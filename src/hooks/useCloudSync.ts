@@ -10,7 +10,8 @@ export function getLocalPasscode(): string {
 
 export function setLocalPasscode(code: string): void {
   if (typeof window === "undefined") return;
-localStorage.setItem(PASSCODE_STORAGE_KEY, code.trim());
+  localStorage.setItem(PASSCODE_STORAGE_KEY, code.trim());
+}
 
 export function useCloudSync(
   globalData: UnifiedFinanceData,
