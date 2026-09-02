@@ -1,0 +1,22 @@
+{
+  "short_name": "Finance",
+  "name": "Financial Dashboard",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#070709",
+  "theme_color": "#070709",
+  "display": "standalone"
+}

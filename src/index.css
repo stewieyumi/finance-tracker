@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #0b0b0d;
+    color: #e2e2e8;
+  }
+}
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.privacy-mode .font-mono:not(form input):not(form textarea):not(button) {
+  filter: blur(5px);
+  user-select: none;
+  will-change: filter;
+  transition: filter 0.15s ease-in-out;
+}
+
+.privacy-mode input:not(form input) {
+  filter: blur(5.5px) !important;
+  user-select: none;
+  will-change: filter;
+  transition: filter 0.15s ease-in-out;
+}
+
+.privacy-mode table tbody tr td:nth-child(2) span,
+.privacy-mode table tbody tr td:nth-child(2) div {
+  filter: blur(5.5px);
+  user-select: none;
+  will-change: filter;
+  transition: filter 0.15s ease-in-out;
+}
+
+.privacy-mode table tbody tr td:nth-child(4) span:not([class*="bg-"]),
+.privacy-mode table tbody tr td:nth-child(5) {
+  filter: blur(5px);
+  user-select: none;
+  will-change: filter;
+  transition: filter 0.15s ease-in-out;
+}
+
+.privacy-mode .border-t span {
+  filter: blur(4.5px);
+  user-select: none;
+}
+
+.privacy-mode div[style*="width"]:not(button):not(td):not(th):not(col),
+.privacy-mode .h-1,
+.privacy-mode .h-1\.5,
+.privacy-mode .h-2,
+.privacy-mode .bg-blue-500:not(button),
+.privacy-mode .bg-blue-600:not(button) {
+  filter: blur(6px) !important;
+  opacity: 0.25 !important;
+  user-select: none;
+  transition: filter 0.15s ease-in-out, opacity 0.15s ease-in-out;
+}
+
+.privacy-mode .block.md\:hidden .truncate,
+.privacy-mode .block.md\:hidden .text-zinc-400 span:not([class*="bg-"]) {
+  filter: blur(5px);
+  user-select: none;
+  will-change: filter;
+}
+
+.privacy-mode form input,
+.privacy-mode form select,
+.privacy-mode form textarea,
+.privacy-mode button,
+.privacy-mode button *,
+.privacy-mode .no-privacy-blur,
+.privacy-mode .no-privacy-blur * {
+  filter: none !important;
+  user-select: auto !important;
+}
