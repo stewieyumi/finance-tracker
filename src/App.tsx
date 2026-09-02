@@ -89,21 +89,22 @@ export default function App() {
   const isModalOpen = showDatePickerModal || showYearlyModal || showAnalyticsModal || showDebugModal;
   usePullToRefresh(() => pullLatestData(), isModalOpen);
 
-  useKeyboardShortcuts({
-    onToggleDatePicker: () => setShowDatePickerModal(prev => !prev),
-    onToggleDebug: () => setShowDebugModal(prev => !prev),
-    onToggleYearly: () => setShowYearlyModal(prev => !prev),
-    onToggleAnalytics: () => setShowAnalyticsModal(prev => !prev),
-    onManualSync: forceManualSync,
-    onPullData: () => pullLatestData(false),
-    onCloseAll: () => {
-      setShowDatePickerModal(false);
-      setShowYearlyModal(false);
-      setShowAnalyticsModal(false);
-      setShowDebugModal(false);
-      setEditingId(null);
-    }
-  });
+useKeyboardShortcuts({
+  onToggleDatePicker: () => setShowDatePickerModal(prev => !prev),
+  onToggleDebug: () => setShowDebugModal(prev => !prev),
+  onToggleYearly: () => setShowYearlyModal(prev => !prev),
+  onToggleAnalytics: () => setShowAnalyticsModal(prev => !prev),
+  onManualSync: forceManualSync,
+  onPullData: () => pullLatestData(false),
+  onTogglePrivacy: () => setIsPrivacyMode(prev => !prev),
+  onCloseAll: () => {
+    setShowDatePickerModal(false);
+    setShowYearlyModal(false);
+    setShowAnalyticsModal(false);
+    setShowDebugModal(false);
+    setEditingId(null);
+  }
+});
 
   const dropdownMonths = useMemo(() => [
     getAdjacentMonth(selectedMonth, -1),

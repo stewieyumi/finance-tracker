@@ -8,6 +8,7 @@ interface ShortcutHandlers {
   onManualSync: () => void;
   onPullData: () => void;
   onCloseAll: () => void;
+  onTogglePrivacy?: () => void;
 }
 
 export function useKeyboardShortcuts({
@@ -17,7 +18,8 @@ export function useKeyboardShortcuts({
   onToggleAnalytics,
   onManualSync,
   onPullData,
-  onCloseAll
+  onCloseAll,
+  onTogglePrivacy
 }: ShortcutHandlers) {
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -71,9 +73,24 @@ export function useKeyboardShortcuts({
         onToggleAnalytics();
         return;
       }
+
+      if (e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        onTogglePrivacy?.();
+        return;
+      }
     };
 
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [onToggleDatePicker, onToggleDebug, onToggleYearly, onToggleAnalytics, onManualSync, onPullData, onCloseAll]);
+  }, [
+    onToggleDatePicker,
+    onToggleDebug,
+    onToggleYearly,
+    onToggleAnalytics,
+    onManualSync,
+    onPullData,
+    onCloseAll,
+    onTogglePrivacy
+  ]);
 }
