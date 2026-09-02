@@ -1,62 +1,66 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const BIN_ID = process.env.JSONBIN_BIN_ID || "6a967958da38895dfe299d7f";
-const MASTER_KEY = process.env.JSONBIN_MASTER_KEY;
-const AUTH_SECRET = process.env.APP_AUTH_SECRET || "ft_secure_token_2026_prod";
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
+const JSONBIN_API_KEY = process.env.JSONBIN_MASTER_KEY;
+const JSONBIN_BIN_ID = process.env.JSONBIN_BIN_ID;
+const APP_AUTH_SECRET = process.env.APP_AUTH_SECRET;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const origin = req.headers.origin;
-  if (ALLOWED_ORIGIN === '*' || (origin && origin === ALLOWED_ORIGIN)) {
-    res.setHeader('Access-Control-Allow-Origin', origin || ALLOWED_ORIGIN);
-  }
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,PUT,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-app-auth');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+  // 1. Fail closed: If server environment variables are missing, deny immediately
+  if (!APP_AUTH_SECRET || !JSONBIN_API_KEY || !JSONBIN_BIN_ID) {
+    console.error("Missing required server environment variables.");
+    return res.status(500).json({ error: "Server configuration error." });
   }
 
-  const clientToken = req.headers['x-app-auth'];
-  if (!clientToken || clientToken !== AUTH_SECRET) {
-    return res.status(401).json({ error: "Unauthorized: Invalid or missing x-app-auth header." });
+  // 2. Validate client passcode via custom header or Bearer authorization
+  const clientToken =
+    req.headers["x-sync-passcode"] ||
+    req.headers.authorization?.replace(/^Bearer\s+/i, "");
+
+  if (!clientToken || clientToken !== APP_AUTH_SECRET) {
+    return res.status(401).json({ error: "Unauthorized: Invalid or missing passcode." });
   }
 
-  if (!MASTER_KEY) {
-    return res.status(500).json({ error: "Server missing JSONBIN_MASTER_KEY environment variable." });
-  }
+  const jsonBinUrl = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
 
   try {
-    if (req.method === 'GET') {
-      const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-        headers: { "X-Master-Key": MASTER_KEY }
+    // GET: Pull from JSONBin
+    if (req.method === "GET") {
+      const response = await fetch(`${jsonBinUrl}/latest`, {
+        headers: {
+          "X-Master-Key": JSONBIN_API_KEY,
+        },
       });
-      if (!response.ok) throw new Error(`JSONBin returned ${response.status}`);
+
+      if (!response.ok) {
+        return res.status(response.status).json({ error: "Failed to fetch remote data." });
+      }
+
       const data = await response.json();
       return res.status(200).json(data.record || data);
-    } 
-    
-    if (req.method === 'PUT') {
-      const payload = {
-        ...req.body,
-        updatedAt: Date.now()
-      };
-      const response = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+    }
+
+    // POST: Push to JSONBin
+    if (req.method === "POST") {
+      const response = await fetch(jsonBinUrl, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "X-Master-Key": MASTER_KEY
+          "X-Master-Key": JSONBIN_API_KEY,
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(req.body),
       });
-      if (!response.ok) throw new Error(`JSONBin returned ${response.status}`);
+
+      if (!response.ok) {
+        return res.status(response.status).json({ error: "Failed to persist remote data." });
+      }
+
       const data = await response.json();
-      return res.status(200).json(data);
+      return res.status(200).json({ success: true, updatedAt: Date.now(), data });
     }
 
     return res.status(405).json({ error: "Method not allowed" });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message || "Internal server sync error" });
+    console.error("Sync handler error:", err);
+    return res.status(500).json({ error: "Internal server error during sync." });
   }
 }

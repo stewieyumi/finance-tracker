@@ -1,7 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { UnifiedFinanceData } from "../types/finance";
 
-const AUTH_TOKEN = import.meta.env.VITE_APP_AUTH_KEY || "ft_secure_token_2026_prod";
+const PASSCODE_STORAGE_KEY = "ft_sync_passcode";
+
+export function getLocalPasscode(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(PASSCODE_STORAGE_KEY) || "";
+}
+
+export function setLocalPasscode(code: string): void {
+  if (typeof window === "undefined") return;
+localStorage.setItem(PASSCODE_STORAGE_KEY, code.trim());
 
 export function useCloudSync(
   globalData: UnifiedFinanceData,
@@ -9,7 +18,9 @@ export function useCloudSync(
   showToast: (msg: string) => void
 ) {
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator !== "undefined" ? navigator.onLine : true);
+  const [isOnline, setIsOnline] = useState<boolean>(() =>
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
   const [debugLog, setDebugLog] = useState<string>("");
 
   const isFirstMount = useRef(true);
@@ -20,37 +31,75 @@ export function useCloudSync(
   const latestDataRef = useRef(globalData);
   latestDataRef.current = globalData;
 
-  const pushToCloud = async (dataToSave: UnifiedFinanceData): Promise<boolean> => {
+  const promptPasscode = useCallback((): string | null => {
+    const current = getLocalPasscode();
+    const entered = window.prompt(
+      "Enter your cloud sync master passcode to enable backup:",
+      current
+    );
+    if (entered !== null) {
+      setLocalPasscode(entered);
+      return entered.trim();
+    }
+    return null;
+  }, []);
+
+  const pushToCloud = async (
+    dataToSave: UnifiedFinanceData,
+    retryCount = 0
+  ): Promise<boolean> => {
     if (!navigator.onLine) {
       setIsOnline(false);
       return false;
     }
+
+    let token = getLocalPasscode();
+    if (!token && retryCount === 0) {
+      const prompted = promptPasscode();
+      if (prompted) token = prompted;
+    }
+
     try {
       setIsSyncing(true);
       const payload: UnifiedFinanceData = {
         ...dataToSave,
-        updatedAt: Date.now()
+        updatedAt: Date.now(),
       };
+
       const res = await fetch("/api/sync", {
         method: "PUT",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "x-app-auth": AUTH_TOKEN
+          "x-sync-passcode": token,
         },
         body: JSON.stringify(payload),
-        keepalive: true
+        keepalive: true,
       });
+
       if (res.ok) {
         isDirtyRef.current = false;
         setIsOnline(true);
-        setDebugLog(`✓ PUSH SUCCESS (${res.status}): Saved at ${new Date().toLocaleTimeString()}`);
+        setDebugLog(
+          `✓ PUSH SUCCESS (${res.status}): Saved at ${new Date().toLocaleTimeString()}`
+        );
         return true;
-      } else if (res.status === 401) {
-        showToast("⚠️ Authentication failed with /api/sync");
-        setDebugLog(`❌ AUTH ERROR (401): Check x-app-auth header`);
-      } else {
-        setDebugLog(`❌ PUSH FAILED (${res.status})`);
       }
+
+      if (res.status === 401) {
+        setDebugLog(`❌ AUTH ERROR (401): Invalid passcode.`);
+        if (retryCount === 0) {
+          showToast("⚠️ Invalid sync passcode. Please enter a valid key.");
+          const prompted = promptPasscode();
+          if (prompted) {
+            return await pushToCloud(dataToSave, retryCount + 1);
+          }
+        } else {
+          showToast("❌ Sync unauthorized.");
+        }
+        return false;
+      }
+
+      setDebugLog(`❌ PUSH FAILED (${res.status})`);
       return false;
     } catch (err: any) {
       setIsOnline(false);
@@ -61,7 +110,7 @@ export function useCloudSync(
     }
   };
 
-  const pullLatestData = async (silent = false) => {
+  const pullLatestData = async (silent = false, retryCount = 0) => {
     if (!navigator.onLine) {
       setIsOnline(false);
       if (!silent) showToast("⚠️ Offline: Cannot pull from cloud");
@@ -69,22 +118,45 @@ export function useCloudSync(
     }
 
     const activeEl = document.activeElement;
-    const isUserTyping = activeEl && (
-      activeEl.tagName === "INPUT" || 
-      activeEl.tagName === "TEXTAREA" || 
-      activeEl.tagName === "SELECT"
-    );
-    
+    const isUserTyping =
+      activeEl &&
+      (activeEl.tagName === "INPUT" ||
+        activeEl.tagName === "TEXTAREA" ||
+        activeEl.tagName === "SELECT");
+
     if (silent && (isDirtyRef.current || isUserTyping)) {
       return;
     }
 
+    let token = getLocalPasscode();
+    if (!token && !silent && retryCount === 0) {
+      const prompted = promptPasscode();
+      if (prompted) token = prompted;
+    }
+
     try {
       if (!silent) setIsSyncing(true);
+
       const res = await fetch("/api/sync", {
-        headers: { "x-app-auth": AUTH_TOKEN }
+        method: "GET",
+        headers: {
+          "x-sync-passcode": token,
+        },
       });
+
+      if (res.status === 401) {
+        setDebugLog(`❌ AUTH ERROR (401): Invalid passcode on pull.`);
+        if (!silent && retryCount === 0) {
+          const prompted = promptPasscode();
+          if (prompted) {
+            return await pullLatestData(silent, retryCount + 1);
+          }
+        }
+        return;
+      }
+
       if (!res.ok) throw new Error(`Server returned status ${res.status}`);
+
       const cloudRecord: UnifiedFinanceData = await res.json();
       if (cloudRecord) {
         const record = (cloudRecord as any).record || cloudRecord;
@@ -93,9 +165,15 @@ export function useCloudSync(
         setGlobalData(record);
         try {
           localStorage.setItem("ft_master_data_v1", JSON.stringify(record));
-        } catch (e) {}
+        } catch (e) {
+          console.warn("localStorage sync error", e);
+        }
         setIsOnline(true);
-        setDebugLog(`✓ PULL SUCCESS (${res.status}): Synced ${record.library?.bills?.length || 0} bills`);
+        setDebugLog(
+          `✓ PULL SUCCESS (${res.status}): Synced ${
+            record.library?.bills?.length || 0
+          } bills`
+        );
         if (!silent) showToast("☁️ Pulled latest cloud data");
       }
     } catch (err: any) {
@@ -220,7 +298,10 @@ export function useCloudSync(
 
     try {
       localStorage.setItem("ft_master_data_v1", JSON.stringify(globalData));
-      broadcastChannelRef.current?.postMessage({ type: "SYNC_DATA", payload: globalData });
+      broadcastChannelRef.current?.postMessage({
+        type: "SYNC_DATA",
+        payload: globalData,
+      });
     } catch (e) {
       console.warn("localStorage write failed", e);
     }
@@ -244,6 +325,7 @@ export function useCloudSync(
     setDebugLog,
     forceManualSync,
     pullLatestData,
-    pushToCloud
+    pushToCloud,
+    promptPasscode,
   };
 }
