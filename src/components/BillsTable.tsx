@@ -273,6 +273,14 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                           {bill.dueDay && <span className="font-mono">Day {bill.dueDay}</span>}
 
                           {(() => {
+                            if (bill.paid) {
+                              return (
+                                <span className="px-2 py-0.5 rounded font-semibold tracking-wide bg-emerald-950/30 text-emerald-400/80 border border-emerald-800/30">
+                                  Settled
+                                </span>
+                              );
+                            }
+
                             const days = getDaysUntil(bill.dueDay, selectedMonth);
                             const { text, tone } = formatDaysRemaining(days);
                             return (
@@ -437,6 +445,14 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                           {bill.dueDay && <span className="text-[11px] text-zinc-400 font-mono">Day {bill.dueDay}</span>}
                           
                           {(() => {
+                            if (bill.paid) {
+                              return (
+                                <span className="px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide bg-emerald-950/30 text-emerald-400/80 border border-emerald-800/30">
+                                  Settled
+                                </span>
+                              );
+                            }
+
                             const days = getDaysUntil(bill.dueDay, selectedMonth);
                             const { text, tone } = formatDaysRemaining(days);
                             return (
