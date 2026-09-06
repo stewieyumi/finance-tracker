@@ -38,3 +38,25 @@ export function getDaysUntil(dueDay: string | number, targetMonthKey: string): n
   const days = Math.round(diffMs / msPerDay);
   return Object.is(days, -0) ? 0 : days;
 }
+
+export function formatDaysRemaining(days: number): { text: string; tone: "urgent" | "warning" | "normal" | "overdue" } {
+  if (days === 999) return { text: "No due date", tone: "normal" };
+  
+  if (days < 0) {
+    const abs = Math.abs(days);
+    return {
+      text: abs === 1 ? "1d overdue" : `${abs}d overdue`,
+      tone: "overdue"
+    };
+  }
+  if (days === 0) {
+    return { text: "Due Today", tone: "urgent" };
+  }
+  if (days === 1) {
+    return { text: "Due Tomorrow", tone: "warning" };
+  }
+  return {
+    text: `${days}d left`,
+    tone: days <= 3 ? "warning" : "normal"
+  };
+}

@@ -3,6 +3,7 @@ import { Check, Circle, Edit2, Save, Trash2, Plus, Calendar, Filter, ChevronDown
 import { ALL_MONTH_YEAR_OPTIONS } from "../constants/config";
 import { LoanProgressBadge } from "./LoanProgressBadge";
 import { Bill, BillType, EditFormData } from "../types/finance";
+import { getDaysUntil, formatDaysRemaining } from "../utils/dateHelpers";
 
 const BILL_TYPES = ["All", "Bill", "Subscription", "Loan / Installment"];
 
@@ -260,38 +261,54 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between pl-7 text-[10px] text-zinc-400">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`px-1.5 py-0.2 rounded font-medium ${
-                          bill.type === "Subscription" ? "bg-purple-950/80 text-purple-300 border border-purple-800/40" :
-                          bill.type === "Loan / Installment" ? "bg-amber-950/80 text-amber-300 border border-amber-800/40" :
-                          "bg-blue-950/80 text-blue-300 border border-blue-800/40"
-                        }`}>{bill.type}</span>
-                        {bill.dueDay && <span>• Day {bill.dueDay}</span>}
-                        {bill.daysLeft !== undefined && <span className="text-zinc-500 font-mono">({bill.daysLeft}d left)</span>}
-                        {bill.type === "Loan / Installment" && bill.endMonth && (
-                          <span className="text-amber-400/80 font-mono">→ {bill.endMonth}</span>
+                    <div className="flex items-start justify-between pl-7 text-[10px] text-zinc-400">
+                      <div className="flex flex-col gap-1.5 mt-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`px-1.5 py-0.5 rounded font-medium ${
+                            bill.type === "Subscription" ? "bg-purple-950/80 text-purple-300 border border-purple-800/40" :
+                            bill.type === "Loan / Installment" ? "bg-amber-950/80 text-amber-300 border border-amber-800/40" :
+                            "bg-blue-950/80 text-blue-300 border border-blue-800/40"
+                          }`}>{bill.type}</span>
+                          
+                          {bill.dueDay && <span className="font-mono">Day {bill.dueDay}</span>}
+
+                          {(() => {
+                            const days = getDaysUntil(bill.dueDay, selectedMonth);
+                            const { text, tone } = formatDaysRemaining(days);
+                            return (
+                              <span className={`px-2 py-0.5 rounded font-semibold tracking-wide ${
+                                tone === "urgent" ? "bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse" :
+                                tone === "overdue" ? "bg-rose-600/25 text-rose-300 border border-rose-500/40" :
+                                tone === "warning" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" :
+                                "bg-slate-800 text-slate-400 border border-slate-700/60"
+                              }`}>
+                                {text}
+                              </span>
+                            );
+                          })()}
+                        </div>
+
+                        {bill.type === "Loan / Installment" && (
+                          <div className="mt-1">
+                            <LoanProgressBadge
+                              startMonth={bill.startMonth}
+                              endMonth={bill.endMonth}
+                              currentMonth={selectedMonth}
+                              monthlyAmount={bill.amount}
+                            />
+                          </div>
                         )}
                       </div>
 
                       <button
                         onClick={() => handleStartEdit(bill)}
                         aria-label={`Edit ${bill.name}`}
-                        className="px-2 py-0.5 text-zinc-400 hover:text-amber-300 bg-zinc-800/70 hover:bg-zinc-700/60 border border-zinc-700/40 rounded-md transition flex items-center gap-1 text-[10px]"
+                        className="px-2 py-0.5 text-zinc-400 hover:text-amber-300 bg-zinc-800/70 hover:bg-zinc-700/60 border border-zinc-700/40 rounded-md transition flex items-center gap-1 text-[10px] shrink-0 mt-1"
                       >
                         <Edit2 size={9} />
                         <span>Edit</span>
                       </button>
                     </div>
-
-                    {bill.type === "Loan / Installment" && (
-                      <LoanProgressBadge
-                        startMonth={bill.startMonth}
-                        endMonth={bill.endMonth}
-                        currentMonth={selectedMonth}
-                        monthlyAmount={bill.amount}
-                      />
-                    )}
                   </div>
                 )}
               </div>
@@ -326,7 +343,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
               const isEditing = editingId === bill.id;
               return (
                 <tr key={bill.id} className={`group transition-all duration-150 ${bill.paid ? "opacity-40" : "hover:bg-white/[0.02]"}`}>
-                  <td className="py-2.5 px-2">
+                  <td className="py-2.5 px-2 align-top pt-3">
                     <button onClick={() => onToggleStatus(bill)} aria-label={`Toggle status for ${bill.name}`} className="flex items-center gap-1.5 focus:outline-none">
                       {bill.paid ? (
                         <span className="flex items-center justify-center gap-1 w-[85px] text-blue-400 text-[11px] font-semibold bg-blue-950/40 px-2 py-1 rounded-lg border border-blue-600/30 transition-all hover:bg-blue-900/50">
@@ -339,7 +356,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                       )}
                     </button>
                   </td>
-                  <td className="py-2.5 px-2 text-zinc-200 truncate font-medium">
+                  <td className="py-2.5 px-2 align-top pt-3 text-zinc-200 truncate font-medium">
                     {isEditing ? (
                       <input type="text" value={editForm.name || ""} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="bg-[#0b0b0d] border border-zinc-700 rounded-lg px-2 py-1 text-white text-xs w-full focus:ring-1 focus:ring-blue-500 outline-none" />
                     ) : (
@@ -353,7 +370,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                       </div>
                     )}
                   </td>
-                  <td className={`py-2.5 px-2 text-right font-mono font-semibold ${bill.paid ? "text-blue-400" : "text-zinc-100"}`}>
+                  <td className={`py-2.5 px-2 align-top pt-3 text-right font-mono font-semibold ${bill.paid ? "text-blue-400" : "text-zinc-100"}`}>
                     {isEditing ? (
                       <div className="flex flex-col items-end gap-1">
                         <input
@@ -390,7 +407,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                       </div>
                     ) : `₱${bill.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
                   </td>
-                  <td className="py-2.5 px-2 text-zinc-400 text-[11px]">
+                  <td className="py-2.5 px-2 align-top text-zinc-400 text-[11px]">
                     {isEditing ? (
                       <div className="flex flex-col gap-1.5">
                         <select value={editForm.type || "Bill"} onChange={(e) => setEditForm({ ...editForm, type: e.target.value as BillType })} className="bg-[#0b0b0d] border border-zinc-700 rounded-lg px-2 py-1 text-white text-xs w-full">
@@ -409,31 +426,46 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                         </select>
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${
                             bill.type === "Subscription" ? "bg-purple-950/70 text-purple-300 border border-purple-800/40" :
                             bill.type === "Loan / Installment" ? "bg-amber-950/70 text-amber-300 border border-amber-800/40" :
                             "bg-blue-950/70 text-blue-300 border border-blue-800/40"
                           }`}>{bill.type}</span>
-                          {bill.dueDay && <span className="text-[10px] text-zinc-400 font-mono">Day {bill.dueDay}</span>}
-                          {bill.type === "Loan / Installment" && bill.endMonth && (
-                            <span className="text-[10px] text-amber-400/90 font-mono">→ {bill.endMonth}</span>
-                          )}
-                          {bill.daysLeft !== undefined && <span className="text-[10px] font-mono text-zinc-500">{bill.daysLeft}d left</span>}
+                          
+                          {bill.dueDay && <span className="text-[11px] text-zinc-400 font-mono">Day {bill.dueDay}</span>}
+                          
+                          {(() => {
+                            const days = getDaysUntil(bill.dueDay, selectedMonth);
+                            const { text, tone } = formatDaysRemaining(days);
+                            return (
+                              <span className={`px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide ${
+                                tone === "urgent" ? "bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse" :
+                                tone === "overdue" ? "bg-rose-600/25 text-rose-300 border border-rose-500/40" :
+                                tone === "warning" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" :
+                                "bg-slate-800 text-slate-400 border border-slate-700/60"
+                              }`}>
+                                {text}
+                              </span>
+                            );
+                          })()}
                         </div>
+
                         {bill.type === "Loan / Installment" && (
-                          <LoanProgressBadge
-                            startMonth={bill.startMonth}
-                            endMonth={bill.endMonth}
-                            currentMonth={selectedMonth}
-                            monthlyAmount={bill.amount}
-                          />
+                          <div className="mt-1">
+                            <LoanProgressBadge
+                              startMonth={bill.startMonth}
+                              endMonth={bill.endMonth}
+                              currentMonth={selectedMonth}
+                              monthlyAmount={bill.amount}
+                            />
+                          </div>
                         )}
                       </div>
                     )}
                   </td>
-                  <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                  <td className="py-2.5 px-2 align-top text-center whitespace-nowrap pt-2">
                     <div className="inline-flex items-center gap-1 bg-[#1a1a22] p-1 rounded-lg border border-white/[0.05]">
                       {isEditing ? (
                         <>
