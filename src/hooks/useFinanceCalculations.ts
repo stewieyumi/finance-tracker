@@ -129,7 +129,7 @@ export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedM
   const overdueSum = useMemo(() => overdueBills.reduce((a, c) => a + (parseFloat(String(c.amount)) || 0), 0), [overdueBills]);
   const cashShortfall = totalUnpaidCommitments - totalLiquid;
 
-const perPayoutSalary = globalData?.settings?.perPayoutSalary ?? 15000;
+  const perPayoutSalary = globalData?.settings?.perPayoutSalary ?? 15000;
   const defaultTransit = globalData?.settings?.defaultTransitAllocation ?? 1500;
   const spayLaterBill = activeBills.find(b => b.name.toLowerCase().includes("spaylater") && !b.paid);
   const unoBankBill = activeBills.find(b => b.name.toLowerCase().includes("unobank") && !b.paid);
@@ -138,13 +138,12 @@ const perPayoutSalary = globalData?.settings?.perPayoutSalary ?? 15000;
   const unoBankAmount = unoBankBill ? unoBankBill.amount : 0;
   const sharedTripAmount = sharedTripBill ? sharedTripBill.amount : 0; // ₱2,000 Shared Japan Ticket/Hotel
   const otherUnpaidBillsSum = totalUnpaidCommitments - spayLaterAmount - unoBankAmount - sharedTripAmount;
-  const targetMayaAllocation = Math.max(0, otherUnpaidBillsSum / 2); // Split general bills across cutoffs
-  const targetMariBankAllocation = spayLaterAmount > 0 ? spayLaterAmount / 2 : 0;
+  const targetMayaAllocation = Math.max(0, otherUnpaidBillsSum / 2);   // Route the ₱2,000 shared trip fund directly to MariBank so you can InstaPay her from there!
+  const targetMariBankAllocation = (spayLaterAmount > 0 ? spayLaterAmount / 2 : 0) + sharedTripAmount;
   const targetGCashAllocation = unoBankAmount > 0 ? unoBankAmount / 2 : 0;
-  const targetGoTymeAllocation = defaultTransit + sharedTripAmount; 
+  const targetGoTymeAllocation = defaultTransit; 
   const totalAllocatedPerPayout = targetMayaAllocation + targetMariBankAllocation + targetGCashAllocation + targetGoTymeAllocation;
-  const remainingBuffer = perPayoutSalary - totalAllocatedPerPayout;
-  return {
+  const remainingBuffer = perPayoutSalary - totalAllocatedPerPayout;    return {
     activeBills,
     activeReceivables,
     activeShoots,
