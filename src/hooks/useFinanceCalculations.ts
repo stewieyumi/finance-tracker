@@ -129,19 +129,21 @@ export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedM
   const overdueSum = useMemo(() => overdueBills.reduce((a, c) => a + (parseFloat(String(c.amount)) || 0), 0), [overdueBills]);
   const cashShortfall = totalUnpaidCommitments - totalLiquid;
 
-  const perPayoutSalary = globalData?.settings?.perPayoutSalary ?? 15000;
-  const targetGoTymeAllocation = globalData?.settings?.defaultTransitAllocation ?? 1500;
+const perPayoutSalary = globalData?.settings?.perPayoutSalary ?? 15000;
+  const defaultTransit = globalData?.settings?.defaultTransitAllocation ?? 1500;
   const spayLaterBill = activeBills.find(b => b.name.toLowerCase().includes("spaylater") && !b.paid);
   const unoBankBill = activeBills.find(b => b.name.toLowerCase().includes("unobank") && !b.paid);
+  const sharedTripBill = activeBills.find(b => b.name.toLowerCase().includes("shared") && !b.paid);
   const spayLaterAmount = spayLaterBill ? spayLaterBill.amount : 0;
   const unoBankAmount = unoBankBill ? unoBankBill.amount : 0;
-  const otherUnpaidBillsSum = totalUnpaidCommitments - spayLaterAmount - unoBankAmount;
-  const targetMayaAllocation = Math.max(0, otherUnpaidBillsSum / 2);
+  const sharedTripAmount = sharedTripBill ? sharedTripBill.amount : 0; // ₱2,000 Shared Japan Ticket/Hotel
+  const otherUnpaidBillsSum = totalUnpaidCommitments - spayLaterAmount - unoBankAmount - sharedTripAmount;
+  const targetMayaAllocation = Math.max(0, otherUnpaidBillsSum / 2); // Split general bills across cutoffs
   const targetMariBankAllocation = spayLaterAmount > 0 ? spayLaterAmount / 2 : 0;
   const targetGCashAllocation = unoBankAmount > 0 ? unoBankAmount / 2 : 0;
+  const targetGoTymeAllocation = defaultTransit + sharedTripAmount; 
   const totalAllocatedPerPayout = targetMayaAllocation + targetMariBankAllocation + targetGCashAllocation + targetGoTymeAllocation;
   const remainingBuffer = perPayoutSalary - totalAllocatedPerPayout;
-
   return {
     activeBills,
     activeReceivables,
