@@ -131,19 +131,29 @@ export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedM
 
   const perPayoutSalary = globalData?.settings?.perPayoutSalary ?? 15000;
   const defaultTransit = globalData?.settings?.defaultTransitAllocation ?? 1500;
+  
+  const baseLivingAllowance = 2500; // GCash: Daily pocket / food
+  const baseSavingsTarget = 1000;   // MariBank: Baseline Japan ADB savings
+  
   const spayLaterBill = activeBills.find(b => b.name.toLowerCase().includes("spaylater") && !b.paid);
   const unoBankBill = activeBills.find(b => b.name.toLowerCase().includes("unobank") && !b.paid);
   const sharedTripBill = activeBills.find(b => b.name.toLowerCase().includes("shared") && !b.paid);
+  
   const spayLaterAmount = spayLaterBill ? spayLaterBill.amount : 0;
   const unoBankAmount = unoBankBill ? unoBankBill.amount : 0;
-  const sharedTripAmount = sharedTripBill ? sharedTripBill.amount : 0; // ₱2,000 Shared Japan Ticket/Hotel
+  const sharedTripAmount = sharedTripBill ? sharedTripBill.amount : 0; 
+  
   const otherUnpaidBillsSum = totalUnpaidCommitments - spayLaterAmount - unoBankAmount - sharedTripAmount;
-  const targetMayaAllocation = Math.max(0, otherUnpaidBillsSum / 2);   // Route the ₱2,000 shared trip fund directly to MariBank so you can InstaPay her from there!
-  const targetMariBankAllocation = (spayLaterAmount > 0 ? spayLaterAmount / 2 : 0) + sharedTripAmount;
-  const targetGCashAllocation = unoBankAmount > 0 ? unoBankAmount / 2 : 0;
+  
+  const targetMayaAllocation = Math.round((Math.max(0, otherUnpaidBillsSum / 2)) * 100) / 100;
+  const targetGCashAllocation = (unoBankAmount > 0 ? unoBankAmount / 2 : 0) + baseLivingAllowance;
+  const targetMariBankAllocation = (spayLaterAmount > 0 ? spayLaterAmount / 2 : 0) + sharedTripAmount + baseSavingsTarget;
   const targetGoTymeAllocation = defaultTransit; 
+  
   const totalAllocatedPerPayout = targetMayaAllocation + targetMariBankAllocation + targetGCashAllocation + targetGoTymeAllocation;
-  const remainingBuffer = perPayoutSalary - totalAllocatedPerPayout;    return {
+  const remainingBuffer = Math.round((perPayoutSalary - totalAllocatedPerPayout) * 100) / 100;
+
+  return {
     activeBills,
     activeReceivables,
     activeShoots,
