@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { UnifiedFinanceData } from "../types/finance";
+import { UnifiedFinanceData, BillViewModel } from "../types/finance";
 import { DEFAULT_TARGET_FUND } from "../constants/config";
 import { parseMonthKey, getMonthKey, getAdjacentMonth, getDaysUntil } from "../utils/dateHelpers";
 export function getEffectiveBillAmount(
@@ -7,13 +7,13 @@ export function getEffectiveBillAmount(
   override?: number
 ): number {
   return override !== undefined ? override : baseAmount;
-  
+
 }export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedMonth: string) {
 const currentMonthDate = parseMonthKey(selectedMonth);
 const fallbackStartMonth = getMonthKey(new Date());
 
-  const activeBills = useMemo(() => {
-    if (!globalData?.library?.bills) return [];
+const activeBills = useMemo<BillViewModel[]>(() => {
+      if (!globalData?.library?.bills) return [];
 
     return globalData.library.bills.filter(b => {
       const start = parseMonthKey(b.startMonth || fallbackStartMonth);
