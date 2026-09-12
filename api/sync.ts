@@ -5,8 +5,8 @@ import { Redis } from '@upstash/redis';
 declare const process: {
   env: {
     APP_AUTH_SECRET?: string;
-    UPSTASH_REDIS_REST_URL?: string;
-    UPSTASH_REDIS_REST_TOKEN?: string;
+    KV_REST_API_URL?: string;
+    KV_REST_API_TOKEN?: string;
     [key: string]: string | undefined;
   };
 };
@@ -26,10 +26,10 @@ interface VercelApiResponse {
 
 const APP_AUTH_SECRET = process.env.APP_AUTH_SECRET;
 
-// Initialize Upstash Redis
+// Initialize Upstash Redis using the Vercel KV variable names
 const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+  url: process.env.KV_REST_API_URL || '',
+  token: process.env.KV_REST_API_TOKEN || '',
 });
 
 export default async function handler(req: VercelApiRequest, res: VercelApiResponse) {
@@ -44,8 +44,8 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
   if (!APP_AUTH_SECRET) {
     return res.status(500).json({ error: "Server configuration error: Missing APP_AUTH_SECRET." });
   }
-  if (!process.env.UPSTASH_REDIS_REST_URL) {
-     return res.status(500).json({ error: "Server configuration error: Missing Upstash Redis credentials." });
+  if (!process.env.KV_REST_API_URL) {
+     return res.status(500).json({ error: "Server configuration error: Missing KV_REST_API_URL credentials." });
   }
 
   // 2. Validate client passcode
