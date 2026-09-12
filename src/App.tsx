@@ -16,6 +16,7 @@ import { useShootActions } from "./hooks/useShootActions";
 import { useBillEditActions } from "./hooks/useBillEditActions";
 import { useBillSaveActions } from "./hooks/useBillSaveActions";
 import { useReceivableSaveActions } from "./hooks/useReceivableSaveActions";
+import { useShootSaveActions } from "./hooks/useShootSaveActions";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MilestoneProgressBar } from "./components/MilestoneProgressBar";
@@ -116,6 +117,14 @@ const { saveReceivableEdit } = useReceivableSaveActions({
   showToast
 });
 
+const { saveShootEdit } = useShootSaveActions({
+  setGlobalData,
+  editingId,
+  editForm,
+  setEditingId,
+  showToast
+});
+
   const {
     isSyncing,
     isOnline,
@@ -202,59 +211,6 @@ useKeyboardShortcuts({
     });
     if (editingId === id) setEditingId(null);
     showToast("Deleted item");
-  };
-
-  const saveEditing = (category: "bills" | "receivables" | "shoots", scope: "monthOnly" | "default" = "monthOnly") => {
-    if (category === "bills" && scope === "monthOnly") {
-      const inputAmount = parseFloat(String(editForm.amount || 0)) || 0;
-      setGlobalData(p => {
-        const mLog = p.logs[selectedMonth] || { billsPaid: [], recsCollected: {}, billOverrides: {} };
-        return {
-          ...p,
-          logs: {
-            ...p.logs,
-            [selectedMonth]: {
-              ...mLog,
-              billOverrides: {
-                ...(mLog.billOverrides || {}),
-                [editingId!]: inputAmount
-              }
-            }
-          }
-        };
-      });
-      showToast(`Updated ${editForm.name} for ${selectedMonth} only`);
-    } else {
-      setGlobalData(p => {
-        if (category === "bills") {
-          return {
-            ...p,
-            library: {
-              ...p.library,
-              bills: p.library.bills.map(i => i.id === editingId ? ({ ...i, ...editForm, amount: parseFloat(String(editForm.amount || 0)) || 0 } as Bill) : i)
-            }
-          };
-        }
-        if (category === "receivables") {
-          return {
-            ...p,
-            library: {
-              ...p.library,
-              receivables: p.library.receivables.map(i => i.id === editingId ? ({ ...i, ...editForm, amount: parseFloat(String(editForm.amount || 0)) || 0 } as Receivable) : i)
-            }
-          };
-        }
-        return {
-          ...p,
-          library: {
-            ...p.library,
-            shoots: p.library.shoots.map(i => i.id === editingId ? ({ ...i, ...editForm, title: editForm.title || i.title } as Shoot) : i)
-          }
-        };
-      });
-      showToast("Default saved in Library");
-    }
-    setEditingId(null);
   };
 
   const copySummaryToClipboard = () => {
@@ -638,7 +594,7 @@ TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}
             onAddPayment={addPayment}
             onAddReceivable={handleAddReceivable}
             onDeleteReceivable={(id) => deleteItem("receivables", id)}
-            onSaveEdit={saveEditing}
+            onSaveEdit={() => saveReceivableEdit()}
             editingId={editingId}
             setEditingId={setEditingId}
             editForm={editForm}
@@ -653,7 +609,7 @@ TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}
             onToggleCompletion={toggleShootCompletion}
             onAddShoot={handleAddShoot}
             onDeleteShoot={(id) => deleteItem("shoots", id)}
-            onSaveEdit={saveEditing}
+            onSaveEdit={() => saveShootEdit()}
             editingId={editingId}
             setEditingId={setEditingId}
             editForm={editForm}
