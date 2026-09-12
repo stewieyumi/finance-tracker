@@ -1,10 +1,12 @@
 // api/sync.ts
+import { Redis } from '@upstash/redis';
 
+// Tell TypeScript about our environment variables
 declare const process: {
   env: {
-    JSONBIN_MASTER_KEY?: string;
-    JSONBIN_BIN_ID?: string;
     APP_AUTH_SECRET?: string;
+    UPSTASH_REDIS_REST_URL?: string;
+    UPSTASH_REDIS_REST_TOKEN?: string;
     [key: string]: string | undefined;
   };
 };
@@ -22,9 +24,13 @@ interface VercelApiResponse {
   end: () => void;
 }
 
-const JSONBIN_API_KEY = process.env.JSONBIN_MASTER_KEY;
-const JSONBIN_BIN_ID = process.env.JSONBIN_BIN_ID;
 const APP_AUTH_SECRET = process.env.APP_AUTH_SECRET;
+
+// Initialize Upstash Redis
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL || '',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+});
 
 export default async function handler(req: VercelApiRequest, res: VercelApiResponse) {
   // CORS Preflight
@@ -34,13 +40,15 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
     return res.status(200).end();
   }
 
-  // 1. Fail closed if server env variables are missing
-  if (!APP_AUTH_SECRET || !JSONBIN_API_KEY || !JSONBIN_BIN_ID) {
-    console.error("Missing required server environment variables.");
-    return res.status(500).json({ error: "Server configuration error." });
+  // 1. Validate Secret & Redis Config
+  if (!APP_AUTH_SECRET) {
+    return res.status(500).json({ error: "Server configuration error: Missing APP_AUTH_SECRET." });
+  }
+  if (!process.env.UPSTASH_REDIS_REST_URL) {
+     return res.status(500).json({ error: "Server configuration error: Missing Upstash Redis credentials." });
   }
 
-  // 2. Validate client passcode via custom header or Bearer authorization
+  // 2. Validate client passcode
   const clientToken =
     (req.headers["x-sync-passcode"] as string) ||
     (req.headers["x-app-auth"] as string) ||
@@ -52,47 +60,23 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
     return res.status(401).json({ error: "Unauthorized: Invalid or missing passcode." });
   }
 
-  const jsonBinUrl = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
-
   try {
-    // GET: Pull latest from JSONBin
+    // GET: Pull data from Upstash Redis
     if (req.method === "GET") {
-      const response = await fetch(`${jsonBinUrl}/latest`, {
-        headers: {
-          "X-Master-Key": JSONBIN_API_KEY,
-        },
-      });
-
-      if (!response.ok) {
-        return res.status(response.status).json({ error: "Failed to fetch remote data." });
-      }
-
-      const data = await response.json();
-      return res.status(200).json(data.record || data);
+      const data = await redis.get("finance_data");
+      return res.status(200).json(data || {});
     }
 
-    // PUT or POST: Save to JSONBin
+    // PUT or POST: Save data to Upstash Redis
     if (req.method === "PUT" || req.method === "POST") {
-      const response = await fetch(jsonBinUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Master-Key": JSONBIN_API_KEY,
-        },
-        body: typeof req.body === "string" ? req.body : JSON.stringify(req.body),
-      });
-
-      if (!response.ok) {
-        return res.status(response.status).json({ error: "Failed to persist remote data." });
-      }
-
-      const data = await response.json();
-      return res.status(200).json({ success: true, updatedAt: Date.now(), data });
+      const payload = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      await redis.set("finance_data", payload);
+      return res.status(200).json({ success: true, updatedAt: Date.now(), data: payload });
     }
 
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
   } catch (err: any) {
-    console.error("Sync handler error:", err);
+    console.error("Redis Sync handler error:", err);
     return res.status(500).json({ error: "Internal server error during sync." });
   }
 }
