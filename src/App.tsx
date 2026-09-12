@@ -15,6 +15,7 @@ import { useReceivableActions } from "./hooks/useReceivableActions";
 import { useShootActions } from "./hooks/useShootActions";
 import { useBillEditActions } from "./hooks/useBillEditActions";
 import { useBillSaveActions } from "./hooks/useBillSaveActions";
+import { useReceivableSaveActions } from "./hooks/useReceivableSaveActions";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MilestoneProgressBar } from "./components/MilestoneProgressBar";
@@ -101,6 +102,14 @@ const { resetMonthOverride } = useBillEditActions({
 const { saveBillEdit } = useBillSaveActions({
   setGlobalData,
   selectedMonth,
+  editingId,
+  editForm,
+  setEditingId,
+  showToast
+});
+
+const { saveReceivableEdit } = useReceivableSaveActions({
+  setGlobalData,
   editingId,
   editForm,
   setEditingId,
