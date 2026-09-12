@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Check, Circle, Edit2, Save, Trash2, Plus, Calendar, Filter, ChevronDown, RotateCcw } from "lucide-react";
 import { ALL_MONTH_YEAR_OPTIONS } from "../constants/config";
 import { LoanProgressBadge } from "./LoanProgressBadge";
-import { Bill, BillType, EditFormData } from "../types/finance";
+import { Bill, BillViewModel, BillType, EditFormData } from "../types/finance";
 import { getDaysUntil, formatDaysRemaining } from "../utils/dateHelpers";
 
 const BILL_TYPES = ["All", "Bill", "Subscription", "Loan / Installment"];
