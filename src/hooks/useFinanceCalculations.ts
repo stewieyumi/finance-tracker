@@ -1,21 +1,23 @@
 import { useMemo } from "react";
 import { UnifiedFinanceData } from "../types/finance";
+import { DEFAULT_TARGET_FUND } from "../constants/config";
 import { parseMonthKey, getMonthKey, getAdjacentMonth, getDaysUntil } from "../utils/dateHelpers";
 
 export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedMonth: string) {
-  const currentMonthDate = parseMonthKey(selectedMonth);
+const currentMonthDate = parseMonthKey(selectedMonth);
+const fallbackStartMonth = getMonthKey(new Date());
 
   const activeBills = useMemo(() => {
     if (!globalData?.library?.bills) return [];
 
     return globalData.library.bills.filter(b => {
-      const start = parseMonthKey(b.startMonth || "August 2026");
+      const start = parseMonthKey(b.startMonth || fallbackStartMonth);
       if (currentMonthDate < start) return false;
       if (b.type === "Loan / Installment" && b.endMonth && currentMonthDate > parseMonthKey(b.endMonth)) return false;
       return true;
     }).map(b => {
       let oldestUnpaid: string | null = null;
-      let ptrMonth = b.startMonth || "August 2026";
+      let ptrMonth = b.startMonth || fallbackStartMonth;
       let loopFailsafe = 0;
       while (parseMonthKey(ptrMonth) <= currentMonthDate && loopFailsafe < 120) {
         if (b.type === "Loan / Installment" && b.endMonth && parseMonthKey(ptrMonth) > parseMonthKey(b.endMonth)) break;
@@ -55,7 +57,7 @@ export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedM
     if (!globalData?.library?.receivables) return [];
     return globalData.library.receivables.filter(r => {
       if (r.frequency === "Monthly" || r.frequency === "Bi-monthly") {
-        const start = parseMonthKey(r.startMonth || "August 2026");
+        const start = parseMonthKey(r.startMonth || fallbackStartMonth);
         if (currentMonthDate < start) return false;
         return true;
       }
@@ -73,7 +75,7 @@ export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedM
       if (r.frequency === "By Date") {
         targetMonthForDue = r.date ? getMonthKey(new Date(r.date.replace(/-/g, "/"))) : selectedMonth;
       } else {
-        let ptrMonth = r.startMonth || "August 2026";
+        let ptrMonth = r.startMonth || fallbackStartMonth;
         let loopFailsafe = 0;
         while (parseMonthKey(ptrMonth) <= currentMonthDate && loopFailsafe < 120) {
           const isCol = globalData.logs?.[ptrMonth]?.recsCollected?.[r.id]?.collected;
@@ -118,7 +120,7 @@ export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedM
   }, [globalData, currentMonthDate]);
 
   const totalLiquid = useMemo(() => Object.values(globalData?.wallets || {}).reduce((a, c) => a + (parseFloat(String(c)) || 0), 0), [globalData?.wallets]);
-  const targetMilestoneFund = globalData?.settings?.targetFund ?? globalData?.targetFund ?? 80000;
+  const targetMilestoneFund = globalData?.settings?.targetFund ?? globalData?.targetFund ?? DEFAULT_TARGET_FUND;
   const fundProgressPercent = useMemo(() => (((globalData?.wallets?.maribank || 0) / targetMilestoneFund) * 100).toFixed(1), [globalData?.wallets?.maribank, targetMilestoneFund]);
   const totalPendingReceivables = useMemo(() => activeReceivables.filter(r => !r.collected).reduce((a, c) => a + Math.max(0, (parseFloat(String(c.amount)) || 0) - (parseFloat(String(c.amountReceived)) || 0)), 0), [activeReceivables]);
   const monthIncomeCollected = useMemo(() => activeReceivables.reduce((a, c) => a + (parseFloat(String(c.amountReceived)) || 0), 0), [activeReceivables]);

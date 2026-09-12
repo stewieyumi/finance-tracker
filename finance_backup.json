@@ -1,0 +1,426 @@
+{
+  "targetFund": 80000,
+  "wallets": {
+    "maribank": 1279.98,
+    "gcash": 560.48,
+    "maya": 0.79,
+    "gotyme": 544.87,
+    "bpi": 174.43,
+    "cash": 0
+  },
+  "library": {
+    "bills": [
+      {
+        "id": "b1",
+        "name": "Gym Membership",
+        "amount": 1750,
+        "dueDay": "30",
+        "type": "Bill",
+        "startMonth": "August 2026",
+        "endMonth": ""
+      },
+      {
+        "id": "b2",
+        "name": "Water Bill",
+        "amount": 250,
+        "dueDay": "14",
+        "type": "Bill",
+        "startMonth": "August 2026",
+        "endMonth": ""
+      },
+      {
+        "id": "b3",
+        "name": "Electricity Bill",
+        "amount": 1500,
+        "dueDay": "21",
+        "type": "Bill",
+        "startMonth": "August 2026",
+        "endMonth": ""
+      },
+      {
+        "id": "b4",
+        "name": "Adobe Subscription",
+        "amount": 788.48,
+        "dueDay": "22",
+        "type": "Subscription",
+        "startMonth": "August 2026",
+        "endMonth": ""
+      },
+      {
+        "id": "b5",
+        "name": "UnoBank Loan",
+        "amount": 1602.62,
+        "dueDay": "1",
+        "type": "Loan / Installment",
+        "startMonth": "August 2026",
+        "endMonth": "July 2027"
+      },
+      {
+        "id": "b6",
+        "name": "SPayLater",
+        "amount": 898.99,
+        "dueDay": "1",
+        "type": "Loan / Installment",
+        "startMonth": "August 2026",
+        "endMonth": "November 2026"
+      },
+      {
+        "id": "b7",
+        "name": "iCloud Subscription",
+        "amount": 599,
+        "dueDay": "6",
+        "type": "Subscription",
+        "startMonth": "August 2026",
+        "endMonth": "",
+        "baseAmount": 599,
+        "isOverridden": true,
+        "paid": true,
+        "targetMonthForDue": "September 2026",
+        "daysLeft": 0,
+        "monthAmount": 699
+      },
+      {
+        "id": "b8",
+        "name": "Internet Bill",
+        "amount": 750,
+        "dueDay": "10",
+        "type": "Bill",
+        "startMonth": "August 2026",
+        "endMonth": ""
+      },
+      {
+        "id": "b9",
+        "name": "Google Subscription",
+        "amount": 355,
+        "dueDay": "27",
+        "type": "Subscription",
+        "startMonth": "August 2026",
+        "endMonth": "",
+        "baseAmount": 355,
+        "isOverridden": false,
+        "paid": false,
+        "targetMonthForDue": "September 2026",
+        "daysLeft": 2,
+        "monthAmount": 599
+      },
+      {
+        "id": "b10",
+        "name": "Home Credit",
+        "amount": 3320.5,
+        "dueDay": "14",
+        "type": "Loan / Installment",
+        "startMonth": "August 2026",
+        "endMonth": "February 2027"
+      },
+      {
+        "id": "b11",
+        "name": "GCredit Payoff",
+        "amount": 316.94,
+        "dueDay": "18",
+        "type": "Loan / Installment",
+        "startMonth": "August 2026",
+        "endMonth": "December 2026",
+        "baseAmount": 316.94,
+        "isOverridden": false,
+        "paid": false,
+        "targetMonthForDue": "September 2026",
+        "daysLeft": 7,
+        "monthAmount": 316.94
+      },
+      {
+        "id": "b12",
+        "name": "Macbook Loan",
+        "amount": 5444.17,
+        "dueDay": "23",
+        "type": "Loan / Installment",
+        "startMonth": "August 2026",
+        "endMonth": "July 2029"
+      },
+      {
+        "id": "b13",
+        "name": "Appliances / Extras",
+        "amount": 1000,
+        "dueDay": "15",
+        "type": "Loan / Installment",
+        "startMonth": "August 2026",
+        "endMonth": "April 2027",
+        "baseAmount": 1000,
+        "isOverridden": true,
+        "paid": false,
+        "targetMonthForDue": "September 2026",
+        "daysLeft": 4,
+        "monthAmount": 1000
+      },
+      {
+        "id": "b14",
+        "name": "TikTok PayLater",
+        "amount": 1644.87,
+        "dueDay": "1",
+        "type": "Loan / Installment",
+        "startMonth": "October 2026",
+        "endMonth": "August 2027",
+        "baseAmount": 1644.87,
+        "isOverridden": false,
+        "paid": false,
+        "targetMonthForDue": "October 2026",
+        "daysLeft": 30,
+        "monthAmount": 1117.19
+      },
+      {
+        "id": "5d2c6b1a-ffbc-4cf6-8817-8999989bc330",
+        "name": "Shared Japan Trip 1",
+        "amount": 2000,
+        "dueDay": "15",
+        "type": "Bill",
+        "startMonth": "September 2026",
+        "endMonth": ""
+      },
+      {
+        "id": "c3176131-291b-4bf8-94e9-87458fef88e1",
+        "name": "Shared Japan Trip 2",
+        "amount": 2000,
+        "dueDay": "30",
+        "type": "Bill",
+        "startMonth": "September 2026",
+        "endMonth": "",
+        "baseAmount": 2000,
+        "isOverridden": false,
+        "paid": false,
+        "targetMonthForDue": "September 2026",
+        "daysLeft": 19,
+        "monthAmount": 2000
+      },
+      {
+        "id": "a5dd66cb-9f36-4a7d-8dc9-30785876de8d",
+        "name": "Spotify",
+        "amount": 164,
+        "dueDay": "4",
+        "type": "Subscription",
+        "startMonth": "September 2026",
+        "endMonth": ""
+      }
+    ],
+    "receivables": [
+      {
+        "id": "r1",
+        "name": "Base Salary (Boombox Social)",
+        "amount": 30000,
+        "category": "Salary",
+        "frequency": "Bi-monthly",
+        "startMonth": "August 2026",
+        "amountReceived": 0,
+        "collected": false,
+        "targetMonthForDue": "August 2026"
+      },
+      {
+        "id": "r2",
+        "name": "August 8 Shoot Balance",
+        "amount": 500,
+        "category": "Shoot",
+        "frequency": "By Date",
+        "date": "",
+        "amountReceived": 0,
+        "collected": false,
+        "targetMonthForDue": "August 2026"
+      },
+      {
+        "id": "r3",
+        "name": "August 29 Shoot",
+        "amount": 3500,
+        "category": "Shoot",
+        "frequency": "By Date",
+        "date": "",
+        "amountReceived": 0,
+        "collected": false,
+        "targetMonthForDue": "August 2026"
+      },
+      {
+        "id": "r4",
+        "name": "John Merin",
+        "amount": 2000,
+        "category": "Payment",
+        "frequency": "By Date",
+        "date": ""
+      },
+      {
+        "id": "r5",
+        "name": "Ampingi",
+        "amount": 2000,
+        "category": "Payment",
+        "frequency": "By Date",
+        "date": ""
+      },
+      {
+        "id": "r6",
+        "name": "Zober",
+        "amount": 2000,
+        "category": "Payment",
+        "frequency": "By Date",
+        "date": ""
+      },
+      {
+        "id": "r7",
+        "name": "Queen",
+        "amount": 4000,
+        "category": "Payment",
+        "frequency": "By Date",
+        "date": "",
+        "amountReceived": 0,
+        "collected": false,
+        "targetMonthForDue": "September 2026"
+      },
+      {
+        "id": "r8",
+        "name": "Dexter (Monthly Retainer)",
+        "amount": 6000,
+        "category": "Edit",
+        "frequency": "Monthly",
+        "startMonth": "August 2026",
+        "amountReceived": 0,
+        "collected": false,
+        "targetMonthForDue": "August 2026"
+      },
+      {
+        "id": "r9",
+        "name": "No Plan B Shoot",
+        "amount": 3500,
+        "category": "Shoot",
+        "frequency": "By Date",
+        "date": ""
+      },
+      {
+        "id": "r10",
+        "name": "Rabbi Shoot (Miss Cordova)",
+        "amount": 4000,
+        "category": "Shoot",
+        "frequency": "By Date",
+        "date": ""
+      },
+      {
+        "id": "r11",
+        "name": "Soredemo Edit (Dexter)",
+        "amount": 30000,
+        "category": "Edit",
+        "frequency": "Monthly",
+        "biMonthlyDays": "15th & 30th",
+        "startMonth": "August 2026",
+        "amountReceived": 0,
+        "collected": false,
+        "targetMonthForDue": "August 2026"
+      },
+      {
+        "id": "r12",
+        "name": "Lander Edit",
+        "amount": 0,
+        "category": "Edit",
+        "frequency": "By Date",
+        "date": ""
+      },
+      {
+        "id": "7a992f93-4049-427a-8290-d2de2232830d",
+        "name": "Jade",
+        "amount": 2000,
+        "category": "Edit",
+        "frequency": "By Date",
+        "biMonthlyDays": "",
+        "monthlyDay": "",
+        "date": "",
+        "startMonth": "September 2026"
+      },
+      {
+        "id": "54dfc17a-9c07-4d95-8ed6-3b06077dde58",
+        "name": "Boombox Incentive",
+        "amount": 1000,
+        "category": "Shoot",
+        "frequency": "By Date",
+        "biMonthlyDays": "",
+        "monthlyDay": "",
+        "date": "",
+        "startMonth": "September 2026"
+      }
+    ],
+    "shoots": [
+      {
+        "id": "s1",
+        "title": "Stacy Luxe Shoot",
+        "date": "2026-09-05",
+        "category": "Solo Shoot",
+        "status": "Confirmed",
+        "completed": true,
+        "amount": 0
+      },
+      {
+        "id": "s2",
+        "title": "Episode 4: TOD",
+        "date": "2026-09-10",
+        "category": "Assistant",
+        "status": "Pencil",
+        "completed": true
+      }
+    ]
+  },
+  "logs": {
+    "August 2026": {
+      "billsPaid": [
+        "b6",
+        "b14",
+        "b5",
+        "b7",
+        "b8",
+        "b9",
+        "b10",
+        "b13",
+        "b2",
+        "b11",
+        "b3",
+        "b4",
+        "b12",
+        "b1"
+      ],
+      "recsCollected": {
+        "r1": {
+          "amountReceived": 30000,
+          "collected": true
+        }
+      }
+    },
+    "September 2026": {
+      "billsPaid": [
+        "b5",
+        "b7",
+        "b6",
+        "b8",
+        "b10",
+        "5d2c6b1a-ffbc-4cf6-8817-8999989bc330",
+        "a5dd66cb-9f36-4a7d-8dc9-30785876de8d"
+      ],
+      "recsCollected": {
+        "r1": {
+          "amountReceived": 0,
+          "collected": false
+        },
+        "r6": {
+          "amountReceived": 2000,
+          "collected": true
+        },
+        "r5": {
+          "amountReceived": 2000,
+          "collected": true
+        },
+        "r7": {
+          "amountReceived": 4000,
+          "collected": true
+        },
+        "54dfc17a-9c07-4d95-8ed6-3b06077dde58": {
+          "amountReceived": 1000,
+          "collected": true
+        }
+      },
+      "billOverrides": {
+        "b14": 1117.19,
+        "b7": 699
+      }
+    }
+  },
+  "updatedAt": 1789092594466
+}

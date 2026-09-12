@@ -106,5 +106,4 @@ export interface EditFormData {
   completed?: boolean;
   baseAmount?: number;
   monthAmount?: number | string;
-  [key: string]: any;
 }

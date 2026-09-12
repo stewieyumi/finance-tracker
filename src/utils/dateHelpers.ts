@@ -60,3 +60,21 @@ export function formatDaysRemaining(days: number): { text: string; tone: "urgent
     tone: days <= 3 ? "warning" : "normal"
   };
 }
+
+export const formatMonthYear = (date: Date): string => {
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+};
+
+export const getCurrentMonthYear = (): string => {
+  return formatMonthYear(new Date());
+};
+
+export const isSameMonth = (
+  date: Date,
+  monthYear: string
+): boolean => {
+  return formatMonthYear(date) === monthYear;
+};

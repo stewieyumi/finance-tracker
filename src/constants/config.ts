@@ -31,3 +31,5 @@ export const CATEGORIES = [
 export const FUND_MILESTONES = [
   1000, 5000, 10000, 20000, 40000, 60000, 80000
 ];
+
+export const DEFAULT_TARGET_FUND = 100000;

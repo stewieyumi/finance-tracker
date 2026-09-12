@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useRef } from "react";
 import { X, Sparkles, ShieldCheck, Flame, CreditCard, Plane, TrendingUp } from "lucide-react";
 import { parseMonthKey, getAdjacentMonth } from "../utils/dateHelpers";
 import { UnifiedFinanceData } from "../types/finance";
+import { DEFAULT_TARGET_FUND } from "../constants/config";
 
 interface FinancialAnalyticsModalProps {
   isOpen: boolean;
@@ -45,7 +46,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
   const dailyBurnRate = safeToSpend / remainingDays;
 
   const maribankBal = globalData?.wallets?.maribank || 0;
-  const targetFund = globalData?.settings?.targetFund ?? globalData?.targetFund ?? 80000;
+  const targetFund = globalData?.settings?.targetFund ?? globalData?.targetFund ?? DEFAULT_TARGET_FUND;
   const phpToJpyRate = globalData?.settings?.phpToJpyRate ?? 2.71;
   const jpyEquivalent = Math.round(maribankBal * phpToJpyRate);
   const targetJpy = Math.round(targetFund * phpToJpyRate);

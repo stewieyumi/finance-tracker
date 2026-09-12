@@ -1,13 +1,14 @@
 import { UnifiedFinanceData } from "../types/finance";
+import { DEFAULT_TARGET_FUND } from "./config";
 
 export const INITIAL_UNIFIED_DATA: UnifiedFinanceData = {
   settings: {
-    targetFund: 100000,
+    targetFund: DEFAULT_TARGET_FUND,
     perPayoutSalary: 15000,
     phpToJpyRate: 2.70,
     defaultTransitAllocation: 1500
   },
-  targetFund: 100000,
+  targetFund: DEFAULT_TARGET_FUND,
   updatedAt: Date.now(),
   wallets: { 
     maribank: 0, 
