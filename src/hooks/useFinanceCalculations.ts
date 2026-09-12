@@ -2,8 +2,13 @@ import { useMemo } from "react";
 import { UnifiedFinanceData } from "../types/finance";
 import { DEFAULT_TARGET_FUND } from "../constants/config";
 import { parseMonthKey, getMonthKey, getAdjacentMonth, getDaysUntil } from "../utils/dateHelpers";
-
-export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedMonth: string) {
+export function getEffectiveBillAmount(
+  baseAmount: number,
+  override?: number
+): number {
+  return override !== undefined ? override : baseAmount;
+  
+}export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedMonth: string) {
 const currentMonthDate = parseMonthKey(selectedMonth);
 const fallbackStartMonth = getMonthKey(new Date());
 
@@ -30,9 +35,13 @@ const fallbackStartMonth = getMonthKey(new Date());
       const targetMonthForDue = oldestUnpaid || selectedMonth;
       const daysLeft = getDaysUntil(b.dueDay, targetMonthForDue);
 
-      const targetOverride = globalData.logs?.[targetMonthForDue]?.billOverrides?.[b.id];
-      const effectiveAmount = targetOverride !== undefined ? targetOverride : b.amount;
-      const isOverridden = targetOverride !== undefined;
+const targetOverride =
+  globalData.logs?.[targetMonthForDue]?.billOverrides?.[b.id];
+
+const effectiveAmount = getEffectiveBillAmount(
+  b.amount,
+  targetOverride
+);      const isOverridden = targetOverride !== undefined;
 
       return {
         ...b,
@@ -75,7 +84,7 @@ const fallbackStartMonth = getMonthKey(new Date());
       if (r.frequency === "By Date") {
         targetMonthForDue = r.date ? getMonthKey(new Date(r.date.replace(/-/g, "/"))) : selectedMonth;
       } else {
-        let ptrMonth = r.startMonth || fallbackStartMonth;
+        let ptrMonth = r.startMonth || "August 2026";
         let loopFailsafe = 0;
         while (parseMonthKey(ptrMonth) <= currentMonthDate && loopFailsafe < 120) {
           const isCol = globalData.logs?.[ptrMonth]?.recsCollected?.[r.id]?.collected;
