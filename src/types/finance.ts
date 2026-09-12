@@ -41,6 +41,12 @@ export interface Receivable {
   targetMonthForDue?: string;
 }
 
+export interface ReceivableViewModel extends Receivable {
+  amountReceived: number;
+  collected: boolean;
+  targetMonthForDue: string;
+}
+
 export interface Shoot {
   id: string;
   title: string;

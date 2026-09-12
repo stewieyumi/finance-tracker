@@ -1,5 +1,9 @@
 import { useMemo } from "react";
-import { UnifiedFinanceData, BillViewModel } from "../types/finance";
+import {
+  UnifiedFinanceData,
+  BillViewModel,
+  ReceivableViewModel
+} from "../types/finance";
 import { DEFAULT_TARGET_FUND } from "../constants/config";
 import { parseMonthKey, getMonthKey, getAdjacentMonth, getDaysUntil } from "../utils/dateHelpers";
 export function getEffectiveBillAmount(
