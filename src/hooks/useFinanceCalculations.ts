@@ -66,8 +66,8 @@ const effectiveAmount = getEffectiveBillAmount(
     });
   }, [globalData, selectedMonth, currentMonthDate]);
 
-  const activeReceivables = useMemo(() => {
-    if (!globalData?.library?.receivables) return [];
+const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
+      if (!globalData?.library?.receivables) return [];
     return globalData.library.receivables.filter(r => {
       if (r.frequency === "Monthly" || r.frequency === "Bi-monthly") {
         const start = parseMonthKey(r.startMonth || fallbackStartMonth);

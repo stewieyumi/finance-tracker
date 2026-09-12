@@ -1,11 +1,17 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Check, Hourglass, Edit2, Save, Trash2, Plus, ArrowDownLeft, Filter, ChevronDown, Calendar, X, CreditCard } from "lucide-react";
-import { Receivable, ReceivableCategory, ReceivableFrequency, EditFormData } from "../types/finance";
+import {
+  Receivable,
+  ReceivableViewModel,
+  ReceivableCategory,
+  ReceivableFrequency,
+  EditFormData
+} from "../types/finance";
 
 const CATEGORIES: (ReceivableCategory | "All")[] = ["All", "Salary", "Shoot", "Edit", "Payment", "Other"];
 
 interface ReceivablesTableProps {
-  activeReceivables: Receivable[];
+  activeReceivables: ReceivableViewModel[];
   selectedMonth: string;
   onToggleStatus: (rec: Receivable) => void;
   onAddPayment: (rec: Receivable, amt: number) => void;

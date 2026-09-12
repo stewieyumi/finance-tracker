@@ -1,3 +1,4 @@
+import { generateId } from "./utils/idHelpers";
 import React, { useState, useMemo, useRef } from "react";
 import { Calendar, Wrench, Cloud, Copy, Download, Upload, AlertTriangle, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
@@ -8,6 +9,7 @@ import { useCloudSync } from "./hooks/useCloudSync";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import { useFinanceCalculations } from "./hooks/useFinanceCalculations";
+import { useWalletActions } from "./hooks/useWalletActions";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MilestoneProgressBar } from "./components/MilestoneProgressBar";
@@ -22,13 +24,6 @@ import { YearlyOverviewModal } from "./components/YearlyOverviewModal";
 import { FinancialAnalyticsModal } from "./components/FinancialAnalyticsModal";
 import { SyncDiagnosticsModal } from "./components/SyncDiagnosticsModal";
 
-function generateId(prefix: string): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-}
-
 function safeLoadAll(): UnifiedFinanceData {
   try {
     const saved = localStorage.getItem("ft_master_data_v1");
@@ -41,6 +36,13 @@ export default function App() {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
   const [globalData, setGlobalData] = useState<UnifiedFinanceData>(safeLoadAll);
   const [selectedMonth, setSelectedMonth] = useState<string>(() => getMonthKey(new Date()));
+  const {
+  commitWallet,
+  incrementWallet,
+  splitPayday
+} = useWalletActions({
+  setGlobalData
+});
   const [showDatePickerModal, setShowDatePickerModal] = useState(false);
   const [showYearlyModal, setShowYearlyModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
@@ -115,12 +117,6 @@ useKeyboardShortcuts({
 
   const handleWalletCommit = (key: string, value: number) => {
     setGlobalData(p => ({ ...p, wallets: { ...p.wallets, [key]: value } }));
-  };
-
-  const incrementWallet = (key: string, addAmount: number) => {
-    const current = parseFloat(String(globalData.wallets[key])) || 0;
-    const num = current + addAmount;
-    setGlobalData(p => ({ ...p, wallets: { ...p.wallets, [key]: num } }));
   };
 
   const handleExecutePaydaySplit = () => {

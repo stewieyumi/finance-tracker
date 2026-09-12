@@ -7,15 +7,10 @@ import { getDaysUntil, formatDaysRemaining } from "../utils/dateHelpers";
 
 const BILL_TYPES = ["All", "Bill", "Subscription", "Loan / Installment"];
 
-interface ExtendedBill extends Bill {
-  baseAmount?: number;
-  monthAmount?: number | string;
-}
-
 interface BillsTableProps {
-  activeBills: ExtendedBill[];
+  activeBills: BillViewModel[];
   selectedMonth: string;
-  onToggleStatus: (bill: ExtendedBill) => void;
+  onToggleStatus: (bill: BillViewModel) => void;
   onAddBill: (bill: { name: string; amount: number; dueDay: string; type: BillType; startMonth: string; endMonth: string }) => void;
   onDeleteBill: (id: string) => void;
   onSaveEdit: (category: "bills", scope?: "monthOnly" | "default") => void;
@@ -78,7 +73,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
     setNewBill({ name: "", amount: "", dueDay: "1", type: "Bill", startMonth: selectedMonth, endMonth: selectedMonth });
   };
 
-  const handleStartEdit = (bill: ExtendedBill) => {
+const handleStartEdit = (bill: BillViewModel) => {
     setEditingId(bill.id);
     setEditScope("monthOnly");
     setEditForm({
