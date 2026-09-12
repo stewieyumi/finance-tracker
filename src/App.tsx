@@ -14,6 +14,7 @@ import { useBillActions } from "./hooks/useBillActions";
 import { useReceivableActions } from "./hooks/useReceivableActions";
 import { useShootActions } from "./hooks/useShootActions";
 import { useBillEditActions } from "./hooks/useBillEditActions";
+import { useBillSaveActions } from "./hooks/useBillSaveActions";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MilestoneProgressBar } from "./components/MilestoneProgressBar";
@@ -88,6 +89,21 @@ const {
   deleteShoot
 } = useShootActions({
   setGlobalData,
+  showToast
+});
+
+const { resetMonthOverride } = useBillEditActions({
+  setGlobalData,
+  selectedMonth,
+  showToast
+});
+
+const { saveBillEdit } = useBillSaveActions({
+  setGlobalData,
+  selectedMonth,
+  editingId,
+  editForm,
+  setEditingId,
   showToast
 });
 
@@ -230,27 +246,6 @@ useKeyboardShortcuts({
       showToast("Default saved in Library");
     }
     setEditingId(null);
-  };
-
-  const resetMonthOverride = (billId: string) => {
-    setGlobalData(p => {
-      const mLog = p.logs[selectedMonth];
-      if (!mLog?.billOverrides?.[billId]) return p;
-      const nextOverrides = { ...mLog.billOverrides };
-      delete nextOverrides[billId];
-      return {
-        ...p,
-        logs: {
-          ...p.logs,
-          [selectedMonth]: {
-            ...mLog,
-            billOverrides: nextOverrides
-          }
-        }
-      };
-    });
-    setEditingId(null);
-    showToast("Reset to default library balance");
   };
 
   const copySummaryToClipboard = () => {
