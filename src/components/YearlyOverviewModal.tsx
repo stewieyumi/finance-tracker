@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { X, Calendar, ChevronDown, Check } from "lucide-react";
 import { MONTH_LIST, YEAR_LIST } from "../constants/config";
-import { parseMonthKey } from "../utils/dateHelpers";
+import { parseMonthKey, getMonthKey } from "../utils/dateHelpers";
 import { UnifiedFinanceData } from "../types/finance";
 
 interface YearlyOverviewModalProps {
@@ -51,9 +51,10 @@ export const YearlyOverviewModal: React.FC<YearlyOverviewModalProps> = ({
   }, [isOpen, onClose]);
 
   const yearlyStats = useMemo(() => {
-    const bills = globalData?.library?.bills || [];
-    const receivables = globalData?.library?.receivables || [];
-    const logs = globalData?.logs || {};
+const bills = globalData?.library?.bills || [];
+const receivables = globalData?.library?.receivables || [];
+const logs = globalData?.logs || {};
+const fallbackStartMonth = getMonthKey(new Date());
 
     let totalYearCommitments = 0;
     let totalYearPaid = 0;
@@ -66,7 +67,7 @@ export const YearlyOverviewModal: React.FC<YearlyOverviewModalProps> = ({
       const mLog = logs[monthKey] || { billsPaid: [], recsCollected: {} };
 
       bills.forEach(b => {
-        const start = parseMonthKey(b.startMonth || "August 2026");
+        const start = parseMonthKey(b.startMonth || fallbackStartMonth);
         if (monthDate >= start) {
           if (b.type !== "Loan / Installment" || !b.endMonth || monthDate <= parseMonthKey(b.endMonth)) {
             const amt = parseFloat(String(b.amount)) || 0;
@@ -81,7 +82,7 @@ export const YearlyOverviewModal: React.FC<YearlyOverviewModalProps> = ({
       receivables.forEach(r => {
         const amt = parseFloat(String(r.amount)) || 0;
         if (r.frequency === "Monthly" || r.frequency === "Bi-monthly") {
-          if (monthDate >= parseMonthKey(r.startMonth || "August 2026")) {
+          if (monthDate >= parseMonthKey(r.startMonth || fallbackStartMonth)) {
             totalYearProjectedIncome += amt;
           }
         } else if (r.frequency === "By Date" && r.date) {
