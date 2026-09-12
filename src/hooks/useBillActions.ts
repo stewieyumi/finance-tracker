@@ -4,6 +4,8 @@ import {
   UnifiedFinanceData
 } from "../types/finance";
 
+import { generateId } from "../utils/idHelpers";
+
 interface UseBillActionsParams {
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
   selectedMonth: string;
@@ -27,11 +29,7 @@ export function useBillActions({
       const isLoan = bill.type === "Loan / Installment";
 
       const newBill: Bill = {
-        id:
-          typeof crypto !== "undefined" &&
-          typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `b_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        id: generateId("b"),
         name: bill.name,
         amount: bill.amount,
         dueDay: bill.dueDay,
