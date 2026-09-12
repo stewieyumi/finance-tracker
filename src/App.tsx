@@ -612,7 +612,7 @@ TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}
             onToggleStatus={toggleBillStatus}
             onAddBill={handleAddBill}
             onDeleteBill={(id) => deleteItem("bills", id)}
-            onSaveEdit={saveEditing}
+            onSaveEdit={(_, scope) => saveBillEdit(scope)}
             onResetMonthOverride={resetMonthOverride}
             editingId={editingId}
             setEditingId={setEditingId}
