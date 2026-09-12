@@ -13,6 +13,7 @@ import { useWalletActions } from "./hooks/useWalletActions";
 import { useBillActions } from "./hooks/useBillActions";
 import { useReceivableActions } from "./hooks/useReceivableActions";
 import { useShootActions } from "./hooks/useShootActions";
+import { useBillEditActions } from "./hooks/useBillEditActions";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MilestoneProgressBar } from "./components/MilestoneProgressBar";
