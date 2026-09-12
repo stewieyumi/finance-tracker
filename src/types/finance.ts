@@ -18,6 +18,14 @@ export interface Bill {
   isOverridden?: boolean;
 }
 
+export interface BillViewModel extends Bill {
+  baseAmount: number;
+  paid: boolean;
+  targetMonthForDue: string;
+  daysLeft: number;
+  isOverridden: boolean;
+}
+
 export interface Receivable {
   id: string;
   name: string;
