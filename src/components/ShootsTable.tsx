@@ -29,6 +29,12 @@ const formatShortDate = (dateStr?: string) => {
   return dateStr;
 };
 
+// Helper to get local date in YYYY-MM-DD format for exact matching
+const getLocalToday = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
   activeShoots,
   selectedMonth,
@@ -56,6 +62,8 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
   const [selectedFilter, setSelectedFilter] = useState<"All" | ShootCategory>("All");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const todayStr = getLocalToday();
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -209,7 +217,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                       <div className="flex items-center gap-2 min-w-0">
                         <button onClick={() => onToggleCompletion(shoot.id)} aria-label={`Mark ${shoot.title} as ${shoot.completed ? "active" : "done"}`} className="shrink-0 focus:outline-none">
                           {shoot.completed ? (
-                            <span className="w-4 h-4 rounded-full bg-amber-950/70 border border-amber-500/50 text-amber-400 flex items-center justify-center">
+                            <span className="w-4 h-4 rounded-full bg-emerald-950/70 border border-emerald-500/50 text-emerald-400 flex items-center justify-center">
                               <Check size={9} className="stroke-[3]" />
                             </span>
                           ) : (
@@ -235,7 +243,15 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                         <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.2 rounded font-medium">
                           {shoot.category}
                         </span>
-                        {shoot.date && <span>• {formatShortDate(shoot.date)}</span>}
+                        {shoot.date && (
+                          shoot.date === todayStr ? (
+                            <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-[1px] rounded font-bold uppercase tracking-wider text-[9px] ml-1">
+                              Due Today
+                            </span>
+                          ) : (
+                            <span>• {formatShortDate(shoot.date)}</span>
+                          )
+                        )}
                       </div>
 
                       <button
@@ -283,8 +299,8 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                     <td className="py-2.5 px-3 whitespace-nowrap">
                       <button onClick={() => onToggleCompletion(shoot.id)} aria-label={`Toggle completion for ${shoot.title}`} className="flex items-center gap-1.5 focus:outline-none">
                         {shoot.completed ? (
-                          <span className="flex items-center justify-center gap-1 w-[72px] text-amber-400 text-[10px] font-semibold bg-amber-950/40 px-2 py-0.5 rounded-lg border border-amber-600/30">
-                            <Check size={10} className="stroke-[3]" /> Done
+                          <span className="flex items-center justify-center gap-1 w-[72px] text-emerald-400 text-[10px] font-bold bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-600/30 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
+                            <Check size={10} className="stroke-[3]" /> Settled
                           </span>
                         ) : (
                           <span className="flex items-center justify-center gap-1 w-[72px] text-zinc-400 text-[10px] font-medium bg-zinc-900/40 px-2 py-0.5 rounded-lg border border-zinc-700/30">
@@ -320,10 +336,17 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                         />
                       ) : (
                         shoot.date ? (
-                          <span className="inline-flex items-center gap-1 text-zinc-300 font-mono text-[11px]">
-                            <Calendar size={10} className="text-zinc-500" />
-                            {formatShortDate(shoot.date)}
-                          </span>
+                          shoot.date === todayStr ? (
+                            <span className="inline-flex items-center gap-1 text-rose-400 font-bold text-[10px] bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md shadow-[0_0_10px_rgba(244,63,94,0.1)]">
+                              <Calendar size={10} className="text-rose-400" />
+                              DUE TODAY
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-zinc-300 font-mono text-[11px]">
+                              <Calendar size={10} className="text-zinc-500" />
+                              {formatShortDate(shoot.date)}
+                            </span>
+                          )
                         ) : (
                           <span className="text-zinc-600">—</span>
                         )
