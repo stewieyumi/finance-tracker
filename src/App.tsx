@@ -10,6 +10,9 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import { useFinanceCalculations } from "./hooks/useFinanceCalculations";
 import { useWalletActions } from "./hooks/useWalletActions";
+import { useBillActions } from "./hooks/useBillActions";
+import { useReceivableActions } from "./hooks/useReceivableActions";
+import { useShootActions } from "./hooks/useShootActions";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MilestoneProgressBar } from "./components/MilestoneProgressBar";
@@ -57,6 +60,35 @@ export default function App() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
   };
+
+const {
+  addBill: handleAddBill,
+  toggleBillStatus,
+  deleteBill
+} = useBillActions({
+  setGlobalData,
+  selectedMonth,
+  showToast
+});
+
+const {
+  addReceivable: handleAddReceivable,
+  toggleReceivableStatus,
+  addPayment
+} = useReceivableActions({
+  setGlobalData,
+  selectedMonth,
+  showToast
+});
+
+const {
+  addShoot: handleAddShoot,
+  toggleShootCompletion,
+  deleteShoot
+} = useShootActions({
+  setGlobalData,
+  showToast
+});
 
   const {
     isSyncing,
@@ -129,104 +161,6 @@ useKeyboardShortcuts({
     };
     setGlobalData(p => ({ ...p, wallets: newWallets }));
     showToast("✨ Payday split automatically distributed to wallets!");
-  };
-
-  const toggleBillStatus = (bill: Bill) => {
-    const target = bill.targetMonthForDue || selectedMonth;
-    setGlobalData(p => {
-      const mLog = p.logs[target] || { billsPaid: [], recsCollected: {} };
-      const isPaid = mLog.billsPaid?.includes(bill.id);
-      const newPaid = isPaid ? (mLog.billsPaid || []).filter(x => x !== bill.id) : [...(mLog.billsPaid || []), bill.id];
-      return { ...p, logs: { ...p.logs, [target]: { ...mLog, billsPaid: newPaid } } };
-    });
-  };
-
-  const toggleReceivableStatus = (rec: Receivable) => {
-    const target = rec.targetMonthForDue || selectedMonth;
-    const fullAmt = parseFloat(String(rec.amount)) || 0;
-
-    setGlobalData(p => {
-      const logs = p.logs || {};
-      const mLog = logs[target] || { billsPaid: [], recsCollected: {} };
-      const recsCollected = mLog.recsCollected || {};
-      const rLog = recsCollected[rec.id] || { amountReceived: 0, collected: false };
-
-      const willCollect = !rLog.collected;
-      const nextReceived = willCollect ? fullAmt : 0;
-
-      return {
-        ...p,
-        logs: {
-          ...logs,
-          [target]: {
-            ...mLog,
-            recsCollected: {
-              ...recsCollected,
-              [rec.id]: { amountReceived: nextReceived, collected: willCollect }
-            }
-          }
-        }
-      };
-    });
-  };
-
-  const addPayment = (rec: Receivable, amt: number) => {
-    const target = rec.targetMonthForDue || selectedMonth;
-    setGlobalData(p => {
-      const mLog = p.logs[target] || { billsPaid: [], recsCollected: {} };
-      const rLog = mLog.recsCollected?.[rec.id] || { amountReceived: 0, collected: false };
-      const newAmt = rLog.amountReceived + amt;
-      const fullyPaid = newAmt >= parseFloat(String(rec.amount));
-      return { ...p, logs: { ...p.logs, [target]: { ...mLog, recsCollected: { ...mLog.recsCollected, [rec.id]: { amountReceived: newAmt, collected: fullyPaid } } } } };
-    });
-  };
-
-  const toggleShootCompletion = (id: string) => {
-    setGlobalData(p => ({ ...p, library: { ...p.library, shoots: p.library.shoots.map(s => s.id === id ? { ...s, completed: !s.completed } : s) } }));
-  };
-
-  const handleAddBill = (nb: { name: string; amount: number; dueDay: string; type: BillType; startMonth: string; endMonth: string }) => {
-    const isLoan = nb.type === "Loan / Installment";
-    const billObj: Bill = { 
-      id: generateId("b"), 
-      name: nb.name, 
-      amount: nb.amount, 
-      dueDay: nb.dueDay, 
-      type: nb.type, 
-      startMonth: isLoan ? nb.startMonth : selectedMonth, 
-      endMonth: isLoan ? nb.endMonth : "" 
-    };
-    setGlobalData(p => ({ ...p, library: { ...p.library, bills: [...p.library.bills, billObj] } }));
-    showToast(`Added ${nb.name}`);
-  };
-
-  const handleAddReceivable = (nr: { name: string; amount: number; category: ReceivableCategory; frequency: ReceivableFrequency; biMonthlyDays?: string; monthlyDay?: string; date?: string }) => {
-    const recObj: Receivable = { 
-      id: generateId("r"), 
-      name: nr.name, 
-      amount: nr.amount, 
-      category: nr.category || "Shoot", 
-      frequency: nr.frequency, 
-      biMonthlyDays: nr.frequency === "Bi-monthly" ? nr.biMonthlyDays : "", 
-      monthlyDay: nr.frequency === "Monthly" ? nr.monthlyDay : "", 
-      date: nr.frequency === "By Date" ? nr.date : "", 
-      startMonth: selectedMonth 
-    };
-    setGlobalData(p => ({ ...p, library: { ...p.library, receivables: [...p.library.receivables, recObj] } }));
-    showToast(`Added ${nr.name}`);
-  };
-
-  const handleAddShoot = (ns: { title: string; date: string; category: ShootCategory; status: ShootStatus }) => {
-    const shootObj: Shoot = { 
-      id: generateId("s"), 
-      title: ns.title, 
-      date: ns.date, 
-      category: ns.category || "Solo Shoot", 
-      status: ns.status, 
-      completed: false 
-    };
-    setGlobalData(p => ({ ...p, library: { ...p.library, shoots: [...p.library.shoots, shootObj] } }));
-    showToast(`Added ${ns.title}`);
   };
 
   const deleteItem = (category: "bills" | "receivables" | "shoots", id: string) => {
