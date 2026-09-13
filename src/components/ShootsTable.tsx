@@ -80,17 +80,27 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
     return activeShoots.filter(s => s.category === selectedFilter);
   }, [activeShoots, selectedFilter]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newShoot.title) return;
-    onAddShoot({
-      title: newShoot.title,
-      date: newShoot.date,
-      category: newShoot.category,
-      status: newShoot.status
-    });
-    setNewShoot({ title: "", date: "", category: "Solo Shoot", status: "Confirmed" });
-  };
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+
+  const title = newShoot.title.trim();
+
+  if (!title) return;
+
+  onAddShoot({
+    title,
+    date: newShoot.date,
+    category: newShoot.category,
+    status: newShoot.status
+  });
+
+  setNewShoot({
+    title: "",
+    date: "",
+    category: "Solo Shoot",
+    status: "Confirmed"
+  });
+};
 
   const handleStartEdit = (shoot: Shoot) => {
     setEditingId(shoot.id);
@@ -328,13 +338,16 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                     <td className="py-2.5 px-3 text-center whitespace-nowrap">
                       {isEditing ? (
                         <input
-                          type="text"
-                          placeholder="e.g. Sep 12"
+                          type="date"
                           value={editForm.date || ""}
-                          onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-                          className="bg-[#0b0b0d] border border-zinc-700 rounded-md px-1.5 py-0.5 text-white text-xs w-24 text-center"
-                        />
-                      ) : (
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              date: e.target.value
+                            })
+                          }
+                          className="bg-[#0b0b0d] border border-zinc-700 rounded-md px-1.5 py-0.5 text-white text-xs w-32 text-center"
+                        />                      ) : (
                         shoot.date ? (
                           shoot.date === todayStr ? (
                             <span className="inline-flex items-center gap-1 text-rose-400 font-bold text-[10px] bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md shadow-[0_0_10px_rgba(244,63,94,0.1)]">
@@ -439,13 +452,16 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
           />
 
           <input
-            type="text"
-            placeholder="Date (e.g. Sep 12)"
+            type="date"
             value={newShoot.date}
-            onChange={(e) => setNewShoot({ ...newShoot, date: e.target.value })}
-            className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 font-mono outline-none w-28"
+            onChange={(e) =>
+            setNewShoot({
+            ...newShoot,
+            date: e.target.value
+            })
+            }
+             className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2.5 py-1.5 text-xs text-white font-mono outline-none w-32"
           />
-
           <select
             value={newShoot.category}
             onChange={(e) => setNewShoot({ ...newShoot, category: e.target.value as ShootCategory })}

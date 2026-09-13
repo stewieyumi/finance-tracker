@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useRef } from "react";
 import { X, Sparkles, ShieldCheck, Flame, CreditCard, Plane, TrendingUp } from "lucide-react";
-import { parseMonthKey, getAdjacentMonth } from "../utils/dateHelpers";
+import { parseMonthKey, getAdjacentMonth, getMonthKey } from "../utils/dateHelpers";
 import { UnifiedFinanceData } from "../types/finance";
 import { DEFAULT_TARGET_FUND } from "../constants/config";
 
@@ -62,11 +62,16 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
       const totalMonths = Math.max(1, (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1);
       
       let elapsedMonths = 0;
+      let totalPaid = 0;
       let ptr = loan.startMonth!;
       let failsafe = 0;
       while (parseMonthKey(ptr) <= currentMonthDate && failsafe < 120) {
         if (logs[ptr]?.billsPaid?.includes(loan.id)) {
           elapsedMonths++;
+          const override = logs[ptr]?.billOverrides?.[loan.id];
+          totalPaid += (override !== undefined && Number.isFinite(override)) 
+            ? override 
+            : (parseFloat(String(loan.amount)) || 0);
         }
         if (ptr === loan.endMonth) break;
         ptr = getAdjacentMonth(ptr, 1);
@@ -74,7 +79,6 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
       }
 
       const totalPrincipal = (parseFloat(String(loan.amount)) || 0) * totalMonths;
-      const totalPaid = (parseFloat(String(loan.amount)) || 0) * elapsedMonths;
       const remainingPrincipal = Math.max(0, totalPrincipal - totalPaid);
       const progressPercent = Math.min(100, (elapsedMonths / totalMonths) * 100);
 
@@ -100,26 +104,125 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
     const receivables = globalData?.library?.receivables || [];
     const logs = globalData?.logs || {};
 
+    const fallbackStartMonth = getMonthKey(new Date());
+
     for (let i = -3; i <= 2; i++) {
       const mKey = getAdjacentMonth(selectedMonth, i);
       const mDate = parseMonthKey(mKey);
-      const mLog = logs[mKey] || { billsPaid: [], recsCollected: {} };
+      const mLog = logs[mKey] || {
+        billsPaid: [],
+        recsCollected: {}
+      };
 
-      const totalBills = bills.filter(b => {
-        const start = parseMonthKey(b.startMonth || "August 2026");
-        if (mDate < start) return false;
-        if (b.type === "Loan / Installment" && b.endMonth && mDate > parseMonthKey(b.endMonth)) return false;
-        return true;
-      }).reduce((sum, b) => sum + (parseFloat(String(b.amount)) || 0), 0);
+      const totalBills = bills
+        .filter(bill => {
+          const startMonth = bill.startMonth || fallbackStartMonth;
+          const startDate = parseMonthKey(startMonth);
 
-      const totalInflow = receivables.reduce((sum, r) => {
-        const amt = parseFloat(String(r.amount)) || 0;
-        const recLog = mLog.recsCollected?.[r.id];
-        if (recLog?.collected || recLog?.amountReceived) {
-          return sum + (parseFloat(String(recLog.amountReceived)) || amt);
-        }
-        return sum + amt;
-      }, 0);
+          if (mDate < startDate) {
+            return false;
+          }
+
+          if (
+            bill.type === "Loan / Installment" &&
+            bill.endMonth &&
+            mDate > parseMonthKey(bill.endMonth)
+          ) {
+            return false;
+          }
+
+          return true;
+        })
+        .reduce((sum, bill) => {
+          const baseAmount =
+            parseFloat(String(bill.amount)) || 0;
+
+          const override =
+            mLog.billOverrides?.[bill.id];
+
+          const effectiveAmount =
+            override !== undefined &&
+            Number.isFinite(override)
+              ? override
+              : baseAmount;
+
+          return sum + Math.max(0, effectiveAmount);
+        }, 0);
+
+      const totalInflow = receivables.reduce(
+        (sum, receivable) => {
+          const amount =
+            Math.max(
+              0,
+              parseFloat(String(receivable.amount)) || 0
+            );
+
+          if (amount <= 0) {
+            return sum;
+          }
+
+          let isScheduled = false;
+
+          if (
+            receivable.frequency === "Monthly" ||
+            receivable.frequency === "Bi-monthly"
+          ) {
+            const startMonth =
+              receivable.startMonth ||
+              fallbackStartMonth;
+
+            isScheduled =
+              mDate >= parseMonthKey(startMonth);
+          } else if (
+            receivable.frequency === "By Date"
+          ) {
+            if (!receivable.date) {
+              isScheduled = false;
+            } else {
+              const exactMonth = getMonthKey(
+                new Date(
+                  receivable.date.replace(/-/g, "/")
+                )
+              );
+
+              isScheduled = exactMonth === mKey;
+            }
+          }
+
+          if (!isScheduled) {
+            return sum;
+          }
+
+          const recLog =
+            mLog.recsCollected?.[receivable.id];
+
+          if (recLog) {
+            const received = Math.min(
+              amount,
+              Math.max(
+                0,
+                parseFloat(
+                  String(recLog.amountReceived)
+                ) || 0
+              )
+            );
+
+            /*
+             * For a scheduled receivable:
+             * - use actual received amount when payment exists
+             * - otherwise show the projected amount
+             */
+            return sum + (
+              received > 0
+                ? received
+                : amount
+            );
+          }
+
+          return sum + amount;
+        },
+        0
+      );
 
       months.push({
         month: mKey.split(" ")[0].slice(0, 3),
@@ -128,6 +231,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
         bills: totalBills
       });
     }
+
     return months;
   }, [globalData, selectedMonth]);
 

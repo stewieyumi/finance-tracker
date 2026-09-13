@@ -6,11 +6,22 @@ interface DateJumpModalProps {
   isOpen: boolean;
   onClose: () => void;
   onJump: (monthKey: string) => void;
+  selectedMonth: string;
 }
 
-export const DateJumpModal: React.FC<DateJumpModalProps> = ({ isOpen, onClose, onJump }) => {
+export const DateJumpModal: React.FC<DateJumpModalProps> = ({ isOpen, onClose, onJump, selectedMonth }) => {
   const [jumpMonth, setJumpMonth] = useState("August");
   const [jumpYear, setJumpYear] = useState("2026");
+
+  useEffect(() => {
+    if (isOpen && selectedMonth) {
+      const parts = selectedMonth.split(" ");
+      if (parts.length === 2) {
+        setJumpMonth(parts[0]);
+        setJumpYear(parts[1]);
+      }
+    }
+  }, [isOpen, selectedMonth]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

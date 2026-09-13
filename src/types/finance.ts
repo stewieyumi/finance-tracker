@@ -12,10 +12,6 @@ export interface Bill {
   type: BillType;
   startMonth?: string;
   endMonth?: string;
-  paid?: boolean;
-  targetMonthForDue?: string;
-  daysLeft?: number;
-  isOverridden?: boolean;
 }
 
 export interface BillViewModel extends Bill {
@@ -24,6 +20,7 @@ export interface BillViewModel extends Bill {
   targetMonthForDue: string;
   daysLeft: number;
   isOverridden: boolean;
+  totalLoanPaid?: number;
 }
 
 export interface Receivable {
@@ -36,9 +33,6 @@ export interface Receivable {
   monthlyDay?: string;
   date?: string;
   startMonth?: string;
-  amountReceived?: number;
-  collected?: boolean;
-  targetMonthForDue?: string;
 }
 
 export interface ReceivableViewModel extends Receivable {
@@ -90,6 +84,7 @@ export interface UnifiedFinanceData {
   settings?: AppSettings;
   targetFund?: number;
   updatedAt?: number;
+  paydaySplitExecutions?: string[];
   wallets: WalletState;
   library: {
     bills: Bill[];
@@ -108,7 +103,7 @@ export interface EditFormData {
   amount?: number;
   dueDay?: string;
   type?: BillType;
-  category?: ReceivableCategory | ShootCategory | string;
+  category?: ReceivableCategory | ShootCategory;
   frequency?: ReceivableFrequency;
   biMonthlyDays?: string;
   monthlyDay?: string;

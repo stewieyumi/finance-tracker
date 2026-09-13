@@ -34,9 +34,52 @@ import { SyncDiagnosticsModal } from "./components/SyncDiagnosticsModal";
 function safeLoadAll(): UnifiedFinanceData {
   try {
     const saved = localStorage.getItem("ft_master_data_v1");
-    if (saved) return JSON.parse(saved);
-  } catch (err) {}
-  return INITIAL_UNIFIED_DATA;
+
+    if (!saved) {
+      return INITIAL_UNIFIED_DATA;
+    }
+
+    const parsed = JSON.parse(saved);
+
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !parsed.wallets ||
+      typeof parsed.wallets !== "object" ||
+      !parsed.library ||
+      typeof parsed.library !== "object" ||
+      !Array.isArray(parsed.library.bills) ||
+      !Array.isArray(parsed.library.receivables) ||
+      !Array.isArray(parsed.library.shoots) ||
+      !parsed.logs ||
+      typeof parsed.logs !== "object" ||
+      !parsed.settings ||
+      typeof parsed.settings !== "object"
+    ) {
+      console.warn(
+        "Invalid local finance data found. Using initial data instead."
+      );
+      return INITIAL_UNIFIED_DATA;
+    }
+
+    const updatedAt =
+      typeof parsed.updatedAt === "number" &&
+      Number.isFinite(parsed.updatedAt) &&
+      parsed.updatedAt >= 0
+        ? parsed.updatedAt
+        : Date.now();
+
+    return {
+      ...parsed,
+      updatedAt
+    } as UnifiedFinanceData;
+  } catch (err) {
+    console.warn(
+      "Could not load local finance data. Using initial data instead.",
+      err
+    );
+    return INITIAL_UNIFIED_DATA;
+  }
 }
 
 export default function App() {
@@ -58,6 +101,7 @@ const {
   const [editForm, setEditForm] = useState<EditFormData>({});
   const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const paydaySplitInProgressRef = useRef(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -155,18 +199,42 @@ const { saveShootEdit } = useShootSaveActions({
     remainingBuffer
   } = useFinanceCalculations(globalData, selectedMonth);
 
-  const isModalOpen = showDatePickerModal || showYearlyModal || showAnalyticsModal || showDebugModal;
-  usePullToRefresh(() => pullLatestData(), isModalOpen);
+  const isModalOpen =
+    showDatePickerModal ||
+    showYearlyModal ||
+    showAnalyticsModal ||
+    showDebugModal;
 
-useKeyboardShortcuts({
-  onToggleDatePicker: () => setShowDatePickerModal(prev => !prev),
-  onToggleDebug: () => setShowDebugModal(prev => !prev),
-  onToggleYearly: () => setShowYearlyModal(prev => !prev),
-  onToggleAnalytics: () => setShowAnalyticsModal(prev => !prev),
-  onManualSync: forceManualSync,
-  onPullData: () => pullLatestData(false),
-  onTogglePrivacy: () => setIsPrivacyMode(prev => !prev),
-  onCloseAll: () => {
+  const isEditing = editingId !== null;
+
+  usePullToRefresh(
+    () => {
+      if (isEditing) {
+        showToast("✏️ Finish editing before pulling cloud data.");
+        return;
+      }
+
+      pullLatestData();
+    },
+    isModalOpen || isEditing
+  );
+
+  useKeyboardShortcuts({
+    onToggleDatePicker: () => setShowDatePickerModal(prev => !prev),
+    onToggleDebug: () => setShowDebugModal(prev => !prev),
+    onToggleYearly: () => setShowYearlyModal(prev => !prev),
+    onToggleAnalytics: () => setShowAnalyticsModal(prev => !prev),
+    onManualSync: forceManualSync,
+    onPullData: () => {
+      if (isEditing) {
+        showToast("✏️ Finish editing before pulling cloud data.");
+        return;
+      }
+
+      pullLatestData(false);
+    },
+    onTogglePrivacy: () => setIsPrivacyMode(prev => !prev),
+    onCloseAll: () => {
     setShowDatePickerModal(false);
     setShowYearlyModal(false);
     setShowAnalyticsModal(false);
@@ -183,15 +251,81 @@ useKeyboardShortcuts({
   ], [selectedMonth]);
 
   const handleExecutePaydaySplit = () => {
-    const newWallets: WalletState = {
-      ...globalData.wallets,
-      maya: (parseFloat(String(globalData.wallets.maya)) || 0) + targetMayaAllocation,
-      maribank: (parseFloat(String(globalData.wallets.maribank)) || 0) + targetMariBankAllocation,
-      gcash: (parseFloat(String(globalData.wallets.gcash)) || 0) + targetGCashAllocation,
-      gotyme: (parseFloat(String(globalData.wallets.gotyme)) || 0) + targetGoTymeAllocation
-    };
-    setGlobalData(p => ({ ...p, wallets: newWallets }));
-    showToast("✨ Payday split automatically distributed to wallets!");
+    if (paydaySplitInProgressRef.current) return;
+
+    if (remainingBuffer < 0) {
+      showToast("⚠️ Payday allocation exceeds the configured payout.");
+      return;
+    }
+
+    const now = new Date();
+    const executionKey =
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+    if (globalData.paydaySplitExecutions?.includes(executionKey)) {
+      showToast("⚠️ Payday split already executed today.");
+      return;
+    }
+
+    paydaySplitInProgressRef.current = true;
+
+    try {
+      const totalDistribution =
+        targetMayaAllocation +
+        targetMariBankAllocation +
+        targetGCashAllocation +
+        targetGoTymeAllocation;
+
+      const confirmed = confirm(
+        `Distribute ₱${totalDistribution.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })} into your wallets?\n\n` +
+        `Maya: ₱${targetMayaAllocation.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}\n` +
+        `MariBank: ₱${targetMariBankAllocation.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}\n` +
+        `GCash: ₱${targetGCashAllocation.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}\n` +
+        `GoTyme: ₱${targetGoTymeAllocation.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })}`
+      );
+
+      if (!confirmed) return;
+
+      setGlobalData(prev => {
+        const executions = prev.paydaySplitExecutions || [];
+
+        if (executions.includes(executionKey)) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          wallets: {
+            ...prev.wallets,
+            maya: (parseFloat(String(prev.wallets.maya)) || 0) + targetMayaAllocation,
+            maribank: (parseFloat(String(prev.wallets.maribank)) || 0) + targetMariBankAllocation,
+            gcash: (parseFloat(String(prev.wallets.gcash)) || 0) + targetGCashAllocation,
+            gotyme: (parseFloat(String(prev.wallets.gotyme)) || 0) + targetGoTymeAllocation
+          },
+          paydaySplitExecutions: [...executions, executionKey],
+          updatedAt: Date.now()
+        };
+      });
+
+      showToast("✨ Payday split automatically distributed to wallets!");
+    } finally {
+      paydaySplitInProgressRef.current = false;
+    }
   };
 
 const copySummaryToClipboard = async () => {
@@ -236,12 +370,35 @@ const copySummaryToClipboard = async () => {
     reader.onload = (evt) => {
       try {
         const parsed = JSON.parse(evt.target?.result as string);
-        if (!parsed.wallets || !parsed.library || !Array.isArray(parsed.library.bills)) {
+
+        if (
+          !parsed ||
+          typeof parsed !== "object" ||
+          !parsed.wallets ||
+          typeof parsed.wallets !== "object" ||
+          !parsed.library ||
+          typeof parsed.library !== "object" ||
+          !Array.isArray(parsed.library.bills) ||
+          !Array.isArray(parsed.library.receivables) ||
+          !Array.isArray(parsed.library.shoots) ||
+          !parsed.logs ||
+          typeof parsed.logs !== "object" ||
+          !parsed.settings ||
+          typeof parsed.settings !== "object"
+        ) {
           alert("This file doesn't look like a valid backup.");
           return;
         }
+
         if (confirm("Import this backup? It will replace current data.")) {
-          setGlobalData(parsed);
+          const importedData: UnifiedFinanceData = {
+            ...parsed,
+            updatedAt: (typeof parsed.updatedAt === "number" && Number.isFinite(parsed.updatedAt) && parsed.updatedAt >= 0) 
+              ? parsed.updatedAt 
+              : Date.now()
+          };
+
+          setGlobalData(importedData);
           showToast("Imported backup successfully");
         }
       } catch (err) {
@@ -437,6 +594,7 @@ const copySummaryToClipboard = async () => {
           isOpen={showDatePickerModal}
           onClose={() => setShowDatePickerModal(false)}
           onJump={(m) => { setSelectedMonth(m); setShowDatePickerModal(false); }}
+          selectedMonth={selectedMonth}
         />
 
         <YearlyOverviewModal
@@ -452,8 +610,8 @@ const copySummaryToClipboard = async () => {
           globalData={globalData}
           totalLiquid={totalLiquid}
           debugLog={debugLog}
-          setDebugLog={setDebugLog}
-          setGlobalData={setGlobalData}
+          onForcePush={forceManualSync}
+          onForcePull={() => pullLatestData(false)}
         />
 
         <FinancialAnalyticsModal

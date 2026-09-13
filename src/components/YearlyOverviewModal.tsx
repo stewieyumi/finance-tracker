@@ -70,8 +70,16 @@ const fallbackStartMonth = getMonthKey(new Date());
         const start = parseMonthKey(b.startMonth || fallbackStartMonth);
         if (monthDate >= start) {
           if (b.type !== "Loan / Installment" || !b.endMonth || monthDate <= parseMonthKey(b.endMonth)) {
-            const amt = parseFloat(String(b.amount)) || 0;
+            const baseAmount = parseFloat(String(b.amount)) || 0;
+            const override = mLog.billOverrides?.[b.id];
+
+            const amt =
+              override !== undefined
+                ? Math.max(0, parseFloat(String(override)) || 0)
+                : baseAmount;
+
             totalYearCommitments += amt;
+
             if (mLog.billsPaid?.includes(b.id)) {
               totalYearPaid += amt;
             }

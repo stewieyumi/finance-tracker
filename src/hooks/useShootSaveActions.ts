@@ -1,6 +1,8 @@
 import {
   EditFormData,
   Shoot,
+  ShootCategory,
+  ShootStatus,
   UnifiedFinanceData
 } from "../types/finance";
 
@@ -12,6 +14,22 @@ interface UseShootSaveActionsParams {
   showToast: (message: string) => void;
 }
 
+const SHOOT_CATEGORIES: ShootCategory[] = [
+  "Solo Shoot",
+  "Assistant",
+  "Video Edit",
+  "Event",
+  "Commercial",
+  "Other"
+];
+
+const SHOOT_STATUSES: ShootStatus[] = [
+  "Pencil",
+  "Confirmed",
+  "Moved",
+  "Cancelled"
+];
+
 export function useShootSaveActions({
   setGlobalData,
   editingId,
@@ -22,19 +40,44 @@ export function useShootSaveActions({
   const saveShootEdit = () => {
     if (!editingId) return;
 
+    const title = String(editForm.title ?? "").trim();
+
+    if (!title) {
+      showToast("Shoot title is required");
+      return;
+    }
+
+    const category = SHOOT_CATEGORIES.includes(
+      editForm.category as ShootCategory
+    )
+      ? (editForm.category as ShootCategory)
+      : null;
+
+    const status = SHOOT_STATUSES.includes(
+      editForm.status as ShootStatus
+    )
+      ? (editForm.status as ShootStatus)
+      : null;
+
     setGlobalData(prev => ({
       ...prev,
       library: {
         ...prev.library,
-        shoots: prev.library.shoots.map(item =>
-          item.id === editingId
-            ? ({
-                ...item,
-                ...editForm,
-                title: editForm.title || item.title
-              } as Shoot)
-            : item
-        )
+        shoots: prev.library.shoots.map(item => {
+          if (item.id !== editingId) return item;
+
+          const newStatus = status ?? item.status;
+          const updatedShoot: Shoot = {
+            id: item.id,
+            title,
+            date: String(editForm.date ?? item.date ?? ""),
+            category: category ?? item.category,
+            status: newStatus,
+            completed: newStatus === "Cancelled" ? false : item.completed
+          };
+
+          return updatedShoot;
+        })
       },
       updatedAt: Date.now()
     }));

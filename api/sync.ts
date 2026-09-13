@@ -1,7 +1,5 @@
-// api/sync.ts
-import { Redis } from '@upstash/redis';
+import { Redis } from "@upstash/redis";
 
-// Tell TypeScript about our environment variables
 declare const process: {
   env: {
     APP_AUTH_SECRET?: string;
@@ -24,59 +22,191 @@ interface VercelApiResponse {
   end: () => void;
 }
 
+interface SyncPayload {
+  updatedAt: number;
+  wallets: unknown;
+  library: unknown;
+  logs?: unknown;
+  settings?: unknown;
+}
+
 const APP_AUTH_SECRET = process.env.APP_AUTH_SECRET;
 
-// Initialize Upstash Redis using the Vercel KV variable names
 const redis = new Redis({
-  url: process.env.KV_REST_API_URL || '',
-  token: process.env.KV_REST_API_TOKEN || '',
+  url: process.env.KV_REST_API_URL || "",
+  token: process.env.KV_REST_API_TOKEN || ""
 });
 
-export default async function handler(req: VercelApiRequest, res: VercelApiResponse) {
-  // CORS Preflight
+const REDIS_KEY = "finance_data";
+
+function getClientToken(
+  req: VercelApiRequest
+): string | undefined {
+  const syncPasscode = req.headers["x-sync-passcode"];
+
+  if (typeof syncPasscode === "string") {
+    return syncPasscode;
+  }
+
+  const appAuth = req.headers["x-app-auth"];
+
+  if (typeof appAuth === "string") {
+    return appAuth;
+  }
+
+  const authorization = req.headers.authorization;
+
+  if (typeof authorization === "string") {
+    return authorization.replace(/^Bearer\s+/i, "");
+  }
+
+  return undefined;
+}
+
+function isValidUpdatedAt(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= 0
+  );
+}
+
+function isValidPayload(
+  payload: unknown
+): payload is SyncPayload {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+
+  const data = payload as SyncPayload;
+
+  if (!isValidUpdatedAt(data.updatedAt)) {
+    return false;
+  }
+
+  if (!data.wallets || typeof data.wallets !== "object") {
+    return false;
+  }
+
+  if (!data.library || typeof data.library !== "object") {
+    return false;
+  }
+
+  return true;
+}
+
+export default async function handler(
+  req: VercelApiRequest,
+  res: VercelApiResponse
+) {
   if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-sync-passcode, x-app-auth, Authorization");
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, OPTIONS"
+    );
+
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, x-sync-passcode, x-app-auth, Authorization"
+    );
+
     return res.status(200).end();
   }
 
-  // 1. Validate Secret & Redis Config
   if (!APP_AUTH_SECRET) {
-    return res.status(500).json({ error: "Server configuration error: Missing APP_AUTH_SECRET." });
-  }
-  if (!process.env.KV_REST_API_URL) {
-     return res.status(500).json({ error: "Server configuration error: Missing KV_REST_API_URL credentials." });
+    return res.status(500).json({
+      error: "Server configuration error: Missing APP_AUTH_SECRET."
+    });
   }
 
-  // 2. Validate client passcode
-  const clientToken =
-    (req.headers["x-sync-passcode"] as string) ||
-    (req.headers["x-app-auth"] as string) ||
-    (typeof req.headers.authorization === "string"
-      ? req.headers.authorization.replace(/^Bearer\s+/i, "")
-      : undefined);
+  if (
+    !process.env.KV_REST_API_URL ||
+    !process.env.KV_REST_API_TOKEN
+  ) {
+    return res.status(500).json({
+      error: "Server configuration error: Missing Redis credentials."
+    });
+  }
 
-  if (!clientToken || clientToken !== APP_AUTH_SECRET) {
-    return res.status(401).json({ error: "Unauthorized: Invalid or missing passcode." });
+  const clientToken = getClientToken(req);
+
+  if (
+    !clientToken ||
+    clientToken !== APP_AUTH_SECRET
+  ) {
+    return res.status(401).json({
+      error: "Unauthorized: Invalid or missing passcode."
+    });
   }
 
   try {
-    // GET: Pull data from Upstash Redis
     if (req.method === "GET") {
-      const data = await redis.get("finance_data");
+      const data = await redis.get(REDIS_KEY);
+
       return res.status(200).json(data || {});
     }
 
-    // PUT or POST: Save data to Upstash Redis
     if (req.method === "PUT" || req.method === "POST") {
-      const payload = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-      await redis.set("finance_data", payload);
-      return res.status(200).json({ success: true, updatedAt: Date.now(), data: payload });
+      const payload =
+        typeof req.body === "string"
+          ? JSON.parse(req.body)
+          : req.body;
+
+      if (!isValidPayload(payload)) {
+        return res.status(400).json({
+          error:
+            "Invalid sync payload: updatedAt, wallets, and library are required."
+        });
+      }
+
+      const existing =
+        await redis.get<SyncPayload>(REDIS_KEY);
+
+      const existingUpdatedAt =
+        existing &&
+        isValidUpdatedAt(existing.updatedAt)
+          ? existing.updatedAt
+          : null;
+
+      /*
+       * Last-write-wins:
+       *
+       * A payload may replace the cloud copy only when it is
+       * at least as new as the existing cloud record.
+       */
+      if (
+        existingUpdatedAt !== null &&
+        payload.updatedAt <= existingUpdatedAt
+      ) {
+        return res.status(200).json({
+          success: true,
+          accepted: false,
+          cloudUpdatedAt: existingUpdatedAt,
+          data: existing
+        });
+      }
+
+      await redis.set(REDIS_KEY, payload);
+
+      return res.status(200).json({
+        success: true,
+        accepted: true,
+        updatedAt: payload.updatedAt
+      });
     }
 
-    return res.status(405).json({ error: `Method ${req.method} not allowed` });
+    return res.status(405).json({
+      error: `Method ${req.method} not allowed`
+    });
   } catch (err: any) {
-    console.error("Redis Sync handler error:", err);
-    return res.status(500).json({ error: "Internal server error during sync." });
+    console.error(
+      "Redis Sync handler error:",
+      err
+    );
+
+    return res.status(500).json({
+      error:
+        "Internal server error during sync."
+    });
   }
 }

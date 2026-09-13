@@ -28,10 +28,18 @@ const activeBills = useMemo<BillViewModel[]>(() => {
       let oldestUnpaid: string | null = null;
       let ptrMonth = b.startMonth || fallbackStartMonth;
       let loopFailsafe = 0;
+      let totalLoanPaid = 0;
       while (parseMonthKey(ptrMonth) <= currentMonthDate && loopFailsafe < 120) {
         if (b.type === "Loan / Installment" && b.endMonth && parseMonthKey(ptrMonth) > parseMonthKey(b.endMonth)) break;
         const isPaid = globalData.logs?.[ptrMonth]?.billsPaid?.includes(b.id);
-        if (!isPaid) { oldestUnpaid = ptrMonth; break; }
+        
+        if (!isPaid) { 
+          if (!oldestUnpaid) oldestUnpaid = ptrMonth; 
+        } else if (b.type === "Loan / Installment") {
+          const override = globalData.logs?.[ptrMonth]?.billOverrides?.[b.id];
+          totalLoanPaid += (override !== undefined && Number.isFinite(override)) ? override : b.amount;
+        }
+        
         ptrMonth = getAdjacentMonth(ptrMonth, 1);
         loopFailsafe++;
       }
@@ -54,7 +62,8 @@ const effectiveAmount = getEffectiveBillAmount(
         isOverridden,
         paid: isPaidThisMonth,
         targetMonthForDue,
-        daysLeft
+        daysLeft,
+        totalLoanPaid
       };
     }).sort((a, b) => {
       if (a.paid !== b.paid) return a.paid ? 1 : -1;
@@ -88,7 +97,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
       if (r.frequency === "By Date") {
         targetMonthForDue = r.date ? getMonthKey(new Date(r.date.replace(/-/g, "/"))) : selectedMonth;
       } else {
-        let ptrMonth = r.startMonth || "August 2026";
+        let ptrMonth = r.startMonth || fallbackStartMonth;
         let loopFailsafe = 0;
         while (parseMonthKey(ptrMonth) <= currentMonthDate && loopFailsafe < 120) {
           const isCol = globalData.logs?.[ptrMonth]?.recsCollected?.[r.id]?.collected;
@@ -98,8 +107,21 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
         }
         targetMonthForDue = oldestUncollected || selectedMonth;
       }
-      const log = globalData.logs?.[targetMonthForDue]?.recsCollected?.[r.id] || { amountReceived: 0, collected: false };
-      return { ...r, amountReceived: log.amountReceived, collected: log.collected, targetMonthForDue };
+            const log = globalData.logs?.[targetMonthForDue]?.recsCollected?.[r.id] || {
+        amountReceived: 0,
+        collected: false
+      };
+
+      const amountReceived = Math.max(0, parseFloat(String(log.amountReceived)) || 0);
+      const receivableAmount = Math.max(0, parseFloat(String(r.amount)) || 0);
+      const collected = receivableAmount > 0 && amountReceived >= receivableAmount;
+
+      return {
+        ...r,
+        amountReceived,
+        collected,
+        targetMonthForDue
+      };
     }).sort((a, b) => {
       const fw = (f: string) => (f === "Bi-monthly" ? 1 : f === "Monthly" ? 2 : 3);
       if (!a.date && b.date) return 1; if (a.date && !b.date) return -1;
@@ -134,7 +156,13 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
 
   const totalLiquid = useMemo(() => Object.values(globalData?.wallets || {}).reduce((a, c) => a + (parseFloat(String(c)) || 0), 0), [globalData?.wallets]);
   const targetMilestoneFund = globalData?.settings?.targetFund ?? globalData?.targetFund ?? DEFAULT_TARGET_FUND;
-  const fundProgressPercent = useMemo(() => (((globalData?.wallets?.maribank || 0) / targetMilestoneFund) * 100).toFixed(1), [globalData?.wallets?.maribank, targetMilestoneFund]);
+const fundProgressPercent = useMemo(() => {
+  if (targetMilestoneFund <= 0) return "0.0";
+
+  return (
+    ((globalData?.wallets?.maribank || 0) / targetMilestoneFund) * 100
+  ).toFixed(1);
+}, [globalData?.wallets?.maribank, targetMilestoneFund]);
   const totalPendingReceivables = useMemo(() => activeReceivables.filter(r => !r.collected).reduce((a, c) => a + Math.max(0, (parseFloat(String(c.amount)) || 0) - (parseFloat(String(c.amountReceived)) || 0)), 0), [activeReceivables]);
   const monthIncomeCollected = useMemo(() => activeReceivables.reduce((a, c) => a + (parseFloat(String(c.amountReceived)) || 0), 0), [activeReceivables]);
   const totalUnpaidCommitments = useMemo(() => activeBills.filter(b => !b.paid).reduce((a, c) => a + (parseFloat(String(c.amount)) || 0), 0), [activeBills]);

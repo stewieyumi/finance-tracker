@@ -3,8 +3,10 @@ import React from "react";
 interface LoanProgressBadgeProps {
   startMonth?: string;
   endMonth?: string;
-  currentMonth: string;
+  targetMonthForDue: string;
+  isPaid: boolean;
   monthlyAmount: number;
+  totalPaid?: number;
 }
 
 const MONTH_NAMES = [
@@ -25,21 +27,30 @@ function monthToNumber(monthStr?: string): number | null {
 export const LoanProgressBadge: React.FC<LoanProgressBadgeProps> = ({
   startMonth,
   endMonth,
-  currentMonth,
-  monthlyAmount
+  targetMonthForDue,
+  isPaid,
+  monthlyAmount,
+  totalPaid
 }) => {
   const startNum = monthToNumber(startMonth);
   const endNum = monthToNumber(endMonth);
-  const currentNum = monthToNumber(currentMonth);
+  const targetNum = monthToNumber(targetMonthForDue);
 
-  if (startNum === null || endNum === null || currentNum === null || endNum < startNum) {
+  if (startNum === null || endNum === null || targetNum === null || endNum < startNum) {
     return null;
   }
 
   const totalMonths = endNum - startNum + 1;
-  const elapsedMonths = Math.min(Math.max(currentNum - startNum + 1, 0), totalMonths);
+  let calculatedElapsed = targetNum - startNum;
+  if (isPaid) {
+    calculatedElapsed += 1;
+  }
+  const elapsedMonths = Math.min(Math.max(calculatedElapsed, 0), totalMonths);
   const remainingMonths = Math.max(0, totalMonths - elapsedMonths);
-  const remainingBalance = remainingMonths * (parseFloat(String(monthlyAmount)) || 0);
+  const totalPrincipal = totalMonths * (parseFloat(String(monthlyAmount)) || 0);
+  const remainingBalance = totalPaid !== undefined 
+    ? Math.max(0, totalPrincipal - totalPaid)
+    : remainingMonths * (parseFloat(String(monthlyAmount)) || 0);
   const progressPercent = Math.min(100, Math.round((elapsedMonths / totalMonths) * 100));
 
   const isCompleted = remainingMonths === 0;

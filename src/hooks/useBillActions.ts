@@ -1,6 +1,7 @@
 import {
   Bill,
   BillType,
+  BillViewModel,
   UnifiedFinanceData
 } from "../types/finance";
 
@@ -51,44 +52,50 @@ export function useBillActions({
     showToast(`Added ${bill.name}`);
   };
 
-  const toggleBillStatus = (bill: Bill) => {
-    setGlobalData(prev => {
-      const monthLog = prev.logs?.[selectedMonth] || {
-        billsPaid: [],
-        recsCollected: {}
-      };
+const toggleBillStatus = (bill: BillViewModel) => {
+  const targetMonth = bill.targetMonthForDue || selectedMonth;
 
-      const currentPaid = monthLog.billsPaid || [];
-      const isPaid = currentPaid.includes(bill.id);
+  setGlobalData(prev => {
+    const monthLog = prev.logs?.[targetMonth] || {
+      billsPaid: [],
+      recsCollected: {}
+    };
 
-      return {
-        ...prev,
-        logs: {
-          ...prev.logs,
-          [selectedMonth]: {
-            ...monthLog,
-            billsPaid: isPaid
-              ? currentPaid.filter(id => id !== bill.id)
-              : [...currentPaid, bill.id]
-          }
-        },
-        updatedAt: Date.now()
-      };
-    });
-  };
+    const currentPaid = monthLog.billsPaid || [];
+    const isPaid = currentPaid.includes(bill.id);
 
-  const deleteBill = (id: string) => {
-    setGlobalData(prev => ({
+    return {
       ...prev,
-      library: {
-        ...prev.library,
-        bills: prev.library.bills.filter(b => b.id !== id)
+      logs: {
+        ...prev.logs,
+        [targetMonth]: {
+          ...monthLog,
+          billsPaid: isPaid
+            ? currentPaid.filter(id => id !== bill.id)
+            : [...currentPaid, bill.id]
+        }
       },
       updatedAt: Date.now()
-    }));
+    };
+  });
+};
 
-    showToast("Bill deleted");
-  };
+const deleteBill = (id: string) => {
+  if (!confirm("Delete this bill from your library?")) return;
+
+  setGlobalData(prev => ({
+    ...prev,
+    library: {
+      ...prev.library,
+      bills: prev.library.bills.filter(
+        bill => bill.id !== id
+      )
+    },
+    updatedAt: Date.now()
+  }));
+
+  showToast("Bill deleted");
+};
 
   return {
     addBill,

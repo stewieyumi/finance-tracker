@@ -13,8 +13,8 @@ const CATEGORIES: (ReceivableCategory | "All")[] = ["All", "Salary", "Shoot", "E
 interface ReceivablesTableProps {
   activeReceivables: ReceivableViewModel[];
   selectedMonth: string;
-  onToggleStatus: (rec: Receivable) => void;
-  onAddPayment: (rec: Receivable, amt: number) => void;
+  onToggleStatus: (rec: ReceivableViewModel) => void;
+  onAddPayment: (rec: ReceivableViewModel, amt: number) => void;
   onAddReceivable: (rec: { 
     name: string; 
     amount: number; 
@@ -117,7 +117,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
     });
   };
 
-  const handleStartEdit = (rec: Receivable) => {
+  const handleStartEdit = (rec: ReceivableViewModel) => {
     setEditingId(rec.id);
     setEditForm({ ...rec });
     setPayPopoverId(null);
@@ -128,13 +128,13 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
     setEditForm({});
   };
 
-  const handleQuickAddHalf = (rec: Receivable) => {
+  const handleQuickAddHalf = (rec: ReceivableViewModel) => {
     const half = (rec.amount || 0) / 2;
     onAddPayment(rec, half);
     setPayPopoverId(null);
   };
 
-  const handleCustomPaySubmit = (rec: Receivable) => {
+  const handleCustomPaySubmit = (rec: ReceivableViewModel) => {
     const val = parseFloat(customPayAmount);
     if (val > 0) {
       onAddPayment(rec, val);
@@ -143,7 +143,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
     }
   };
 
-  const renderMobileCard = (rec: Receivable) => {
+  const renderMobileCard = (rec: ReceivableViewModel) => {
     const isEditing = editingId === rec.id;
     const isBiMonthly = rec.frequency === "Bi-monthly";
     const received = rec.amountReceived || 0;
@@ -300,7 +300,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
     );
   };
 
-  const renderDesktopRow = (rec: Receivable) => {
+  const renderDesktopRow = (rec: ReceivableViewModel) => {
     const isEditing = editingId === rec.id;
     const isBiMonthly = rec.frequency === "Bi-monthly";
     const received = rec.amountReceived || 0;

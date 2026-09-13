@@ -26,8 +26,12 @@ export function useBillSaveActions({
   ) => {
     if (!editingId) return;
 
-    const inputAmount =
-      parseFloat(String(editForm.amount || 0)) || 0;
+    const inputAmount = parseFloat(String(editForm.amount ?? ""));
+
+    if (!Number.isFinite(inputAmount) || inputAmount <= 0) {
+      showToast("Amount must be greater than 0");
+      return;
+    }
 
     if (scope === "monthOnly") {
       setGlobalData(prev => {
@@ -61,15 +65,21 @@ export function useBillSaveActions({
         ...prev,
         library: {
           ...prev.library,
-          bills: prev.library.bills.map(item =>
-            item.id === editingId
-              ? ({
-                  ...item,
-                  ...editForm,
-                  amount: inputAmount
-                } as Bill)
-              : item
-          )
+          bills: prev.library.bills.map(item => {
+            if (item.id !== editingId) return item;
+
+            const updatedBill: Bill = {
+              id: item.id,
+              name: String(editForm.name ?? item.name).trim(),
+              amount: inputAmount,
+              dueDay: String(editForm.dueDay ?? item.dueDay),
+              type: editForm.type ?? item.type,
+              startMonth: String(editForm.startMonth ?? item.startMonth ?? ""),
+              endMonth: String(editForm.endMonth ?? item.endMonth ?? "")
+            };
+
+            return updatedBill;
+          })
         },
         updatedAt: Date.now()
       }));
