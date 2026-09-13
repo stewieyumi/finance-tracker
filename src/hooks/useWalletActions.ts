@@ -50,7 +50,6 @@ const incrementWallet = (key: string, addAmount: number) => {
 
 return {
   commitWallet,
-  incrementWallet,
-  splitPayday
+  incrementWallet
 };
 }
