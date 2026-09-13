@@ -1,4 +1,4 @@
-import { UnifiedFinanceData, WalletState } from "../types/finance";
+import { UnifiedFinanceData } from "../types/finance";
 
 interface UseWalletActionsParams {
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;

@@ -1,3 +1,4 @@
+import { generateId } from "../utils/idHelpers";
 import {
   Shoot,
   ShootCategory,
@@ -22,12 +23,7 @@ export function useShootActions({
   }) => {
     setGlobalData(prev => {
       const newShoot: Shoot = {
-        id:
-          typeof crypto !== "undefined" &&
-          typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `s_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-        title: shoot.title,
+id: generateId("s"),        title: shoot.title,
         date: shoot.date,
         category: shoot.category || "Solo Shoot",
         status: shoot.status,
