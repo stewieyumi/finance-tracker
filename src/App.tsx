@@ -67,7 +67,7 @@ function safeLoadAll(): UnifiedFinanceData {
       Number.isFinite(parsed.updatedAt) &&
       parsed.updatedAt >= 0
         ? parsed.updatedAt
-        : Date.now();
+        : 0;
 
     return {
       ...parsed,

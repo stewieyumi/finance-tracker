@@ -9,7 +9,7 @@ export const INITIAL_UNIFIED_DATA: UnifiedFinanceData = {
     defaultTransitAllocation: 1500
   },
   targetFund: DEFAULT_TARGET_FUND,
-  updatedAt: Date.now(),
+  updatedAt: 0,
   wallets: { 
     maribank: 0, 
     gcash: 0, 
