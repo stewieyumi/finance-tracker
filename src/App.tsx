@@ -181,10 +181,6 @@ useKeyboardShortcuts({
     getAdjacentMonth(selectedMonth, 2)
   ], [selectedMonth]);
 
-  const handleWalletCommit = (key: string, value: number) => {
-    setGlobalData(p => ({ ...p, wallets: { ...p.wallets, [key]: value } }));
-  };
-
   const handleExecutePaydaySplit = () => {
     const newWallets: WalletState = {
       ...globalData.wallets,
@@ -195,21 +191,6 @@ useKeyboardShortcuts({
     };
     setGlobalData(p => ({ ...p, wallets: newWallets }));
     showToast("✨ Payday split automatically distributed to wallets!");
-  };
-
-  const deleteItem = (category: "bills" | "receivables" | "shoots", id: string) => {
-    if (!confirm("Delete this item from your library?")) return;
-    setGlobalData(p => {
-      if (category === "bills") {
-        return { ...p, library: { ...p.library, bills: p.library.bills.filter(i => i.id !== id) } };
-      }
-      if (category === "receivables") {
-        return { ...p, library: { ...p.library, receivables: p.library.receivables.filter(i => i.id !== id) } };
-      }
-      return { ...p, library: { ...p.library, shoots: p.library.shoots.filter(i => i.id !== id) } };
-    });
-    if (editingId === id) setEditingId(null);
-    showToast("Deleted item");
   };
 
   const copySummaryToClipboard = () => {
@@ -619,7 +600,7 @@ TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}
         <ErrorBoundary>
           <WalletGrid
             wallets={globalData?.wallets || {}}
-            onCommit={handleWalletCommit}
+            onCommit={commitWallet}
             onIncrement={incrementWallet}
           />
         </ErrorBoundary>
