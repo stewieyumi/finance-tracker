@@ -1,9 +1,8 @@
-import { generateId } from "./utils/idHelpers";
 import React, { useState, useMemo, useRef } from "react";
 import { Calendar, Wrench, Cloud, Copy, Download, Upload, AlertTriangle, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { getMonthKey, getAdjacentMonth } from "./utils/dateHelpers";
-import { UnifiedFinanceData, WalletState, Bill, Receivable, Shoot, BillType, ReceivableCategory, ReceivableFrequency, ShootCategory, ShootStatus, EditFormData } from "./types/finance";
+import { UnifiedFinanceData, WalletState, EditFormData } from "./types/finance";
 
 import { useCloudSync } from "./hooks/useCloudSync";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -43,10 +42,9 @@ export default function App() {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
   const [globalData, setGlobalData] = useState<UnifiedFinanceData>(safeLoadAll);
   const [selectedMonth, setSelectedMonth] = useState<string>(() => getMonthKey(new Date()));
-  const {
+const {
   commitWallet,
-  incrementWallet,
-  splitPayday
+  incrementWallet
 } = useWalletActions({
   setGlobalData
 });
@@ -70,7 +68,7 @@ const {
   toggleBillStatus,
   deleteBill
 } = useBillActions({
-  setGlobalData,
+    setGlobalData,
   selectedMonth,
   showToast
 });
@@ -78,7 +76,8 @@ const {
 const {
   addReceivable: handleAddReceivable,
   toggleReceivableStatus,
-  addPayment
+  addPayment,
+  deleteReceivable
 } = useReceivableActions({
   setGlobalData,
   selectedMonth,
@@ -576,7 +575,7 @@ TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}
             selectedMonth={selectedMonth}
             onToggleStatus={toggleBillStatus}
             onAddBill={handleAddBill}
-            onDeleteBill={(id) => deleteItem("bills", id)}
+            onDeleteBill={deleteBill}
             onSaveEdit={(_, scope) => saveBillEdit(scope)}
             onResetMonthOverride={resetMonthOverride}
             editingId={editingId}
@@ -593,7 +592,7 @@ TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}
             onToggleStatus={toggleReceivableStatus}
             onAddPayment={addPayment}
             onAddReceivable={handleAddReceivable}
-            onDeleteReceivable={(id) => deleteItem("receivables", id)}
+            onDeleteReceivable={deleteReceivable}
             onSaveEdit={() => saveReceivableEdit()}
             editingId={editingId}
             setEditingId={setEditingId}
@@ -608,7 +607,7 @@ TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}
             selectedMonth={selectedMonth}
             onToggleCompletion={toggleShootCompletion}
             onAddShoot={handleAddShoot}
-            onDeleteShoot={(id) => deleteItem("shoots", id)}
+            onDeleteShoot={deleteShoot}
             onSaveEdit={() => saveShootEdit()}
             editingId={editingId}
             setEditingId={setEditingId}

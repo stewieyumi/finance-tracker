@@ -5,6 +5,9 @@ import {
   UnifiedFinanceData
 } from "../types/finance";
 
+import { generateId } from "../utils/idHelpers";
+
+
 interface UseReceivableActionsParams {
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
   selectedMonth: string;
@@ -15,8 +18,8 @@ export function useReceivableActions({
   setGlobalData,
   selectedMonth,
   showToast
-}: UseReceivableActionsParams) {
-  const addReceivable = (receivable: {
+}: UseReceivableActionsParams) {    
+ const addReceivable = (receivable: {
     name: string;
     amount: number;
     category: ReceivableCategory;
@@ -26,35 +29,31 @@ export function useReceivableActions({
     date?: string;
   }) => {
     setGlobalData(prev => {
-      const newReceivable: Receivable = {
-        id:
-          typeof crypto !== "undefined" &&
-          typeof crypto.randomUUID === "function"
-            ? crypto.randomUUID()
-            : `r_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-        name: receivable.name,
-        amount: receivable.amount,
-        category: receivable.category || "Shoot",
-        frequency: receivable.frequency,
-        biMonthlyDays:
-          receivable.frequency === "Bi-monthly"
-            ? receivable.biMonthlyDays
-            : "",
-        monthlyDay:
-          receivable.frequency === "Monthly"
-            ? receivable.monthlyDay
-            : "",
-        date:
-          receivable.frequency === "By Date"
-            ? receivable.date
-            : "",
-        startMonth:
-          receivable.frequency === "By Date"
-            ? ""
-            : selectedMonth,
-        amountReceived: 0,
-        collected: false
-      };
+    const newReceivable: Receivable = {
+  id: generateId("r"),
+  name: receivable.name,
+  amount: receivable.amount,
+  category: receivable.category || "Shoot",
+  frequency: receivable.frequency,
+  biMonthlyDays:
+    receivable.frequency === "Bi-monthly"
+      ? receivable.biMonthlyDays
+      : "",
+  monthlyDay:
+    receivable.frequency === "Monthly"
+      ? receivable.monthlyDay
+      : "",
+  date:
+    receivable.frequency === "By Date"
+      ? receivable.date
+      : "",
+  startMonth:
+    receivable.frequency === "By Date"
+      ? ""
+      : selectedMonth,
+  amountReceived: 0,
+  collected: false
+};
 
       return {
         ...prev,
@@ -149,9 +148,27 @@ export function useReceivableActions({
     showToast(`Payment added to ${receivable.name}`);
   };
 
+  const deleteReceivable = (id: string) => {
+    if (!confirm("Delete this receivable from your library?")) return;
+
+    setGlobalData(prev => ({
+      ...prev,
+      library: {
+        ...prev.library,
+        receivables: prev.library.receivables.filter(
+          receivable => receivable.id !== id
+        )
+      },
+      updatedAt: Date.now()
+    }));
+
+    showToast("Receivable deleted");
+  };
+
   return {
     addReceivable,
     toggleReceivableStatus,
-    addPayment
+    addPayment,
+    deleteReceivable
   };
 }
