@@ -413,6 +413,10 @@ const copySummaryToClipboard = async () => {
 
   return (
     <div className={`min-h-screen bg-[#070709] text-[#d4d4d8] px-4 sm:px-6 pb-8 pt-[max(2rem,env(safe-area-inset-top))] flex justify-center selection:bg-blue-600 selection:text-white ${isPrivacyMode ? "privacy-mode" : ""}`}>
+      <div
+        className="fixed top-0 left-0 right-0 z-[200] bg-[#070709]/80 backdrop-blur-xl pointer-events-none"
+        style={{ height: "env(safe-area-inset-top)" }}
+      />
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[#181822] text-white text-xs px-4 py-2.5 rounded-xl border border-white/10 shadow-2xl animate-fade-in">
           <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
