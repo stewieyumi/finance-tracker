@@ -51,6 +51,9 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
   editForm,
   setEditForm
 }) => {
+  const categoriesList = gigCategories?.length ? gigCategories : ["Solo Shoot", "Assistant", "Video Edit", "Event", "Commercial", "Other"];
+  const filterList = ["All", ...categoriesList];
+
   const [newShoot, setNewShoot] = useState<{
     title: string;
     date: string;
@@ -457,44 +460,33 @@ const handleSubmit = (e: React.FormEvent) => {
       </div>
 
       {/* ADD GIG FORM */}
-      <form onSubmit={handleSubmit} className="mt-3.5 pt-3 border-t border-white/[0.06] flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 flex-1 min-w-[260px]">
-          <input
-            type="text"
-            placeholder="Gig title / project..."
-            value={newShoot.title}
-            onChange={(e) => setNewShoot({ ...newShoot, title: e.target.value })}
-            className="bg-[#0b0b0d] border border-zinc-800 focus:border-amber-500/60 rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none flex-1"
-          />
+      <form onSubmit={handleSubmit} className="mt-3.5 pt-3 border-t border-white/[0.06] flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
+        <input
+          type="text"
+          placeholder="Gig title / project..."
+          value={newShoot.title}
+          onChange={(e) => setNewShoot({ ...newShoot, title: e.target.value })}
+          className="bg-[#0b0b0d] border border-zinc-800 focus:border-amber-500/60 rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none w-full lg:flex-1"
+        />
 
+        <div className="flex items-center gap-1.5 w-full lg:w-auto">
           <input
             type="date"
             value={newShoot.date}
-            onChange={(e) =>
-            setNewShoot({
-            ...newShoot,
-            date: e.target.value
-            })
-            }
-             className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2.5 py-1.5 text-xs text-white font-mono outline-none w-32"
+            onChange={(e) => setNewShoot({ ...newShoot, date: e.target.value })}
+            className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-1.5 sm:px-2.5 py-1.5 text-[11px] sm:text-xs text-white font-mono outline-none flex-1 lg:w-32 min-w-[100px]"
           />
           <select
             value={newShoot.category}
             onChange={(e) => setNewShoot({ ...newShoot, category: e.target.value as ShootCategory })}
-            className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-1.5 text-xs text-white outline-none"
+            className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-1 sm:px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-auto truncate min-w-[80px]"
           >
-            <option value="Solo Shoot">Solo Shoot</option>
-            <option value="Assistant">Assistant</option>
-            <option value="Video Edit">Video Edit</option>
-            <option value="Event">Event</option>
-            <option value="Commercial">Commercial</option>
-            <option value="Other">Other</option>
+            {categoriesList.map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
-
           <select
             value={newShoot.status}
             onChange={(e) => setNewShoot({ ...newShoot, status: e.target.value as ShootStatus })}
-            className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-1.5 text-xs text-white outline-none"
+            className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-1 sm:px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-auto min-w-[85px]"
           >
             <option value="Confirmed">Confirmed</option>
             <option value="Pencil">Pencil</option>
@@ -505,7 +497,7 @@ const handleSubmit = (e: React.FormEvent) => {
 
         <button
           type="submit"
-          className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1 shadow-lg shadow-amber-950/40 transition whitespace-nowrap"
+          className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1 shadow-lg shadow-amber-950/40 transition shrink-0 w-full lg:w-auto"
         >
           <Plus size={13} />
           <span>Add Gig</span>
