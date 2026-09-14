@@ -8,9 +8,11 @@ import {
   EditFormData
 } from "../types/finance";
 
-const CATEGORIES: (ReceivableCategory | "All")[] = ["All", "Salary", "Shoot", "Edit", "Payment", "Other"];
+
 
 interface ReceivablesTableProps {
+  inflowsLabel?: string;
+  inflowCategories?: string[];
   activeReceivables: ReceivableViewModel[];
   selectedMonth: string;
   onToggleStatus: (rec: ReceivableViewModel) => void;
@@ -43,6 +45,8 @@ const formatShortDate = (dateStr?: string) => {
 };
 
 export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
+  inflowsLabel,
+  inflowCategories,
   activeReceivables,
   selectedMonth,
   onToggleStatus,
@@ -55,6 +59,9 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
   editForm,
   setEditForm
 }) => {
+  const categoriesList = inflowCategories?.length ? inflowCategories : ["Salary", "Shoot", "Edit", "Payment", "Other"];
+  const filterList = ["All", ...categoriesList];
+
   const [newReceivable, setNewReceivable] = useState<{
     name: string;
     amount: string;
@@ -181,11 +188,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 onChange={(e) => setEditForm({ ...editForm, category: e.target.value as ReceivableCategory })}
                 className="bg-[#0b0b0d] border border-zinc-700 rounded-lg px-2 py-1.5 text-white text-xs"
               >
-                <option value="Salary">Salary</option>
-                <option value="Shoot">Shoot</option>
-                <option value="Edit">Edit</option>
-                <option value="Payment">Payment</option>
-                <option value="Other">Other</option>
+                {categoriesList.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
 
@@ -373,11 +376,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
               onChange={(e) => setEditForm({ ...editForm, category: e.target.value as ReceivableCategory })}
               className="bg-[#0b0b0d] border border-zinc-700 rounded-md px-1.5 py-1 text-white text-xs"
             >
-              <option value="Salary">Salary</option>
-              <option value="Shoot">Shoot</option>
-              <option value="Edit">Edit</option>
-              <option value="Payment">Payment</option>
-              <option value="Other">Other</option>
+              {categoriesList.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
           ) : (
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
@@ -525,7 +524,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-2">
           <ArrowDownLeft size={13} className="text-emerald-400" />
-          {selectedMonth} Receivables & Inflows
+          {selectedMonth} {inflowsLabel || 'Receivables & Inflows'}
         </h2>
 
         <div className="flex items-center gap-2">
@@ -550,7 +549,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
 
             {showFilterDropdown && (
               <div className="absolute right-0 mt-1.5 w-40 bg-[#181822]/95 backdrop-blur-xl border border-white/[0.1] rounded-xl shadow-2xl p-1 z-30 space-y-0.5">
-                {CATEGORIES.map(cat => (
+                {filterList.map(cat => (
                   <button
                     key={cat}
                     onClick={() => { setSelectedFilter(cat); setShowFilterDropdown(false); }}
@@ -607,7 +606,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
       </div>
 
       <form onSubmit={handleSubmit} className="mt-3.5 pt-3 border-t border-white/[0.06] flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 flex-1 min-w-[260px]">
+        <div className="flex items-center gap-2 flex-1 min-w-[260px] flex-wrap">
           <input
             type="text"
             placeholder="New inflow name..."
@@ -631,11 +630,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
             onChange={(e) => setNewReceivable({ ...newReceivable, category: e.target.value as ReceivableCategory })}
             className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-1.5 text-xs text-white outline-none"
           >
-            <option value="Salary">Salary</option>
-            <option value="Shoot">Shoot</option>
-            <option value="Edit">Edit</option>
-            <option value="Payment">Payment</option>
-            <option value="Other">Other</option>
+            {categoriesList.map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
 
           <select

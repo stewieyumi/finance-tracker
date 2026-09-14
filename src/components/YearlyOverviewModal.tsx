@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { X, Calendar, ChevronDown, Check } from "lucide-react";
 import { MONTH_LIST, YEAR_LIST } from "../constants/config";
-import { parseMonthKey, getMonthKey } from "../utils/dateHelpers";
+import { parseMonthKey, parseDateKey, getMonthKey } from "../utils/dateHelpers";
 import { UnifiedFinanceData } from "../types/finance";
 
 interface YearlyOverviewModalProps {
@@ -94,7 +94,7 @@ const fallbackStartMonth = getMonthKey(new Date());
             totalYearProjectedIncome += amt;
           }
         } else if (r.frequency === "By Date" && r.date) {
-          const rDate = new Date(r.date.replace(/-/g, "/"));
+          const rDate = parseDateKey(r.date);
           if (rDate.getFullYear().toString() === activeYear && MONTH_LIST[rDate.getMonth()] === month) {
             totalYearProjectedIncome += amt;
           }

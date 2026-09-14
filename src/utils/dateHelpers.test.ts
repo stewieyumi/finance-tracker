@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { parseMonthKey, getAdjacentMonth, getDaysUntil, getMonthKey } from './dateHelpers';
+import {
+  parseMonthKey,
+  parseDateKey,
+  getAdjacentMonth,
+  getMonthRange,
+  getDaysUntil,
+  getMonthKey
+} from './dateHelpers';
 
 describe('Date Helpers & Month Math', () => {
   it('correctly parses month strings into Date objects', () => {
@@ -12,6 +19,32 @@ describe('Date Helpers & Month Math', () => {
     expect(getAdjacentMonth('August 2026', 1)).toBe('September 2026');
     expect(getAdjacentMonth('December 2026', 1)).toBe('January 2027');
     expect(getAdjacentMonth('January 2026', -1)).toBe('December 2025');
+  });
+
+  it('parses YYYY-MM-DD as a local calendar date', () => {
+    const parsed = parseDateKey('2026-08-20');
+
+    expect(parsed.getFullYear()).toBe(2026);
+    expect(parsed.getMonth()).toBe(7);
+    expect(parsed.getDate()).toBe(20);
+  });
+
+  it('builds an inclusive month range with a failsafe limit', () => {
+    expect(
+      getMonthRange('November 2026', 'February 2027')
+    ).toEqual([
+      'November 2026',
+      'December 2026',
+      'January 2027',
+      'February 2027'
+    ]);
+
+    expect(
+      getMonthRange('November 2026', 'February 2027', 2)
+    ).toEqual([
+      'November 2026',
+      'December 2026'
+    ]);
   });
 
   it('accurately calculates days until a due date', () => {

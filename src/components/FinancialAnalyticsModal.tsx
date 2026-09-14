@@ -1,8 +1,15 @@
 import React, { useMemo, useEffect, useRef } from "react";
 import { X, Sparkles, ShieldCheck, Flame, CreditCard, Plane, TrendingUp } from "lucide-react";
-import { parseMonthKey, getAdjacentMonth, getMonthKey } from "../utils/dateHelpers";
+import {
+  parseMonthKey,
+  parseDateKey,
+  getAdjacentMonth,
+  getMonthKey,
+  getMonthRange
+} from "../utils/dateHelpers";
 import { UnifiedFinanceData } from "../types/finance";
 import { DEFAULT_TARGET_FUND } from "../constants/config";
+import { getEffectiveBillAmount } from "../utils/financeHelpers";
 
 interface FinancialAnalyticsModalProps {
   isOpen: boolean;
@@ -63,19 +70,26 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
       
       let elapsedMonths = 0;
       let totalPaid = 0;
-      let ptr = loan.startMonth!;
-      let failsafe = 0;
-      while (parseMonthKey(ptr) <= currentMonthDate && failsafe < 120) {
-        if (logs[ptr]?.billsPaid?.includes(loan.id)) {
+
+      const scanEndMonth =
+        currentMonthDate <= end
+          ? selectedMonth
+          : loan.endMonth!;
+
+      const monthsToCheck = getMonthRange(
+        loan.startMonth!,
+        scanEndMonth
+      );
+
+      for (const monthKey of monthsToCheck) {
+        if (logs[monthKey]?.billsPaid?.includes(loan.id)) {
           elapsedMonths++;
-          const override = logs[ptr]?.billOverrides?.[loan.id];
-          totalPaid += (override !== undefined && Number.isFinite(override)) 
-            ? override 
-            : (parseFloat(String(loan.amount)) || 0);
+          const override = logs[monthKey]?.billOverrides?.[loan.id];
+          totalPaid +=
+            override !== undefined && Number.isFinite(override)
+              ? override
+              : (parseFloat(String(loan.amount)) || 0);
         }
-        if (ptr === loan.endMonth) break;
-        ptr = getAdjacentMonth(ptr, 1);
-        failsafe++;
       }
 
       const totalPrincipal = (parseFloat(String(loan.amount)) || 0) * totalMonths;
@@ -140,11 +154,10 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
           const override =
             mLog.billOverrides?.[bill.id];
 
-          const effectiveAmount =
-            override !== undefined &&
-            Number.isFinite(override)
-              ? override
-              : baseAmount;
+          const effectiveAmount = getEffectiveBillAmount(
+            baseAmount,
+            override
+          );
 
           return sum + Math.max(0, effectiveAmount);
         }, 0);
@@ -180,9 +193,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
               isScheduled = false;
             } else {
               const exactMonth = getMonthKey(
-                new Date(
-                  receivable.date.replace(/-/g, "/")
-                )
+                parseDateKey(receivable.date)
               );
 
               isScheduled = exactMonth === mKey;

@@ -33,7 +33,7 @@ export function useReceivableActions({
         id: generateId("r"),
         name: receivable.name.trim(),
         amount: receivable.amount,
-        category: receivable.category || "Shoot",
+        category: receivable.category || "Other",
         frequency: receivable.frequency,
         biMonthlyDays:
           receivable.frequency === "Bi-monthly"

@@ -27,7 +27,7 @@ export function useShootActions({
         id: generateId("s"),
         title: shoot.title,
         date: shoot.date,
-        category: shoot.category || "Solo Shoot",
+        category: shoot.category || "Other",
         status: shoot.status,
         completed: false
       };

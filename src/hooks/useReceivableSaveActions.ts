@@ -47,13 +47,7 @@ export function useReceivableSaveActions({
             ).trim(),
             amount: inputAmount,
             category:
-              editForm.category === "Salary" ||
-              editForm.category === "Edit" ||
-              editForm.category === "Shoot" ||
-              editForm.category === "Payment" ||
-              editForm.category === "Other"
-                ? editForm.category
-                : item.category,
+              editForm.category ?? item.category,
             frequency,
             biMonthlyDays:
               frequency === "Bi-monthly"

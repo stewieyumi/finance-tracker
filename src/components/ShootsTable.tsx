@@ -5,6 +5,8 @@ import { Shoot, ShootCategory, ShootStatus, EditFormData } from "../types/financ
 const SHOOT_CATEGORIES: (ShootCategory | "All")[] = ["All", "Solo Shoot", "Assistant", "Video Edit", "Event", "Commercial", "Other"];
 
 interface ShootsTableProps {
+  gigsLabel?: string;
+  gigCategories?: string[];
   activeShoots: Shoot[];
   selectedMonth: string;
   onToggleCompletion: (id: string) => void;
@@ -36,6 +38,8 @@ const getLocalToday = () => {
 };
 
 export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
+  gigsLabel,
+  gigCategories,
   activeShoots,
   selectedMonth,
   onToggleCompletion,
@@ -181,17 +185,29 @@ const handleSubmit = (e: React.FormEvent) => {
                     : "bg-[#14141a] border-zinc-800/80 shadow-sm"
                 )}
               >
-                {isEditing ? (
+                  {isEditing ? (
                   <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={editForm.title || ""}
-                      onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                      placeholder="Gig title"
-                      className="bg-[#0b0b0d] border border-zinc-700 rounded-lg px-2.5 py-1.5 text-white text-xs w-full outline-none"
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      <select
+                        <input
+                          type="text"
+                          value={editForm.title || ""}
+                          onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                          placeholder="Gig title"
+                          className="bg-[#0b0b0d] border border-zinc-700 rounded-lg px-2.5 py-1.5 text-white text-xs w-full outline-none"
+                        />
+
+                        <input
+                          type="date"
+                          value={editForm.date || ""}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              date: e.target.value
+                            })
+                          }
+                          className="bg-[#0b0b0d] border border-zinc-700 rounded-lg px-2.5 py-1.5 text-white text-xs w-full outline-none"
+                        />
+
+                        <div className="grid grid-cols-2 gap-2">                      <select
                         value={editForm.category || "Solo Shoot"}
                         onChange={(e) => setEditForm({ ...editForm, category: e.target.value as ShootCategory })}
                         className="bg-[#0b0b0d] border border-zinc-700 rounded-lg px-2 py-1.5 text-white text-xs"

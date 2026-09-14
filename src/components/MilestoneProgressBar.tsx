@@ -4,11 +4,13 @@ import { FUND_MILESTONES } from "../constants/config";
 interface MilestoneProgressBarProps {
   maribankBalance?: number;
   targetFund?: number;
+  goalName?: string;
 }
 
 export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = React.memo(({
   maribankBalance = 0,
-  targetFund = 80000
+  targetFund = 80000,
+  goalName
 }) => {
   const percentage = Math.min(100, Math.max(0, (maribankBalance / targetFund) * 100));
   const fundProgressPercent = percentage.toFixed(1);
@@ -19,7 +21,7 @@ export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = React.m
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
           <span className="text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
-            Japan ADB Target Milestone
+            {goalName || 'Japan ADB Target Milestone'}
           </span>
         </div>
         <div className="flex items-baseline gap-1.5">

@@ -37,7 +37,7 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN || ""
 });
 
-const REDIS_KEY = "finance_data";
+
 
 function getClientToken(
   req: VercelApiRequest
@@ -130,18 +130,19 @@ export default async function handler(
 
   const clientToken = getClientToken(req);
 
-  if (
-    !clientToken ||
-    clientToken !== APP_AUTH_SECRET
-  ) {
+  if (!clientToken || clientToken.trim().length < 4) {
     return res.status(401).json({
-      error: "Unauthorized: Invalid or missing passcode."
+      error: "Unauthorized: Passcode must be at least 4 characters."
     });
   }
 
+  // Multi-user isolation: If using the original master passcode, use the main db.
+  // Otherwise, create a unique database slot for their specific passcode.
+  const USER_REDIS_KEY = clientToken === APP_AUTH_SECRET ? "finance_data" : `finance_data_${clientToken}`;
+
   try {
     if (req.method === "GET") {
-      const data = await redis.get(REDIS_KEY);
+      const data = await redis.get(USER_REDIS_KEY);
 
       return res.status(200).json(data || {});
     }
@@ -160,7 +161,7 @@ export default async function handler(
       }
 
       const existing =
-        await redis.get<SyncPayload>(REDIS_KEY);
+        await redis.get<SyncPayload>(USER_REDIS_KEY);
 
       const existingUpdatedAt =
         existing &&
@@ -186,7 +187,7 @@ export default async function handler(
         });
       }
 
-      await redis.set(REDIS_KEY, payload);
+      await redis.set(USER_REDIS_KEY, payload);
 
       return res.status(200).json({
         success: true,

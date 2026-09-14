@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from "react";
-import { Calendar, Wrench, Cloud, Copy, Download, Upload, AlertTriangle, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
+import { Calendar, Wrench, Settings, Cloud, Copy, Download, Upload, AlertTriangle, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { getMonthKey, getAdjacentMonth } from "./utils/dateHelpers";
 import { UnifiedFinanceData, WalletState, EditFormData } from "./types/finance";
@@ -30,6 +30,7 @@ import { DateJumpModal } from "./components/DateJumpModal";
 import { YearlyOverviewModal } from "./components/YearlyOverviewModal";
 import { FinancialAnalyticsModal } from "./components/FinancialAnalyticsModal";
 import { SyncDiagnosticsModal } from "./components/SyncDiagnosticsModal";
+import { SettingsModal } from "./components/SettingsModal";
 
 function safeLoadAll(): UnifiedFinanceData {
   try {
@@ -96,6 +97,7 @@ const {
   const [showYearlyModal, setShowYearlyModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showDebugModal, setShowDebugModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormData>({});
@@ -534,6 +536,15 @@ const copySummaryToClipboard = async () => {
               </button>
 
               <button 
+                onClick={() => setShowSettingsModal(true)} 
+                aria-label="App Settings"
+                title="Settings" 
+                className="h-6 w-6 rounded-md bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-500/50 text-zinc-400 hover:text-amber-400 flex items-center justify-center transition shadow-sm"
+              >
+                <Settings size={11} />
+              </button>
+              
+              <button 
                 onClick={() => setShowDebugModal(true)} 
                 aria-label="Open Diagnostics & Settings"
                 title="Sync Diagnostics & Settings (Press ⌘D)" 
@@ -604,6 +615,13 @@ const copySummaryToClipboard = async () => {
           selectedYear={selectedMonth.split(" ")[1] || "2026"}
         />
 
+        <SettingsModal
+          isOpen={showSettingsModal}
+          onClose={() => setShowSettingsModal(false)}
+          globalData={globalData}
+          setGlobalData={setGlobalData}
+        />
+
         <SyncDiagnosticsModal
           isOpen={showDebugModal}
           onClose={() => setShowDebugModal(false)}
@@ -627,6 +645,7 @@ const copySummaryToClipboard = async () => {
           <MilestoneProgressBar
             maribankBalance={globalData?.wallets?.maribank || 0}
             targetFund={targetMilestoneFund}
+            goalName={globalData?.settings?.goalName}
           />
         </ErrorBoundary>
 
@@ -673,6 +692,8 @@ const copySummaryToClipboard = async () => {
 
         <ErrorBoundary>
           <ReceivablesTable
+            inflowsLabel={globalData?.settings?.inflowsLabel}
+            inflowCategories={globalData?.settings?.inflowCategories}
             activeReceivables={activeReceivables}
             selectedMonth={selectedMonth}
             onToggleStatus={toggleReceivableStatus}
@@ -689,6 +710,8 @@ const copySummaryToClipboard = async () => {
 
         <ErrorBoundary>
           <ShootsTable
+            gigsLabel={globalData?.settings?.gigsLabel}
+            gigCategories={globalData?.settings?.gigCategories}
             activeShoots={activeShoots}
             selectedMonth={selectedMonth}
             onToggleCompletion={toggleShootCompletion}

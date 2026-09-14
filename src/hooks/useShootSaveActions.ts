@@ -47,11 +47,7 @@ export function useShootSaveActions({
       return;
     }
 
-    const category = SHOOT_CATEGORIES.includes(
-      editForm.category as ShootCategory
-    )
-      ? (editForm.category as ShootCategory)
-      : null;
+    const category = editForm.category ?? null;
 
     const status = SHOOT_STATUSES.includes(
       editForm.status as ShootStatus

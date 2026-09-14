@@ -8,6 +8,32 @@ export function parseMonthKey(str: string): Date {
   return new Date(y, mIndex !== -1 ? mIndex : 0, 1);
 }
 
+export function parseDateKey(str: string): Date {
+  const parts = str.split("-");
+
+  if (parts.length !== 3) {
+    return new Date(NaN);
+  }
+
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return new Date(NaN);
+  }
+
+  return new Date(year, month - 1, day);
+}
+
 export function getMonthKey(date: Date): string {
   return `${MONTH_LIST[date.getMonth()]} ${date.getFullYear()}`;
 }
@@ -16,6 +42,29 @@ export function getAdjacentMonth(monthKey: string, offset: number): string {
   const d = parseMonthKey(monthKey);
   d.setMonth(d.getMonth() + offset);
   return getMonthKey(d);
+}
+
+export function getMonthRange(
+  startMonth: string,
+  endMonth: string,
+  maxMonths = 120
+): string[] {
+  const start = parseMonthKey(startMonth);
+  const end = parseMonthKey(endMonth);
+
+  if (start > end || maxMonths <= 0) {
+    return [];
+  }
+
+  const months: string[] = [];
+  let current = startMonth;
+
+  for (let i = 0; i < maxMonths && parseMonthKey(current) <= end; i++) {
+    months.push(current);
+    current = getAdjacentMonth(current, 1);
+  }
+
+  return months;
 }
 
 export function getDaysUntil(dueDay: string | number, targetMonthKey: string): number {

@@ -1,7 +1,7 @@
 export type BillType = "Bill" | "Subscription" | "Loan / Installment";
 export type ReceivableFrequency = "By Date" | "Monthly" | "Bi-monthly";
-export type ReceivableCategory = "Salary" | "Edit" | "Shoot" | "Payment" | "Other";
-export type ShootCategory = "Solo Shoot" | "Assistant" | "Video Edit" | "Event" | "Commercial" | "Other";
+export type ReceivableCategory = string;
+export type ShootCategory = string;
 export type ShootStatus = "Pencil" | "Confirmed" | "Moved" | "Cancelled";
 
 export interface Bill {
@@ -75,6 +75,11 @@ export interface MonthLog {
 
 export interface AppSettings {
   targetFund: number;
+  goalName?: string;
+  inflowsLabel?: string;
+  gigsLabel?: string;
+  inflowCategories?: string[];
+  gigCategories?: string[];
   perPayoutSalary: number;
   phpToJpyRate: number;
   defaultTransitAllocation: number;

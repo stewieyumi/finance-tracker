@@ -3,6 +3,7 @@ import {
   ReceivableViewModel,
   UnifiedFinanceData
 } from "../types/finance";
+import { parseDateKey } from "./dateHelpers";
 
 interface BuildSummaryParams {
   activeBills: BillViewModel[];
@@ -92,9 +93,7 @@ export function buildFinancialSummary({
         const freqInfo =
           r.frequency === "By Date"
             ? r.date
-              ? new Date(
-                  r.date.replace(/-/g, "/")
-                ).toLocaleDateString("en-US", {
+              ? parseDateKey(r.date).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric"
                 })
@@ -124,13 +123,13 @@ ${billLines}
 ----------------------------------------
 TOTAL UNPAID BILLS: ₱${fmt(totalUnpaidCommitments)}
 
-3. PENDING RECEIVABLES & INFLOWS (${pending.length} pending)
+3. PENDING ${globalData?.settings?.inflowsLabel?.toUpperCase() || 'RECEIVABLES & INFLOWS'} (${pending.length} pending)
 ${recLines}
 ----------------------------------------
 TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}
 
 4. GOAL TRACKING & NET OUTLOOK
-• Japan ADB Milestone: ₱${fmt(globalData?.wallets?.maribank)} / ₱${fmt(targetMilestoneFund)} (${fundProgressPercent}%)
+• ${globalData?.settings?.goalName || 'Japan ADB Milestone'}: ₱${fmt(globalData?.wallets?.maribank)} / ₱${fmt(targetMilestoneFund)} (${fundProgressPercent}%)
 • Month Income Collected: ₱${fmt(monthIncomeCollected)}
 • Net Projected Position: ₱${fmt(netPosition)} ${netPosition >= 0 ? "(Surplus)" : "(Shortfall)"}
 ========================================`;

@@ -5,14 +5,15 @@ import {
   ReceivableViewModel
 } from "../types/finance";
 import { DEFAULT_TARGET_FUND } from "../constants/config";
-import { parseMonthKey, getMonthKey, getAdjacentMonth, getDaysUntil } from "../utils/dateHelpers";
-export function getEffectiveBillAmount(
-  baseAmount: number,
-  override?: number
-): number {
-  return override !== undefined ? override : baseAmount;
-
-}export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedMonth: string) {
+import { getEffectiveBillAmount } from "../utils/financeHelpers";
+import {
+  parseMonthKey,
+  parseDateKey,
+  getMonthKey,
+  getMonthRange,
+  getDaysUntil
+} from "../utils/dateHelpers";
+export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedMonth: string) {
 const currentMonthDate = parseMonthKey(selectedMonth);
 const fallbackStartMonth = getMonthKey(new Date());
 
@@ -26,22 +27,34 @@ const activeBills = useMemo<BillViewModel[]>(() => {
       return true;
     }).map(b => {
       let oldestUnpaid: string | null = null;
-      let ptrMonth = b.startMonth || fallbackStartMonth;
-      let loopFailsafe = 0;
       let totalLoanPaid = 0;
-      while (parseMonthKey(ptrMonth) <= currentMonthDate && loopFailsafe < 120) {
-        if (b.type === "Loan / Installment" && b.endMonth && parseMonthKey(ptrMonth) > parseMonthKey(b.endMonth)) break;
-        const isPaid = globalData.logs?.[ptrMonth]?.billsPaid?.includes(b.id);
-        
-        if (!isPaid) { 
-          if (!oldestUnpaid) oldestUnpaid = ptrMonth; 
-        } else if (b.type === "Loan / Installment") {
-          const override = globalData.logs?.[ptrMonth]?.billOverrides?.[b.id];
-          totalLoanPaid += (override !== undefined && Number.isFinite(override)) ? override : b.amount;
+
+      const startMonth = b.startMonth || fallbackStartMonth;
+      const monthsToCheck = getMonthRange(
+        startMonth,
+        selectedMonth
+      );
+
+      for (const monthKey of monthsToCheck) {
+        if (
+          b.type === "Loan / Installment" &&
+          b.endMonth &&
+          parseMonthKey(monthKey) > parseMonthKey(b.endMonth)
+        ) {
+          break;
         }
-        
-        ptrMonth = getAdjacentMonth(ptrMonth, 1);
-        loopFailsafe++;
+
+        const isPaid = globalData.logs?.[monthKey]?.billsPaid?.includes(b.id);
+
+        if (!isPaid) {
+          if (!oldestUnpaid) oldestUnpaid = monthKey;
+        } else if (b.type === "Loan / Installment") {
+          const override = globalData.logs?.[monthKey]?.billOverrides?.[b.id];
+          totalLoanPaid +=
+            override !== undefined && Number.isFinite(override)
+              ? override
+              : b.amount;
+        }
       }
       const isPaidThisMonth = !oldestUnpaid;
       const targetMonthForDue = oldestUnpaid || selectedMonth;
@@ -85,7 +98,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
       }
       if (r.frequency === "By Date") {
         if (!r.date) return true;
-        const exactMonth = getMonthKey(new Date(r.date.replace(/-/g, "/")));
+        const exactMonth = getMonthKey(parseDateKey(r.date));
         if (selectedMonth !== exactMonth && globalData.logs?.[exactMonth]?.recsCollected?.[r.id]?.collected) {
           return false;
         }
@@ -95,16 +108,19 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
       let targetMonthForDue = selectedMonth;
       let oldestUncollected: string | null = null;
       if (r.frequency === "By Date") {
-        targetMonthForDue = r.date ? getMonthKey(new Date(r.date.replace(/-/g, "/"))) : selectedMonth;
+        targetMonthForDue = r.date ? getMonthKey(parseDateKey(r.date)) : selectedMonth;
       } else {
-        let ptrMonth = r.startMonth || fallbackStartMonth;
-        let loopFailsafe = 0;
-        while (parseMonthKey(ptrMonth) <= currentMonthDate && loopFailsafe < 120) {
-          const isCol = globalData.logs?.[ptrMonth]?.recsCollected?.[r.id]?.collected;
-          if (!isCol) { oldestUncollected = ptrMonth; break; }
-          ptrMonth = getAdjacentMonth(ptrMonth, 1);
-          loopFailsafe++;
-        }
+        const startMonth = r.startMonth || fallbackStartMonth;
+        const monthsToCheck = getMonthRange(
+          startMonth,
+          selectedMonth
+        );
+
+        oldestUncollected =
+          monthsToCheck.find(
+            monthKey =>
+              !globalData.logs?.[monthKey]?.recsCollected?.[r.id]?.collected
+          ) || null;
         targetMonthForDue = oldestUncollected || selectedMonth;
       }
             const log = globalData.logs?.[targetMonthForDue]?.recsCollected?.[r.id] || {
@@ -126,7 +142,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
       const fw = (f: string) => (f === "Bi-monthly" ? 1 : f === "Monthly" ? 2 : 3);
       if (!a.date && b.date) return 1; if (a.date && !b.date) return -1;
       if (a.date && b.date) {
-        const dDiff = new Date(a.date.replace(/-/g, "/")).getTime() - new Date(b.date.replace(/-/g, "/")).getTime();
+        const dDiff = parseDateKey(a.date).getTime() - parseDateKey(b.date).getTime();
         if (dDiff !== 0) return dDiff;
       }
       if (fw(a.frequency) !== fw(b.frequency)) return fw(a.frequency) - fw(b.frequency);
@@ -139,7 +155,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
     if (!globalData?.library?.shoots) return [];
     return globalData.library.shoots.filter(s => {
       if (!s.date) return true;
-      const sMonth = parseMonthKey(getMonthKey(new Date(s.date.replace(/-/g, "/"))));
+      const sMonth = parseMonthKey(getMonthKey(parseDateKey(s.date)));
       if (currentMonthDate < sMonth) return false;
       if (s.completed && currentMonthDate > sMonth) return false;
       return true;
@@ -147,7 +163,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
       if (!a.date && b.date) return 1; if (a.date && !b.date) return -1;
       if (a.date && b.date) {
-        const dDiff = new Date(a.date.replace(/-/g, "/")).getTime() - new Date(b.date.replace(/-/g, "/")).getTime();
+        const dDiff = parseDateKey(a.date).getTime() - parseDateKey(b.date).getTime();
         if (dDiff !== 0) return dDiff;
       }
       return String(a.title || "").localeCompare(String(b.title || ""));
