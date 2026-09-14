@@ -605,14 +605,14 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
         </table>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-3.5 pt-3 border-t border-white/[0.06] flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2 flex-1 min-w-[260px] flex-wrap">
+      <form onSubmit={handleSubmit} className="mt-3.5 pt-3 border-t border-white/[0.06] flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
+        <div className="flex items-center gap-1.5 w-full lg:flex-1">
           <input
             type="text"
             placeholder="New inflow name..."
             value={newReceivable.name}
             onChange={(e) => setNewReceivable({ ...newReceivable, name: e.target.value })}
-            className="bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/60 rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none flex-1"
+            className="bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/60 rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none w-full flex-1"
           />
 
           <input
@@ -622,13 +622,15 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
             placeholder="₱ Amount"
             value={newReceivable.amount}
             onChange={(e) => setNewReceivable({ ...newReceivable, amount: e.target.value })}
-            className="bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/60 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 font-mono outline-none w-24"
+            className="bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/60 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-zinc-500 font-mono outline-none w-28 shrink-0"
           />
+        </div>
 
+        <div className="flex items-center gap-1.5 w-full lg:w-auto">
           <select
             value={newReceivable.category}
             onChange={(e) => setNewReceivable({ ...newReceivable, category: e.target.value as ReceivableCategory })}
-            className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-1.5 text-xs text-white outline-none"
+            className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-1 sm:px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-auto truncate min-w-[80px]"
           >
             {categoriesList.map(cat => <option key={cat} value={cat}>{cat}</option>)}
           </select>
@@ -636,18 +638,18 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
           <select
             value={newReceivable.frequency}
             onChange={(e) => setNewReceivable({ ...newReceivable, frequency: e.target.value as ReceivableFrequency })}
-            className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-1.5 text-xs text-white outline-none"
+            className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-1 sm:px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-auto min-w-[85px]"
           >
             <option value="By Date">By Date</option>
             <option value="Monthly">Monthly</option>
-            <option value="Bi-monthly">15th & 30th</option>
+            <option value="Bi-monthly">15th/30th</option>
           </select>
 
           {newReceivable.frequency === "Monthly" && (
             <select
               value={newReceivable.monthlyDay}
               onChange={(e) => setNewReceivable({ ...newReceivable, monthlyDay: e.target.value })}
-              className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-1.5 text-xs text-white outline-none"
+              className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-1 sm:px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-auto min-w-[80px]"
             >
               {Array.from({length: 31}, (_, i) => i + 1).map(d => (
                 <option key={d} value={String(d)}>Day {d}</option>
@@ -660,14 +662,14 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
               type="date"
               value={newReceivable.date}
               onChange={(e) => setNewReceivable({ ...newReceivable, date: e.target.value })}
-              className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-1 text-xs text-white outline-none"
+              className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-1.5 sm:px-2.5 py-1.5 text-[11px] sm:text-xs text-white font-mono outline-none flex-1 lg:w-32 min-w-[100px]"
             />
           )}
         </div>
 
         <button
           type="submit"
-          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1 shadow-lg shadow-emerald-950/40 transition whitespace-nowrap"
+          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1 shadow-lg shadow-emerald-950/40 transition shrink-0 w-full lg:w-auto"
         >
           <Plus size={13} />
           <span>Add Inflow</span>

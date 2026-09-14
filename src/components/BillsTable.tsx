@@ -557,33 +557,38 @@
           </table>
         </div>
 
-        <form onSubmit={handleSubmit} className={`grid grid-cols-1 ${newBill.type === "Loan / Installment" ? "md:grid-cols-[1fr_0.7fr_1.2fr_1.8fr_auto]" : "md:grid-cols-[1.5fr_1fr_1fr_1.5fr_auto]"} gap-2 mt-4 pt-4 border-t border-white/[0.05] items-center`}>
-          <input type="text" placeholder="New commitment name..." value={newBill.name} onChange={(e) => setNewBill({ ...newBill, name: e.target.value })} className="bg-[#0b0b0d] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:ring-1 focus:ring-blue-500 outline-none" />
-          <input type="number" inputMode="decimal" placeholder="₱ Amount" value={newBill.amount} onChange={(e) => setNewBill({ ...newBill, amount: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white font-mono focus:ring-1 focus:ring-blue-500 outline-none" />
-          <select value={newBill.type} onChange={(e) => setNewBill({ ...newBill, type: e.target.value as BillType, startMonth: selectedMonth, endMonth: selectedMonth })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer">
-            <option value="Bill">Bill</option>
-            <option value="Subscription">Subscription</option>
-            <option value="Loan / Installment">Loan / Installment</option>
-          </select>
-          <div>
+        <form onSubmit={handleSubmit} className="mt-3.5 pt-3 border-t border-white/[0.05] flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
+          <div className="flex items-center gap-1.5 w-full lg:flex-1">
+            <input type="text" placeholder="New commitment name..." value={newBill.name} onChange={(e) => setNewBill({ ...newBill, name: e.target.value })} className="bg-[#0b0b0d] border border-white/[0.08] focus:border-blue-500/60 rounded-xl px-3 py-1.5 text-xs text-white outline-none w-full flex-1" />
+            <input type="number" inputMode="decimal" placeholder="₱ Amount" value={newBill.amount} onChange={(e) => setNewBill({ ...newBill, amount: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] focus:border-blue-500/60 rounded-xl px-2.5 py-1.5 text-xs text-white font-mono outline-none w-28 shrink-0" />
+          </div>
+          
+          <div className="flex items-center gap-1.5 w-full lg:w-auto">
+            <select value={newBill.type} onChange={(e) => setNewBill({ ...newBill, type: e.target.value as BillType, startMonth: selectedMonth, endMonth: selectedMonth })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 sm:px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-auto truncate min-w-[80px]">
+              <option value="Bill">Bill</option>
+              <option value="Subscription">Subscription</option>
+              <option value="Loan / Installment">Loan / Installment</option>
+            </select>
+            
             {newBill.type === "Loan / Installment" ? (
-              <div className="flex flex-col gap-1">
-                <div className="grid grid-cols-2 gap-1">
-                  <select value={newBill.startMonth} onChange={(e) => setNewBill({ ...newBill, startMonth: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-lg px-2 py-1 text-[10px] text-white outline-none cursor-pointer">{ALL_MONTH_YEAR_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}</select>
-                  <select value={newBill.endMonth} onChange={(e) => setNewBill({ ...newBill, endMonth: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-lg px-2 py-1 text-[10px] text-white outline-none cursor-pointer">{ALL_MONTH_YEAR_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}</select>
+              <div className="flex items-center gap-1 flex-1 lg:w-auto">
+                <div className="flex items-center gap-1 flex-1 min-w-[120px]">
+                  <select value={newBill.startMonth} onChange={(e) => setNewBill({ ...newBill, startMonth: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 py-1.5 text-[10px] text-white outline-none w-1/2 truncate">{ALL_MONTH_YEAR_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}</select>
+                  <select value={newBill.endMonth} onChange={(e) => setNewBill({ ...newBill, endMonth: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 py-1.5 text-[10px] text-white outline-none w-1/2 truncate">{ALL_MONTH_YEAR_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}</select>
                 </div>
-                <select value={newBill.dueDay} onChange={(e) => setNewBill({ ...newBill, dueDay: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-lg px-2.5 py-1 text-[10px] text-white outline-none cursor-pointer w-full">
-                  {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Due on {d}{d===1?"st":d===2?"nd":d===3?"rd":"th"}</option>)}
+                <select value={newBill.dueDay} onChange={(e) => setNewBill({ ...newBill, dueDay: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 sm:px-2 py-1.5 text-[10px] sm:text-xs text-white outline-none w-20 shrink-0">
+                  {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Day {d}</option>)}
                 </select>
               </div>
             ) : (
-              <select value={newBill.dueDay} onChange={(e) => setNewBill({ ...newBill, dueDay: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white outline-none cursor-pointer w-full">
+              <select value={newBill.dueDay} onChange={(e) => setNewBill({ ...newBill, dueDay: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 sm:px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-auto min-w-[80px]">
                 {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Due on {d}{d===1?"st":d===2?"nd":d===3?"rd":"th"}</option>)}
               </select>
             )}
           </div>
-          <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs py-2 px-4 rounded-xl flex items-center justify-center gap-1.5 whitespace-nowrap shadow-lg shadow-blue-600/20 transition">
-            <Plus size={13} /> Add Bill
+          
+          <button type="submit" className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1 shadow-lg shadow-blue-900/20 transition shrink-0 w-full lg:w-auto">
+            <Plus size={13} /> <span>Add Bill</span>
           </button>
         </form>
       </div>
