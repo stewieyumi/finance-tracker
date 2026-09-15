@@ -223,7 +223,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
                     <Receipt size={14} />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-semibold text-zinc-200 truncate">{exp.merchant}</div>
+                    <div className="privacy-blur text-xs font-semibold text-zinc-200 truncate">{exp.merchant}</div>
                     <div className="flex items-center gap-1.5 text-[9px] text-zinc-500 mt-0.5">
                       <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400 font-medium">{exp.category}</span>
                       <span>•</span>

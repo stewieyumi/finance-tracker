@@ -91,7 +91,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
               <div key={w.id} className="flex items-center justify-between bg-[#14141a] border border-white/[0.04] p-3.5 rounded-xl shadow-sm">
                 <div className="flex items-center gap-2.5">
                   <div className={`w-2.5 h-2.5 rounded-full bg-current ${w.color || 'text-emerald-400'} shadow-[0_0_8px_currentColor]`} />
-                  <span className="text-xs font-semibold text-zinc-200">{w.label}</span>
+                  <span className="privacy-blur text-xs font-semibold text-zinc-200">{w.label}</span>
                 </div>
                 <button onClick={() => handleDelete(w.id, w.label)} aria-label="Delete account" className="text-zinc-500 hover:text-rose-400 p-1.5 transition rounded-lg hover:bg-rose-500/10">
                   <Trash2 size={14} />

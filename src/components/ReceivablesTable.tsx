@@ -116,7 +116,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                     <button onClick={() => onToggleStatus(rec)} className="shrink-0 focus:outline-none">
                       {rec.collected ? <span className="w-4 h-4 rounded-full bg-emerald-950/70 border border-emerald-500/50 text-emerald-400 flex items-center justify-center"><Check size={9} className="stroke-[3]" /></span> : <span className="w-4 h-4 rounded-full bg-amber-950/40 border border-amber-500/40 text-amber-400 flex items-center justify-center"><Hourglass size={8} /></span>}
                     </button>
-                    <span className="text-xs font-semibold text-zinc-100 truncate">{rec.name}</span>
+                    <span className="privacy-blur text-xs font-semibold text-zinc-100 truncate">{rec.name}</span>
                   </div>
                   <div className="text-right">
                     <span className={`font-mono text-xs font-bold shrink-0 ${rec.collected ? "text-emerald-400" : "text-zinc-100"}`}>₱{rec.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
@@ -177,7 +177,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                       {rec.collected ? <span className="flex items-center justify-center gap-1 w-[82px] text-emerald-400 text-[10px] font-semibold bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-600/30"><Check size={10} className="stroke-[3]" /> Received</span> : isPartial ? <span className="flex items-center justify-center gap-1 w-[82px] text-cyan-400 text-[10px] font-semibold bg-cyan-950/40 px-2 py-0.5 rounded-lg border border-cyan-600/30"><CreditCard size={9} /> Partial</span> : <span className="flex items-center justify-center gap-1 w-[82px] text-amber-400 text-[10px] font-medium bg-amber-950/30 px-2 py-0.5 rounded-lg border border-amber-800/30"><Hourglass size={8} /> Pending</span>}
                     </button>
                   </td>
-                  <td className="py-2.5 px-3 text-zinc-200 font-medium"><span>{rec.name}</span></td>
+                  <td className="py-2.5 px-3 text-zinc-200 font-medium"><span className="privacy-blur">{rec.name}</span></td>
                   <td className={`py-2.5 px-3 text-right font-mono font-semibold whitespace-nowrap ${rec.collected ? "text-emerald-400" : "text-zinc-100"}`}>
                     <div>
                       <div>₱{rec.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>

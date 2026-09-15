@@ -20,7 +20,7 @@ export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = React.m
       <div className="flex justify-between items-center mb-3">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
-          <span className="text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
+          <span className="privacy-blur text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
             {goalName || 'Japan ADB Target Milestone'}
           </span>
         </div>

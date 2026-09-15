@@ -9,21 +9,15 @@
   }
 }
 
-/* Hide native browser number arrows for a cleaner app feel */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-/* =========================================
-   NATIVE APP PRIVACY ENGINE
-   ========================================= */
-
-/* 1. Blur all numbers, dates, and truncated list names globally */
+/* 1. Blur all explicitly tagged names and all mono-spaced numbers */
 .privacy-mode .font-mono:not(kbd):not(input):not(textarea):not(select),
-.privacy-mode .truncate:not(select):not(input),
-.privacy-mode td:nth-child(2):not(.no-privacy-blur) {
+.privacy-mode .privacy-blur {
   filter: blur(5.5px) !important;
   user-select: none !important;
   will-change: filter;

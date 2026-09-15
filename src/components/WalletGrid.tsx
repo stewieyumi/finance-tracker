@@ -76,7 +76,7 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
                 onClick={() => openEdit(w, currentBalance)}
                 className="flex items-center justify-between w-full bg-[#0b0b0e] border border-white/[0.05] rounded-xl px-3.5 py-3 hover:border-white/[0.12] hover:bg-white/[0.02] active:scale-[0.98] transition-all text-left group"
               >
-                <span className="text-xs text-zinc-300 font-medium truncate pr-2 group-hover:text-white transition-colors">{w.label}</span>
+                <span className="privacy-blur text-xs text-zinc-300 font-medium truncate pr-2 group-hover:text-white transition-colors">{w.label}</span>
                 <div className="flex items-baseline gap-0.5 shrink-0">
                   <span className="text-[10px] text-zinc-500 font-mono">₱</span>
                   <span className={`font-bold font-mono tracking-tight ${w.color} text-xs`}>

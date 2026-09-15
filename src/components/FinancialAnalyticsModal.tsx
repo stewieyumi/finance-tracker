@@ -355,7 +355,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
               <div key={loan.id} className="bg-[#0a0a0d] border border-white/[0.05] rounded-xl p-3 space-y-2">
                 <div className="flex justify-between items-center text-xs">
                   <div>
-                    <span className="font-semibold text-white">{loan.name}</span>
+                    <span className="privacy-blur font-semibold text-white">{loan.name}</span>
                     <span className="text-[10px] text-zinc-500 block font-mono">
                       ₱{loan.monthlyAmount.toLocaleString("en-US")}/mo • Ends {loan.endMonth}
                     </span>

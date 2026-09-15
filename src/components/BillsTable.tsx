@@ -110,7 +110,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                   <button onClick={() => onToggleStatus(bill)} className="shrink-0 focus:outline-none">
                     {bill.paid ? <span className="w-5 h-5 rounded-full bg-blue-950/70 border border-blue-500/50 text-blue-400 flex items-center justify-center"><Check size={11} className="stroke-[3]" /></span> : <span className="w-5 h-5 rounded-full bg-rose-950/40 border border-rose-500/40 text-rose-400 flex items-center justify-center"><Circle size={7} className="fill-rose-400/40" /></span>}
                   </button>
-                  <span className="text-xs font-semibold text-zinc-100 truncate">{bill.name}</span>
+                  <span className="privacy-blur text-xs font-semibold text-zinc-100 truncate">{bill.name}</span>
                   {bill.isOverridden && <span className="text-[8px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1 rounded shrink-0">adj</span>}
                 </div>
                 <span className={`font-mono text-xs font-bold shrink-0 ${bill.paid ? "text-blue-400" : "text-zinc-100"}`}>₱{bill.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
@@ -159,7 +159,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                 </td>
                 <td className="py-2.5 px-2 align-top pt-3 text-zinc-200 truncate font-medium">
                   <div className="flex flex-col">
-                    <span>{bill.name}</span>
+                    <span className="privacy-blur">{bill.name}</span>
                     {bill.isOverridden && <span className="text-[9px] font-mono text-amber-400 flex items-center gap-1">• {selectedMonth.split(" ")[0]} bill adjusted</span>}
                   </div>
                 </td>
