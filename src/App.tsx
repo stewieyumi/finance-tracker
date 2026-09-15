@@ -212,10 +212,7 @@ const { saveShootEdit } = useShootSaveActions({
     overdueBills,
     overdueSum,
     cashShortfall,
-    targetMayaAllocation,
-    targetMariBankAllocation,
-    targetGCashAllocation,
-    targetGoTymeAllocation,
+    paydayAllocations,
     remainingBuffer
   ,
     billPaydayAllocations
@@ -298,33 +295,17 @@ const { saveShootEdit } = useShootSaveActions({
     paydaySplitInProgressRef.current = true;
 
     try {
-      const totalDistribution =
-        targetMayaAllocation +
-        targetMariBankAllocation +
-        targetGCashAllocation +
-        targetGoTymeAllocation;
+      const totalDistribution = Object.values(paydayAllocations).reduce((a, b) => a + b, 0);
+
+      const allocList = Object.entries(paydayAllocations)
+        .filter(([_, amt]) => amt > 0)
+        .map(([key, amt]) => `${globalData?.settings?.walletLabels?.[key] || key}: ₱${amt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
+        .join("\n");
 
       const confirmed = confirm(
-        `Distribute ₱${totalDistribution.toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        })} into your wallets?\n\n` +
-        `${globalData?.settings?.walletLabels?.maya || "Maya"}: ₱${targetMayaAllocation.toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        })}\n` +
-        `${globalData?.settings?.walletLabels?.maribank || "MariBank"}: ₱${targetMariBankAllocation.toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        })}\n` +
-        `${globalData?.settings?.walletLabels?.gcash || "GCash"}: ₱${targetGCashAllocation.toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        })}\n` +
-        `${globalData?.settings?.walletLabels?.gotyme || "GoTyme"}: ₱${targetGoTymeAllocation.toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        })}`
+        `Distribute ₱${totalDistribution.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} into your wallets?
+
+${allocList}`
       );
 
       if (!confirmed) return;
@@ -351,13 +332,13 @@ const { saveShootEdit } = useShootSaveActions({
 
         return {
           ...prev,
-          wallets: {
-            ...prev.wallets,
-            maya: (parseFloat(String(prev.wallets.maya)) || 0) + targetMayaAllocation,
-            maribank: (parseFloat(String(prev.wallets.maribank)) || 0) + targetMariBankAllocation,
-            gcash: (parseFloat(String(prev.wallets.gcash)) || 0) + targetGCashAllocation,
-            gotyme: (parseFloat(String(prev.wallets.gotyme)) || 0) + targetGoTymeAllocation
-          },
+          wallets: (() => {
+            const newWallets = { ...prev.wallets };
+            Object.entries(paydayAllocations).forEach(([walletKey, amount]) => {
+              newWallets[walletKey] = (parseFloat(String(newWallets[walletKey])) || 0) + amount;
+            });
+            return newWallets;
+          })(),
           logs: updatedLogs,
           paydaySplitExecutions: [...executions, executionKey],
           updatedAt: Date.now()
@@ -698,10 +679,8 @@ const copySummaryToClipboard = async () => {
             totalUnpaidCommitments={totalUnpaidCommitments}
             overdueBills={overdueBills}
             overdueSum={overdueSum}
-            targetMayaAllocation={targetMayaAllocation}
-            targetMariBankAllocation={targetMariBankAllocation}
-            targetGCashAllocation={targetGCashAllocation}
-            targetGoTymeAllocation={targetGoTymeAllocation}
+            paydayAllocations={paydayAllocations}
+            onConfigureBaselines={() => setShowSettingsModal(true)}
             remainingBuffer={remainingBuffer}
             walletLabels={globalData?.settings?.walletLabels}
             onExecutePaydaySplit={handleExecutePaydaySplit}

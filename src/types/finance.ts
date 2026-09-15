@@ -88,6 +88,11 @@ export interface AppSettings {
   perPayoutSalary: number;
   phpToJpyRate: number;
   defaultTransitAllocation: number;
+  baseLivingAllowance?: number;
+  baseSavingsTarget?: number;
+  livingWallet?: string;
+  savingsWallet?: string;
+  transitWallet?: string;
   walletLabels?: Record<string, string>;
 }
 

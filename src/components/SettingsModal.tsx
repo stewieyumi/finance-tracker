@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Settings, Briefcase, Target, Save, Cloud, Database } from "lucide-react";
+import { X, Settings, Briefcase, Target, Save, Cloud, Database, ArrowRightLeft } from "lucide-react";
 import { UnifiedFinanceData } from "../types/finance";
 import { getWalletForBill } from "../utils/financeHelpers";
 
@@ -21,9 +21,12 @@ const PRESETS = {
 };
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull }) => {
-  const [activeTab, setActiveTab] = useState<"general"|"wallets"|"sync">("general");
+  const [activeTab, setActiveTab] = useState<"general"|"baselines"|"wallets"|"sync">("general");
   const [form, setForm] = useState({
     goalName: "Japan ADB Target Milestone", targetFund: 80000, milestoneWallet: "maribank",
+    baseLivingAllowance: 2500, livingWallet: "gcash",
+    baseSavingsTarget: 1000, savingsWallet: "maribank",
+    defaultTransitAllocation: 1500, transitWallet: "gotyme",
     inflowsLabel: "RECEIVABLES & INFLOWS", gigsLabel: "UPCOMING SHOOTS & GIGS",
     inflowCategories: PRESETS.videographer.inflowCats, gigCategories: PRESETS.videographer.gigCats,
     walletLabels: { maribank: "MariBank", gcash: "GCash", maya: "Maya", gotyme: "GoTyme", bpi: "BPI", cash: "Cash On-Hand" } as Record<string, string>
@@ -37,6 +40,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, g
         goalName: globalData.settings.goalName || "Japan ADB Target Milestone",
         targetFund: globalData.settings.targetFund || 80000,
         milestoneWallet: globalData.settings.milestoneWallet || "maribank",
+        baseLivingAllowance: globalData.settings.baseLivingAllowance ?? 2500,
+        livingWallet: globalData.settings.livingWallet || "gcash",
+        baseSavingsTarget: globalData.settings.baseSavingsTarget ?? 1000,
+        savingsWallet: globalData.settings.savingsWallet || "maribank",
+        defaultTransitAllocation: globalData.settings.defaultTransitAllocation ?? 1500,
+        transitWallet: globalData.settings.transitWallet || "gotyme",
         inflowsLabel: globalData.settings.inflowsLabel || "RECEIVABLES & INFLOWS",
         gigsLabel: globalData.settings.gigsLabel || "UPCOMING SHOOTS & GIGS",
         inflowCategories: globalData.settings.inflowCategories?.length ? globalData.settings.inflowCategories : PRESETS.videographer.inflowCats,
@@ -61,8 +70,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, g
     setGlobalData(prev => ({
       ...prev,
       settings: {
-        ...(prev.settings || { perPayoutSalary: 15000, phpToJpyRate: 2.7, defaultTransitAllocation: 1500 }),
+        ...(prev.settings || { perPayoutSalary: 15000, phpToJpyRate: 2.7 }),
         targetFund: Number(form.targetFund), goalName: form.goalName, milestoneWallet: form.milestoneWallet,
+        baseLivingAllowance: Number(form.baseLivingAllowance), livingWallet: form.livingWallet,
+        baseSavingsTarget: Number(form.baseSavingsTarget), savingsWallet: form.savingsWallet,
+        defaultTransitAllocation: Number(form.defaultTransitAllocation), transitWallet: form.transitWallet,
         inflowsLabel: form.inflowsLabel, gigsLabel: form.gigsLabel, inflowCategories: form.inflowCategories, gigCategories: form.gigCategories, walletLabels: form.walletLabels
       },
       updatedAt: Date.now()
@@ -86,6 +98,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, g
 
   if (!isOpen) return null;
 
+  const WalletSelectOptions = () => (
+    <>
+      <option value="maribank">{form.walletLabels?.maribank || "MariBank"}</option><option value="bpi">{form.walletLabels?.bpi || "BPI"}</option>
+      <option value="maya">{form.walletLabels?.maya || "Maya"}</option><option value="gcash">{form.walletLabels?.gcash || "GCash"}</option>
+      <option value="gotyme">{form.walletLabels?.gotyme || "GoTyme"}</option><option value="cash">{form.walletLabels?.cash || "Cash On-Hand"}</option>
+    </>
+  );
+
   return (
     <div className="fixed inset-0 z-[110] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (modalRef.current && !modalRef.current.contains(e.target as Node)) onClose(); }}>
       <div ref={modalRef} className="bg-[#121217] border border-white/[0.08] rounded-3xl p-6 w-full max-w-lg shadow-2xl">
@@ -97,8 +117,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, g
           <button onClick={onClose} className="text-zinc-500 hover:text-white transition"><X size={18} /></button>
         </div>
 
-        <div className="flex gap-4 border-b border-white/[0.06] mb-5">
+        <div className="flex gap-4 border-b border-white/[0.06] mb-5 overflow-x-auto whitespace-nowrap hide-scrollbar">
           <button onClick={() => setActiveTab("general")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'general' ? 'text-white border-b-2 border-blue-500' : 'text-zinc-500 hover:text-zinc-300'}`}>General</button>
+          <button onClick={() => setActiveTab("baselines")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'baselines' ? 'text-white border-b-2 border-purple-500' : 'text-zinc-500 hover:text-zinc-300'}`}>Flow & Baselines</button>
           <button onClick={() => setActiveTab("wallets")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'wallets' ? 'text-white border-b-2 border-emerald-500' : 'text-zinc-500 hover:text-zinc-300'}`}>Wallets</button>
           <button onClick={() => setActiveTab("sync")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'sync' ? 'text-white border-b-2 border-amber-500' : 'text-zinc-500 hover:text-zinc-300'}`}>Cloud Sync</button>
         </div>
@@ -114,9 +135,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, g
                   <div className="col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Linked Wallet (Tracks Progress)</label>
                     <select value={form.milestoneWallet} onChange={e => setForm({...form, milestoneWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500 cursor-pointer">
-                      <option value="maribank">{form.walletLabels?.maribank || "MariBank"}</option><option value="bpi">{form.walletLabels?.bpi || "BPI"}</option>
-                      <option value="maya">{form.walletLabels?.maya || "Maya"}</option><option value="gcash">{form.walletLabels?.gcash || "GCash"}</option>
-                      <option value="gotyme">{form.walletLabels?.gotyme || "GoTyme"}</option><option value="cash">{form.walletLabels?.cash || "Cash On-Hand"}</option>
+                      <WalletSelectOptions />
                     </select>
                   </div>
                 </div>
@@ -132,6 +151,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, g
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <div><label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Receivables Title</label><input type="text" value={form.inflowsLabel} onChange={e => setForm({...form, inflowsLabel: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500" /></div>
                   <div><label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Gigs/Tasks Title</label><input type="text" value={form.gigsLabel} onChange={e => setForm({...form, gigsLabel: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500" /></div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "baselines" && (
+            <div className="space-y-5 animate-in fade-in duration-200">
+              <div className="text-xs text-zinc-400 mb-2">Configure the default amounts injected into your wallets during the 15th/30th Payday Distribution. (Note: These scale down safely if your bills consume too much of your paycheck).</div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-purple-400 uppercase tracking-wider"><ArrowRightLeft size={14} /> Routing Rules</div>
+                
+                <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Living Allowance (₱)</label>
+                    <input type="number" value={form.baseLivingAllowance} onChange={e => setForm({...form, baseLivingAllowance: Number(e.target.value)})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-purple-500" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Routes To</label>
+                    <select value={form.livingWallet} onChange={e => setForm({...form, livingWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 cursor-pointer">
+                      <WalletSelectOptions />
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Savings Target (₱)</label>
+                    <input type="number" value={form.baseSavingsTarget} onChange={e => setForm({...form, baseSavingsTarget: Number(e.target.value)})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-purple-500" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Routes To</label>
+                    <select value={form.savingsWallet} onChange={e => setForm({...form, savingsWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 cursor-pointer">
+                      <WalletSelectOptions />
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Transit / Misc (₱)</label>
+                    <input type="number" value={form.defaultTransitAllocation} onChange={e => setForm({...form, defaultTransitAllocation: Number(e.target.value)})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-purple-500" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Routes To</label>
+                    <select value={form.transitWallet} onChange={e => setForm({...form, transitWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 cursor-pointer">
+                      <WalletSelectOptions />
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>

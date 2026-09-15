@@ -1,5 +1,5 @@
 import React from "react";
-import { Zap, Banknote, AlertCircle, ArrowRight } from "lucide-react";
+import { Zap, Banknote, AlertCircle, ArrowRight, Settings } from "lucide-react";
 import { Bill } from "../types/finance";
 
 interface ExecutionFlowCardProps {
@@ -7,10 +7,8 @@ interface ExecutionFlowCardProps {
   totalUnpaidCommitments: number;
   overdueBills: Bill[];
   overdueSum: number;
-  targetMayaAllocation: number;
-  targetMariBankAllocation: number;
-  targetGCashAllocation: number;
-  targetGoTymeAllocation: number;
+  paydayAllocations: Record<string, number>;
+  onConfigureBaselines: () => void;
   remainingBuffer: number;
   walletLabels?: Record<string, string>;
   onExecutePaydaySplit: () => void;
@@ -22,10 +20,8 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
   totalUnpaidCommitments,
   overdueBills,
   overdueSum,
-  targetMayaAllocation,
-  targetMariBankAllocation,
-  targetGCashAllocation,
-  targetGoTymeAllocation,
+  paydayAllocations,
+  onConfigureBaselines,
   remainingBuffer,
   walletLabels,
   onExecutePaydaySplit,
@@ -78,33 +74,25 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
       {/* PAYDAY FLOW CARD */}
       <div className="bg-[#101014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col justify-between">
         <div>
-          <div className="flex items-center gap-2 mb-3.5">
-            <Banknote size={14} className="text-emerald-400" />
-            <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-              Payday Flow (15th & 30th)
-            </h2>
+          <div className="flex items-center justify-between mb-3.5">
+            <div className="flex items-center gap-2">
+              <Banknote size={14} className="text-emerald-400" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                Payday Flow (15th & 30th)
+              </h2>
+            </div>
+            <button onClick={onConfigureBaselines} className="text-zinc-500 hover:text-amber-400 transition" title="Configure Baselines & Routing">
+              <Settings size={13} />
+            </button>
           </div>
 
           <div className="space-y-1.5 text-xs">
-            <div className="flex items-center justify-between py-1 border-b border-white/[0.03]">
-              <span className="text-zinc-400 no-privacy-blur">{walletLabels?.maya || "Maya (Bills)"}</span>
-              <span className="font-mono font-semibold text-zinc-200">₱{fmt(targetMayaAllocation)}</span>
-            </div>
-
-            <div className="flex items-center justify-between py-1 border-b border-white/[0.03]">
-              <span className="text-zinc-400 no-privacy-blur">{walletLabels?.maribank || "MariBank (Main)"}</span>
-              <span className="font-mono font-semibold text-zinc-200">₱{fmt(targetMariBankAllocation)}</span>
-            </div>
-
-            <div className="flex items-center justify-between py-1 border-b border-white/[0.03]">
-              <span className="text-zinc-400 no-privacy-blur">{walletLabels?.gcash || "GCash"}</span>
-              <span className="font-mono font-semibold text-zinc-200">₱{fmt(targetGCashAllocation)}</span>
-            </div>
-
-            <div className="flex items-center justify-between py-1 border-b border-white/[0.03]">
-              <span className="text-zinc-400 no-privacy-blur">{walletLabels?.gotyme || "GoTyme"}</span>
-              <span className="font-mono font-semibold text-zinc-200">₱{fmt(targetGoTymeAllocation)}</span>
-            </div>
+            {Object.entries(paydayAllocations).filter(([_, amount]) => amount > 0).map(([walletKey, amount]) => (
+              <div key={walletKey} className="flex items-center justify-between py-1 border-b border-white/[0.03]">
+                <span className="text-zinc-400 no-privacy-blur">{walletLabels?.[walletKey] || walletKey.charAt(0).toUpperCase() + walletKey.slice(1)}</span>
+                <span className="font-mono font-semibold text-zinc-200">₱{fmt(amount)}</span>
+              </div>
+            ))}
 
             <div className="flex items-center justify-between py-1.5 text-emerald-400 font-medium">
               <span className="no-privacy-blur">Remaining Buffer</span>
