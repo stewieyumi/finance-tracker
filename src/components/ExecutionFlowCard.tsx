@@ -13,6 +13,7 @@ interface ExecutionFlowCardProps {
   targetGoTymeAllocation: number;
   remainingBuffer: number;
   onExecutePaydaySplit: () => void;
+  disabled?: boolean;
 }
 
 export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
@@ -25,7 +26,8 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
   targetGCashAllocation,
   targetGoTymeAllocation,
   remainingBuffer,
-  onExecutePaydaySplit
+  onExecutePaydaySplit,
+  disabled = false
 }) => {
   const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2 });
 
@@ -112,9 +114,10 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
         <button
           type="button"
           onClick={onExecutePaydaySplit}
-          className="mt-3 w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/20 no-privacy-blur"
+          disabled={disabled}
+          className="mt-3 w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 text-white font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/20 no-privacy-blur"
         >
-          <span>Auto-Distribute to Wallets</span>
+          <span>{disabled ? "Switch to current month to distribute" : "Auto-Distribute to Wallets"}</span>
           <ArrowRight size={13} />
         </button>
       </div>
