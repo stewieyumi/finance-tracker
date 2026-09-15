@@ -6,6 +6,7 @@ import {
 } from "../types/finance";
 
 import { generateId } from "../utils/idHelpers";
+import { getWalletForBill } from "../utils/financeHelpers";
 
 interface UseBillActionsParams {
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
@@ -56,6 +57,7 @@ export function useBillActions({
 
 const toggleBillStatus = (bill: BillViewModel) => {
   const targetMonth = bill.targetMonthForDue || selectedMonth;
+  const walletKey = bill.wallet || getWalletForBill(bill.name);
 
   setGlobalData(prev => {
     const monthLog = prev.logs?.[targetMonth] || {
@@ -64,15 +66,26 @@ const toggleBillStatus = (bill: BillViewModel) => {
     };
 
     const currentPaid = monthLog.billsPaid || [];
-    const isPaid = currentPaid.includes(bill.id);
+    const isCurrentlyPaid = currentPaid.includes(bill.id);
+    const willBePaid = !isCurrentlyPaid;
+
+    const nextWallets = { ...prev.wallets };
+    
+    // Auto-deduct or refund the wallet balance
+    if (willBePaid) {
+      nextWallets[walletKey] = Math.max(0, (nextWallets[walletKey] || 0) - bill.amount);
+    } else {
+      nextWallets[walletKey] = (nextWallets[walletKey] || 0) + bill.amount;
+    }
 
     return {
       ...prev,
+      wallets: nextWallets,
       logs: {
         ...prev.logs,
         [targetMonth]: {
           ...monthLog,
-          billsPaid: isPaid
+          billsPaid: isCurrentlyPaid
             ? currentPaid.filter(id => id !== bill.id)
             : [...currentPaid, bill.id]
         }
@@ -80,6 +93,12 @@ const toggleBillStatus = (bill: BillViewModel) => {
       updatedAt: Date.now()
     };
   });
+
+  if (!bill.paid) {
+    showToast(`Paid ₱${bill.amount.toLocaleString()} (deducted from wallet)`);
+  } else {
+    showToast(`Unmarked ₱${bill.amount.toLocaleString()} (refunded to wallet)`);
+  }
 };
 
 const deleteBill = (id: string) => {
