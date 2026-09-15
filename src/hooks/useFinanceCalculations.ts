@@ -140,6 +140,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
         targetMonthForDue
       };
     }).sort((a, b) => {
+      if (a.collected !== b.collected) return a.collected ? 1 : -1;
       const fw = (f: string) => (f === "Bi-monthly" ? 1 : f === "Monthly" ? 2 : 3);
       if (!a.date && b.date) return 1; if (a.date && !b.date) return -1;
       if (a.date && b.date) {
@@ -147,7 +148,6 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
         if (dDiff !== 0) return dDiff;
       }
       if (fw(a.frequency) !== fw(b.frequency)) return fw(a.frequency) - fw(b.frequency);
-      if (a.collected !== b.collected) return a.collected ? 1 : -1;
       return String(a.name || "").localeCompare(String(b.name || ""));
     });
   }, [globalData, selectedMonth, currentMonthDate]);
