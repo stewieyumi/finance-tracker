@@ -99,6 +99,7 @@ const {
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("home");
+  const [opsTab, setOpsTab] = useState<"bills" | "inflows" | "gigs">("bills");
   const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "wallets" | "sync">("general");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -711,8 +712,19 @@ const copySummaryToClipboard = async () => {
         )}
 
         {activeTab === "operations" && (
-          <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
-            <ErrorBoundary>
+          <div className="space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
+            
+            {/* SEGMENTED CONTROL */}
+            <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] p-1.5 rounded-2xl flex items-center shadow-lg w-full mx-auto">
+              <button onClick={() => setOpsTab("bills")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "bills" ? "bg-blue-600/20 text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.3)]" : "text-zinc-500 hover:text-zinc-300"}`}>Commitments</button>
+              <button onClick={() => setOpsTab("inflows")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "inflows" ? "bg-emerald-600/20 text-emerald-400 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)]" : "text-zinc-500 hover:text-zinc-300"}`}>Inflows</button>
+              <button onClick={() => setOpsTab("gigs")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "gigs" ? "bg-amber-600/20 text-amber-400 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.3)]" : "text-zinc-500 hover:text-zinc-300"}`}>Gigs & Tasks</button>
+            </div>
+
+            {/* DYNAMIC VIEWS */}
+            {opsTab === "bills" && (
+              <div className="animate-in fade-in slide-in-from-right-2 duration-300">
+                <ErrorBoundary>
               <BillsTable
                 activeBills={activeBills}
                 selectedMonth={selectedMonth}
@@ -728,8 +740,12 @@ const copySummaryToClipboard = async () => {
                 walletLabels={globalData?.settings?.walletLabels}
               />
             </ErrorBoundary>
+              </div>
+            )}
 
-            <ErrorBoundary>
+            {opsTab === "inflows" && (
+              <div className="animate-in fade-in slide-in-from-right-2 duration-300">
+                <ErrorBoundary>
               <ReceivablesTable
                 inflowsLabel={globalData?.settings?.inflowsLabel}
                 inflowCategories={globalData?.settings?.inflowCategories}
@@ -746,8 +762,12 @@ const copySummaryToClipboard = async () => {
                 setEditForm={setEditForm}
               />
             </ErrorBoundary>
+              </div>
+            )}
 
-            <ErrorBoundary>
+            {opsTab === "gigs" && (
+              <div className="animate-in fade-in slide-in-from-right-2 duration-300">
+                <ErrorBoundary>
               <ShootsTable
                 gigsLabel={globalData?.settings?.gigsLabel}
                 gigCategories={globalData?.settings?.gigCategories}
@@ -763,9 +783,11 @@ const copySummaryToClipboard = async () => {
                 setEditForm={setEditForm}
               />
             </ErrorBoundary>
+              </div>
+            )}
           </div>
         )}
-
+        
         {activeTab === "wallets" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
             <ErrorBoundary>
