@@ -233,14 +233,13 @@ const { saveShootEdit } = useShootSaveActions({
 
   const isEditing = editingId !== null;
 
-  usePullToRefresh(
+    const { pullProgress } = usePullToRefresh(
     () => {
       if (isEditing) {
         showToast("✏️ Finish editing before pulling cloud data.");
         return;
       }
-
-      pullLatestData();
+      pullLatestData(false);
     },
     isModalOpen || isEditing
   );
@@ -449,6 +448,19 @@ const copySummaryToClipboard = async () => {
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[#181822] text-white text-xs px-4 py-2.5 rounded-xl border border-white/10 shadow-2xl animate-fade-in">
           <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* PULL TO REFRESH INDICATOR */}
+      {pullProgress > 0 && (
+        <div 
+          className="fixed top-[max(1rem,env(safe-area-inset-top))] left-0 right-0 z-[300] flex justify-center pointer-events-none" 
+          style={{ transform: `translateY(${Math.min(pullProgress, 60)}px)`, opacity: Math.min(pullProgress / 40, 1) }}
+        >
+          <div className="bg-[#181822] border border-white/[0.1] shadow-2xl rounded-full px-4 py-2.5 flex items-center gap-2.5 text-xs font-bold text-emerald-400">
+            <RefreshCw size={14} className={pullProgress >= 40 ? "animate-spin" : ""} style={{ transform: `rotate(${pullProgress * 5}deg)` }} />
+            <span>{pullProgress >= 40 ? "Release to Sync" : "Pull to Sync"}</span>
+          </div>
         </div>
       )}
 
