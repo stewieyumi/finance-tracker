@@ -138,14 +138,14 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 {rec.frequency === "Monthly" && <span>Day {rec.monthlyDay || "15"}</span>}
                 {rec.frequency === "By Date" && rec.date && <span>{formatShortDate(rec.date)}</span>}
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 {!rec.collected && (
                   <>
-                    {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} className="px-1.5 py-0.5 bg-cyan-950/70 text-cyan-300 border border-cyan-800/40 rounded text-[9px] font-medium hover:bg-cyan-900/50">+1/2</button>}
-                    <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} className="px-1.5 py-0.5 bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 rounded text-[9px] font-medium">+₱</button>
+                    {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} className="whitespace-nowrap shrink-0 px-1.5 py-0.5 bg-cyan-950/70 text-cyan-300 border border-cyan-800/40 rounded text-[9px] font-medium hover:bg-cyan-900/50">+1/2</button>}
+                    <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} className="whitespace-nowrap shrink-0 px-1.5 py-0.5 bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 rounded text-[9px] font-medium">+₱</button>
                   </>
                 )}
-                <button onClick={() => handleStartEdit(rec)} className="px-2 py-0.5 text-zinc-400 hover:text-amber-300 bg-zinc-800/70 rounded text-[10px]">Edit</button>
+                <button onClick={() => handleStartEdit(rec)} className="whitespace-nowrap shrink-0 px-2 py-0.5 text-zinc-400 hover:text-amber-300 bg-zinc-800/70 rounded text-[10px]">Edit</button>
               </div>
             </div>
             {payPopoverId === rec.id && (
@@ -255,11 +255,11 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
               <>
                 {!rec.collected && (
                   <>
-                    {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} title="Add 1st/2nd half payment" className="px-1.5 py-0.5 text-[9px] font-mono bg-cyan-950/60 text-cyan-300 hover:bg-cyan-900/60 border border-cyan-700/40 rounded transition">+1/2</button>}
-                    <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} title="Add custom payment" className="px-1.5 py-0.5 text-[10px] font-mono bg-emerald-950/60 text-emerald-400 hover:bg-emerald-900/60 border border-emerald-700/40 rounded transition">+₱</button>
+                    {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} title="Add 1st/2nd half payment" className="whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[9px] font-mono bg-cyan-950/60 text-cyan-300 hover:bg-cyan-900/60 border border-cyan-700/40 rounded transition">+1/2</button>}
+                    <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} title="Add custom payment" className="whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[10px] font-mono bg-emerald-950/60 text-emerald-400 hover:bg-emerald-900/60 border border-emerald-700/40 rounded transition">+₱</button>
                   </>
                 )}
-                <button onClick={() => handleStartEdit(rec)} className="px-2 py-1 text-zinc-400 hover:text-amber-300 hover:bg-white/[0.05] rounded-md text-[11px] flex items-center transition"><Edit2 size={10} className="mr-1" /> Edit</button>
+                <button onClick={() => handleStartEdit(rec)} className="whitespace-nowrap shrink-0 px-2 py-1 text-zinc-400 hover:text-amber-300 hover:bg-white/[0.05] rounded-md text-[11px] flex items-center transition"><Edit2 size={10} className="mr-1" /> Edit</button>
               </>
             )}
           </div>
