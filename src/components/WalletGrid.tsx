@@ -39,7 +39,7 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
 
   const openEdit = (wallet: any, currentBalance: number) => {
     setEditingWallet({ ...wallet, balance: currentBalance });
-    setEditValue(currentBalance === 0 ? "" : String(currentBalance));
+    setEditValue(currentBalance === 0 ? "" : String(Math.round(currentBalance * 100) / 100));
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -47,7 +47,7 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
     if (!editingWallet) return;
     const cleaned = editValue.replace(/,/g, "").trim();
     const parsed = cleaned === "" ? 0 : parseFloat(cleaned);
-    const validAmount = isNaN(parsed) ? editingWallet.balance : parsed;
+    const validAmount = isNaN(parsed) ? editingWallet.balance : Math.round(parsed * 100) / 100;
     
     onCommit(editingWallet.id, validAmount);
     setEditingWallet(null);
