@@ -4,6 +4,17 @@ export type ReceivableCategory = string;
 export type ShootCategory = string;
 export type ShootStatus = "Pencil" | "Confirmed" | "Moved" | "Cancelled";
 
+export type ExpenseCategory = "Food & Dining" | "Transport" | "Utilities" | "Laundry & Home" | "Shopping" | "Other";
+
+export interface Expense {
+  id: string;
+  merchant: string;
+  amount: number;
+  category: ExpenseCategory | string;
+  wallet: string;
+  date: string;
+}
+
 export interface Bill {
   id: string;
   name: string;
@@ -113,6 +124,7 @@ export interface UnifiedFinanceData {
     bills: Bill[];
     receivables: Receivable[];
     shoots: Shoot[];
+    expenses?: Expense[];
   };
   logs: {
     [monthKey: string]: MonthLog;

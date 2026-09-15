@@ -21,7 +21,8 @@ export const INITIAL_UNIFIED_DATA: UnifiedFinanceData = {
 library: {
   bills: [],
   receivables: [],
-  shoots: []
+  shoots: [],
+  expenses: []
 },
   logs: {}
 };
