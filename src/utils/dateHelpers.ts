@@ -88,6 +88,27 @@ export function getDaysUntil(dueDay: string | number, targetMonthKey: string): n
   return Object.is(days, -0) ? 0 : days;
 }
 
+export function countPaydaysUntil(today: Date, dueDate: Date): number {
+  if (dueDate < today) return 0;
+  let count = 0;
+  let year = today.getFullYear();
+  let month = today.getMonth();
+  const endYear = dueDate.getFullYear();
+  const endMonth = dueDate.getMonth();
+
+  while (year < endYear || (year === endYear && month <= endMonth)) {
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const paydayDays = [15, Math.min(30, lastDay)];
+    for (const day of paydayDays) {
+      const payday = new Date(year, month, day);
+      if (payday >= today && payday <= dueDate) count++;
+    }
+    month++;
+    if (month > 11) { month = 0; year++; }
+  }
+  return count;
+}
+
 export function formatDaysRemaining(days: number): { text: string; tone: "urgent" | "warning" | "normal" | "overdue" } {
   if (days === 999) return { text: "No due date", tone: "normal" };
   

@@ -11,7 +11,8 @@ import {
   parseDateKey,
   getMonthKey,
   getMonthRange,
-  getDaysUntil
+  getDaysUntil,
+  countPaydaysUntil
 } from "../utils/dateHelpers";
 export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedMonth: string) {
 const currentMonthDate = parseMonthKey(selectedMonth);
@@ -194,21 +195,30 @@ const fundProgressPercent = useMemo(() => {
   const baseLivingAllowance = 2500; // GCash: Daily pocket / food
   const baseSavingsTarget = 1000;   // MariBank: Baseline Japan ADB savings
   
-  const spayLaterBill = activeBills.find(b => b.name.toLowerCase().includes("spaylater") && !b.paid);
-  const unoBankBill = activeBills.find(b => b.name.toLowerCase().includes("unobank") && !b.paid);
-  const sharedTripBill = activeBills.find(b => b.name.toLowerCase().includes("shared") && !b.paid);
-  
-  const spayLaterAmount = spayLaterBill ? spayLaterBill.amount : 0;
-  const unoBankAmount = unoBankBill ? unoBankBill.amount : 0;
-  const sharedTripAmount = sharedTripBill ? sharedTripBill.amount : 0; 
-  
-  const otherUnpaidBillsSum = totalUnpaidCommitments - spayLaterAmount - unoBankAmount - sharedTripAmount;
-  
-  const targetMayaAllocation = Math.round((Math.max(0, otherUnpaidBillsSum / 2)) * 100) / 100;
-  const targetGCashAllocation = (unoBankAmount > 0 ? unoBankAmount / 2 : 0) + baseLivingAllowance;
-  const targetMariBankAllocation = (spayLaterAmount > 0 ? spayLaterAmount / 2 : 0) + sharedTripAmount + baseSavingsTarget;
-  const targetGoTymeAllocation = defaultTransit; 
-  
+  function getWalletForBill(name: string): "maya" | "gcash" | "maribank" | "gotyme" {
+    const n = (name || "").toLowerCase();
+    if (n.includes("unobank") || n.includes("appliance") || n.includes("gcredit")) return "gcash";
+    if (n.includes("spaylater")) return "maribank";
+    if (n.includes("shared") || n.includes("japan trip")) return "gotyme";
+    return "maya";
+  }
+
+  const today = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+  const walletSplitTotals = { maya: 0, gcash: 0, maribank: 0, gotyme: 0 };
+
+  activeBills.filter(b => !b.paid).forEach(b => {
+    const dueDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (b.daysLeft ?? 0));
+    const paydaysRemaining = Math.max(1, countPaydaysUntil(today, dueDate));
+    const perPayday = (parseFloat(String(b.amount)) || 0) / paydaysRemaining;
+    const wallet = getWalletForBill(b.name);
+    walletSplitTotals[wallet] += perPayday;
+  });
+
+  const targetMayaAllocation = Math.round(walletSplitTotals.maya * 100) / 100;
+  const targetGCashAllocation = Math.round((walletSplitTotals.gcash + baseLivingAllowance) * 100) / 100;
+  const targetMariBankAllocation = Math.round((walletSplitTotals.maribank + baseSavingsTarget) * 100) / 100;
+  const targetGoTymeAllocation = Math.round((walletSplitTotals.gotyme + defaultTransit) * 100) / 100;
+
   const totalAllocatedPerPayout = targetMayaAllocation + targetMariBankAllocation + targetGCashAllocation + targetGoTymeAllocation;
   const remainingBuffer = Math.round((perPayoutSalary - totalAllocatedPerPayout) * 100) / 100;
 
