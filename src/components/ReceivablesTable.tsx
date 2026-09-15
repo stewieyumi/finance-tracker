@@ -420,7 +420,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   type="date"
                   value={editForm.date || ""}
                   onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
-                  className="bg-[#0b0b0d] border border-zinc-700 rounded-md px-1 py-0.5 text-white text-[10px] w-24"
+                  className="bg-[#0b0b0d] border border-zinc-700 rounded-md px-1.5 py-1 text-white text-[10px] min-w-[110px] flex-1"
                 />
               )}
             </div>
@@ -662,7 +662,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
               type="date"
               value={newReceivable.date}
               onChange={(e) => setNewReceivable({ ...newReceivable, date: e.target.value })}
-              className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-1.5 sm:px-2.5 py-1.5 text-[11px] sm:text-xs text-white font-mono outline-none flex-1 lg:w-32 min-w-[100px]"
+              className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-32 min-w-[115px]"
             />
           )}
         </div>

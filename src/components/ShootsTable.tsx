@@ -207,7 +207,7 @@ const handleSubmit = (e: React.FormEvent) => {
                               date: e.target.value
                             })
                           }
-                          className="bg-[#0b0b0d] border border-zinc-700 rounded-lg px-2.5 py-1.5 text-white text-xs w-full outline-none"
+                          className="bg-[#0b0b0d] border border-zinc-700 rounded-lg px-2.5 py-1.5 text-white text-[11px] w-full outline-none min-h-[34px]"
                         />
 
                         <div className="grid grid-cols-2 gap-2">                      <select
@@ -365,7 +365,7 @@ const handleSubmit = (e: React.FormEvent) => {
                               date: e.target.value
                             })
                           }
-                          className="bg-[#0b0b0d] border border-zinc-700 rounded-md px-1.5 py-0.5 text-white text-xs w-32 text-center"
+                          className="bg-[#0b0b0d] border border-zinc-700 rounded-md px-1.5 py-1 text-white text-[10px] w-[115px] text-center"
                         />                      ) : (
                         shoot.date ? (
                           shoot.date === todayStr ? (
@@ -469,12 +469,12 @@ const handleSubmit = (e: React.FormEvent) => {
           className="bg-[#0b0b0d] border border-zinc-800 focus:border-amber-500/60 rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none w-full lg:flex-1"
         />
 
-        <div className="flex items-center gap-1.5 w-full lg:w-auto">
+        <div className="flex flex-wrap lg:flex-nowrap items-center gap-1.5 w-full lg:w-auto">
           <input
             type="date"
             value={newShoot.date}
             onChange={(e) => setNewShoot({ ...newShoot, date: e.target.value })}
-            className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-1.5 sm:px-2.5 py-1.5 text-[11px] sm:text-xs text-white font-mono outline-none flex-1 lg:w-32 min-w-[100px]"
+            className="bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-32 min-w-[115px]"
           />
           <select
             value={newShoot.category}
