@@ -436,7 +436,7 @@ const copySummaryToClipboard = async () => {
   };
 
   return (
-    <div className={`min-h-screen bg-[#070709] text-[#d4d4d8] px-4 sm:px-6 pb-8 pt-[max(2rem,env(safe-area-inset-top))] flex justify-center selection:bg-blue-600 selection:text-white ${isPrivacyMode ? "privacy-mode" : ""}`}>
+    <div className={`min-h-screen bg-[#070709] text-[#d4d4d8] px-4 sm:px-6 pb-28 sm:pb-32 pt-[max(2rem,env(safe-area-inset-top))] flex justify-center selection:bg-blue-600 selection:text-white ${isPrivacyMode ? "privacy-mode" : ""}`}>
       <div
         className="fixed top-0 left-0 right-0 z-[200] bg-[#070709]/80 backdrop-blur-xl pointer-events-none"
         style={{ height: "env(safe-area-inset-top)" }}
@@ -662,110 +662,150 @@ const copySummaryToClipboard = async () => {
         {activeTab === "home" && (
           <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-300">
             <ErrorBoundary>
-          <MilestoneProgressBar
-            currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0}
-            targetFund={targetMilestoneFund}
-            goalName={globalData?.settings?.goalName}
-          />
-        </ErrorBoundary>
+              <MilestoneProgressBar
+                currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0}
+                targetFund={targetMilestoneFund}
+                goalName={globalData?.settings?.goalName}
+              />
+            </ErrorBoundary>
 
-        <ErrorBoundary>
-          <MetricsSummaryGrid
-            totalLiquid={totalLiquid}
-            fundProgressPercent={fundProgressPercent}
-            totalPendingReceivables={totalPendingReceivables}
-            monthIncomeCollected={monthIncomeCollected}
-            selectedMonth={selectedMonth}
-          />
-        </ErrorBoundary>
+            <ErrorBoundary>
+              <MetricsSummaryGrid
+                totalLiquid={totalLiquid}
+                fundProgressPercent={fundProgressPercent}
+                totalPendingReceivables={totalPendingReceivables}
+                monthIncomeCollected={monthIncomeCollected}
+                selectedMonth={selectedMonth}
+              />
+            </ErrorBoundary>
 
-        <ErrorBoundary>
-          <ExecutionFlowCard
-            priorityUnpaidSum={priorityUnpaidSum}
-            totalUnpaidCommitments={totalUnpaidCommitments}
-            overdueBills={overdueBills}
-            overdueSum={overdueSum}
-            paydayAllocations={paydayAllocations}
-            onConfigureBaselines={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }}
-            remainingBuffer={remainingBuffer}
-            walletLabels={globalData?.settings?.walletLabels}
-            onExecutePaydaySplit={handleExecutePaydaySplit}
-            disabled={!isViewingCurrentMonth}
-          />
-        </ErrorBoundary>
+            <ErrorBoundary>
+              <WalletGrid
+                wallets={globalData?.wallets || {}}
+                milestoneWallet={globalData?.settings?.milestoneWallet}
+                walletLabels={globalData?.settings?.walletLabels}
+                onCommit={commitWallet}
+                onIncrement={incrementWallet}
+              />
+            </ErrorBoundary>
 
-                  </div>
+            <ErrorBoundary>
+              <ExecutionFlowCard
+                priorityUnpaidSum={priorityUnpaidSum}
+                totalUnpaidCommitments={totalUnpaidCommitments}
+                overdueBills={overdueBills}
+                overdueSum={overdueSum}
+                paydayAllocations={paydayAllocations}
+                onConfigureBaselines={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }}
+                remainingBuffer={remainingBuffer}
+                walletLabels={globalData?.settings?.walletLabels}
+                onExecutePaydaySplit={handleExecutePaydaySplit}
+                disabled={!isViewingCurrentMonth}
+              />
+            </ErrorBoundary>
+
+            <button onClick={copySummaryToClipboard} aria-label="Copy summary to clipboard" className="w-full bg-[#121217]/90 hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition text-xs shadow-md">
+              <Copy size={14} /> Copy Summary
+            </button>
+          </div>
         )}
 
-        <ErrorBoundary>
-          <BillsTable
-            activeBills={activeBills}
-            selectedMonth={selectedMonth}
-            onToggleStatus={toggleBillStatus}
-            onAddBill={handleAddBill}
-            onDeleteBill={deleteBill}
-            onSaveEdit={(_, scope) => saveBillEdit(scope)}
-            onResetMonthOverride={resetMonthOverride}
-            editingId={editingId}
-            setEditingId={setEditingId}
-            editForm={editForm}
-            setEditForm={setEditForm}
-            walletLabels={globalData?.settings?.walletLabels}
-          />
-        </ErrorBoundary>
+        {activeTab === "operations" && (
+          <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-300">
+            <ErrorBoundary>
+              <BillsTable
+                activeBills={activeBills}
+                selectedMonth={selectedMonth}
+                onToggleStatus={toggleBillStatus}
+                onAddBill={handleAddBill}
+                onDeleteBill={deleteBill}
+                onSaveEdit={(_, scope) => saveBillEdit(scope)}
+                onResetMonthOverride={resetMonthOverride}
+                editingId={editingId}
+                setEditingId={setEditingId}
+                editForm={editForm}
+                setEditForm={setEditForm}
+                walletLabels={globalData?.settings?.walletLabels}
+              />
+            </ErrorBoundary>
 
-        <ErrorBoundary>
-          <ReceivablesTable
-            inflowsLabel={globalData?.settings?.inflowsLabel}
-            inflowCategories={globalData?.settings?.inflowCategories}
-            activeReceivables={activeReceivables}
-            selectedMonth={selectedMonth}
-            onToggleStatus={toggleReceivableStatus}
-            onAddPayment={addPayment}
-            onAddReceivable={handleAddReceivable}
-            onDeleteReceivable={deleteReceivable}
-            onSaveEdit={() => saveReceivableEdit()}
-            editingId={editingId}
-            setEditingId={setEditingId}
-            editForm={editForm}
-            setEditForm={setEditForm}
-          />
-        </ErrorBoundary>
+            <ErrorBoundary>
+              <ReceivablesTable
+                inflowsLabel={globalData?.settings?.inflowsLabel}
+                inflowCategories={globalData?.settings?.inflowCategories}
+                activeReceivables={activeReceivables}
+                selectedMonth={selectedMonth}
+                onToggleStatus={toggleReceivableStatus}
+                onAddPayment={addPayment}
+                onAddReceivable={handleAddReceivable}
+                onDeleteReceivable={deleteReceivable}
+                onSaveEdit={() => saveReceivableEdit()}
+                editingId={editingId}
+                setEditingId={setEditingId}
+                editForm={editForm}
+                setEditForm={setEditForm}
+              />
+            </ErrorBoundary>
 
-        <ErrorBoundary>
-          <ShootsTable
-            gigsLabel={globalData?.settings?.gigsLabel}
-            gigCategories={globalData?.settings?.gigCategories}
-            activeShoots={activeShoots}
-            selectedMonth={selectedMonth}
-            onToggleCompletion={toggleShootCompletion}
-            onAddShoot={handleAddShoot}
-            onDeleteShoot={deleteShoot}
-            onSaveEdit={() => saveShootEdit()}
-            editingId={editingId}
-            setEditingId={setEditingId}
-            editForm={editForm}
-            setEditForm={setEditForm}
-          />
-        </ErrorBoundary>
+            <ErrorBoundary>
+              <ShootsTable
+                gigsLabel={globalData?.settings?.gigsLabel}
+                gigCategories={globalData?.settings?.gigCategories}
+                activeShoots={activeShoots}
+                selectedMonth={selectedMonth}
+                onToggleCompletion={toggleShootCompletion}
+                onAddShoot={handleAddShoot}
+                onDeleteShoot={deleteShoot}
+                onSaveEdit={() => saveShootEdit()}
+                editingId={editingId}
+                setEditingId={setEditingId}
+                editForm={editForm}
+                setEditForm={setEditForm}
+              />
+            </ErrorBoundary>
+          </div>
+        )}
 
-        <ErrorBoundary>
-          <WalletGrid
-            wallets={globalData?.wallets || {}}
-            milestoneWallet={globalData?.settings?.milestoneWallet}
-            walletLabels={globalData?.settings?.walletLabels}
-            onCommit={commitWallet}
-            onIncrement={incrementWallet}
-          />
-        </ErrorBoundary>
+        {activeTab === "wallets" && (
+          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+            <ErrorBoundary>
+              <WalletGrid
+                wallets={globalData?.wallets || {}}
+                milestoneWallet={globalData?.settings?.milestoneWallet}
+                walletLabels={globalData?.settings?.walletLabels}
+                onCommit={commitWallet}
+                onIncrement={incrementWallet}
+              />
+            </ErrorBoundary>
+          </div>
+        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-          <button onClick={copySummaryToClipboard} aria-label="Copy summary to clipboard" className="w-full bg-[#121217]/90 hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Copy size={14} /> Copy Summary</button>
-          <button onClick={exportBackup} aria-label="Export JSON backup" className="w-full bg-[#121217]/90 hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Download size={14} /> Export Backup</button>
-          <button onClick={() => importInputRef.current?.click()} aria-label="Import JSON backup" className="w-full bg-[#121217]/90 hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Upload size={14} /> Import Backup</button>
-          <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} className="hidden" />
-        </div>
+        {activeTab === "expenses" && (
+          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+            <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl rounded-3xl p-8 text-center flex flex-col items-center justify-center min-h-[30vh]">
+              <h3 className="text-white font-bold text-lg mb-2">Expenses & AI Scanner</h3>
+              <p className="text-sm text-zinc-400">Receipt ledger and AI extraction loading in Phase 2...</p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "account" && (
+          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+            <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl rounded-3xl p-8 text-center flex flex-col items-center justify-center min-h-[30vh]">
+              <h3 className="text-white font-bold text-lg mb-4">Account Dashboard</h3>
+              <div className="flex flex-col gap-3 max-w-xs mx-auto w-full">
+                <button onClick={() => setShowSettingsModal(true)} className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl transition shadow-lg shadow-blue-900/20">Open Settings & Sync</button>
+                <button onClick={exportBackup} className="w-full bg-[#1a1a22] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Download size={14} /> Export JSON Backup</button>
+                <button onClick={() => importInputRef.current?.click()} className="w-full bg-[#1a1a22] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Upload size={14} /> Import JSON Backup</button>
+              </div>
+              <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} className="hidden" />
+            </div>
+          </div>
+        )}
+
       </div>
+      
+      <BottomNav activeTab={activeTab} onChange={setActiveTab} />
     </div>
   );
 }
