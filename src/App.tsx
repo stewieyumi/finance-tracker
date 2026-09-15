@@ -199,6 +199,8 @@ const { saveShootEdit } = useShootSaveActions({
     targetGCashAllocation,
     targetGoTymeAllocation,
     remainingBuffer
+  ,
+    billPaydayAllocations
   } = useFinanceCalculations(globalData, selectedMonth);
 
   const isModalOpen =
@@ -310,6 +312,19 @@ const { saveShootEdit } = useShootSaveActions({
           return prev;
         }
 
+        const updatedLogs = { ...prev.logs };
+        billPaydayAllocations.forEach(alloc => {
+          const monthLog = updatedLogs[alloc.month] || {};
+          const existingContributions = monthLog.billPaydayContributions || {};
+          updatedLogs[alloc.month] = {
+            ...monthLog,
+            billPaydayContributions: {
+              ...existingContributions,
+              [alloc.id]: (existingContributions[alloc.id] || 0) + alloc.amount
+            }
+          };
+        });
+
         return {
           ...prev,
           wallets: {
@@ -319,6 +334,7 @@ const { saveShootEdit } = useShootSaveActions({
             gcash: (parseFloat(String(prev.wallets.gcash)) || 0) + targetGCashAllocation,
             gotyme: (parseFloat(String(prev.wallets.gotyme)) || 0) + targetGoTymeAllocation
           },
+          logs: updatedLogs,
           paydaySplitExecutions: [...executions, executionKey],
           updatedAt: Date.now()
         };

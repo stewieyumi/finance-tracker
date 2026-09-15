@@ -71,6 +71,9 @@ export interface MonthLog {
       collected: boolean;
     };
   };
+  billPaydayContributions?: {
+    [billId: string]: number;
+  };
 }
 
 export interface AppSettings {

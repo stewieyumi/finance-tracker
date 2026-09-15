@@ -206,23 +206,42 @@ const fundProgressPercent = useMemo(() => {
   const today = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
   const walletSplitTotals = { maya: 0, gcash: 0, maribank: 0, gotyme: 0 };
 
+  const billPaydayAllocations: { id: string; month: string; wallet: "maya" | "gcash" | "maribank" | "gotyme"; amount: number }[] = [];
+
   activeBills.filter(b => !b.paid).forEach(b => {
     const dueDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (b.daysLeft ?? 0));
     const paydaysRemaining = Math.max(1, countPaydaysUntil(today, dueDate));
-    const perPayday = (parseFloat(String(b.amount)) || 0) / paydaysRemaining;
+    const alreadyAllocated = globalData.logs?.[b.targetMonthForDue]?.billPaydayContributions?.[b.id] || 0;
+    const remainingAmount = Math.max(0, (parseFloat(String(b.amount)) || 0) - alreadyAllocated);
+    const perPayday = remainingAmount / paydaysRemaining;
     const wallet = getWalletForBill(b.name);
     walletSplitTotals[wallet] += perPayday;
+    if (perPayday > 0) {
+      billPaydayAllocations.push({ id: b.id, month: b.targetMonthForDue, wallet, amount: Math.round(perPayday * 100) / 100 });
+    }
   });
 
+  const totalBillObligations = walletSplitTotals.maya + walletSplitTotals.gcash + walletSplitTotals.maribank + walletSplitTotals.gotyme;
+  const totalBaselineTarget = baseLivingAllowance + baseSavingsTarget + defaultTransit;
+  const leftoverAfterBills = Math.max(0, perPayoutSalary - totalBillObligations);
+  // Bills are funded first, in full. Baselines only get whatever payout room is left,
+  // scaled down together (not zeroed one at a time) so no single wallet gets starved.
+  const baselineScale = totalBaselineTarget > 0 ? Math.min(1, leftoverAfterBills / totalBaselineTarget) : 0;
+
+  const scaledLivingAllowance = Math.round(baseLivingAllowance * baselineScale * 100) / 100;
+  const scaledSavingsTarget = Math.round(baseSavingsTarget * baselineScale * 100) / 100;
+  const scaledTransit = Math.round(defaultTransit * baselineScale * 100) / 100;
+
   const targetMayaAllocation = Math.round(walletSplitTotals.maya * 100) / 100;
-  const targetGCashAllocation = Math.round((walletSplitTotals.gcash + baseLivingAllowance) * 100) / 100;
-  const targetMariBankAllocation = Math.round((walletSplitTotals.maribank + baseSavingsTarget) * 100) / 100;
-  const targetGoTymeAllocation = Math.round((walletSplitTotals.gotyme + defaultTransit) * 100) / 100;
+  const targetGCashAllocation = Math.round((walletSplitTotals.gcash + scaledLivingAllowance) * 100) / 100;
+  const targetMariBankAllocation = Math.round((walletSplitTotals.maribank + scaledSavingsTarget) * 100) / 100;
+  const targetGoTymeAllocation = Math.round((walletSplitTotals.gotyme + scaledTransit) * 100) / 100;
 
   const totalAllocatedPerPayout = targetMayaAllocation + targetMariBankAllocation + targetGCashAllocation + targetGoTymeAllocation;
   const remainingBuffer = Math.round((perPayoutSalary - totalAllocatedPerPayout) * 100) / 100;
 
   return {
+    billPaydayAllocations,
     activeBills,
     activeReceivables,
     activeShoots,
