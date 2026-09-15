@@ -680,16 +680,6 @@ const copySummaryToClipboard = async () => {
             </ErrorBoundary>
 
             <ErrorBoundary>
-              <WalletGrid
-                wallets={globalData?.wallets || {}}
-                milestoneWallet={globalData?.settings?.milestoneWallet}
-                walletLabels={globalData?.settings?.walletLabels}
-                onCommit={commitWallet}
-                onIncrement={incrementWallet}
-              />
-            </ErrorBoundary>
-
-            <ErrorBoundary>
               <ExecutionFlowCard
                 priorityUnpaidSum={priorityUnpaidSum}
                 totalUnpaidCommitments={totalUnpaidCommitments}
@@ -701,6 +691,16 @@ const copySummaryToClipboard = async () => {
                 walletLabels={globalData?.settings?.walletLabels}
                 onExecutePaydaySplit={handleExecutePaydaySplit}
                 disabled={!isViewingCurrentMonth}
+              />
+            </ErrorBoundary>
+
+            <ErrorBoundary>
+              <WalletGrid
+                wallets={globalData?.wallets || {}}
+                milestoneWallet={globalData?.settings?.milestoneWallet}
+                walletLabels={globalData?.settings?.walletLabels}
+                onCommit={commitWallet}
+                onIncrement={incrementWallet}
               />
             </ErrorBoundary>
 
