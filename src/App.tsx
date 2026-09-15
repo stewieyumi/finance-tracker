@@ -254,8 +254,15 @@ const { saveShootEdit } = useShootSaveActions({
     getAdjacentMonth(selectedMonth, 2)
   ], [selectedMonth]);
 
+  const isViewingCurrentMonth = selectedMonth === getMonthKey(new Date());
+
   const handleExecutePaydaySplit = () => {
     if (paydaySplitInProgressRef.current) return;
+
+    if (!isViewingCurrentMonth) {
+      showToast(`⚠️ You're viewing ${selectedMonth}. Switch to the current month before distributing.`);
+      return;
+    }
 
     if (remainingBuffer < 0) {
       showToast("⚠️ Payday allocation exceeds the configured payout.");
@@ -691,6 +698,7 @@ const copySummaryToClipboard = async () => {
             targetGoTymeAllocation={targetGoTymeAllocation}
             remainingBuffer={remainingBuffer}
             onExecutePaydaySplit={handleExecutePaydaySplit}
+            disabled={!isViewingCurrentMonth}
           />
         </ErrorBoundary>
 
