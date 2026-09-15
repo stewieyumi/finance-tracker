@@ -108,6 +108,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
       <option value="maribank">{form.walletLabels?.maribank || "MariBank"}</option><option value="bpi">{form.walletLabels?.bpi || "BPI"}</option>
       <option value="maya">{form.walletLabels?.maya || "Maya"}</option><option value="gcash">{form.walletLabels?.gcash || "GCash"}</option>
       <option value="gotyme">{form.walletLabels?.gotyme || "GoTyme"}</option><option value="cash">{form.walletLabels?.cash || "Cash On-Hand"}</option>
+      {globalData.settings?.customWallets?.map(cw => <option key={cw.id} value={cw.id}>{cw.label}</option>)}
     </>
   );
 

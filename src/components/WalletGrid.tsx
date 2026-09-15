@@ -68,23 +68,29 @@ const WalletRow: React.FC<WalletRowProps> = ({ wallet, currentBalance, onCommit,
   );
 };
 
+import { CustomWallet } from "../types/finance";
+
 interface WalletGridProps {
   wallets: WalletState;
+  customWallets?: CustomWallet[];
   milestoneWallet?: string;
   walletLabels?: Record<string, string>;
   onCommit: (key: string, value: number) => void;
   onIncrement: (key: string, addAmount: number) => void;
 }
 
-export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, milestoneWallet = 'maribank', walletLabels, onCommit, onIncrement }) => {
+export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, milestoneWallet = 'maribank', walletLabels, customWallets, onCommit, onIncrement }) => {
   return (
     <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.07] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] rounded-2xl p-4 sm:p-5">
       <div className="text-[11px] font-semibold tracking-wider text-zinc-400 uppercase mb-3">Liquid Cash Wallets</div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-        {WALLET_CONFIG.map(w => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+        {[
+          ...WALLET_CONFIG.map(w => ({ id: w.id, label: walletLabels?.[w.id] || w.defaultLabel, color: w.id === milestoneWallet ? 'text-blue-400 font-bold' : 'text-zinc-100' })),
+          ...(customWallets || []).map(w => ({ id: w.id, label: w.label, color: w.id === milestoneWallet ? 'text-blue-400 font-bold' : (w.color || 'text-zinc-100') }))
+        ].map(w => (
           <WalletRow
             key={w.id}
-            wallet={{ id: w.id, label: walletLabels?.[w.id] || w.defaultLabel, color: w.id === milestoneWallet ? 'text-blue-400 font-bold' : 'text-zinc-100' }}
+            wallet={w}
             currentBalance={wallets[w.id] ?? 0}
             onCommit={onCommit}
             onIncrement={onIncrement}

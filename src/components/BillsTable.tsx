@@ -20,6 +20,7 @@
     editForm: EditFormData;
     setEditForm: React.Dispatch<React.SetStateAction<EditFormData>>;
     walletLabels?: Record<string, string>;
+    customWallets?: import("../types/finance").CustomWallet[];
   }
 
   export const BillsTable: React.FC<BillsTableProps> = React.memo(({
@@ -34,7 +35,8 @@
     setEditingId,
     editForm,
     setEditForm,
-    walletLabels
+    walletLabels,
+    customWallets
   }) => {
     const [newBill, setNewBill] = useState({ name: "", amount: "", dueDay: "1", type: "Bill" as BillType, startMonth: selectedMonth, endMonth: selectedMonth, wallet: "maya" });
     const [selectedFilter, setSelectedFilter] = useState("All");
@@ -235,6 +237,7 @@
                           <option value="maribank">{walletLabels?.maribank || "MariBank"}</option>
                           <option value="gotyme">{walletLabels?.gotyme || "GoTyme"}</option>
                           <option value="bpi">{walletLabels?.bpi || "BPI"}</option>
+                            {customWallets?.map(cw => <option key={cw.id} value={cw.id}>{cw.label}</option>)}
                         </select>
                       </div>
 
@@ -478,6 +481,7 @@
                             <option value="maribank">{walletLabels?.maribank || "MariBank"}</option>
                             <option value="gotyme">{walletLabels?.gotyme || "GoTyme"}</option>
                             <option value="bpi">{walletLabels?.bpi || "BPI"}</option>
+                            {customWallets?.map(cw => <option key={cw.id} value={cw.id}>{cw.label}</option>)}
                           </select>
                           {editForm.type === "Loan / Installment" && (
                         <div className="grid grid-cols-2 gap-1">
@@ -606,6 +610,7 @@
               <option value="maribank">{walletLabels?.maribank || "MariBank"}</option>
               <option value="gotyme">{walletLabels?.gotyme || "GoTyme"}</option>
               <option value="bpi">{walletLabels?.bpi || "BPI"}</option>
+                            {customWallets?.map(cw => <option key={cw.id} value={cw.id}>{cw.label}</option>)}
             </select>
 
             {newBill.type === "Loan / Installment" ? (

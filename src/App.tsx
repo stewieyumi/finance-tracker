@@ -30,6 +30,7 @@ import { WalletGrid } from "./components/WalletGrid";
 import { DateJumpModal } from "./components/DateJumpModal";
 import { YearlyOverviewModal } from "./components/YearlyOverviewModal";
 import { FinancialAnalyticsModal } from "./components/FinancialAnalyticsModal";
+import { WalletsTab } from "./components/WalletsTab";
 import { BottomNav, TabType } from "./components/BottomNav";
 import { SettingsModal } from "./components/SettingsModal";
 
@@ -690,6 +691,7 @@ const copySummaryToClipboard = async () => {
                 onConfigureBaselines={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }}
                 remainingBuffer={remainingBuffer}
                 walletLabels={globalData?.settings?.walletLabels}
+                customWallets={globalData?.settings?.customWallets}
                 onExecutePaydaySplit={handleExecutePaydaySplit}
                 disabled={!isViewingCurrentMonth}
               />
@@ -700,6 +702,7 @@ const copySummaryToClipboard = async () => {
                 wallets={globalData?.wallets || {}}
                 milestoneWallet={globalData?.settings?.milestoneWallet}
                 walletLabels={globalData?.settings?.walletLabels}
+                customWallets={globalData?.settings?.customWallets}
                 onCommit={commitWallet}
                 onIncrement={incrementWallet}
               />
@@ -738,6 +741,7 @@ const copySummaryToClipboard = async () => {
                 editForm={editForm}
                 setEditForm={setEditForm}
                 walletLabels={globalData?.settings?.walletLabels}
+                customWallets={globalData?.settings?.customWallets}
               />
             </ErrorBoundary>
               </div>
@@ -789,17 +793,13 @@ const copySummaryToClipboard = async () => {
         )}
         
         {activeTab === "wallets" && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
-            <ErrorBoundary>
-              <WalletGrid
-                wallets={globalData?.wallets || {}}
-                milestoneWallet={globalData?.settings?.milestoneWallet}
-                walletLabels={globalData?.settings?.walletLabels}
-                onCommit={commitWallet}
-                onIncrement={incrementWallet}
-              />
-            </ErrorBoundary>
-          </div>
+          <WalletsTab
+            globalData={globalData}
+            setGlobalData={setGlobalData}
+            onCommit={commitWallet}
+            onIncrement={incrementWallet}
+            onOpenSettings={() => { setSettingsInitialTab("wallets"); setShowSettingsModal(true); }}
+          />
         )}
 
         {activeTab === "expenses" && (

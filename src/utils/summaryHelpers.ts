@@ -60,7 +60,11 @@ export function buildFinancialSummary({
     `  • ${wl.gotyme || "GoTyme"}: ₱${fmt(globalData?.wallets?.gotyme)}`,
     `  • ${wl.bpi || "BPI"}: ₱${fmt(globalData?.wallets?.bpi)}`,
     `  • ${wl.cash || "Cash On-Hand"}: ₱${fmt(globalData?.wallets?.cash)}`
-  ].join("\n");
+  ];
+  (globalData?.settings?.customWallets || []).forEach(cw => {
+    walletLines.push(`  • ${cw.label}: ₱${fmt(globalData?.wallets?.[cw.id])}`);
+  });
+  const finalWalletLines = walletLines.join("\n");
 
   const billLines =
     unpaid
@@ -115,7 +119,7 @@ Generated: ${new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle
 ========================================
 
 1. LIQUID CASH BREAKDOWN
-${walletLines}
+${finalWalletLines}
 ----------------------------------------
 TOTAL LIQUID CASH: ₱${fmt(totalLiquid)}
 
