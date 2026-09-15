@@ -77,6 +77,12 @@ export interface MonthLog {
   };
 }
 
+export interface CustomWallet {
+  id: string;
+  label: string;
+  color?: string;
+}
+
 export interface AppSettings {
   targetFund: number;
   goalName?: string;
@@ -94,6 +100,7 @@ export interface AppSettings {
   savingsWallet?: string;
   transitWallet?: string;
   walletLabels?: Record<string, string>;
+  customWallets?: CustomWallet[];
 }
 
 export interface UnifiedFinanceData {

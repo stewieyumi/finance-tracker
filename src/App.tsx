@@ -30,6 +30,7 @@ import { WalletGrid } from "./components/WalletGrid";
 import { DateJumpModal } from "./components/DateJumpModal";
 import { YearlyOverviewModal } from "./components/YearlyOverviewModal";
 import { FinancialAnalyticsModal } from "./components/FinancialAnalyticsModal";
+import { BottomNav, TabType } from "./components/BottomNav";
 import { SettingsModal } from "./components/SettingsModal";
 
 function safeLoadAll(): UnifiedFinanceData {
@@ -97,6 +98,7 @@ const {
   const [showYearlyModal, setShowYearlyModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>("home");
   const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "wallets" | "sync">("general");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -657,7 +659,9 @@ const copySummaryToClipboard = async () => {
           totalUnpaidCommitments={totalUnpaidCommitments}
         />
 
-        <ErrorBoundary>
+        {activeTab === "home" && (
+          <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-300">
+            <ErrorBoundary>
           <MilestoneProgressBar
             currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0}
             targetFund={targetMilestoneFund}
@@ -689,6 +693,9 @@ const copySummaryToClipboard = async () => {
             disabled={!isViewingCurrentMonth}
           />
         </ErrorBoundary>
+
+                  </div>
+        )}
 
         <ErrorBoundary>
           <BillsTable
