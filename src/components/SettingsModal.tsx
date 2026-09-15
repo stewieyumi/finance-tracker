@@ -5,6 +5,7 @@ import { getWalletForBill } from "../utils/financeHelpers";
 
 interface SettingsModalProps {
   isOpen: boolean;
+  initialTab?: "general" | "baselines" | "wallets" | "sync";
   onClose: () => void;
   globalData: UnifiedFinanceData;
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
@@ -20,8 +21,12 @@ const PRESETS = {
   personal: { label: "Personal / Student", inflows: "INCOME & ALLOWANCE", gigs: "TASKS & HUSTLES", inflowCats: ["Allowance", "Salary", "Gift", "Side Hustle", "Other"], gigCats: ["Part-time", "Errand", "Online Selling", "Other"] }
 };
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull }) => {
-  const [activeTab, setActiveTab] = useState<"general"|"baselines"|"wallets"|"sync">("general");
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab = "general", onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull }) => {
+  const [activeTab, setActiveTab] = useState<"general"|"baselines"|"wallets"|"sync">(initialTab);
+
+  useEffect(() => {
+    if (isOpen) setActiveTab(initialTab);
+  }, [isOpen, initialTab]);
   const [form, setForm] = useState({
     goalName: "Japan ADB Target Milestone", targetFund: 80000, milestoneWallet: "maribank",
     baseLivingAllowance: 2500, livingWallet: "gcash",

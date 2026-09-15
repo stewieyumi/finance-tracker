@@ -97,6 +97,7 @@ const {
   const [showYearlyModal, setShowYearlyModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "wallets" | "sync">("general");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormData>({});
@@ -240,7 +241,7 @@ const { saveShootEdit } = useShootSaveActions({
 
   useKeyboardShortcuts({
     onToggleDatePicker: () => setShowDatePickerModal(prev => !prev),
-    onToggleDebug: () => setShowSettingsModal(true),
+    onToggleDebug: () => { setSettingsInitialTab("sync"); setShowSettingsModal(true); },
     onToggleYearly: () => setShowYearlyModal(prev => !prev),
     onToggleAnalytics: () => setShowAnalyticsModal(prev => !prev),
     onManualSync: forceManualSync,
@@ -561,7 +562,7 @@ const copySummaryToClipboard = async () => {
               </button>
 
               <button 
-                onClick={() => setShowSettingsModal(true)} 
+                onClick={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} 
                 aria-label="App Settings"
                 title="Settings" 
                 className="h-6 w-6 rounded-md bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-500/50 text-zinc-400 hover:text-amber-400 flex items-center justify-center transition shadow-sm"
@@ -635,6 +636,7 @@ const copySummaryToClipboard = async () => {
 
         <SettingsModal
           isOpen={showSettingsModal}
+          initialTab={settingsInitialTab}
           onClose={() => setShowSettingsModal(false)}
           globalData={globalData}
           setGlobalData={setGlobalData}
@@ -680,7 +682,7 @@ const copySummaryToClipboard = async () => {
             overdueBills={overdueBills}
             overdueSum={overdueSum}
             paydayAllocations={paydayAllocations}
-            onConfigureBaselines={() => setShowSettingsModal(true)}
+            onConfigureBaselines={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }}
             remainingBuffer={remainingBuffer}
             walletLabels={globalData?.settings?.walletLabels}
             onExecutePaydaySplit={handleExecutePaydaySplit}
