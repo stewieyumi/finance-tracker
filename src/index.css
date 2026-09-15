@@ -8,73 +8,43 @@
     color: #e2e2e8;
   }
 }
+
+/* Hide native browser number arrows for a cleaner app feel */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-.privacy-mode .font-mono:not(form input):not(form textarea):not(button) {
-  filter: blur(5px);
-  user-select: none;
-  will-change: filter;
-  transition: filter 0.15s ease-in-out;
-}
+/* =========================================
+   NATIVE APP PRIVACY ENGINE
+   ========================================= */
 
-.privacy-mode input:not(form input) {
+/* 1. Blur all numbers, dates, and truncated list names globally */
+.privacy-mode .font-mono:not(kbd):not(input):not(textarea):not(select),
+.privacy-mode .truncate:not(select):not(input),
+.privacy-mode td:nth-child(2):not(.no-privacy-blur) {
   filter: blur(5.5px) !important;
-  user-select: none;
+  user-select: none !important;
   will-change: filter;
   transition: filter 0.15s ease-in-out;
 }
 
-.privacy-mode table tbody tr td:nth-child(2) span,
-.privacy-mode table tbody tr td:nth-child(2) div {
-  filter: blur(5.5px);
-  user-select: none;
-  will-change: filter;
-  transition: filter 0.15s ease-in-out;
-}
-
-.privacy-mode table tbody tr td:nth-child(4) span:not([class*="bg-"]),
-.privacy-mode table tbody tr td:nth-child(5) {
-  filter: blur(5px);
-  user-select: none;
-  will-change: filter;
-  transition: filter 0.15s ease-in-out;
-}
-
-.privacy-mode .border-t span {
-  filter: blur(4.5px);
-  user-select: none;
-}
-
-.privacy-mode div[style*="width"]:not(button):not(td):not(th):not(col),
-.privacy-mode .h-1,
-.privacy-mode .h-1\.5,
-.privacy-mode .h-2,
-.privacy-mode .bg-blue-500:not(button),
-.privacy-mode .bg-blue-600:not(button) {
+/* 2. Blur the progress bars */
+.privacy-mode div[style*="width"]:not(button):not(td):not(th):not(col) {
   filter: blur(6px) !important;
   opacity: 0.25 !important;
-  user-select: none;
   transition: filter 0.15s ease-in-out, opacity 0.15s ease-in-out;
 }
 
-.privacy-mode .block.md\:hidden .truncate,
-.privacy-mode .block.md\:hidden .text-zinc-400 span:not([class*="bg-"]) {
-  filter: blur(5px);
-  user-select: none;
-  will-change: filter;
-}
-
-.privacy-mode form input,
-.privacy-mode form select,
-.privacy-mode form textarea,
-.privacy-mode button,
-.privacy-mode button *,
+/* 3. Strict Exceptions (Never blur inputs, dropdowns, or active buttons) */
+.privacy-mode input,
+.privacy-mode select,
+.privacy-mode textarea,
+.privacy-mode button.font-mono,
 .privacy-mode .no-privacy-blur,
 .privacy-mode .no-privacy-blur * {
   filter: none !important;
   user-select: auto !important;
+  opacity: 1 !important;
 }
