@@ -88,6 +88,7 @@ export interface AppSettings {
   perPayoutSalary: number;
   phpToJpyRate: number;
   defaultTransitAllocation: number;
+  walletLabels?: Record<string, string>;
 }
 
 export interface UnifiedFinanceData {

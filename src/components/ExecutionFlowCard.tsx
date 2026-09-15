@@ -12,6 +12,7 @@ interface ExecutionFlowCardProps {
   targetGCashAllocation: number;
   targetGoTymeAllocation: number;
   remainingBuffer: number;
+  walletLabels?: Record<string, string>;
   onExecutePaydaySplit: () => void;
   disabled?: boolean;
 }
@@ -26,6 +27,7 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
   targetGCashAllocation,
   targetGoTymeAllocation,
   remainingBuffer,
+  walletLabels,
   onExecutePaydaySplit,
   disabled = false
 }) => {
@@ -85,22 +87,22 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
 
           <div className="space-y-1.5 text-xs">
             <div className="flex items-center justify-between py-1 border-b border-white/[0.03]">
-              <span className="text-zinc-400 no-privacy-blur">Maya (Bills & Utilities)</span>
+              <span className="text-zinc-400 no-privacy-blur">{walletLabels?.maya || "Maya (Bills)"}</span>
               <span className="font-mono font-semibold text-zinc-200">₱{fmt(targetMayaAllocation)}</span>
             </div>
 
             <div className="flex items-center justify-between py-1 border-b border-white/[0.03]">
-              <span className="text-zinc-400 no-privacy-blur">MariBank (Japan / Loan Fund)</span>
+              <span className="text-zinc-400 no-privacy-blur">{walletLabels?.maribank || "MariBank (Main)"}</span>
               <span className="font-mono font-semibold text-zinc-200">₱{fmt(targetMariBankAllocation)}</span>
             </div>
 
             <div className="flex items-center justify-between py-1 border-b border-white/[0.03]">
-              <span className="text-zinc-400 no-privacy-blur">GCash (UnoBank / Payoff)</span>
+              <span className="text-zinc-400 no-privacy-blur">{walletLabels?.gcash || "GCash"}</span>
               <span className="font-mono font-semibold text-zinc-200">₱{fmt(targetGCashAllocation)}</span>
             </div>
 
             <div className="flex items-center justify-between py-1 border-b border-white/[0.03]">
-              <span className="text-zinc-400 no-privacy-blur">GoTyme (Transit / Daily)</span>
+              <span className="text-zinc-400 no-privacy-blur">{walletLabels?.gotyme || "GoTyme"}</span>
               <span className="font-mono font-semibold text-zinc-200">₱{fmt(targetGoTymeAllocation)}</span>
             </div>
 

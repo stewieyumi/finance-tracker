@@ -19,6 +19,7 @@
     setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
     editForm: EditFormData;
     setEditForm: React.Dispatch<React.SetStateAction<EditFormData>>;
+    walletLabels?: Record<string, string>;
   }
 
   export const BillsTable: React.FC<BillsTableProps> = React.memo(({
@@ -32,7 +33,8 @@
     editingId,
     setEditingId,
     editForm,
-    setEditForm
+    setEditForm,
+    walletLabels
   }) => {
     const [newBill, setNewBill] = useState({ name: "", amount: "", dueDay: "1", type: "Bill" as BillType, startMonth: selectedMonth, endMonth: selectedMonth, wallet: "maya" });
     const [selectedFilter, setSelectedFilter] = useState("All");
@@ -228,11 +230,11 @@
                           disabled={editScope === "monthOnly"}
                           className="bg-[#0b0b0d] border border-zinc-700 rounded-lg px-2 py-1.5 text-white text-[10px] uppercase font-semibold disabled:opacity-50 disabled:cursor-not-allowed col-span-2"
                         >                          
-                          <option value="maya">Maya</option>
-                          <option value="gcash">GCash</option>
-                          <option value="maribank">MariBank</option>
-                          <option value="gotyme">GoTyme</option>
-                          <option value="bpi">BPI</option>
+                          <option value="maya">{walletLabels?.maya || "Maya"}</option>
+                          <option value="gcash">{walletLabels?.gcash || "GCash"}</option>
+                          <option value="maribank">{walletLabels?.maribank || "MariBank"}</option>
+                          <option value="gotyme">{walletLabels?.gotyme || "GoTyme"}</option>
+                          <option value="bpi">{walletLabels?.bpi || "BPI"}</option>
                         </select>
                       </div>
 
@@ -297,7 +299,7 @@
                               bill.type === "Loan / Installment" ? "bg-amber-950/80 text-amber-300 border border-amber-800/40" :
                               "bg-blue-950/80 text-blue-300 border border-blue-800/40"
                             }`}>{bill.type}</span>
-                            {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{bill.wallet}</span>}
+                            {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{walletLabels?.[bill.wallet!] || bill.wallet}</span>}
                             
                             {bill.dueDay && <span className="font-mono">Day {bill.dueDay}</span>}
 
@@ -471,11 +473,11 @@
                             disabled={editScope === "monthOnly"}
                             className="bg-[#0b0b0d] border border-zinc-700 rounded-lg px-2 py-1 text-white text-[10px] font-semibold uppercase disabled:opacity-50 disabled:cursor-not-allowed w-full"
                           >
-                            <option value="maya">Maya</option>
-                            <option value="gcash">GCash</option>
-                            <option value="maribank">MariBank</option>
-                            <option value="gotyme">GoTyme</option>
-                            <option value="bpi">BPI</option>
+                            <option value="maya">{walletLabels?.maya || "Maya"}</option>
+                            <option value="gcash">{walletLabels?.gcash || "GCash"}</option>
+                            <option value="maribank">{walletLabels?.maribank || "MariBank"}</option>
+                            <option value="gotyme">{walletLabels?.gotyme || "GoTyme"}</option>
+                            <option value="bpi">{walletLabels?.bpi || "BPI"}</option>
                           </select>
                           {editForm.type === "Loan / Installment" && (
                         <div className="grid grid-cols-2 gap-1">
@@ -519,7 +521,7 @@
                               bill.type === "Loan / Installment" ? "bg-amber-950/70 text-amber-300 border border-amber-800/40" :
                               "bg-blue-950/70 text-blue-300 border border-blue-800/40"
                             }`}>{bill.type}</span>
-                            {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{bill.wallet}</span>}
+                            {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{walletLabels?.[bill.wallet!] || bill.wallet}</span>}
                             
                             {bill.dueDay && <span className="text-[11px] text-zinc-400 font-mono">Day {bill.dueDay}</span>}
                             
@@ -597,26 +599,27 @@
               <option value="Subscription">Subscription</option>
               <option value="Loan / Installment">Loan / Installment</option>
             </select>
-            <select value={newBill.wallet} onChange={(e) => setNewBill({ ...newBill, wallet: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 sm:px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-auto min-w-[80px] font-semibold uppercase">
-              <option value="maya">Maya</option>
-              <option value="gcash">GCash</option>
-              <option value="maribank">MariBank</option>
-              <option value="gotyme">GoTyme</option>
-              <option value="bpi">BPI</option>
-            </select>
             
+            <select value={newBill.wallet} onChange={(e) => setNewBill({ ...newBill, wallet: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 sm:px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-auto min-w-[80px] font-semibold uppercase text-blue-300 cursor-pointer">
+              <option value="maya">{walletLabels?.maya || "Maya"}</option>
+              <option value="gcash">{walletLabels?.gcash || "GCash"}</option>
+              <option value="maribank">{walletLabels?.maribank || "MariBank"}</option>
+              <option value="gotyme">{walletLabels?.gotyme || "GoTyme"}</option>
+              <option value="bpi">{walletLabels?.bpi || "BPI"}</option>
+            </select>
+
             {newBill.type === "Loan / Installment" ? (
               <div className="flex items-center gap-1 flex-1 lg:w-auto">
                 <div className="flex items-center gap-1 flex-1 min-w-[120px]">
                   <select value={newBill.startMonth} onChange={(e) => setNewBill({ ...newBill, startMonth: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 py-1.5 text-[10px] text-white outline-none w-1/2 truncate">{ALL_MONTH_YEAR_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}</select>
                   <select value={newBill.endMonth} onChange={(e) => setNewBill({ ...newBill, endMonth: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 py-1.5 text-[10px] text-white outline-none w-1/2 truncate">{ALL_MONTH_YEAR_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}</select>
                 </div>
-                <select value={newBill.dueDay} onChange={(e) => setNewBill({ ...newBill, dueDay: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 sm:px-2 py-1.5 text-[10px] sm:text-xs text-white outline-none w-20 shrink-0">
+                <select value={newBill.dueDay} onChange={(e) => setNewBill({ ...newBill, dueDay: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 sm:px-2 py-1.5 text-[10px] sm:text-xs text-white outline-none w-20 shrink-0 cursor-pointer">
                   {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Day {d}</option>)}
                 </select>
               </div>
             ) : (
-              <select value={newBill.dueDay} onChange={(e) => setNewBill({ ...newBill, dueDay: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 sm:px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-auto min-w-[80px]">
+              <select value={newBill.dueDay} onChange={(e) => setNewBill({ ...newBill, dueDay: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 sm:px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-auto min-w-[80px] cursor-pointer">
                 {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Due on {d}{d===1?"st":d===2?"nd":d===3?"rd":"th"}</option>)}
               </select>
             )}

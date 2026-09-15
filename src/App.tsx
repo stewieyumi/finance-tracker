@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from "react";
-import { Calendar, Wrench, Settings, Cloud, Copy, Download, Upload, AlertTriangle, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
+import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { getMonthKey, getAdjacentMonth } from "./utils/dateHelpers";
 import { UnifiedFinanceData, WalletState, EditFormData } from "./types/finance";
@@ -30,7 +30,6 @@ import { WalletGrid } from "./components/WalletGrid";
 import { DateJumpModal } from "./components/DateJumpModal";
 import { YearlyOverviewModal } from "./components/YearlyOverviewModal";
 import { FinancialAnalyticsModal } from "./components/FinancialAnalyticsModal";
-import { SyncDiagnosticsModal } from "./components/SyncDiagnosticsModal";
 import { SettingsModal } from "./components/SettingsModal";
 
 function safeLoadAll(): UnifiedFinanceData {
@@ -97,7 +96,6 @@ const {
   const [showDatePickerModal, setShowDatePickerModal] = useState(false);
   const [showYearlyModal, setShowYearlyModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
-  const [showDebugModal, setShowDebugModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -227,7 +225,7 @@ const { saveShootEdit } = useShootSaveActions({
     showDatePickerModal ||
     showYearlyModal ||
     showAnalyticsModal ||
-    showDebugModal;
+    showAnalyticsModal;
 
   const isEditing = editingId !== null;
 
@@ -245,7 +243,7 @@ const { saveShootEdit } = useShootSaveActions({
 
   useKeyboardShortcuts({
     onToggleDatePicker: () => setShowDatePickerModal(prev => !prev),
-    onToggleDebug: () => setShowDebugModal(prev => !prev),
+    onToggleDebug: () => setShowSettingsModal(true),
     onToggleYearly: () => setShowYearlyModal(prev => !prev),
     onToggleAnalytics: () => setShowAnalyticsModal(prev => !prev),
     onManualSync: forceManualSync,
@@ -262,7 +260,6 @@ const { saveShootEdit } = useShootSaveActions({
     setShowDatePickerModal(false);
     setShowYearlyModal(false);
     setShowAnalyticsModal(false);
-    setShowDebugModal(false);
     setEditingId(null);
   }
 });
@@ -312,19 +309,19 @@ const { saveShootEdit } = useShootSaveActions({
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         })} into your wallets?\n\n` +
-        `Maya: ₱${targetMayaAllocation.toLocaleString("en-US", {
+        `${globalData?.settings?.walletLabels?.maya || "Maya"}: ₱${targetMayaAllocation.toLocaleString("en-US", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         })}\n` +
-        `MariBank: ₱${targetMariBankAllocation.toLocaleString("en-US", {
+        `${globalData?.settings?.walletLabels?.maribank || "MariBank"}: ₱${targetMariBankAllocation.toLocaleString("en-US", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         })}\n` +
-        `GCash: ₱${targetGCashAllocation.toLocaleString("en-US", {
+        `${globalData?.settings?.walletLabels?.gcash || "GCash"}: ₱${targetGCashAllocation.toLocaleString("en-US", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         })}\n` +
-        `GoTyme: ₱${targetGoTymeAllocation.toLocaleString("en-US", {
+        `${globalData?.settings?.walletLabels?.gotyme || "GoTyme"}: ₱${targetGoTymeAllocation.toLocaleString("en-US", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         })}`
@@ -591,14 +588,7 @@ const copySummaryToClipboard = async () => {
                 <Settings size={11} />
               </button>
               
-              <button 
-                onClick={() => setShowDebugModal(true)} 
-                aria-label="Open Diagnostics & Settings"
-                title="Sync Diagnostics & Settings (Press ⌘D)" 
-                className="h-6 w-6 rounded-md bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-emerald-500/50 text-zinc-400 hover:text-emerald-400 flex items-center justify-center transition shadow-sm"
-              >
-                <Wrench size={11} />
-              </button>
+              
 
               <button 
                 onClick={forceManualSync} 
@@ -667,17 +657,13 @@ const copySummaryToClipboard = async () => {
           onClose={() => setShowSettingsModal(false)}
           globalData={globalData}
           setGlobalData={setGlobalData}
-        />
-
-        <SyncDiagnosticsModal
-          isOpen={showDebugModal}
-          onClose={() => setShowDebugModal(false)}
-          globalData={globalData}
           totalLiquid={totalLiquid}
           debugLog={debugLog}
           onForcePush={forceManualSync}
           onForcePull={() => pullLatestData(false)}
         />
+
+        
 
         <FinancialAnalyticsModal
           isOpen={showAnalyticsModal}
@@ -717,6 +703,7 @@ const copySummaryToClipboard = async () => {
             targetGCashAllocation={targetGCashAllocation}
             targetGoTymeAllocation={targetGoTymeAllocation}
             remainingBuffer={remainingBuffer}
+            walletLabels={globalData?.settings?.walletLabels}
             onExecutePaydaySplit={handleExecutePaydaySplit}
             disabled={!isViewingCurrentMonth}
           />
@@ -735,6 +722,7 @@ const copySummaryToClipboard = async () => {
             setEditingId={setEditingId}
             editForm={editForm}
             setEditForm={setEditForm}
+            walletLabels={globalData?.settings?.walletLabels}
           />
         </ErrorBoundary>
 
@@ -776,6 +764,8 @@ const copySummaryToClipboard = async () => {
         <ErrorBoundary>
           <WalletGrid
             wallets={globalData?.wallets || {}}
+            milestoneWallet={globalData?.settings?.milestoneWallet}
+            walletLabels={globalData?.settings?.walletLabels}
             onCommit={commitWallet}
             onIncrement={incrementWallet}
           />

@@ -325,7 +325,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
           </div>
           <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
-              <div className="text-[10px] text-zinc-500 uppercase font-semibold">MariBank Yen Balance</div>
+              <div className="text-[10px] text-zinc-500 uppercase font-semibold">{globalData?.settings?.walletLabels?.[globalData?.settings?.milestoneWallet || "maribank"] || "MariBank"} Yen Balance</div>
               <div className="text-base font-bold font-mono text-white mt-0.5">
                 ¥{jpyEquivalent.toLocaleString("en-US")} <span className="text-[11px] text-zinc-500 font-normal">/ ¥{targetJpy.toLocaleString()}</span>
               </div>

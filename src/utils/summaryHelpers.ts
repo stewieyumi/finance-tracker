@@ -52,13 +52,14 @@ export function buildFinancialSummary({
     totalPendingAmount -
     totalUnpaidCommitments;
 
+  const wl = globalData?.settings?.walletLabels || {};
   const walletLines = [
-    `  • MariBank (Japan Fund): ₱${fmt(globalData?.wallets?.maribank)}`,
-    `  • Maya: ₱${fmt(globalData?.wallets?.maya)}`,
-    `  • GCash: ₱${fmt(globalData?.wallets?.gcash)}`,
-    `  • GoTyme: ₱${fmt(globalData?.wallets?.gotyme)}`,
-    `  • BPI: ₱${fmt(globalData?.wallets?.bpi)}`,
-    `  • Cash On-Hand: ₱${fmt(globalData?.wallets?.cash)}`
+    `  • ${wl.maribank || "MariBank"}: ₱${fmt(globalData?.wallets?.maribank)}`,
+    `  • ${wl.maya || "Maya"}: ₱${fmt(globalData?.wallets?.maya)}`,
+    `  • ${wl.gcash || "GCash"}: ₱${fmt(globalData?.wallets?.gcash)}`,
+    `  • ${wl.gotyme || "GoTyme"}: ₱${fmt(globalData?.wallets?.gotyme)}`,
+    `  • ${wl.bpi || "BPI"}: ₱${fmt(globalData?.wallets?.bpi)}`,
+    `  • ${wl.cash || "Cash On-Hand"}: ₱${fmt(globalData?.wallets?.cash)}`
   ].join("\n");
 
   const billLines =
