@@ -660,7 +660,7 @@ const copySummaryToClipboard = async () => {
         />
 
         {activeTab === "home" && (
-          <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
             <ErrorBoundary>
               <MilestoneProgressBar
                 currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0}
@@ -711,7 +711,7 @@ const copySummaryToClipboard = async () => {
         )}
 
         {activeTab === "operations" && (
-          <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
             <ErrorBoundary>
               <BillsTable
                 activeBills={activeBills}
@@ -767,7 +767,7 @@ const copySummaryToClipboard = async () => {
         )}
 
         {activeTab === "wallets" && (
-          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
             <ErrorBoundary>
               <WalletGrid
                 wallets={globalData?.wallets || {}}
@@ -781,7 +781,7 @@ const copySummaryToClipboard = async () => {
         )}
 
         {activeTab === "expenses" && (
-          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
             <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl rounded-3xl p-8 text-center flex flex-col items-center justify-center min-h-[30vh]">
               <h3 className="text-white font-bold text-lg mb-2">Expenses & AI Scanner</h3>
               <p className="text-sm text-zinc-400">Receipt ledger and AI extraction loading in Phase 2...</p>
@@ -790,7 +790,7 @@ const copySummaryToClipboard = async () => {
         )}
 
         {activeTab === "account" && (
-          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
             <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl rounded-3xl p-8 text-center flex flex-col items-center justify-center min-h-[30vh]">
               <h3 className="text-white font-bold text-lg mb-4">Account Dashboard</h3>
               <div className="flex flex-col gap-3 max-w-xs mx-auto w-full">
