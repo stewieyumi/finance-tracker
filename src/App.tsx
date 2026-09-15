@@ -754,6 +754,8 @@ const copySummaryToClipboard = async () => {
               <ReceivablesTable
                 inflowsLabel={globalData?.settings?.inflowsLabel}
                 inflowCategories={globalData?.settings?.inflowCategories}
+                walletLabels={globalData?.settings?.walletLabels}
+                customWallets={globalData?.settings?.customWallets}
                 activeReceivables={activeReceivables}
                 selectedMonth={selectedMonth}
                 onToggleStatus={toggleReceivableStatus}

@@ -48,6 +48,8 @@ export function useReceivableSaveActions({
             amount: inputAmount,
             category:
               editForm.category ?? item.category,
+            wallet:
+              editForm.wallet ?? item.wallet,
             frequency,
             biMonthlyDays:
               frequency === "Bi-monthly"

@@ -41,6 +41,7 @@ export interface Receivable {
   amount: number;
   category?: ReceivableCategory;
   frequency: ReceivableFrequency;
+  wallet?: string;
   biMonthlyDays?: string;
   monthlyDay?: string;
   date?: string;
