@@ -5,7 +5,7 @@ import {
   ReceivableViewModel
 } from "../types/finance";
 import { DEFAULT_TARGET_FUND } from "../constants/config";
-import { getEffectiveBillAmount } from "../utils/financeHelpers";
+import { getEffectiveBillAmount, getWalletForBill, computeBillPerPaydayAmount, computeBaselineScale } from "../utils/financeHelpers";
 import {
   parseMonthKey,
   parseDateKey,
@@ -195,15 +195,7 @@ const fundProgressPercent = useMemo(() => {
   const baseLivingAllowance = 2500; // GCash: Daily pocket / food
   const baseSavingsTarget = 1000;   // MariBank: Baseline Japan ADB savings
   
-  function getWalletForBill(name: string): "maya" | "gcash" | "maribank" | "gotyme" {
-    const n = (name || "").toLowerCase();
-    if (n.includes("unobank") || n.includes("appliance") || n.includes("gcredit")) return "gcash";
-    if (n.includes("spaylater")) return "maribank";
-    if (n.includes("shared") || n.includes("japan trip")) return "gotyme";
-    return "maya";
-  }
-
-  const today = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    const today = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
   const walletSplitTotals = { maya: 0, gcash: 0, maribank: 0, gotyme: 0 };
 
   const billPaydayAllocations: { id: string; month: string; wallet: "maya" | "gcash" | "maribank" | "gotyme"; amount: number }[] = [];
@@ -212,8 +204,7 @@ const fundProgressPercent = useMemo(() => {
     const dueDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (b.daysLeft ?? 0));
     const paydaysRemaining = Math.max(1, countPaydaysUntil(today, dueDate));
     const alreadyAllocated = globalData.logs?.[b.targetMonthForDue]?.billPaydayContributions?.[b.id] || 0;
-    const remainingAmount = Math.max(0, (parseFloat(String(b.amount)) || 0) - alreadyAllocated);
-    const perPayday = remainingAmount / paydaysRemaining;
+    const perPayday = computeBillPerPaydayAmount(parseFloat(String(b.amount)) || 0, alreadyAllocated, paydaysRemaining);
     const wallet = getWalletForBill(b.name);
     walletSplitTotals[wallet] += perPayday;
     if (perPayday > 0) {
@@ -223,10 +214,9 @@ const fundProgressPercent = useMemo(() => {
 
   const totalBillObligations = walletSplitTotals.maya + walletSplitTotals.gcash + walletSplitTotals.maribank + walletSplitTotals.gotyme;
   const totalBaselineTarget = baseLivingAllowance + baseSavingsTarget + defaultTransit;
-  const leftoverAfterBills = Math.max(0, perPayoutSalary - totalBillObligations);
   // Bills are funded first, in full. Baselines only get whatever payout room is left,
   // scaled down together (not zeroed one at a time) so no single wallet gets starved.
-  const baselineScale = totalBaselineTarget > 0 ? Math.min(1, leftoverAfterBills / totalBaselineTarget) : 0;
+  const baselineScale = computeBaselineScale(totalBillObligations, perPayoutSalary, totalBaselineTarget);
 
   const scaledLivingAllowance = Math.round(baseLivingAllowance * baselineScale * 100) / 100;
   const scaledSavingsTarget = Math.round(baseSavingsTarget * baselineScale * 100) / 100;
