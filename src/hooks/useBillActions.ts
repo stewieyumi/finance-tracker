@@ -1,3 +1,4 @@
+import { roundMoney } from "../utils/currency";
 import {
   Bill,
   BillType,
@@ -73,9 +74,9 @@ const toggleBillStatus = (bill: BillViewModel) => {
     
     // Auto-deduct or refund the wallet balance
     if (willBePaid) {
-      nextWallets[walletKey] = Math.max(0, (nextWallets[walletKey] || 0) - bill.amount);
+      nextWallets[walletKey] = roundMoney(Math.max(0, (nextWallets[walletKey] || 0) - bill.amount));
     } else {
-      nextWallets[walletKey] = (nextWallets[walletKey] || 0) + bill.amount;
+      nextWallets[walletKey] = roundMoney((nextWallets[walletKey] || 0) + bill.amount);
     }
 
     return {

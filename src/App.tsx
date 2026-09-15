@@ -1,3 +1,4 @@
+import { roundMoney } from "./utils/currency";
 import React, { useState, useMemo, useRef } from "react";
 import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
@@ -341,7 +342,7 @@ ${allocList}`
           wallets: (() => {
             const newWallets = { ...prev.wallets };
             Object.entries(paydayAllocations).forEach(([walletKey, amount]) => {
-              newWallets[walletKey] = (parseFloat(String(newWallets[walletKey])) || 0) + amount;
+              newWallets[walletKey] = roundMoney((parseFloat(String(newWallets[walletKey])) || 0) + amount);
             });
             return newWallets;
           })(),

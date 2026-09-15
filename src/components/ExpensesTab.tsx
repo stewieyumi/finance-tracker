@@ -1,3 +1,4 @@
+import { roundMoney } from "../utils/currency";
 import React, { useState, useRef } from "react";
 import { Camera, UploadCloud, ScanLine, Plus, Receipt, Trash2, CheckCircle2 } from "lucide-react";
 import { UnifiedFinanceData, Expense, ExpenseCategory } from "../types/finance";
@@ -70,7 +71,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
       const nextWallets = { ...prev.wallets };
       // Instantly deduct from the chosen liquid wallet
       if (nextWallets[form.wallet] !== undefined) {
-        nextWallets[form.wallet] = Math.max(0, nextWallets[form.wallet] - amount);
+        nextWallets[form.wallet] = roundMoney(Math.max(0, nextWallets[form.wallet] - amount));
       }
 
       return {
@@ -95,7 +96,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
     setGlobalData(prev => {
       const nextWallets = { ...prev.wallets };
       if (nextWallets[exp.wallet] !== undefined) {
-        nextWallets[exp.wallet] += exp.amount; // Refund
+        nextWallets[exp.wallet] = roundMoney(nextWallets[exp.wallet] + exp.amount); // Refund
       }
       return {
         ...prev,

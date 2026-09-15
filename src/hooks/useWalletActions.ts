@@ -1,3 +1,4 @@
+import { roundMoney } from "../utils/currency";
 import { UnifiedFinanceData } from "../types/finance";
 
 interface UseWalletActionsParams {
@@ -12,7 +13,7 @@ export function useWalletActions({
       ...prev,
       wallets: {
         ...prev.wallets,
-        [key]: value
+        [key]: roundMoney(value)
       },
       updatedAt: Date.now()
     }));
@@ -23,7 +24,7 @@ export function useWalletActions({
       ...prev,
       wallets: {
         ...prev.wallets,
-        [key]: (prev.wallets[key] ?? 0) + addAmount
+        [key]: roundMoney((prev.wallets[key] ?? 0) + addAmount)
       },
       updatedAt: Date.now()
     }));

@@ -16,3 +16,7 @@ export const formatPHP = (
     maximumFractionDigits: decimals,
   })}`;
 };
+
+export const roundMoney = (val: number): number => {
+  return Math.round((Number(val) || 0) * 100) / 100;
+};

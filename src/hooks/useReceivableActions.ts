@@ -1,3 +1,4 @@
+import { roundMoney } from "../utils/currency";
 import { Receivable, ReceivableCategory, ReceivableFrequency, ReceivableViewModel, UnifiedFinanceData } from "../types/finance";
 import { generateId } from "../utils/idHelpers";
 
@@ -44,9 +45,9 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
       const newAmountReceived = isCurrentlyCompleted || currentAmount > 0 ? 0 : receivableAmount;
       const newCollected = newAmountReceived >= receivableAmount;
       
-      const amountDelta = newAmountReceived - currentAmount;
+      const amountDelta = roundMoney(newAmountReceived - currentAmount);
       const nextWallets = { ...prev.wallets };
-      nextWallets[targetWallet] = Math.max(0, (nextWallets[targetWallet] || 0) + amountDelta);
+      nextWallets[targetWallet] = roundMoney(Math.max(0, roundMoney((nextWallets[targetWallet] || 0) + amountDelta)));
 
       return {
         ...prev,
@@ -74,7 +75,7 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
       const amountDelta = newAmount - currentAmount;
       
       const nextWallets = { ...prev.wallets };
-      nextWallets[targetWallet] = (nextWallets[targetWallet] || 0) + amountDelta;
+      nextWallets[targetWallet] = roundMoney((nextWallets[targetWallet] || 0) + amountDelta);
 
       return {
         ...prev,
