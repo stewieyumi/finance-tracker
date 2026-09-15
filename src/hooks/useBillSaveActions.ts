@@ -74,6 +74,7 @@ export function useBillSaveActions({
               amount: inputAmount,
               dueDay: String(editForm.dueDay ?? item.dueDay),
               type: editForm.type ?? item.type,
+              wallet: editForm.wallet ?? item.wallet,
               startMonth: String(editForm.startMonth ?? item.startMonth ?? ""),
               endMonth: String(editForm.endMonth ?? item.endMonth ?? "")
             };

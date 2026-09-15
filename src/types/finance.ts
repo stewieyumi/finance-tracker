@@ -10,6 +10,7 @@ export interface Bill {
   amount: number;
   dueDay: string;
   type: BillType;
+  wallet?: string;
   startMonth?: string;
   endMonth?: string;
 }
@@ -79,6 +80,7 @@ export interface MonthLog {
 export interface AppSettings {
   targetFund: number;
   goalName?: string;
+  milestoneWallet?: string;
   inflowsLabel?: string;
   gigsLabel?: string;
   inflowCategories?: string[];
@@ -111,6 +113,7 @@ export interface EditFormData {
   amount?: number;
   dueDay?: string;
   type?: BillType;
+  wallet?: string;
   category?: ReceivableCategory | ShootCategory;
   frequency?: ReceivableFrequency;
   biMonthlyDays?: string;

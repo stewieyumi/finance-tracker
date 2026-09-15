@@ -2,17 +2,17 @@ import React from "react";
 import { FUND_MILESTONES } from "../constants/config";
 
 interface MilestoneProgressBarProps {
-  maribankBalance?: number;
+  currentBalance?: number;
   targetFund?: number;
   goalName?: string;
 }
 
 export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = React.memo(({
-  maribankBalance = 0,
+  currentBalance = 0,
   targetFund = 80000,
   goalName
 }) => {
-  const percentage = Math.min(100, Math.max(0, (maribankBalance / targetFund) * 100));
+  const percentage = Math.min(100, Math.max(0, (currentBalance / targetFund) * 100));
   const fundProgressPercent = percentage.toFixed(1);
 
   return (
@@ -27,7 +27,7 @@ export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = React.m
         <div className="flex items-baseline gap-1.5">
           <span className="text-xs text-zinc-500 font-mono">₱</span>
           <span className="text-sm sm:text-base font-bold text-white font-mono tracking-tight">
-            {maribankBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            {currentBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </span>
           <span className="text-[11px] font-semibold text-blue-400 font-mono bg-blue-950/50 border border-blue-800/40 px-2 py-0.5 rounded-full ml-1">
             {fundProgressPercent}%
@@ -45,7 +45,7 @@ export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = React.m
       <div className="relative w-full h-4 mt-2">
         {FUND_MILESTONES.filter(m => m <= targetFund).map(m => {
           const leftPct = Math.min(100, (m / targetFund) * 100);
-          const reached = maribankBalance >= m;
+          const reached = currentBalance >= m;
           const translate = leftPct < 4 ? "0%" : leftPct > 96 ? "-100%" : "-50%";
           return (
             <span

@@ -626,7 +626,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
           />
         </div>
 
-        <div className="flex items-center gap-1.5 w-full lg:w-auto">
+        <div className="flex flex-wrap lg:flex-nowrap items-center gap-1.5 w-full lg:w-auto">
           <select
             value={newReceivable.category}
             onChange={(e) => setNewReceivable({ ...newReceivable, category: e.target.value as ReceivableCategory })}

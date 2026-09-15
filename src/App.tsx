@@ -4,6 +4,7 @@ import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { getMonthKey, getAdjacentMonth } from "./utils/dateHelpers";
 import { UnifiedFinanceData, WalletState, EditFormData } from "./types/finance";
 import { buildFinancialSummary } from "./utils/summaryHelpers";
+import { getWalletForBill } from "./utils/financeHelpers";
 
 import { useCloudSync } from "./hooks/useCloudSync";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -109,6 +110,25 @@ const {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
   };
+
+  // ⚡ SILENT AUTO-MIGRATION FOR OLD BILLS
+  React.useEffect(() => {
+    const needsMigration = globalData.library?.bills?.some(b => !b.wallet);
+    if (needsMigration) {
+      setGlobalData(prev => ({
+        ...prev,
+        library: {
+          ...prev.library,
+          bills: prev.library.bills.map(b => ({
+            ...b,
+            wallet: b.wallet || getWalletForBill(b.name)
+          }))
+        },
+        updatedAt: Date.now()
+      }));
+      setTimeout(() => showToast("✨ Auto-migrated legacy bills to new wallet system"), 1000);
+    }
+  }, [globalData.library?.bills]);
 
 const {
   addBill: handleAddBill,
@@ -670,7 +690,7 @@ const copySummaryToClipboard = async () => {
 
         <ErrorBoundary>
           <MilestoneProgressBar
-            maribankBalance={globalData?.wallets?.maribank || 0}
+            currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0}
             targetFund={targetMilestoneFund}
             goalName={globalData?.settings?.goalName}
           />

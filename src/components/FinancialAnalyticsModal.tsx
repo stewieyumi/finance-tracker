@@ -52,7 +52,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
   const remainingDays = isCurrentActiveMonth ? Math.max(1, totalDaysInMonth - now.getDate() + 1) : totalDaysInMonth;
   const dailyBurnRate = safeToSpend / remainingDays;
 
-  const maribankBal = globalData?.wallets?.maribank || 0;
+  const maribankBal = globalData?.wallets?.[globalData?.settings?.milestoneWallet || 'maribank'] || 0;
   const targetFund = globalData?.settings?.targetFund ?? globalData?.targetFund ?? DEFAULT_TARGET_FUND;
   const phpToJpyRate = globalData?.settings?.phpToJpyRate ?? 2.71;
   const jpyEquivalent = Math.round(maribankBal * phpToJpyRate);

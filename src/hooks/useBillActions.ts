@@ -25,6 +25,7 @@ export function useBillActions({
     type: BillType;
     startMonth: string;
     endMonth: string;
+    wallet?: string;
   }) => {
     setGlobalData(prev => {
       const isLoan = bill.type === "Loan / Installment";
@@ -35,6 +36,7 @@ export function useBillActions({
         amount: bill.amount,
         dueDay: bill.dueDay,
         type: bill.type,
+        wallet: bill.wallet,
         startMonth: isLoan ? bill.startMonth : selectedMonth,
         endMonth: isLoan ? bill.endMonth : ""
       };

@@ -39,6 +39,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [form, setForm] = useState({
     goalName: "Japan ADB Target Milestone",
     targetFund: 80000,
+    milestoneWallet: "maribank",
     inflowsLabel: "RECEIVABLES & INFLOWS",
     gigsLabel: "UPCOMING SHOOTS & GIGS",
     inflowCategories: PRESETS.videographer.inflowCats,
@@ -52,6 +53,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setForm({
         goalName: globalData.settings.goalName || "Japan ADB Target Milestone",
         targetFund: globalData.settings.targetFund || 80000,
+        milestoneWallet: globalData.settings.milestoneWallet || "maribank",
         inflowsLabel: globalData.settings.inflowsLabel || "RECEIVABLES & INFLOWS",
         gigsLabel: globalData.settings.gigsLabel || "UPCOMING SHOOTS & GIGS",
         inflowCategories: globalData.settings.inflowCategories?.length ? globalData.settings.inflowCategories : PRESETS.videographer.inflowCats,
@@ -84,6 +86,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         ...(prev.settings || { perPayoutSalary: 15000, phpToJpyRate: 2.7, defaultTransitAllocation: 1500 }),
         targetFund: Number(form.targetFund),
         goalName: form.goalName,
+        milestoneWallet: form.milestoneWallet,
         inflowsLabel: form.inflowsLabel,
         gigsLabel: form.gigsLabel,
         inflowCategories: form.inflowCategories,
@@ -120,6 +123,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div>
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Target Amount (₱)</label>
                 <input type="number" value={form.targetFund} onChange={e => setForm({...form, targetFund: Number(e.target.value)})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-blue-500" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Linked Wallet</label>
+                <select value={form.milestoneWallet} onChange={e => setForm({...form, milestoneWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500 cursor-pointer">
+                  <option value="maribank">MariBank (Japan/ADB)</option>
+                  <option value="bpi">BPI</option>
+                  <option value="maya">Maya</option>
+                  <option value="gcash">GCash</option>
+                  <option value="gotyme">GoTyme</option>
+                  <option value="cash">Cash On-Hand</option>
+                </select>
               </div>
             </div>
           </div>

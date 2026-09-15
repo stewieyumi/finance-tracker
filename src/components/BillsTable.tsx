@@ -11,7 +11,7 @@
     activeBills: BillViewModel[];
     selectedMonth: string;
     onToggleStatus: (bill: BillViewModel) => void;
-    onAddBill: (bill: { name: string; amount: number; dueDay: string; type: BillType; startMonth: string; endMonth: string }) => void;
+    onAddBill: (bill: { name: string; amount: number; dueDay: string; type: BillType; startMonth: string; endMonth: string; wallet?: string }) => void;
     onDeleteBill: (id: string) => void;
     onSaveEdit: (category: "bills", scope?: "monthOnly" | "default") => void;
     onResetMonthOverride: (billId: string) => void;
@@ -34,7 +34,7 @@
     editForm,
     setEditForm
   }) => {
-    const [newBill, setNewBill] = useState({ name: "", amount: "", dueDay: "1", type: "Bill" as BillType, startMonth: selectedMonth, endMonth: selectedMonth });
+    const [newBill, setNewBill] = useState({ name: "", amount: "", dueDay: "1", type: "Bill" as BillType, startMonth: selectedMonth, endMonth: selectedMonth, wallet: "maya" });
     const [selectedFilter, setSelectedFilter] = useState("All");
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const [editScope, setEditScope] = useState<"monthOnly" | "default">("monthOnly");
@@ -77,7 +77,8 @@
       dueDay: newBill.dueDay,
       type: newBill.type,
       startMonth: newBill.startMonth,
-      endMonth: newBill.endMonth
+      endMonth: newBill.endMonth,
+      wallet: newBill.wallet
     });
 
     setNewBill({
@@ -86,7 +87,8 @@
       dueDay: "1",
       type: "Bill",
       startMonth: selectedMonth,
-      endMonth: selectedMonth
+      endMonth: selectedMonth,
+      wallet: "maya"
     });
   };
 
@@ -220,6 +222,18 @@
                           <option value="Subscription">Subscription</option>
                           <option value="Loan / Installment">Loan / Installment</option>
                         </select>
+                        <select
+                          value={editForm.wallet || "maya"}
+                          onChange={(e) => setEditForm({ ...editForm, wallet: e.target.value })}
+                          disabled={editScope === "monthOnly"}
+                          className="bg-[#0b0b0d] border border-zinc-700 rounded-lg px-2 py-1.5 text-white text-[10px] uppercase font-semibold disabled:opacity-50 disabled:cursor-not-allowed col-span-2"
+                        >                          
+                          <option value="maya">Maya</option>
+                          <option value="gcash">GCash</option>
+                          <option value="maribank">MariBank</option>
+                          <option value="gotyme">GoTyme</option>
+                          <option value="bpi">BPI</option>
+                        </select>
                       </div>
 
                       <div className="flex items-center justify-between pt-1">
@@ -283,6 +297,7 @@
                               bill.type === "Loan / Installment" ? "bg-amber-950/80 text-amber-300 border border-amber-800/40" :
                               "bg-blue-950/80 text-blue-300 border border-blue-800/40"
                             }`}>{bill.type}</span>
+                            {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{bill.wallet}</span>}
                             
                             {bill.dueDay && <span className="font-mono">Day {bill.dueDay}</span>}
 
@@ -450,6 +465,18 @@
                             <option value="Subscription">Subscription</option>
                             <option value="Loan / Installment">Loan / Installment</option>
                           </select>
+                          <select
+                            value={editForm.wallet || "maya"}
+                            onChange={(e) => setEditForm({ ...editForm, wallet: e.target.value })}
+                            disabled={editScope === "monthOnly"}
+                            className="bg-[#0b0b0d] border border-zinc-700 rounded-lg px-2 py-1 text-white text-[10px] font-semibold uppercase disabled:opacity-50 disabled:cursor-not-allowed w-full"
+                          >
+                            <option value="maya">Maya</option>
+                            <option value="gcash">GCash</option>
+                            <option value="maribank">MariBank</option>
+                            <option value="gotyme">GoTyme</option>
+                            <option value="bpi">BPI</option>
+                          </select>
                           {editForm.type === "Loan / Installment" && (
                         <div className="grid grid-cols-2 gap-1">
                           <select
@@ -492,6 +519,7 @@
                               bill.type === "Loan / Installment" ? "bg-amber-950/70 text-amber-300 border border-amber-800/40" :
                               "bg-blue-950/70 text-blue-300 border border-blue-800/40"
                             }`}>{bill.type}</span>
+                            {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{bill.wallet}</span>}
                             
                             {bill.dueDay && <span className="text-[11px] text-zinc-400 font-mono">Day {bill.dueDay}</span>}
                             
@@ -563,11 +591,18 @@
             <input type="number" inputMode="decimal" placeholder="₱ Amount" value={newBill.amount} onChange={(e) => setNewBill({ ...newBill, amount: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] focus:border-blue-500/60 rounded-xl px-2.5 py-1.5 text-xs text-white font-mono outline-none w-28 shrink-0" />
           </div>
           
-          <div className="flex items-center gap-1.5 w-full lg:w-auto">
+          <div className="flex flex-wrap lg:flex-nowrap items-center gap-1.5 w-full lg:w-auto">
             <select value={newBill.type} onChange={(e) => setNewBill({ ...newBill, type: e.target.value as BillType, startMonth: selectedMonth, endMonth: selectedMonth })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 sm:px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-auto truncate min-w-[80px]">
               <option value="Bill">Bill</option>
               <option value="Subscription">Subscription</option>
               <option value="Loan / Installment">Loan / Installment</option>
+            </select>
+            <select value={newBill.wallet} onChange={(e) => setNewBill({ ...newBill, wallet: e.target.value })} className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-1 sm:px-2 py-1.5 text-[11px] sm:text-xs text-white outline-none flex-1 lg:w-auto min-w-[80px] font-semibold uppercase">
+              <option value="maya">Maya</option>
+              <option value="gcash">GCash</option>
+              <option value="maribank">MariBank</option>
+              <option value="gotyme">GoTyme</option>
+              <option value="bpi">BPI</option>
             </select>
             
             {newBill.type === "Loan / Installment" ? (

@@ -7,7 +7,8 @@ export function getEffectiveBillAmount(
 
 export type Wallet = "maya" | "gcash" | "maribank" | "gotyme";
 
-export function getWalletForBill(name: string): Wallet {
+export function getWalletForBill(name: string, walletProp?: string): Wallet {
+  if (walletProp) return walletProp as Wallet;
   const n = (name || "").toLowerCase();
   if (n.includes("unobank") || n.includes("appliance") || n.includes("gcredit")) return "gcash";
   if (n.includes("spaylater")) return "maribank";

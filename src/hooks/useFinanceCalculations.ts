@@ -177,9 +177,9 @@ const fundProgressPercent = useMemo(() => {
   if (targetMilestoneFund <= 0) return "0.0";
 
   return (
-    ((globalData?.wallets?.maribank || 0) / targetMilestoneFund) * 100
+    ((globalData?.wallets?.[globalData?.settings?.milestoneWallet || 'maribank'] || 0) / targetMilestoneFund) * 100
   ).toFixed(1);
-}, [globalData?.wallets?.maribank, targetMilestoneFund]);
+}, [globalData?.wallets, globalData?.settings?.milestoneWallet, targetMilestoneFund]);
   const totalPendingReceivables = useMemo(() => activeReceivables.filter(r => !r.collected).reduce((a, c) => a + Math.max(0, (parseFloat(String(c.amount)) || 0) - (parseFloat(String(c.amountReceived)) || 0)), 0), [activeReceivables]);
   const monthIncomeCollected = useMemo(() => activeReceivables.reduce((a, c) => a + (parseFloat(String(c.amountReceived)) || 0), 0), [activeReceivables]);
   const totalUnpaidCommitments = useMemo(() => activeBills.filter(b => !b.paid).reduce((a, c) => a + (parseFloat(String(c.amount)) || 0), 0), [activeBills]);
@@ -205,7 +205,7 @@ const fundProgressPercent = useMemo(() => {
     const paydaysRemaining = Math.max(1, countPaydaysUntil(today, dueDate));
     const alreadyAllocated = globalData.logs?.[b.targetMonthForDue]?.billPaydayContributions?.[b.id] || 0;
     const perPayday = computeBillPerPaydayAmount(parseFloat(String(b.amount)) || 0, alreadyAllocated, paydaysRemaining);
-    const wallet = getWalletForBill(b.name);
+    const wallet = getWalletForBill(b.name, b.wallet);
     walletSplitTotals[wallet] += perPayday;
     if (perPayday > 0) {
       billPaydayAllocations.push({ id: b.id, month: b.targetMonthForDue, wallet, amount: Math.round(perPayday * 100) / 100 });
