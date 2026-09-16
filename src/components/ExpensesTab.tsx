@@ -172,27 +172,27 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
 
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
+              <div className="col-span-2 min-w-0">
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Merchant / Name</label>
-                <input type="text" value={form.merchant} onChange={e => setForm({...form, merchant: e.target.value})} placeholder="e.g. Starbucks, Laundry..." className="w-full bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs text-white outline-none" required />
+                <input type="text" value={form.merchant} onChange={e => setForm({...form, merchant: e.target.value})} placeholder="e.g. Starbucks, Laundry..." className="w-full min-w-0 bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs text-white outline-none box-border" required />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Amount (₱)</label>
-                <input type="number" inputMode="decimal" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="0.00" className="w-full bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-emerald-400 outline-none" required />
+                <input type="number" inputMode="decimal" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="0.00" className="w-full min-w-0 bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-emerald-400 outline-none box-border" required />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Date</label>
-                <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-[11px] text-white outline-none" required />
+                <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full min-w-0 appearance-none bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/50 rounded-xl px-2 sm:px-3 py-2.5 text-[11px] text-white outline-none min-h-[38px] box-border" required />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Category</label>
-                <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-2.5 text-[11px] text-white outline-none">
+                <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full min-w-0 bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-2.5 text-[11px] text-white outline-none min-h-[38px] box-border">
                   {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Deduct From</label>
-                <select value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-2.5 text-[11px] text-blue-300 font-semibold uppercase outline-none">
+                <select value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full min-w-0 bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-2.5 text-[11px] text-blue-300 font-semibold uppercase outline-none min-h-[38px] box-border">
                   {allWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                 </select>
               </div>
