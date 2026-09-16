@@ -464,18 +464,22 @@ const copySummaryToClipboard = async () => {
         </div>
       )}
 
-      {/* PULL TO REFRESH INDICATOR */}
-      {pullProgress > 0 && (
-        <div 
-          className="fixed top-[max(1rem,env(safe-area-inset-top))] left-0 right-0 z-[300] flex justify-center pointer-events-none" 
-          style={{ transform: `translateY(${Math.min(pullProgress, 60)}px)`, opacity: Math.min(pullProgress / 40, 1) }}
-        >
-          <div className="bg-[#181822] border border-white/[0.1] shadow-2xl rounded-full px-4 py-2.5 flex items-center gap-2.5 text-xs font-bold text-emerald-400">
-            <RefreshCw size={14} className={pullProgress >= 40 ? "animate-spin" : ""} style={{ transform: `rotate(${pullProgress * 5}deg)` }} />
-            <span>{pullProgress >= 40 ? "Release to Sync" : "Pull to Sync"}</span>
-          </div>
+      {/* PULL TO REFRESH INDICATOR (NATIVE PUSH-DOWN) */}
+      <div 
+        className="w-full flex items-center justify-center overflow-hidden transition-[height] duration-0"
+        style={{ 
+          height: `${pullProgress > 0 ? Math.min(pullProgress, 75) : 0}px`,
+          opacity: pullProgress > 10 ? Math.min((pullProgress - 10) / 40, 1) : 0
+        }}
+      >
+        <div className={`p-2 rounded-full bg-[#14141a] border border-white/[0.08] shadow-md transition-all ${pullProgress >= 50 ? "shadow-blue-500/20 border-blue-500/30" : ""}`}>
+          <RefreshCw 
+            size={18} 
+            className={pullProgress >= 50 ? "animate-spin text-blue-400" : "text-zinc-500"} 
+            style={{ transform: `rotate(${pullProgress * 6}deg)` }} 
+          />
         </div>
-      )}
+      </div>
 
       <div className="w-full max-w-[860px] space-y-4">
         {cashShortfall > 0 && (
