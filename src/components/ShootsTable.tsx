@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Camera, Check, Circle, Edit2, Save, Trash2, Plus, Filter, ChevronDown, Calendar, X } from "lucide-react";
+import { Camera, Check, Circle, Edit2, Save, Trash2, Plus, Filter, ChevronDown, Calendar, X, CalendarPlus } from "lucide-react";
 import { Shoot, ShootCategory, ShootStatus, EditFormData } from "../types/finance";
 
 const SHOOT_CATEGORIES: (ShootCategory | "All")[] = ["All", "Solo Shoot", "Assistant", "Video Edit", "Event", "Commercial", "Other"];
@@ -52,7 +52,43 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setShowFilterDropdown(false); };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const handleAddToCalendar = (shoot: Shoot) => {
+    if (!shoot.date) {
+      alert("Please set a date for this gig first.");
+      return;
+    }
+    // Format to YYYYMMDD for the iCal standard
+    const formattedDate = shoot.date.replace(/-/g, "");
+    
+    // Calculate the next day for the end of an all-day event
+    const dateObj = new Date(shoot.date);
+    dateObj.setDate(dateObj.getDate() + 1);
+    const nextDay = `${dateObj.getFullYear()}${String(dateObj.getMonth()+1).padStart(2, '0')}${String(dateObj.getDate()).padStart(2, '0')}`;
+
+    // Build the raw iCalendar string
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      `DTSTART;VALUE=DATE:${formattedDate}`,
+      `DTEND;VALUE=DATE:${nextDay}`,
+      `SUMMARY:${shoot.title}`,
+      `DESCRIPTION:Category: ${shoot.category} \nStatus: ${shoot.status} \n\nLogged via Finance Tracker`,
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ].join("\n");
+
+    // Trigger the native browser download
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', `${shoot.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const filteredShoots = useMemo(() => {
@@ -71,6 +107,42 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
 
   const handleStartEdit = (shoot: Shoot) => { setEditingId(shoot.id); setEditForm({ ...shoot }); };
   const handleCancelEdit = () => { setEditingId(null); setEditForm({}); };
+
+  const handleAddToCalendar = (shoot: Shoot) => {
+    if (!shoot.date) {
+      alert("Please set a date for this gig first.");
+      return;
+    }
+    // Format to YYYYMMDD for the iCal standard
+    const formattedDate = shoot.date.replace(/-/g, "");
+    
+    // Calculate the next day for the end of an all-day event
+    const dateObj = new Date(shoot.date);
+    dateObj.setDate(dateObj.getDate() + 1);
+    const nextDay = `${dateObj.getFullYear()}${String(dateObj.getMonth()+1).padStart(2, '0')}${String(dateObj.getDate()).padStart(2, '0')}`;
+
+    // Build the raw iCalendar string
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      `DTSTART;VALUE=DATE:${formattedDate}`,
+      `DTEND;VALUE=DATE:${nextDay}`,
+      `SUMMARY:${shoot.title}`,
+      `DESCRIPTION:Category: ${shoot.category} \nStatus: ${shoot.status} \n\nLogged via Finance Tracker`,
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ].join("\n");
+
+    // Trigger the native browser download
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', `${shoot.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="bg-[#101014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl w-full">
@@ -118,7 +190,12 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                   <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.2 rounded font-medium">{shoot.category}</span>
                   {shoot.date && (shoot.date === todayStr ? <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-[1px] rounded font-bold uppercase tracking-wider text-[9px] ml-1">Due Today</span> : <span>• {formatShortDate(shoot.date)}</span>)}
                 </div>
-                <button onClick={() => handleStartEdit(shoot)} className="px-2 py-0.5 text-zinc-400 hover:text-amber-300 bg-zinc-800/70 rounded text-[10px] whitespace-nowrap shrink-0">Edit</button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button onClick={() => handleAddToCalendar(shoot)} className="px-2 py-0.5 text-zinc-400 hover:text-blue-400 bg-zinc-800/70 rounded text-[10px] whitespace-nowrap flex items-center gap-1 transition shadow-sm" title="Add to Calendar">
+                    <CalendarPlus size={9} /> Sync
+                  </button>
+                  <button onClick={() => handleStartEdit(shoot)} className="px-2 py-0.5 text-zinc-400 hover:text-amber-300 bg-zinc-800/70 rounded text-[10px] whitespace-nowrap transition shadow-sm">Edit</button>
+                </div>
               </div>
             </div>
           </div>
@@ -155,6 +232,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                 </td>
                 <td className="py-2.5 px-3 text-right whitespace-nowrap">
                   <div className="inline-flex items-center gap-1 justify-end shrink-0">
+                    <button onClick={() => handleAddToCalendar(shoot)} className="whitespace-nowrap shrink-0 px-2 py-1 text-zinc-400 hover:text-blue-400 hover:bg-white/[0.05] rounded-md text-[11px] flex items-center transition" title="Add to Calendar"><CalendarPlus size={10} className="mr-1" /> Sync</button>
                     <button onClick={() => handleStartEdit(shoot)} className="whitespace-nowrap shrink-0 px-2 py-1 text-zinc-400 hover:text-amber-300 hover:bg-white/[0.05] rounded-md text-[11px] flex items-center transition"><Edit2 size={10} className="mr-1" /> Edit</button>
                   </div>
                 </td>
