@@ -178,6 +178,24 @@ const {
     return () => window.removeEventListener("auth-expired", handleAuthExpired);
   }, []);
 
+  // 🛠 SECRET DEV MODE SHORTCUT (Cmd/Ctrl + Shift + M)
+  React.useEffect(() => {
+    const handleDevShortcut = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        const code = window.prompt("🛠 DEV ADMIN MODE 🛠\nEnter master sync passcode to override Google Auth:");
+        if (code) {
+          localStorage.setItem("ft_sync_passcode", code);
+          showToast("🔑 Master passcode applied. Reloading workspace...");
+          setTimeout(() => window.location.reload(), 1000);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleDevShortcut);
+    return () => window.removeEventListener("keydown", handleDevShortcut);
+  }, []);
+
+
   const importInputRef = useRef<HTMLInputElement>(null);
   const paydaySplitInProgressRef = useRef(false);
 
