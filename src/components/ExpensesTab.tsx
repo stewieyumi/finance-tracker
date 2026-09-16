@@ -37,6 +37,13 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const token = getLocalPasscode();
+    if (!token) {
+      showToast("⚠️ Please sign in to use the AI Scanner.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     setIsScanning(true);
     setShowForm(true);
 

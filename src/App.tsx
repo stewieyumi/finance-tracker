@@ -163,7 +163,12 @@ const {
       localStorage.removeItem("ft_sync_passcode");
       
       if ((window as any).google?.accounts?.id) {
-        (window as any).google.accounts.id.prompt();
+        (window as any).google.accounts.id.prompt((notification: any) => {
+            if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
+              handleGoogleLogout();
+              showToast("⚠️ Session expired. Please sign in again.");
+            }
+          });
       } else {
         handleGoogleLogout();
       }
