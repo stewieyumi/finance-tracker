@@ -59,14 +59,11 @@ export function useCloudSync(
   const promptPasscode = useCallback((): string | null => {
     const current = getLocalPasscode();
 
-    const entered = window.prompt(
-      "Enter your cloud sync master passcode to enable backup:",
-      current
-    );
+    const entered = null as any;
 
     if (entered !== null) {
       setLocalPasscode(entered);
-      return entered.trim();
+      return (entered as any)?.trim();
     }
 
     return null;

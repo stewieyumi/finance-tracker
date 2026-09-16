@@ -546,7 +546,7 @@ const copySummaryToClipboard = async () => {
 
       
 
-      <div className="w-full max-w-[860px] space-y-4">
+      <div className="w-full max-w-md space-y-4">
         {cashShortfall > 0 && (
           <div className="bg-[#2a1712] border border-orange-900/50 text-orange-300 text-[11px] rounded-2xl px-4 py-3 flex items-center gap-2.5 shadow-lg">
             <AlertTriangle size={14} className="shrink-0 text-orange-400" />
@@ -692,7 +692,7 @@ const copySummaryToClipboard = async () => {
         />
 
         {activeTab === "home" && (
-          <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
+          <div className="space-y-5 sm:space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
             <ErrorBoundary>
               <MilestoneProgressBar
                 currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0}
@@ -786,7 +786,7 @@ const copySummaryToClipboard = async () => {
         )}
 
         {activeTab === "operations" && (
-          <div className="space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
+          <div className="space-y-4 sm:space-y-5 animate-in fade-in zoom-in-95 duration-400 ease-out">
             
             {/* SEGMENTED CONTROL */}
             <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] p-1.5 rounded-2xl flex items-center shadow-lg w-full mx-auto">
@@ -797,7 +797,7 @@ const copySummaryToClipboard = async () => {
 
             {/* DYNAMIC VIEWS */}
             {opsTab === "bills" && (
-              <div className="animate-in fade-in slide-in-from-right-2 duration-300">
+              <div className="animate-in fade-in zoom-in-95 duration-300 ease-out">
                 <ErrorBoundary>
               <BillsTable
                 activeBills={activeBills}
@@ -819,7 +819,7 @@ const copySummaryToClipboard = async () => {
             )}
 
             {opsTab === "inflows" && (
-              <div className="animate-in fade-in slide-in-from-right-2 duration-300">
+              <div className="animate-in fade-in zoom-in-95 duration-300 ease-out">
                 <ErrorBoundary>
               <ReceivablesTable
                 inflowsLabel={globalData?.settings?.inflowsLabel}
@@ -843,7 +843,7 @@ const copySummaryToClipboard = async () => {
             )}
 
             {opsTab === "gigs" && (
-              <div className="animate-in fade-in slide-in-from-right-2 duration-300">
+              <div className="animate-in fade-in zoom-in-95 duration-300 ease-out">
                 <ErrorBoundary>
               <ShootsTable
                 gigsLabel={globalData?.settings?.gigsLabel}
@@ -884,7 +884,7 @@ const copySummaryToClipboard = async () => {
         )}
 
         {activeTab === "account" && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
+          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
             <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl rounded-3xl p-8 text-center flex flex-col items-center justify-center min-h-[30vh]">
               
               <h3 className="text-white font-bold text-lg mb-4">Account Dashboard</h3>
