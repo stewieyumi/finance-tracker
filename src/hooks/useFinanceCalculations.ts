@@ -110,7 +110,7 @@ const effectiveAmount = getEffectiveBillAmount(
       });
     });
 
-    return txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return txs.sort((a, b) => { const dateA = a.date || ""; const dateB = b.date || ""; if (dateA !== dateB) return dateB.localeCompare(dateA); return b.id.localeCompare(a.id); });
   }, [globalData]);
 
   const recentTransactions = useMemo(() => allTransactions.slice(0, 5), [allTransactions]);
@@ -220,7 +220,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
       });
     });
 
-    return txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return txs.sort((a, b) => { const dateA = a.date || ""; const dateB = b.date || ""; if (dateA !== dateB) return dateB.localeCompare(dateA); return b.id.localeCompare(a.id); });
   }, [globalData]);
 
   const recentTransactions = useMemo(() => allTransactions.slice(0, 5), [allTransactions]);
@@ -370,7 +370,7 @@ const fundProgressPercent = useMemo(() => {
       });
     });
 
-    return txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return txs.sort((a, b) => { const dateA = a.date || ""; const dateB = b.date || ""; if (dateA !== dateB) return dateB.localeCompare(dateA); return b.id.localeCompare(a.id); });
   }, [globalData]);
 
   const recentTransactions = useMemo(() => allTransactions.slice(0, 5), [allTransactions]);

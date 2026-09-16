@@ -646,18 +646,6 @@ const copySummaryToClipboard = async () => {
             </ErrorBoundary>
 
             <ErrorBoundary>
-              <WalletGrid
-                wallets={globalData?.wallets || {}}
-                milestoneWallet={globalData?.settings?.milestoneWallet}
-                walletLabels={globalData?.settings?.walletLabels}
-                customWallets={globalData?.settings?.customWallets}
-                onCommit={commitWallet}
-                onIncrement={incrementWallet}
-              />
-            </ErrorBoundary>
-
-            
-            <ErrorBoundary>
               <div className="bg-[#101014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-2">
@@ -692,6 +680,20 @@ const copySummaryToClipboard = async () => {
                 </div>
               </div>
             </ErrorBoundary>
+
+            <ErrorBoundary>
+              <WalletGrid
+                wallets={globalData?.wallets || {}}
+                milestoneWallet={globalData?.settings?.milestoneWallet}
+                walletLabels={globalData?.settings?.walletLabels}
+                customWallets={globalData?.settings?.customWallets}
+                onCommit={commitWallet}
+                onIncrement={incrementWallet}
+              />
+            </ErrorBoundary>
+
+            
+            
 
             <button onClick={copySummaryToClipboard} aria-label="Copy summary to clipboard" className="w-full bg-[#121217]/90 hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition text-xs shadow-md">
               <Copy size={14} /> Copy Summary
@@ -811,7 +813,7 @@ const copySummaryToClipboard = async () => {
 
             <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl rounded-3xl p-5 sm:p-8 animate-in fade-in duration-300">
               <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/[0.06]">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><History size={16} className="text-purple-400"/> Full Ledger</h3>
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><History size={16} className="text-purple-400"/> Transaction History</h3>
                 <span className="text-xs text-zinc-500 font-mono">{allTransactions.length} records</span>
               </div>
               
