@@ -50,7 +50,7 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
       nextWallets[targetWallet] = roundMoney(Math.max(0, (nextWallets[targetWallet] || 0) + amountDelta));
 
       const today = new Date(); 
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+      const todayStr = today.toISOString();
 
       return {
         ...prev,
@@ -88,7 +88,7 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
       nextWallets[targetWallet] = roundMoney((nextWallets[targetWallet] || 0) + amountDelta);
 
       const today = new Date(); 
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+      const todayStr = today.toISOString();
 
       return {
         ...prev,

@@ -87,6 +87,17 @@ function safeLoadAll(): UnifiedFinanceData {
   }
 }
 
+const formatDateTime = (dateStr: string) => {
+  if (!dateStr) return "";
+  try {
+    const d = dateStr.includes("T") ? new Date(dateStr) : new Date(dateStr + "T12:00:00");
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  } catch {
+    return dateStr;
+  }
+};
+
 export default function App() {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
   const [globalData, setGlobalData] = useState<UnifiedFinanceData>(safeLoadAll);
@@ -669,7 +680,7 @@ const copySummaryToClipboard = async () => {
                             <div className="privacy-blur text-xs font-semibold text-zinc-200 truncate">{tx.title}</div>
                             <div className="flex items-center gap-1.5 text-[9px] text-zinc-500 mt-0.5">
                               <span className="privacy-blur uppercase text-blue-400/80 font-semibold">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
-                              <span>•</span><span className="whitespace-nowrap shrink-0">{tx.date}</span>
+                              <span>•</span><span className="whitespace-nowrap shrink-0">{formatDateTime(tx.date)}</span>
                             </div>
                           </div>
                         </div>
@@ -835,7 +846,7 @@ const copySummaryToClipboard = async () => {
                             <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400 font-medium whitespace-nowrap shrink-0">{tx.category || tx.type}</span>
                             <span>•</span>
                             <span className="privacy-blur uppercase text-blue-400/80 font-semibold">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
-                            <span>•</span><span className="whitespace-nowrap shrink-0">{tx.date}</span>
+                            <span>•</span><span className="whitespace-nowrap shrink-0">{formatDateTime(tx.date)}</span>
                           </div>
                         </div>
                       </div>

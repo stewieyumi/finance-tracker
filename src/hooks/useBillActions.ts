@@ -69,7 +69,7 @@ const toggleBillStatus = (bill: BillViewModel) => {
     const currentPaid = monthLog.billsPaid || [];
     const isCurrentlyPaid = currentPaid.includes(bill.id);
     const willBePaid = !isCurrentlyPaid;
-    const today = new Date(); const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+    const today = new Date(); const todayStr = today.toISOString();
 
     const nextWallets = { ...prev.wallets };
     
