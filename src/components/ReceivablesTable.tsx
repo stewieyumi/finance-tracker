@@ -11,7 +11,7 @@ interface ReceivablesTableProps {
   selectedMonth: string;
   onToggleStatus: (rec: ReceivableViewModel) => void;
   onAddPayment: (rec: ReceivableViewModel, amt: number) => void;
-  onAddReceivable: (rec: { name: string; amount: number; category: ReceivableCategory; frequency: ReceivableFrequency; biMonthlyDays?: string; monthlyDay?: string; date?: string; wallet?: string; }) => void;
+  onAddReceivable: (rec: { name: string; amount: number; category: ReceivableCategory; frequency: ReceivableFrequency; biMonthlyDays?: number[]; monthlyDay?: number; date?: string; wallet?: string; }) => void;
   onDeleteReceivable: (id: string) => void;
   onSaveEdit: (category: "receivables") => void;
   editingId: string | null;
@@ -41,7 +41,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
   ], [walletLabels, customWallets]);
 
   const [isAdding, setIsAdding] = useState(false);
-  const [newReceivable, setNewReceivable] = useState({ name: "", amount: "", category: "Shoot" as ReceivableCategory, frequency: "By Date" as ReceivableFrequency, biMonthlyDays: "15th & 30th", monthlyDay: "15", date: "", wallet: "maya" });
+  const [newReceivable, setNewReceivable] = useState({ name: "", amount: "", category: "Shoot" as ReceivableCategory, frequency: "By Date" as ReceivableFrequency, biMonthlyDays: [15, 30], monthlyDay: 15, date: "", wallet: "maya" });
   const [selectedFilter, setSelectedFilter] = useState<"All" | ReceivableCategory>("All");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [payPopoverId, setPayPopoverId] = useState<string | null>(null);
@@ -67,7 +67,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
       biMonthlyDays: newReceivable.frequency === "Bi-monthly" ? newReceivable.biMonthlyDays : undefined, monthlyDay: newReceivable.frequency === "Monthly" ? newReceivable.monthlyDay : undefined,
       date: newReceivable.frequency === "By Date" ? newReceivable.date : undefined, wallet: newReceivable.wallet
     });
-    setNewReceivable({ name: "", amount: "", category: "Shoot", frequency: "By Date", biMonthlyDays: "15th & 30th", monthlyDay: "15", date: "", wallet: "maya" });
+    setNewReceivable({ name: "", amount: "", category: "Shoot", frequency: "By Date", biMonthlyDays: [15, 30], monthlyDay: 15, date: "", wallet: "maya" });
     setIsAdding(false);
   };
 
@@ -128,8 +128,8 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="px-1.5 py-0.5 rounded font-medium bg-zinc-800 text-zinc-300">{rec.category || "Other"}</span>
                     {rec.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{allWallets.find(w => w.id === rec.wallet)?.label || rec.wallet}</span>}
-                    {isBiMonthly && <span>{rec.biMonthlyDays || "15th & 30th"}</span>}
-                    {rec.frequency === "Monthly" && <span>Day {rec.monthlyDay || "15"}</span>}
+                    {isBiMonthly && <span>{rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(d => d+"th").join(" & ") : "15th & 30th"}</span>}
+                    {rec.frequency === "Monthly" && <span>Day {rec.monthlyDay || 15}</span>}
                     {rec.frequency === "By Date" && rec.date && <span>{formatShortDate(rec.date)}</span>}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -193,8 +193,8 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   </td>
                   <td className="py-2.5 px-3 text-center whitespace-nowrap">
                     <div className="text-zinc-300 text-xs">
-                      {rec.frequency === "Bi-monthly" && <span className="text-zinc-300 font-medium text-[11px]">15th & 30th</span>}
-                      {rec.frequency === "Monthly" && <span className="text-zinc-400 text-[11px]">Monthly • Day {rec.monthlyDay || "15"}</span>}
+                      {rec.frequency === "Bi-monthly" && <span className="text-zinc-300 font-medium text-[11px]">{rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(d => d+"th").join(" & ") : "15th & 30th"}</span>}
+                      {rec.frequency === "Monthly" && <span className="text-zinc-400 text-[11px]">Monthly • Day {rec.monthlyDay || 15}</span>}
                       {rec.frequency === "By Date" && (rec.date ? <span className="inline-flex items-center gap-1 text-zinc-300 font-mono text-[11px]"><Calendar size={10} className="text-zinc-500" />{formatShortDate(rec.date)}</span> : <span className="text-zinc-600">—</span>)}
                     </div>
                   </td>
@@ -269,7 +269,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 {editForm.frequency === "Monthly" && (
                   <div className="col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Monthly Day</label>
-                    <select value={editForm.monthlyDay || "15"} onChange={(e) => setEditForm({ ...editForm, monthlyDay: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
+                    <select value={editForm.monthlyDay || 15} onChange={(e) => setEditForm({ ...editForm, monthlyDay: parseInt(e.target.value, 10) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
                       {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Day {d}</option>)}
                     </select>
                   </div>
@@ -333,7 +333,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 {newReceivable.frequency === "Monthly" && (
                   <div className="col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Monthly Day</label>
-                    <select value={newReceivable.monthlyDay} onChange={(e) => setNewReceivable({ ...newReceivable, monthlyDay: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
+                    <select value={newReceivable.monthlyDay} onChange={(e) => setNewReceivable({ ...newReceivable, monthlyDay: parseInt(e.target.value, 10) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
                       {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Day {d}</option>)}
                     </select>
                   </div>

@@ -10,7 +10,7 @@ interface UseReceivableActionsParams {
 
 export function useReceivableActions({ setGlobalData, selectedMonth, showToast }: UseReceivableActionsParams) {
   
-  const addReceivable = (receivable: { name: string; amount: number; category: ReceivableCategory; frequency: ReceivableFrequency; biMonthlyDays?: string; monthlyDay?: string; date?: string; wallet?: string; }) => {
+  const addReceivable = (receivable: { name: string; amount: number; category: ReceivableCategory; frequency: ReceivableFrequency; biMonthlyDays?: number[]; monthlyDay?: number; date?: string; wallet?: string; }) => {
     setGlobalData(prev => {
       const newReceivable: Receivable = {
         id: generateId("r"),
@@ -19,8 +19,8 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
         category: receivable.category || "Other",
         frequency: receivable.frequency,
         wallet: receivable.wallet,
-        biMonthlyDays: receivable.frequency === "Bi-monthly" ? receivable.biMonthlyDays || "" : "",
-        monthlyDay: receivable.frequency === "Monthly" ? receivable.monthlyDay || "" : "",
+        biMonthlyDays: receivable.frequency === "Bi-monthly" ? receivable.biMonthlyDays || [15, 30] : [],
+        monthlyDay: receivable.frequency === "Monthly" ? receivable.monthlyDay || 15 : undefined,
         date: receivable.frequency === "By Date" ? receivable.date || "" : "",
         startMonth: receivable.frequency === "By Date" ? "" : selectedMonth
       };

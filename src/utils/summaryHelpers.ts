@@ -104,8 +104,8 @@ export function buildFinancialSummary({
                 })
               : "Date TBA"
             : r.frequency === "Bi-monthly"
-              ? r.biMonthlyDays || "15th & 30th"
-              : `Monthly (Day ${r.monthlyDay || "15"})`;
+              ? (r.biMonthlyDays && r.biMonthlyDays.length > 0 ? r.biMonthlyDays.map(d => d + "th").join(" & ") : "15th & 30th")
+              : `Monthly (Day ${r.monthlyDay || 15})`;
 
         return rec > 0
           ? `  • ${r.name} [${cat} | ${freqInfo}]: ₱${fmt(rem)} remaining (₱${fmt(rec)} collected of ₱${fmt(r.amount)})`

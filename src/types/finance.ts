@@ -42,8 +42,8 @@ export interface Receivable {
   category?: ReceivableCategory;
   frequency: ReceivableFrequency;
   wallet?: string;
-  biMonthlyDays?: string;
-  monthlyDay?: string;
+  biMonthlyDays?: number[];
+  monthlyDay?: number;
   date?: string;
   startMonth?: string;
 }
@@ -143,8 +143,8 @@ export interface EditFormData {
   wallet?: string;
   category?: ReceivableCategory | ShootCategory;
   frequency?: ReceivableFrequency;
-  biMonthlyDays?: string;
-  monthlyDay?: string;
+  biMonthlyDays?: number[];
+  monthlyDay?: number;
   date?: string;
   status?: ShootStatus;
   startMonth?: string;

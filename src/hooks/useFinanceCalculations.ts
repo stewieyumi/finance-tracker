@@ -270,7 +270,7 @@ const fundProgressPercent = useMemo(() => {
             const d = parseMonthKey(monthKey);
             const year = d.getFullYear();
             const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = r.frequency === "Monthly" ? String(r.monthlyDay || "15").padStart(2, '0') : "15";
+            const day = r.frequency === "Monthly" ? String(r.monthlyDay || 15).padStart(2, '0') : "15";
             txDate = `${year}-${month}-${day}`;
           }
           txs.push({ id: `${r.id}_${monthKey}`, title: `${r.name}`, amount: recLog.amountReceived, date: log.paymentDates?.[r.id] || txDate, type: "inflow", wallet: r.wallet || "maya", category: r.category });

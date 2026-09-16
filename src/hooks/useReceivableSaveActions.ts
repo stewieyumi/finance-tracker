@@ -53,20 +53,12 @@ export function useReceivableSaveActions({
             frequency,
             biMonthlyDays:
               frequency === "Bi-monthly"
-                ? String(
-                    editForm.biMonthlyDays ??
-                    item.biMonthlyDays ??
-                    ""
-                  )
-                : "",
+                ? (editForm.biMonthlyDays ?? item.biMonthlyDays ?? [15, 30])
+                : [],
             monthlyDay:
               frequency === "Monthly"
-                ? String(
-                    editForm.monthlyDay ??
-                    item.monthlyDay ??
-                    ""
-                  )
-                : "",
+                ? (editForm.monthlyDay ?? item.monthlyDay ?? 15)
+                : undefined,
             date:
               frequency === "By Date"
                 ? String(editForm.date ?? item.date ?? "")
