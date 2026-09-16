@@ -24,26 +24,14 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
     const payload = {
       contents: [{
         parts: [
-          { text: "Extract the following details from this receipt: 'merchant' (string), 'amount' (number), 'date' (YYYY-MM-DD), 'category' (string). For category, strictly choose from: 'Food & Dining', 'Transport', 'Utilities', 'Laundry & Home', 'Shopping', 'Other'." },
+          { text: "Extract the following details from this receipt: 'merchant' (string), 'amount' (number), 'date' (YYYY-MM-DD), 'category' (string). For category, choose from: 'Food & Dining', 'Transport', 'Utilities', 'Laundry & Home', 'Shopping', 'Other'. Return ONLY a raw JSON object. Do not include markdown formatting like ```json." },
           { inline_data: { mime_type: mimeType, data: base64Data } }
         ]
-      }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "OBJECT",
-          properties: {
-            merchant: { type: "STRING" },
-            amount: { type: "NUMBER" },
-            date: { type: "STRING" },
-            category: { type: "STRING" }
-          },
-          required: ["merchant", "amount", "date", "category"]
-        }
-      }
+      }]
     };
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+    // Using the absolute most stable model string with zero experimental config flags
+    const response = await fetch(`[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$){apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -54,11 +42,14 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
     
+    // Manually strip any Markdown formatting if the AI disobeys instructions
+    const cleanText = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+    
     try {
-      const result = JSON.parse(text);
-      return res.status(200).json({ success: true, parsed: result, raw_text: text, api_data: data });
+      const result = JSON.parse(cleanText);
+      return res.status(200).json({ success: true, parsed: result, raw_text: cleanText });
     } catch (parseErr: any) {
-      return res.status(200).json({ success: false, error: "JSON Parse failed", raw_text: text, api_data: data });
+      return res.status(200).json({ success: false, error: "JSON Parse failed", raw_text: cleanText, api_data: data });
     }
   } catch (error: any) {
     console.error("AI Scan Error:", error.message || error);
