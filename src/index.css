@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 @layer base {
+  html, body {
+    overscroll-behavior-y: none; /* Disables native iOS Safari bounce to fix custom pull-to-refresh */
+  }
   body {
     background-color: #0b0b0d;
     color: #e2e2e8;

@@ -78,18 +78,22 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
       "END:VCALENDAR"
     ].join("\n");
 
-    // Detect iOS to bypass Safari's strict Blob download blockers
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
-    if (isIOS) {
-      // iOS prefers direct navigation to the data URI for Calendar events
-      window.location.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+        // Convert ICS string to a File object
+    const fileName = `${shoot.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`;
+    const file = new File([ics], fileName, { type: 'text/calendar' });
+
+    // Use native Web Share API (Flawless on iOS Safari)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({
+        files: [file],
+        title: shoot.title,
+      }).catch((err) => console.log("Share cancelled:", err));
     } else {
-      // Standard download for Desktop/Android
+      // Fallback for Desktop Chrome/Edge
       const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
-      link.setAttribute('download', `${shoot.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`);
+      link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -142,18 +146,22 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
       "END:VCALENDAR"
     ].join("\n");
 
-    // Detect iOS to bypass Safari's strict Blob download blockers
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    
-    if (isIOS) {
-      // iOS prefers direct navigation to the data URI for Calendar events
-      window.location.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+        // Convert ICS string to a File object
+    const fileName = `${shoot.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`;
+    const file = new File([ics], fileName, { type: 'text/calendar' });
+
+    // Use native Web Share API (Flawless on iOS Safari)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({
+        files: [file],
+        title: shoot.title,
+      }).catch((err) => console.log("Share cancelled:", err));
     } else {
-      // Standard download for Desktop/Android
+      // Fallback for Desktop Chrome/Edge
       const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
-      link.setAttribute('download', `${shoot.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`);
+      link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

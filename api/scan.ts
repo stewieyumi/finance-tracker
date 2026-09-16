@@ -53,9 +53,13 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
     if (data.error) throw new Error(data.error.message);
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-    const result = JSON.parse(text);
-
-    return res.status(200).json(result);
+    
+    try {
+      const result = JSON.parse(text);
+      return res.status(200).json({ success: true, parsed: result, raw_text: text, api_data: data });
+    } catch (parseErr: any) {
+      return res.status(200).json({ success: false, error: "JSON Parse failed", raw_text: text, api_data: data });
+    }
   } catch (error: any) {
     console.error("AI Scan Error:", error.message || error);
     return res.status(500).json({ error: "Failed to process receipt: " + (error.message || "") });

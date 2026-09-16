@@ -19,6 +19,7 @@ const getLocalToday = () => {
 
 export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalData, showToast }) => {
   const [isScanning, setIsScanning] = useState(false);
+  const [debugLog, setDebugLog] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,25 +66,42 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ image: base64 })
           });
-          const data = await res.json();
           
-          if (!res.ok || data.error) {
-            showToast("❌ Scan failed: " + (data.error || "Server error"));
-            setIsScanning(false);
+          const textResponse = await res.text();
+          let data;
+          try {
+            data = JSON.parse(textResponse);
+          } catch (e) {
+            setDebugLog({ error: "Failed to parse server response as JSON", raw: textResponse });
+            showToast("❌ Server crashed. See debug log.");
             return;
           }
 
+          setDebugLog(data); // Render this below for troubleshooting
+          
+          if (!res.ok || data.error) {
+            showToast("❌ Scan failed: " + (data.error || "Server error"));
+            return;
+          }
+
+          if (data.success === false) {
+            showToast("❌ AI failed to format JSON. See debug log.");
+            return;
+          }
+
+          const parsed = data.parsed || {};
           setForm(prev => ({
             ...prev,
-            merchant: data.merchant || "",
-            amount: data.amount ? String(data.amount) : "",
-            category: data.category || "Other",
-            date: data.date || getLocalToday()
+            merchant: parsed.merchant || "",
+            amount: parsed.amount ? String(parsed.amount) : "",
+            category: parsed.category || "Other",
+            date: parsed.date || getLocalToday()
           }));
           
           showToast("✨ Receipt scanned successfully!");
-        } catch (err) {
-          showToast("❌ Server failed to read receipt.");
+        } catch (err: any) {
+          setDebugLog({ error: "Network or execution error", message: err.message });
+          showToast("❌ Network error. See debug log.");
         } finally {
           setIsScanning(false);
           if (fileInputRef.current) fileInputRef.current.value = "";
