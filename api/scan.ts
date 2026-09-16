@@ -25,13 +25,14 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
       contents: [{
         parts: [
           { text: "Extract the following details from this receipt: 'merchant' (string), 'amount' (number), 'date' (YYYY-MM-DD), 'category' (string). For category, choose from: 'Food & Dining', 'Transport', 'Utilities', 'Laundry & Home', 'Shopping', 'Other'. Return ONLY a raw JSON object. Do not include markdown formatting." },
-          { inline_data: { mime_type: mimeType, data: base64Data } }
+          // STRICT CAMEL-CASE REQUIRED FOR REST API
+          { inlineData: { mimeType: mimeType, data: base64Data } }
         ]
       }]
     };
 
-    // FOOLPROOF URL CONSTRUCTION - NO TEMPLATE LITERALS
-    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+    // UPGRADED TO OFFICIAL 'v1' STABLE ENDPOINT
+    const endpoint = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + apiKey;
 
     const response = await fetch(endpoint, {
       method: "POST",
