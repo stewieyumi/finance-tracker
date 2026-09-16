@@ -1,6 +1,6 @@
-import { roundMoney } from "../utils/currency";
 import { Receivable, ReceivableCategory, ReceivableFrequency, ReceivableViewModel, UnifiedFinanceData } from "../types/finance";
 import { generateId } from "../utils/idHelpers";
+import { roundMoney } from "../utils/currency";
 
 interface UseReceivableActionsParams {
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
@@ -32,7 +32,7 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
   const toggleReceivableStatus = (receivable: ReceivableViewModel) => {
     const targetMonth = receivable.targetMonthForDue || selectedMonth;
     const receivableAmount = Math.max(0, parseFloat(String(receivable.amount)) || 0);
-    if (receivableAmount <= 0) { showToast("Amount must be greater than 0"); return; }
+    if (receivableAmount < 0) { showToast("Amount cannot be negative"); return; }
     
     const targetWallet = receivable.wallet || "maya";
 
@@ -47,12 +47,22 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
       
       const amountDelta = roundMoney(newAmountReceived - currentAmount);
       const nextWallets = { ...prev.wallets };
-      nextWallets[targetWallet] = roundMoney(Math.max(0, roundMoney((nextWallets[targetWallet] || 0) + amountDelta)));
+      nextWallets[targetWallet] = roundMoney(Math.max(0, (nextWallets[targetWallet] || 0) + amountDelta));
+
+      const today = new Date(); 
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
 
       return {
         ...prev,
         wallets: nextWallets,
-        logs: { ...prev.logs, [targetMonth]: { ...monthLog, recsCollected: { ...(monthLog.recsCollected || {}), [receivable.id]: { amountReceived: newAmountReceived, collected: newCollected } } } },
+        logs: { 
+          ...prev.logs, 
+          [targetMonth]: { 
+            ...monthLog, 
+            paymentDates: { ...(monthLog.paymentDates || {}), [receivable.id]: todayStr }, 
+            recsCollected: { ...(monthLog.recsCollected || {}), [receivable.id]: { amountReceived: newAmountReceived, collected: newCollected } } 
+          } 
+        },
         updatedAt: Date.now()
       };
     });
@@ -62,7 +72,7 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
     if (!Number.isFinite(amount) || amount <= 0) return;
     const targetMonth = receivable.targetMonthForDue || selectedMonth;
     const receivableAmount = Math.max(0, parseFloat(String(receivable.amount)) || 0);
-    if (receivableAmount <= 0) { showToast("Amount must be greater than 0"); return; }
+    if (receivableAmount < 0) { showToast("Amount cannot be negative"); return; }
     
     const targetWallet = receivable.wallet || "maya";
 
@@ -72,15 +82,25 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
       const currentAmount = Math.max(0, parseFloat(String(currentRecord.amountReceived)) || 0);
 
       const newAmount = Math.min(currentAmount + amount, receivableAmount);
-      const amountDelta = newAmount - currentAmount;
+      const amountDelta = roundMoney(newAmount - currentAmount);
       
       const nextWallets = { ...prev.wallets };
       nextWallets[targetWallet] = roundMoney((nextWallets[targetWallet] || 0) + amountDelta);
 
+      const today = new Date(); 
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+
       return {
         ...prev,
         wallets: nextWallets,
-        logs: { ...prev.logs, [targetMonth]: { ...monthLog, recsCollected: { ...(monthLog.recsCollected || {}), [receivable.id]: { amountReceived: newAmount, collected: newAmount >= receivableAmount } } } },
+        logs: { 
+          ...prev.logs, 
+          [targetMonth]: { 
+            ...monthLog, 
+            paymentDates: { ...(monthLog.paymentDates || {}), [receivable.id]: todayStr }, 
+            recsCollected: { ...(monthLog.recsCollected || {}), [receivable.id]: { amountReceived: newAmount, collected: newAmount >= receivableAmount } } 
+          } 
+        },
         updatedAt: Date.now()
       };
     });

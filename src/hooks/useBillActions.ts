@@ -69,6 +69,7 @@ const toggleBillStatus = (bill: BillViewModel) => {
     const currentPaid = monthLog.billsPaid || [];
     const isCurrentlyPaid = currentPaid.includes(bill.id);
     const willBePaid = !isCurrentlyPaid;
+    const today = new Date(); const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
 
     const nextWallets = { ...prev.wallets };
     
@@ -86,6 +87,9 @@ const toggleBillStatus = (bill: BillViewModel) => {
         ...prev.logs,
         [targetMonth]: {
           ...monthLog,
+          paymentDates: willBePaid 
+            ? { ...(monthLog.paymentDates || {}), [bill.id]: todayStr }
+            : (()=>{ const pd = {...(monthLog.paymentDates || {})}; delete pd[bill.id]; return pd; })(),
           billsPaid: isCurrentlyPaid
             ? currentPaid.filter(id => id !== bill.id)
             : [...currentPaid, bill.id]

@@ -84,6 +84,7 @@ export interface MonthLog {
       collected: boolean;
     };
   };
+  paymentDates?: Record<string, string>;
   billPaydayContributions?: {
     [billId: string]: number;
   };

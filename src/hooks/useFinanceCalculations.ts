@@ -87,7 +87,7 @@ const effectiveAmount = getEffectiveBillAmount(
           const day = String(b.dueDay || "1").padStart(2, '0');
           const override = log.billOverrides?.[b.id];
           const amt = override !== undefined ? override : b.amount;
-          txs.push({ id: `${b.id}_${monthKey}`, title: `${b.name} (${monthKey.split(" ")[0]})`, amount: -amt, date: `${year}-${month}-${day}`, type: "bill", wallet: b.wallet || "maya", category: b.type });
+          txs.push({ id: `${b.id}_${monthKey}`, title: `${b.name} (${monthKey.split(" ")[0]})`, amount: -amt, date: log.paymentDates?.[b.id] || `${year}-${month}-${day}`, type: "bill", wallet: b.wallet || "maya", category: b.type });
         }
       });
     });
@@ -105,7 +105,7 @@ const effectiveAmount = getEffectiveBillAmount(
             const day = r.frequency === "Monthly" ? String(r.monthlyDay || "15").padStart(2, '0') : "15";
             txDate = `${year}-${month}-${day}`;
           }
-          txs.push({ id: `${r.id}_${monthKey}`, title: `${r.name}`, amount: recLog.amountReceived, date: txDate, type: "inflow", wallet: r.wallet || "maya", category: r.category });
+          txs.push({ id: `${r.id}_${monthKey}`, title: `${r.name}`, amount: recLog.amountReceived, date: log.paymentDates?.[r.id] || txDate, type: "inflow", wallet: r.wallet || "maya", category: r.category });
         }
       });
     });
@@ -197,7 +197,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
           const day = String(b.dueDay || "1").padStart(2, '0');
           const override = log.billOverrides?.[b.id];
           const amt = override !== undefined ? override : b.amount;
-          txs.push({ id: `${b.id}_${monthKey}`, title: `${b.name} (${monthKey.split(" ")[0]})`, amount: -amt, date: `${year}-${month}-${day}`, type: "bill", wallet: b.wallet || "maya", category: b.type });
+          txs.push({ id: `${b.id}_${monthKey}`, title: `${b.name} (${monthKey.split(" ")[0]})`, amount: -amt, date: log.paymentDates?.[b.id] || `${year}-${month}-${day}`, type: "bill", wallet: b.wallet || "maya", category: b.type });
         }
       });
     });
@@ -215,7 +215,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
             const day = r.frequency === "Monthly" ? String(r.monthlyDay || "15").padStart(2, '0') : "15";
             txDate = `${year}-${month}-${day}`;
           }
-          txs.push({ id: `${r.id}_${monthKey}`, title: `${r.name}`, amount: recLog.amountReceived, date: txDate, type: "inflow", wallet: r.wallet || "maya", category: r.category });
+          txs.push({ id: `${r.id}_${monthKey}`, title: `${r.name}`, amount: recLog.amountReceived, date: log.paymentDates?.[r.id] || txDate, type: "inflow", wallet: r.wallet || "maya", category: r.category });
         }
       });
     });
@@ -347,7 +347,7 @@ const fundProgressPercent = useMemo(() => {
           const day = String(b.dueDay || "1").padStart(2, '0');
           const override = log.billOverrides?.[b.id];
           const amt = override !== undefined ? override : b.amount;
-          txs.push({ id: `${b.id}_${monthKey}`, title: `${b.name} (${monthKey.split(" ")[0]})`, amount: -amt, date: `${year}-${month}-${day}`, type: "bill", wallet: b.wallet || "maya", category: b.type });
+          txs.push({ id: `${b.id}_${monthKey}`, title: `${b.name} (${monthKey.split(" ")[0]})`, amount: -amt, date: log.paymentDates?.[b.id] || `${year}-${month}-${day}`, type: "bill", wallet: b.wallet || "maya", category: b.type });
         }
       });
     });
@@ -365,7 +365,7 @@ const fundProgressPercent = useMemo(() => {
             const day = r.frequency === "Monthly" ? String(r.monthlyDay || "15").padStart(2, '0') : "15";
             txDate = `${year}-${month}-${day}`;
           }
-          txs.push({ id: `${r.id}_${monthKey}`, title: `${r.name}`, amount: recLog.amountReceived, date: txDate, type: "inflow", wallet: r.wallet || "maya", category: r.category });
+          txs.push({ id: `${r.id}_${monthKey}`, title: `${r.name}`, amount: recLog.amountReceived, date: log.paymentDates?.[r.id] || txDate, type: "inflow", wallet: r.wallet || "maya", category: r.category });
         }
       });
     });
