@@ -30,27 +30,50 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
     date: getLocalToday()
   });
 
-  const handleCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Simulate AI Processing Delay
     setIsScanning(true);
     setShowForm(true);
-    
-    setTimeout(() => {
-      // Mock AI Extraction Result
-      setForm(prev => ({
-        ...prev,
-        merchant: "LaundryHub Cebu",
-        amount: "350",
-        category: "Laundry & Home",
-        date: getLocalToday()
-      }));
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        
+        const res = await fetch("/api/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: base64 })
+        });
+
+        if (!res.ok) {
+          showToast("❌ Scan failed. Ensure GEMINI_API_KEY is set in Vercel.");
+          setIsScanning(false);
+          return;
+        }
+
+        const data = await res.json();
+
+        setForm(prev => ({
+          ...prev,
+          merchant: data.merchant || "",
+          amount: data.amount ? String(data.amount) : "",
+          category: data.category || "Other",
+          date: data.date || getLocalToday()
+        }));
+        
+        showToast("✨ Receipt scanned successfully!");
+        setIsScanning(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      };
+    } catch (err) {
+      showToast("❌ Scan failed. Please enter manually.");
       setIsScanning(false);
-      showToast("✨ Receipt scanned successfully!");
       if (fileInputRef.current) fileInputRef.current.value = "";
-    }, 2000);
+    }
   };
 
   const handleSave = (e: React.FormEvent) => {
