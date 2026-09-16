@@ -9,36 +9,89 @@ export type Wallet = "maya" | "gcash" | "maribank" | "gotyme";
 
 export function getWalletForBill(name: string, walletProp?: string): Wallet {
   if (walletProp) return walletProp as Wallet;
+
   const n = (name || "").toLowerCase();
-  if (n.includes("unobank") || n.includes("appliance") || n.includes("gcredit")) return "gcash";
-  if (n.includes("spaylater")) return "maribank";
-  if (n.includes("shared") || n.includes("japan trip")) return "gotyme";
+
+  if (
+    n.includes("unobank") ||
+    n.includes("appliance") ||
+    n.includes("gcredit")
+  ) {
+    return "gcash";
+  }
+
+  if (n.includes("spaylater")) {
+    return "maribank";
+  }
+
+  if (n.includes("shared") || n.includes("japan trip")) {
+    return "gotyme";
+  }
+
   return "maya";
 }
 
-// How much of a bill should be set aside THIS payday, given what's
-// already been contributed toward it and how many paydays remain
-// before it's due. Never re-funds an amount already allocated.
+/**
+ * Calculates how much of a bill should be funded on this payday.
+ *
+ * Rules:
+ * - Never fund more than the remaining bill balance.
+ * - Never return a negative value.
+ * - Treat zero paydays remaining as one payday.
+ * - Round the actual allocation to cents here, before it is routed
+ *   into wallet totals and contribution logs.
+ *
+ * Rounding here is important because an amount such as 100 / 3 can
+ * otherwise become 33.333..., which can cause cent-level drift when
+ * the previous contribution is stored as 33.33.
+ */
 export function computeBillPerPaydayAmount(
   billAmount: number,
   alreadyAllocated: number,
   paydaysRemaining: number
 ): number {
-  const remaining = Math.max(0, billAmount - alreadyAllocated);
-  const safePaydays = Math.max(1, paydaysRemaining);
-  return remaining / safePaydays;
+  const safeBillAmount = Math.max(0, Number(billAmount) || 0);
+  const safeAlreadyAllocated = Math.min(
+    safeBillAmount,
+    Math.max(0, Number(alreadyAllocated) || 0)
+  );
+  const safePaydays = Math.max(1, Math.floor(Number(paydaysRemaining) || 0));
+
+  const remaining = Math.max(
+    0,
+    safeBillAmount - safeAlreadyAllocated
+  );
+
+  return Math.round((remaining / safePaydays) * 100) / 100;
 }
 
-// Scales the three flat baselines (living/savings/transit) down together
-// so they only consume whatever payout room is left after bills are
-// funded in full — never pushing the total negative.
+/**
+ * Scales the living/savings/transit baselines together so they only
+ * consume the payout room left after bill allocations.
+ *
+ * Bills are funded first. Baselines consume only the remaining room.
+ * If bills already exceed the payout, baselines become zero.
+ */
 export function computeBaselineScale(
   totalBillObligations: number,
   perPayoutSalary: number,
   totalBaselineTarget: number
 ): number {
-  const leftoverAfterBills = Math.max(0, perPayoutSalary - totalBillObligations);
-  return totalBaselineTarget > 0 ? Math.min(1, leftoverAfterBills / totalBaselineTarget) : 0;
+  const safeBills = Math.max(0, Number(totalBillObligations) || 0);
+  const safeSalary = Math.max(0, Number(perPayoutSalary) || 0);
+  const safeBaseline = Math.max(0, Number(totalBaselineTarget) || 0);
+
+  if (safeBaseline <= 0) return 0;
+
+  const leftoverAfterBills = Math.max(
+    0,
+    safeSalary - safeBills
+  );
+
+  return Math.min(
+    1,
+    leftoverAfterBills / safeBaseline
+  );
 }
 
 export function getReceivableStatus(
@@ -48,10 +101,13 @@ export function getReceivableStatus(
 ) {
   const safeAmount = Math.max(0, amount || 0);
   const safeReceived = Math.max(0, amountReceived || 0);
-  
+
   const remaining = Math.max(0, safeAmount - safeReceived);
-  const isCollected = safeAmount > 0 ? safeReceived >= safeAmount : !!isManuallyCollected;
-  
+  const isCollected =
+    safeAmount > 0
+      ? safeReceived >= safeAmount
+      : !!isManuallyCollected;
+
   return { isCollected, remaining };
 }
 
@@ -60,5 +116,7 @@ export function applyWalletTransaction(
   delta: number
 ): number {
   const safeBalance = currentBalance || 0;
-  return Math.round(Math.max(0, safeBalance + delta) * 100) / 100;
+  return Math.round(
+    Math.max(0, safeBalance + delta) * 100
+  ) / 100;
 }

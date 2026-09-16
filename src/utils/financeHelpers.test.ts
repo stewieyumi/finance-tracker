@@ -185,3 +185,40 @@ describe("Expense & Wallet Tracking Logic", () => {
     expect(applyWalletTransaction(100.55, -50.10)).toBe(50.45);
   });
 });
+
+describe("computeBillPerPaydayAmount — cent-safe payday allocation", () => {
+  it("prevents floating-point reallocation across three paydays", () => {
+    const first = computeBillPerPaydayAmount(100, 0, 3);
+    expect(first).toBe(33.33);
+
+    const second = computeBillPerPaydayAmount(100, first, 2);
+    expect(second).toBe(33.34);
+
+    const third = computeBillPerPaydayAmount(
+      100,
+      first + second,
+      1
+    );
+    expect(third).toBe(33.33);
+
+    expect(
+      Math.round((first + second + third) * 100) / 100
+    ).toBe(100);
+  });
+
+  it("never allocates above the bill even when alreadyAllocated is malformed", () => {
+    expect(
+      computeBillPerPaydayAmount(1000, -500, 2)
+    ).toBe(500);
+
+    expect(
+      computeBillPerPaydayAmount(1000, 1500, 2)
+    ).toBe(0);
+  });
+
+  it("floors fractional payday counts safely", () => {
+    expect(
+      computeBillPerPaydayAmount(900, 0, 2.9)
+    ).toBe(450);
+  });
+});

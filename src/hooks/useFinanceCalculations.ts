@@ -206,15 +206,48 @@ const fundProgressPercent = useMemo(() => {
   const billPaydayAllocations: { id: string; month: string; wallet: string; amount: number }[] = [];
 
   activeBills.filter(b => !b.paid).forEach(b => {
-    const dueDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + (b.daysLeft ?? 0));
-    const paydaysRemaining = Math.max(1, countPaydaysUntil(today, dueDate));
-    const alreadyAllocated = globalData.logs?.[b.targetMonthForDue]?.billPaydayContributions?.[b.id] || 0;
-    const perPayday = computeBillPerPaydayAmount(parseFloat(String(b.amount)) || 0, alreadyAllocated, paydaysRemaining);
+    const dueDate = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate() + (b.daysLeft ?? 0)
+    );
+
+    const paydaysRemaining = Math.max(
+      1,
+      countPaydaysUntil(today, dueDate)
+    );
+
+    const alreadyAllocated =
+      globalData.logs?.[b.targetMonthForDue]
+        ?.billPaydayContributions?.[b.id] || 0;
+
+    const perPayday = computeBillPerPaydayAmount(
+      parseFloat(String(b.amount)) || 0,
+      alreadyAllocated,
+      paydaysRemaining
+    );
+
     const wallet = getWalletForBill(b.name, b.wallet);
-    if (walletSplitTotals[wallet] === undefined) walletSplitTotals[wallet] = 0;
-    walletSplitTotals[wallet] += perPayday;
+
+    if (walletSplitTotals[wallet] === undefined) {
+      walletSplitTotals[wallet] = 0;
+    }
+
+    // The helper already rounds to cents. Keep the aggregate rounded too
+    // so multiple bills routed to the same wallet cannot accumulate
+    // floating-point fractions that alter later payday calculations.
+    walletSplitTotals[wallet] =
+      Math.round(
+        (walletSplitTotals[wallet] + perPayday) * 100
+      ) / 100;
+
     if (perPayday > 0) {
-      billPaydayAllocations.push({ id: b.id, month: b.targetMonthForDue, wallet, amount: Math.round(perPayday * 100) / 100 });
+      billPaydayAllocations.push({
+        id: b.id,
+        month: b.targetMonthForDue,
+        wallet,
+        amount: perPayday
+      });
     }
   });
 
