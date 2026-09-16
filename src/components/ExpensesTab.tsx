@@ -77,7 +77,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
             data = JSON.parse(textResponse);
           } catch (e) {
             localStorage.setItem('scanner_debug_log', JSON.stringify({ error: 'Failed to parse server response as JSON', raw: textResponse }));
-            /* silenced toast */
+            showToast("Unable to scan this receipt. Please try again or enter the details manually.");
             return;
           }
 
@@ -113,7 +113,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
       };
       img.src = URL.createObjectURL(file);
     } catch (err) {
-      /* silenced toast */
+      showToast("Unable to scan this receipt. Please try again or enter the details manually.");
       setIsScanning(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
