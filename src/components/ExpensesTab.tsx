@@ -80,7 +80,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
           localStorage.setItem('scanner_debug_log', JSON.stringify(data));
           
           if (!res.ok || data.error) {
-            showToast("❌ Scan failed: " + (data.error || "Server error"));
+            /* silenced toast */
             return;
           }
 
