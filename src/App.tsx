@@ -591,11 +591,13 @@ const copySummaryToClipboard = async () => {
                         <button onClick={() => setShowShortcutsHelp(false)} className="text-zinc-500 hover:text-zinc-300">✕</button>
                       </div>
                       <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Tabs</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">1-5</kbd></div>
+                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Ops Views</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">B,I,G</kbd></div>
                         <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Month</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">⌘K</kbd></div>
                         <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Yearly</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">Y</kbd></div>
                         <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Analytics</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">A</kbd></div>
-                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Sync</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">S</kbd></div>
-                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Diagnostic</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">⌘D</kbd></div>
+                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Privacy</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">P</kbd></div>
+                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Pull/Sync</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">R / S</kbd></div>
                         <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Close</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">Esc</kbd></div>
                       </div>
                     </div>
