@@ -93,7 +93,7 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
       }
     };
 
-    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    const endpoint = "https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash:generateContent";
 
     const response = await fetch(endpoint, {
       method: "POST",
