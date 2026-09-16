@@ -19,6 +19,7 @@ const getLocalToday = () => {
 
 export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalData, showToast }) => {
   const [isScanning, setIsScanning] = useState(false);
+  const [debugLog, setDebugLog] = useState<any>(null);
   const [showForm, setShowForm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -71,12 +72,12 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
           try {
             data = JSON.parse(textResponse);
           } catch (e) {
-            localStorage.setItem('scanner_debug_log', JSON.stringify({ error: 'Failed to parse server response as JSON', raw: textResponse }));
+            setDebugLog({ error: 'Failed to parse server response as JSON', raw: textResponse });
             showToast("❌ Server crashed. Check Account Tab.");
             return;
           }
 
-          localStorage.setItem('scanner_debug_log', JSON.stringify(data));
+          setDebugLog(data);
           
           if (!res.ok || data.error) {
             showToast("❌ Scan failed: " + (data.error || "Server error"));
@@ -99,7 +100,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
           
           showToast("✨ Receipt scanned successfully!");
         } catch (err: any) {
-          localStorage.setItem('scanner_debug_log', JSON.stringify({ error: 'Network error', message: err.message }));
+          setDebugLog({ error: 'Network error', message: err.message });
           showToast("❌ Network error. Check Account Tab.");
         } finally {
           setIsScanning(false);

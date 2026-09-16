@@ -464,22 +464,7 @@ const copySummaryToClipboard = async () => {
         </div>
       )}
 
-      {/* PULL TO REFRESH INDICATOR (NATIVE PUSH-DOWN) */}
-      <div 
-        className="w-full flex items-center justify-center overflow-hidden transition-[height] duration-0"
-        style={{ 
-          height: `${pullProgress > 0 ? Math.min(pullProgress, 75) : 0}px`,
-          opacity: pullProgress > 10 ? Math.min((pullProgress - 10) / 40, 1) : 0
-        }}
-      >
-        <div className={`p-2 rounded-full bg-[#14141a] border border-white/[0.08] shadow-md transition-all ${pullProgress >= 50 ? "shadow-blue-500/20 border-blue-500/30" : ""}`}>
-          <RefreshCw 
-            size={18} 
-            className={pullProgress >= 50 ? "animate-spin text-blue-400" : "text-zinc-500"} 
-            style={{ transform: `rotate(${pullProgress * 6}deg)` }} 
-          />
-        </div>
-      </div>
+      
 
       <div className="w-full max-w-[860px] space-y-4">
         {cashShortfall > 0 && (
