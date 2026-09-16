@@ -546,7 +546,7 @@ const copySummaryToClipboard = async () => {
 
       
 
-      <div className="w-full max-w-md space-y-4">
+      <div className="w-full max-w-[860px] space-y-4">
         {cashShortfall > 0 && (
           <div className="bg-[#2a1712] border border-orange-900/50 text-orange-300 text-[11px] rounded-2xl px-4 py-3 flex items-center gap-2.5 shadow-lg">
             <AlertTriangle size={14} className="shrink-0 text-orange-400" />
