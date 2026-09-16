@@ -71,19 +71,36 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
     const payload = {
       contents: [{
         parts: [
-          { text: "Extract the following details from this receipt: 'merchant' (string), 'amount' (number), 'date' (YYYY-MM-DD), 'category' (string). For category, choose from: 'Food & Dining', 'Transport', 'Utilities', 'Laundry & Home', 'Shopping', 'Other'. Return ONLY a raw JSON object. Do not include markdown formatting." },
-          // STRICT CAMEL-CASE REQUIRED FOR REST API
+          { text: "Extract the details from this receipt." },
           { inlineData: { mimeType: mimeType, data: base64Data } }
         ]
-      }]
+      }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            merchant: { type: "STRING" },
+            amount: { type: "NUMBER" },
+            date: { type: "STRING", description: "YYYY-MM-DD" },
+            category: {
+              type: "STRING",
+              enum: ["Food & Dining", "Transport", "Utilities", "Laundry & Home", "Shopping", "Other"]
+            }
+          },
+          required: ["merchant", "amount", "date", "category"]
+        }
+      }
     };
 
-    // UPGRADED TO OFFICIAL 'v1' STABLE ENDPOINT
-    const endpoint = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey
+      },
       body: JSON.stringify(payload)
     });
 

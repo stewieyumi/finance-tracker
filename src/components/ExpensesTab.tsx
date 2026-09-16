@@ -84,12 +84,12 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
           localStorage.setItem('scanner_debug_log', JSON.stringify(data));
           
           if (!res.ok || data.error) {
-            /* silenced toast */
+            showToast("Unable to scan this receipt. Please try again or enter the details manually.");
             return;
           }
 
           if (data.success === false) {
-            /* silenced toast */
+            showToast("Unable to scan this receipt. Please try again or enter the details manually.");
             return;
           }
 
@@ -105,7 +105,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
           showToast("✨ Receipt scanned successfully!");
         } catch (err: any) {
           localStorage.setItem('scanner_debug_log', JSON.stringify({ error: 'Network error', message: err.message }));
-          /* silenced toast */
+          showToast("Unable to scan this receipt. Please try again or enter the details manually.");
         } finally {
           setIsScanning(false);
           if (fileInputRef.current) fileInputRef.current.value = "";
