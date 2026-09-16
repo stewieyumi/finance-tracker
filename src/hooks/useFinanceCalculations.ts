@@ -195,7 +195,7 @@ const fundProgressPercent = useMemo(() => {
   const defaultTransit = globalData?.settings?.defaultTransitAllocation ?? 1500;
 
   const livingWallet = globalData?.settings?.livingWallet || "gcash";
-  const savingsWallet = globalData?.settings?.savingsWallet || "maribank";
+  const savingsWallet = globalData?.settings?.savingsWallet || "bpi";
   const transitWallet = globalData?.settings?.transitWallet || "gotyme";
   
   const today = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());

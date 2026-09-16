@@ -5,6 +5,8 @@ declare const process: {
     APP_AUTH_SECRET?: string;
     KV_REST_API_URL?: string;
     KV_REST_API_TOKEN?: string;
+    VITE_GOOGLE_CLIENT_ID?: string;
+    VITE_GOOGLE_CLIENT_ID?: string;
     [key: string]: string | undefined;
   };
 };
@@ -130,15 +132,47 @@ export default async function handler(
 
   const clientToken = getClientToken(req);
 
-  if (!clientToken || clientToken.trim().length < 4) {
+  if (!clientToken) {
     return res.status(401).json({
-      error: "Unauthorized: Passcode must be at least 4 characters."
+      error: "Unauthorized: Missing token."
     });
   }
 
-  // Multi-user isolation: If using the original master passcode, use the main db.
-  // Otherwise, create a unique database slot for their specific passcode.
-  const USER_REDIS_KEY = clientToken === APP_AUTH_SECRET ? "finance_data" : `finance_data_${clientToken}`;
+  let USER_REDIS_KEY = "";
+  let isAuthenticated = false;
+
+  // 1. Dev Shortcut (Master Passcode)
+  if (clientToken === APP_AUTH_SECRET) {
+    USER_REDIS_KEY = "finance_data";
+    isAuthenticated = true;
+  } 
+  // 2. Google OAuth Token Verification
+  else if (clientToken.startsWith("eyJ") && clientToken.split(".").length === 3) {
+    try {
+      const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${clientToken}`);
+      if (!googleRes.ok) {
+        return res.status(401).json({ error: "Unauthorized: Invalid or expired Google token." });
+      }
+      
+      const tokenInfo = await googleRes.json();
+      if (!tokenInfo.sub) {
+        return res.status(401).json({ error: "Unauthorized: Invalid token payload." });
+      }
+      
+      if (tokenInfo.aud !== process.env.VITE_GOOGLE_CLIENT_ID) {
+        return res.status(401).json({ error: "Unauthorized: Invalid token audience (cross-app replay risk)." });
+      }
+      
+      USER_REDIS_KEY = `finance_data_g_${tokenInfo.sub}`;
+      isAuthenticated = true;
+    } catch (err) {
+      return res.status(500).json({ error: "Internal error validating Google token." });
+    }
+  }
+
+  if (!isAuthenticated) {
+    return res.status(401).json({ error: "Unauthorized: Invalid passcode or Google token." });
+  }
 
   try {
     if (req.method === "GET") {

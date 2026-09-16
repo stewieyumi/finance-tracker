@@ -1,5 +1,7 @@
 import { roundMoney } from "./utils/currency";
 import React, { useState, useMemo, useRef } from "react";
+import { GoogleLogin, googleLogout } from "@react-oauth/google";
+import { jwtDecode } from "jwt-decode";
 import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { getMonthKey, getAdjacentMonth } from "./utils/dateHelpers";
@@ -119,6 +121,35 @@ const {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormData>({});
   const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(false);
+
+  const [googleUser, setGoogleUser] = useState<any>(() => {
+    const saved = localStorage.getItem("ft_google_user");
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const handleGoogleSuccess = (credentialResponse: any) => {
+    try {
+      const decoded: any = jwtDecode(credentialResponse.credential);
+      setGoogleUser(decoded);
+      localStorage.setItem("ft_google_user", JSON.stringify(decoded));
+      
+      // Temporarily use the JWT as the master passcode for backend sync
+      localStorage.setItem("ft_sync_passcode", credentialResponse.credential);
+      
+      showToast(`Welcome, ${decoded.name || "User"}!`);
+    } catch (e) {
+      showToast("Failed to decode Google token");
+    }
+  };
+
+  const handleGoogleLogout = () => {
+    googleLogout();
+    setGoogleUser(null);
+    localStorage.removeItem("ft_google_user");
+    localStorage.removeItem("ft_sync_passcode");
+    showToast("Signed out of Google");
+  };
+
   const importInputRef = useRef<HTMLInputElement>(null);
   const paydaySplitInProgressRef = useRef(false);
 
@@ -804,7 +835,31 @@ const copySummaryToClipboard = async () => {
         {activeTab === "account" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
             <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl rounded-3xl p-8 text-center flex flex-col items-center justify-center min-h-[30vh]">
+              
               <h3 className="text-white font-bold text-lg mb-4">Account Dashboard</h3>
+
+              {/* GOOGLE AUTHENTICATION */}
+              <div className="w-full bg-[#1a1a22] border border-white/[0.06] rounded-2xl p-4 mb-4 flex flex-col items-center gap-3 shadow-md">
+                {googleUser ? (
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    {googleUser.picture && <img src={googleUser.picture} alt="Profile" className="w-12 h-12 rounded-full border border-zinc-700 shadow-md" />}
+                    <div className="text-sm font-bold text-white">{googleUser.name}</div>
+                    <div className="text-[10px] text-zinc-400 mb-2">{googleUser.email}</div>
+                    <button onClick={handleGoogleLogout} className="w-full bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/30 font-semibold py-2.5 rounded-xl text-xs transition">Sign Out</button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <div className="text-xs text-zinc-400 text-center mb-2">Sign in to sync your data securely.</div>
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => showToast("Google Sign-In Failed")}
+                      theme="filled_black"
+                      shape="pill"
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-col gap-3 max-w-xs mx-auto w-full">
                 <button onClick={() => setShowSettingsModal(true)} className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl transition shadow-lg shadow-blue-900/20">Open Settings & Sync</button>
                 <button onClick={exportBackup} className="w-full bg-[#1a1a22] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Download size={14} /> Export JSON Backup</button>

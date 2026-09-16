@@ -28,9 +28,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     if (isOpen) setActiveTab(initialTab);
   }, [isOpen, initialTab]);
   const [form, setForm] = useState({
-    goalName: "Japan ADB Target Milestone", targetFund: 80000, milestoneWallet: "maribank",
+    goalName: "Japan ADB Target Milestone", targetFund: 80000, milestoneWallet: "bpi",
     baseLivingAllowance: 2500, livingWallet: "gcash",
-    baseSavingsTarget: 1000, savingsWallet: "maribank",
+    baseSavingsTarget: 1000, savingsWallet: "bpi",
     defaultTransitAllocation: 1500, transitWallet: "gotyme",
     inflowsLabel: "RECEIVABLES & INFLOWS", gigsLabel: "UPCOMING SHOOTS & GIGS",
     inflowCategories: PRESETS.videographer.inflowCats, gigCategories: PRESETS.videographer.gigCats,
@@ -44,11 +44,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
       setForm({
         goalName: globalData.settings.goalName || "Japan ADB Target Milestone",
         targetFund: globalData.settings.targetFund || 80000,
-        milestoneWallet: globalData.settings.milestoneWallet || "maribank",
+        milestoneWallet: globalData.settings.milestoneWallet || "bpi",
         baseLivingAllowance: globalData.settings.baseLivingAllowance ?? 2500,
         livingWallet: globalData.settings.livingWallet || "gcash",
         baseSavingsTarget: globalData.settings.baseSavingsTarget ?? 1000,
-        savingsWallet: globalData.settings.savingsWallet || "maribank",
+        savingsWallet: globalData.settings.savingsWallet || "bpi",
         defaultTransitAllocation: globalData.settings.defaultTransitAllocation ?? 1500,
         transitWallet: globalData.settings.transitWallet || "gotyme",
         inflowsLabel: globalData.settings.inflowsLabel || "RECEIVABLES & INFLOWS",

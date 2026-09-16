@@ -1,7 +1,7 @@
 interface VercelApiRequest { method?: string; headers: Record<string, string | string[] | undefined>; body?: any; }
 interface VercelApiResponse { status: (code: number) => VercelApiResponse; json: (data: any) => void; }
 
-declare const process: { env: { GEMINI_API_KEY?: string; APP_AUTH_SECRET?: string; [key: string]: string | undefined } };
+declare const process: { env: { GEMINI_API_KEY?: string; APP_AUTH_SECRET?: string; VITE_GOOGLE_CLIENT_ID?: string; [key: string]: string | undefined } };
 
 export const config = { api: { bodyParser: { sizeLimit: '4mb' } } };
 
@@ -27,8 +27,29 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
   }
 
   const clientToken = getClientToken(req);
-  if (!clientToken || clientToken.trim().length < 4) {
-    return res.status(401).json({ error: 'Unauthorized: Passcode must be at least 4 characters.' });
+  if (!clientToken) {
+    return res.status(401).json({ error: 'Unauthorized: Missing token.' });
+  }
+
+  let isAuthenticated = false;
+  if (clientToken === APP_AUTH_SECRET) {
+    isAuthenticated = true;
+  } else if (clientToken.startsWith("eyJ") && clientToken.split(".").length === 3) {
+    try {
+      const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${clientToken}`);
+      if (googleRes.ok) {
+        const tokenInfo = await googleRes.json();
+        if (tokenInfo.sub && tokenInfo.aud === process.env.VITE_GOOGLE_CLIENT_ID) {
+          isAuthenticated = true;
+        }
+      }
+    } catch (err) {
+      console.error("Google verification error:", err);
+    }
+  }
+
+  if (!isAuthenticated) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid passcode or Google token.' });
   }
 
   try {
