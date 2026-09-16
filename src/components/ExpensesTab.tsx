@@ -19,7 +19,7 @@ const getLocalToday = () => {
 
 export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalData, showToast }) => {
   const [isScanning, setIsScanning] = useState(false);
-  const [debugLog, setDebugLog] = useState<any>(null);
+  
   const [showForm, setShowForm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -72,12 +72,12 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
           try {
             data = JSON.parse(textResponse);
           } catch (e) {
-            setDebugLog({ error: 'Failed to parse server response as JSON', raw: textResponse });
-            showToast("❌ Server crashed. Check Account Tab.");
+            localStorage.setItem('scanner_debug_log', JSON.stringify({ error: 'Failed to parse server response as JSON', raw: textResponse }));
+            /* silenced toast */
             return;
           }
 
-          setDebugLog(data);
+          localStorage.setItem('scanner_debug_log', JSON.stringify(data));
           
           if (!res.ok || data.error) {
             showToast("❌ Scan failed: " + (data.error || "Server error"));
@@ -85,7 +85,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
           }
 
           if (data.success === false) {
-            showToast("❌ AI failed. Check Account Tab.");
+            /* silenced toast */
             return;
           }
 
@@ -100,8 +100,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
           
           showToast("✨ Receipt scanned successfully!");
         } catch (err: any) {
-          setDebugLog({ error: 'Network error', message: err.message });
-          showToast("❌ Network error. Check Account Tab.");
+          localStorage.setItem('scanner_debug_log', JSON.stringify({ error: 'Network error', message: err.message }));
+          /* silenced toast */
         } finally {
           setIsScanning(false);
           if (fileInputRef.current) fileInputRef.current.value = "";
@@ -109,7 +109,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
       };
       img.src = URL.createObjectURL(file);
     } catch (err) {
-      showToast("❌ Image processing failed.");
+      /* silenced toast */
       setIsScanning(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }

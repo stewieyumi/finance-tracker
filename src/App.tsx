@@ -458,7 +458,7 @@ const copySummaryToClipboard = async () => {
         style={{ height: "env(safe-area-inset-top)" }}
       />
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[#181822] text-white text-xs px-4 py-2.5 rounded-xl border border-white/10 shadow-2xl animate-fade-in">
+        <div className="fixed top-12  right-6 z-50 flex items-center gap-2 bg-[#181822] text-white text-xs px-4 py-2.5 rounded-xl border border-white/10 shadow-2xl animate-fade-in">
           <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
@@ -811,6 +811,25 @@ const copySummaryToClipboard = async () => {
                 <button onClick={() => importInputRef.current?.click()} className="w-full bg-[#1a1a22] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Upload size={14} /> Import JSON Backup</button>
               </div>
                             
+                <details className="mt-4 bg-[#14141a] border border-zinc-800 rounded-xl p-3 group">
+                  <summary className="text-xs text-zinc-400 font-semibold cursor-pointer outline-none flex items-center justify-between" style={{ listStyle: "none" }}>
+                    <span>AI Scanner Debug Logs</span>
+                    <span className="text-zinc-600 text-[10px]">Tap to view</span>
+                  </summary>
+                  <div className="mt-3 pt-3 border-t border-zinc-800/80">
+                    <pre className="text-[10px] text-zinc-500 font-mono overflow-auto max-h-48 whitespace-pre-wrap break-words">
+                      {(() => {
+                        if (typeof window === 'undefined') return '';
+                        try {
+                          const log = window.localStorage.getItem('scanner_debug_log');
+                          return log ? JSON.stringify(JSON.parse(log), null, 2) : 'No recent scans.';
+                        } catch (e) {
+                          return window.localStorage.getItem('scanner_debug_log') || 'No recent scans.';
+                        }
+                      })()}
+                    </pre>
+                  </div>
+                </details>
                 <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} className="hidden" />
             </div>
 
