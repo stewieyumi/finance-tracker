@@ -78,14 +78,22 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
       "END:VCALENDAR"
     ].join("\n");
 
-    // Trigger the native browser download
-    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
-    link.setAttribute('download', `${shoot.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Detect iOS to bypass Safari's strict Blob download blockers
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    if (isIOS) {
+      // iOS prefers direct navigation to the data URI for Calendar events
+      window.location.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+    } else {
+      // Standard download for Desktop/Android
+      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.setAttribute('download', `${shoot.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -134,14 +142,22 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
       "END:VCALENDAR"
     ].join("\n");
 
-    // Trigger the native browser download
-    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
-    link.setAttribute('download', `${shoot.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Detect iOS to bypass Safari's strict Blob download blockers
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    if (isIOS) {
+      // iOS prefers direct navigation to the data URI for Calendar events
+      window.location.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+    } else {
+      // Standard download for Desktop/Android
+      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.setAttribute('download', `${shoot.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
