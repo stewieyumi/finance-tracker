@@ -218,7 +218,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Commitment Name</label>
                 <input type="text" value={editForm.name || ""} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500 disabled:opacity-50" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Amount (₱)</label>
                   <input type="number" inputMode="decimal" step="0.01" value={editForm.amount ?? ""} onChange={(e) => { const val = parseFloat(e.target.value) || 0; setEditForm(prev => ({ ...prev, amount: val, ...(editScope === "monthOnly" ? { monthAmount: val } : { baseAmount: val }) })); }} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-white outline-none focus:border-blue-500" />
@@ -244,7 +244,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                 </div>
               </div>
               {editForm.type === "Loan / Installment" && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Start Month</label>
                     <select value={editForm.startMonth || selectedMonth} onChange={(e) => setEditForm({ ...editForm, startMonth: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none disabled:opacity-50">
@@ -286,7 +286,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Commitment Name</label>
                 <input type="text" value={newBill.name} onChange={(e) => setNewBill({ ...newBill, name: e.target.value })} autoFocus placeholder="e.g. Internet Bill" className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500" required />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Amount (₱)</label>
                   <input type="number" inputMode="decimal" step="0.01" value={newBill.amount} onChange={(e) => setNewBill({ ...newBill, amount: e.target.value })} placeholder="0.00" className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-white outline-none focus:border-blue-500" required />
@@ -312,7 +312,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                 </div>
               </div>
               {newBill.type === "Loan / Installment" && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Start Month</label>
                     <select value={newBill.startMonth} onChange={(e) => setNewBill({ ...newBill, startMonth: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500">

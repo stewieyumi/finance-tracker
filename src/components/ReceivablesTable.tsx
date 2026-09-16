@@ -156,11 +156,16 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
       </div>
 
       {/* DESKTOP LIST */}
-      <div className="hidden lg:block">
-        <table className="w-full text-left text-xs">
+      <div className="hidden lg:block overflow-x-auto pb-2">
+        <table className="w-full text-left text-xs min-w-[850px]">
           <thead>
-            <tr className="text-zinc-400 border-b border-white/[0.06] text-[11px]">
-              <th className="py-2.5 px-3 font-semibold w-[100px]">Status</th><th className="py-2.5 px-3 font-semibold">Receivable</th><th className="py-2.5 px-3 font-semibold text-right w-[140px]">Amount</th><th className="py-2.5 px-3 font-semibold text-center w-[90px]">Category & Route</th><th className="py-2.5 px-3 font-semibold text-center w-[130px]">Schedule / Date</th><th className="py-2.5 px-3 font-semibold text-right w-[140px]">Actions</th>
+            <tr className="text-zinc-400 border-b border-white/[0.06] text-[11px] uppercase tracking-wider">
+              <th className="py-3 px-4 font-semibold w-[15%]">STATUS</th>
+              <th className="py-3 px-4 font-semibold w-[25%]">RECEIVABLE</th>
+              <th className="py-3 px-4 font-semibold text-right w-[15%]">AMOUNT</th>
+              <th className="py-3 px-4 font-semibold text-center w-[15%]">CATEGORY</th>
+              <th className="py-3 px-4 font-semibold text-center w-[15%]">SCHEDULE</th>
+              <th className="py-3 px-4 font-semibold text-right w-[15%]">ACTION</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.03]">
@@ -172,12 +177,12 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
               const isPartial = !rec.collected && received > 0;
               return (
                 <tr key={rec.id} className={`group transition-all duration-150 ${rec.collected ? "opacity-45" : "hover:bg-white/[0.02]"}`}>
-                  <td className="py-2.5 px-3 whitespace-nowrap">
+                  <td className="py-3 px-4 whitespace-nowrap">
                     <button onClick={() => onToggleStatus(rec)} className="flex items-center gap-1.5 focus:outline-none">
                       {rec.collected ? <span className="flex items-center justify-center gap-1 w-[82px] text-emerald-400 text-[10px] font-semibold bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-600/30"><Check size={10} className="stroke-[3]" /> Received</span> : isPartial ? <span className="flex items-center justify-center gap-1 w-[82px] text-cyan-400 text-[10px] font-semibold bg-cyan-950/40 px-2 py-0.5 rounded-lg border border-cyan-600/30"><CreditCard size={9} /> Partial</span> : <span className="flex items-center justify-center gap-1 w-[82px] text-amber-400 text-[10px] font-medium bg-amber-950/30 px-2 py-0.5 rounded-lg border border-amber-800/30"><Hourglass size={8} /> Pending</span>}
                     </button>
                   </td>
-                  <td className="py-2.5 px-3 text-zinc-200 font-medium"><span className="privacy-blur">{rec.name}</span></td>
+                  <td className="py-3 px-4 text-zinc-200 font-medium"><span className="privacy-blur">{rec.name}</span></td>
                   <td className={`py-2.5 px-3 text-right font-mono font-semibold whitespace-nowrap ${rec.collected ? "text-emerald-400" : "text-zinc-100"}`}>
                     <div>
                       <div>₱{rec.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>
@@ -185,20 +190,20 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                       {isPartial && <div className="text-[9px] text-cyan-400 font-mono">+₱{received.toLocaleString()} rec'd</div>}
                     </div>
                   </td>
-                  <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                  <td className="py-3 px-4 text-center whitespace-nowrap">
                     <div className="flex flex-col items-center gap-1">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${rec.category === "Salary" ? "bg-cyan-950/70 text-cyan-300 border border-cyan-800/40" : rec.category === "Shoot" ? "bg-amber-950/70 text-amber-300 border border-amber-800/40" : rec.category === "Edit" ? "bg-purple-950/70 text-purple-300 border border-purple-800/40" : "bg-zinc-800 text-zinc-300 border border-zinc-700/40"}`}>{rec.category || "Other"}</span>
                       {rec.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{allWallets.find(w => w.id === rec.wallet)?.label || rec.wallet}</span>}
                     </div>
                   </td>
-                  <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                  <td className="py-3 px-4 text-center whitespace-nowrap">
                     <div className="text-zinc-300 text-xs">
                       {rec.frequency === "Bi-monthly" && <span className="text-zinc-300 font-medium text-[11px]">{rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(d => d+"th").join(" & ") : "15th & 30th"}</span>}
                       {rec.frequency === "Monthly" && <span className="text-zinc-400 text-[11px]">Monthly • Day {rec.monthlyDay || 15}</span>}
                       {rec.frequency === "By Date" && (rec.date ? <span className="inline-flex items-center gap-1 text-zinc-300 font-mono text-[11px]"><Calendar size={10} className="text-zinc-500" />{formatShortDate(rec.date)}</span> : <span className="text-zinc-600">—</span>)}
                     </div>
                   </td>
-                  <td className="py-2.5 px-3 text-right whitespace-nowrap relative">
+                  <td className="py-3 px-4 text-right whitespace-nowrap relative">
                     <div className="inline-flex items-center gap-1 justify-end shrink-0">
                       {!rec.collected && (
                         <>
@@ -243,7 +248,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Inflow Name</label>
                 <input type="text" value={editForm.name || ""} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Amount (₱)</label>
                   <input type="number" inputMode="decimal" step="0.01" value={editForm.amount ?? ""} onChange={(e) => setEditForm({ ...editForm, amount: parseFloat(e.target.value) || 0 })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-white outline-none focus:border-emerald-500" />
@@ -267,7 +272,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   </select>
                 </div>
                 {editForm.frequency === "Monthly" && (
-                  <div className="col-span-2">
+                  <div className="col-span-1 sm:col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Monthly Day</label>
                     <select value={editForm.monthlyDay || 15} onChange={(e) => setEditForm({ ...editForm, monthlyDay: parseInt(e.target.value, 10) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
                       {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Day {d}</option>)}
@@ -275,7 +280,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   </div>
                 )}
                 {editForm.frequency === "By Date" && (
-                  <div className="col-span-2">
+                  <div className="col-span-1 sm:col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Specific Date</label>
                     <input type="date" value={editForm.date || ""} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" />
                   </div>
@@ -307,7 +312,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Inflow Name</label>
                 <input type="text" value={newReceivable.name} onChange={(e) => setNewReceivable({ ...newReceivable, name: e.target.value })} autoFocus placeholder="e.g. Salary, Client Payment" className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Amount (₱)</label>
                   <input type="number" inputMode="decimal" step="0.01" value={newReceivable.amount} onChange={(e) => setNewReceivable({ ...newReceivable, amount: e.target.value })} placeholder="0.00" className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-white outline-none focus:border-emerald-500" required />
@@ -331,7 +336,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   </select>
                 </div>
                 {newReceivable.frequency === "Monthly" && (
-                  <div className="col-span-2">
+                  <div className="col-span-1 sm:col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Monthly Day</label>
                     <select value={newReceivable.monthlyDay} onChange={(e) => setNewReceivable({ ...newReceivable, monthlyDay: parseInt(e.target.value, 10) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
                       {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Day {d}</option>)}
@@ -339,7 +344,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   </div>
                 )}
                 {newReceivable.frequency === "By Date" && (
-                  <div className="col-span-2">
+                  <div className="col-span-1 sm:col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Specific Date</label>
                     <input type="date" value={newReceivable.date} onChange={(e) => setNewReceivable({ ...newReceivable, date: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" />
                   </div>

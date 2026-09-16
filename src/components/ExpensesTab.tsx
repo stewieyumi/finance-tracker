@@ -237,8 +237,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
           </div>
 
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2 min-w-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="col-span-1 sm:col-span-2 min-w-0">
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Merchant / Name</label>
                 <input type="text" value={form.merchant} onChange={e => setForm({...form, merchant: e.target.value})} placeholder="e.g. Starbucks, Laundry..." className="w-full min-w-0 bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs text-white outline-none box-border" required />
               </div>

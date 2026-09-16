@@ -227,11 +227,16 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
       </div>
 
       {/* DESKTOP LIST */}
-      <div className="hidden lg:block">
-        <table className="w-full text-left text-xs">
+      <div className="hidden lg:block overflow-x-auto pb-2">
+        <table className="w-full text-left text-xs min-w-[750px]">
           <thead>
-            <tr className="text-zinc-400 border-b border-white/[0.06] text-[11px]">
-              <th className="py-2.5 px-3 font-semibold w-[90px]">Done</th><th className="py-2.5 px-3 font-semibold">Shoot / Gig Title</th><th className="py-2.5 px-3 font-semibold text-center w-[120px]">Date</th><th className="py-2.5 px-3 font-semibold text-center w-[110px]">Status</th><th className="py-2.5 px-3 font-semibold text-center w-[110px]">Category</th><th className="py-2.5 px-3 font-semibold text-right w-[90px]">Actions</th>
+            <tr className="text-zinc-400 border-b border-white/[0.06] text-[11px] uppercase tracking-wider">
+              <th className="py-3 px-4 font-semibold w-[10%]">Done</th>
+              <th className="py-3 px-4 font-semibold w-[30%]">Shoots/Gigs</th>
+              <th className="py-3 px-4 font-semibold text-center w-[15%]">Date</th>
+              <th className="py-3 px-4 font-semibold text-center w-[15%]">Status</th>
+              <th className="py-3 px-4 font-semibold text-center w-[15%]">Category</th>
+              <th className="py-3 px-4 font-semibold text-right w-[15%]">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.03]">
@@ -239,22 +244,22 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
               <tr><td colSpan={6} className="py-8 text-center text-zinc-500 italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} production gigs found.</td></tr>
             ) : filteredShoots.map(shoot => (
               <tr key={shoot.id} className={`group transition-all duration-150 ${shoot.completed ? "opacity-45" : "hover:bg-white/[0.02]"}`}>
-                <td className="py-2.5 px-3 whitespace-nowrap">
+                <td className="py-3 px-4 whitespace-nowrap">
                   <button onClick={() => onToggleCompletion(shoot.id)} className="flex items-center gap-1.5 focus:outline-none">
                     {shoot.completed ? <span className="flex items-center justify-center gap-1 w-[72px] text-emerald-400 text-[10px] font-bold bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-600/30 shadow-[0_0_10px_rgba(16,185,129,0.1)]"><Check size={10} className="stroke-[3]" /> Settled</span> : <span className="flex items-center justify-center gap-1 w-[72px] text-zinc-400 text-[10px] font-medium bg-zinc-900/40 px-2 py-0.5 rounded-lg border border-zinc-700/30"><Circle size={6} /> Active</span>}
                   </button>
                 </td>
-                <td className="py-2.5 px-3 text-zinc-200 font-medium"><span className={`privacy-blur ${shoot.completed ? "line-through text-zinc-500" : ""}`}>{shoot.title}</span></td>
-                <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                <td className="py-3 px-4 text-zinc-200 font-medium"><span className={`privacy-blur ${shoot.completed ? "line-through text-zinc-500" : ""}`}>{shoot.title}</span></td>
+                <td className="py-3 px-4 text-center whitespace-nowrap">
                   {shoot.date ? (shoot.date === todayStr ? <span className="inline-flex items-center gap-1 text-rose-400 font-bold text-[10px] bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md shadow-[0_0_10px_rgba(244,63,94,0.1)]"><Calendar size={10} className="text-rose-400" />DUE TODAY</span> : <span className="inline-flex items-center gap-1 text-zinc-300 font-mono text-[11px]"><Calendar size={10} className="text-zinc-500" />{formatShortDate(shoot.date)}</span>) : <span className="text-zinc-600">—</span>}
                 </td>
-                <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                <td className="py-3 px-4 text-center whitespace-nowrap">
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${shoot.status === "Confirmed" ? "bg-emerald-950/70 text-emerald-300 border border-emerald-800/40" : shoot.status === "Pencil" ? "bg-amber-950/70 text-amber-300 border border-amber-800/40" : "bg-zinc-800 text-zinc-300 border border-zinc-700/40"}`}>{shoot.status}</span>
                 </td>
-                <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                <td className="py-3 px-4 text-center whitespace-nowrap">
                   <span className="bg-[#1c1c24] border border-white/[0.08] px-2 py-0.5 rounded-md text-[10px] font-medium text-amber-300/90">{shoot.category}</span>
                 </td>
-                <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                <td className="py-3 px-4 text-right whitespace-nowrap">
                   <div className="inline-flex items-center gap-1 justify-end shrink-0">
                     <button onClick={() => handleAddToCalendar(shoot)} className="whitespace-nowrap shrink-0 px-2 py-1 text-zinc-400 hover:text-blue-400 hover:bg-white/[0.05] rounded-md text-[11px] flex items-center transition" title="Add to Calendar"><CalendarPlus size={10} className="mr-1" /> Sync</button>
                     <button onClick={() => handleStartEdit(shoot)} className="whitespace-nowrap shrink-0 px-2 py-1 text-zinc-400 hover:text-amber-300 hover:bg-white/[0.05] rounded-md text-[11px] flex items-center transition"><Edit2 size={10} className="mr-1" /> Edit</button>
@@ -286,8 +291,8 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Gig / Project Title</label>
                 <input type="text" value={editForm.title || ""} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-amber-500" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="col-span-1 sm:col-span-2">
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Date</label>
                   <input type="date" value={editForm.date || ""} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-amber-500" />
                 </div>
@@ -330,8 +335,8 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Gig / Project Title</label>
                 <input type="text" value={newShoot.title} onChange={(e) => setNewShoot({ ...newShoot, title: e.target.value })} autoFocus placeholder="e.g. Wedding Edit, Product Shoot" className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-amber-500" required />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="col-span-1 sm:col-span-2">
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Date</label>
                   <input type="date" value={newShoot.date} onChange={(e) => setNewShoot({ ...newShoot, date: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-amber-500" />
                 </div>
