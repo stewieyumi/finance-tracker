@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, Briefcase, Wallet, Camera, User } from "lucide-react";
+import { Home, Briefcase, CreditCard, Receipt, User } from "lucide-react";
 
 export type TabType = "home" | "operations" | "wallets" | "expenses" | "account";
 
@@ -9,42 +9,13 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ activeTab, onChange }: BottomNavProps) {
+  // Restored original order: Operations, Wallets, Home, Scanner, Account
   const tabs = [
-    { 
-      id: "home", 
-      label: "Dashboard", 
-      icon: LayoutDashboard, 
-      activeColor: "text-blue-500", 
-      activeBg: "bg-blue-500/10" 
-    },
-    { 
-      id: "operations", 
-      label: "Operations", 
-      icon: Briefcase, 
-      activeColor: "text-violet-500", 
-      activeBg: "bg-violet-500/10" 
-    },
-    { 
-      id: "wallets", 
-      label: "Wallets", 
-      icon: Wallet, 
-      activeColor: "text-emerald-500", 
-      activeBg: "bg-emerald-500/10" 
-    },
-    { 
-      id: "expenses", 
-      label: "Scanner", 
-      icon: Camera, 
-      activeColor: "text-amber-500", 
-      activeBg: "bg-amber-500/10" 
-    },
-    { 
-      id: "account", 
-      label: "Account", 
-      icon: User, 
-      activeColor: "text-rose-500", 
-      activeBg: "bg-rose-500/10" 
-    },
+    { id: "operations", label: "Operations", icon: Briefcase, activeColor: "text-violet-500", activeBg: "bg-violet-500/10" },
+    { id: "wallets", label: "Wallets", icon: CreditCard, activeColor: "text-emerald-500", activeBg: "bg-emerald-500/10" },
+    { id: "home", label: "Dashboard", icon: Home, activeColor: "text-blue-500", activeBg: "bg-blue-500/10" },
+    { id: "expenses", label: "Scanner", icon: Receipt, activeColor: "text-amber-500", activeBg: "bg-amber-500/10" },
+    { id: "account", label: "Account", icon: User, activeColor: "text-rose-500", activeBg: "bg-rose-500/10" },
   ];
 
   return (
@@ -62,18 +33,10 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
                 isActive ? tab.activeBg : "hover:bg-white/[0.02]"
               }`}
             >
-              <div 
-                className={`transition-all duration-300 ${
-                  isActive ? "scale-110 " + tab.activeColor : "text-zinc-500 scale-100"
-                }`}
-              >
+              <div className={`transition-all duration-300 ${isActive ? "scale-110 " + tab.activeColor : "text-zinc-500 scale-100"}`}>
                 <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
               </div>
-              <span 
-                className={`text-[10px] mt-1 font-medium transition-colors duration-300 ${
-                  isActive ? tab.activeColor : "text-zinc-500"
-                }`}
-              >
+              <span className={`text-[10px] mt-1 font-medium transition-colors duration-300 ${isActive ? tab.activeColor : "text-zinc-500"}`}>
                 {tab.label}
               </span>
             </button>
