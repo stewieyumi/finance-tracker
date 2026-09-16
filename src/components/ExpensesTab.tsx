@@ -3,6 +3,7 @@ import React, { useState, useRef } from "react";
 import { Camera, UploadCloud, ScanLine, Plus, Receipt, Trash2, CheckCircle2 } from "lucide-react";
 import { UnifiedFinanceData, Expense, ExpenseCategory } from "../types/finance";
 import { generateId } from "../utils/idHelpers";
+import { getLocalPasscode } from "../hooks/useCloudSync";
 
 const EXPENSE_CATEGORIES: ExpenseCategory[] = ["Food & Dining", "Transport", "Utilities", "Laundry & Home", "Shopping", "Other"];
 
@@ -63,7 +64,10 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
         try {
           const res = await fetch("/api/scan", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "x-sync-passcode": getLocalPasscode()
+            },
             body: JSON.stringify({ image: base64 })
           });
           

@@ -1,10 +1,36 @@
-interface VercelApiRequest { method?: string; body?: any; }
+interface VercelApiRequest { method?: string; headers: Record<string, string | string[] | undefined>; body?: any; }
 interface VercelApiResponse { status: (code: number) => VercelApiResponse; json: (data: any) => void; }
+
+declare const process: { env: { GEMINI_API_KEY?: string; APP_AUTH_SECRET?: string; [key: string]: string | undefined } };
 
 export const config = { api: { bodyParser: { sizeLimit: '4mb' } } };
 
+function getClientToken(req: VercelApiRequest): string | undefined {
+  const syncPasscode = req.headers["x-sync-passcode"];
+  if (typeof syncPasscode === "string") return syncPasscode;
+
+  const appAuth = req.headers["x-app-auth"];
+  if (typeof appAuth === "string") return appAuth;
+
+  const authorization = req.headers.authorization;
+  if (typeof authorization === "string") return authorization.replace(/^Bearer\s+/i, "");
+
+  return undefined;
+}
+
 export default async function handler(req: VercelApiRequest, res: VercelApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const APP_AUTH_SECRET = process.env.APP_AUTH_SECRET;
+  if (!APP_AUTH_SECRET) {
+    return res.status(500).json({ error: 'Server configuration error: Missing APP_AUTH_SECRET.' });
+  }
+
+  const clientToken = getClientToken(req);
+  if (!clientToken || clientToken.trim().length < 4) {
+    return res.status(401).json({ error: 'Unauthorized: Passcode must be at least 4 characters.' });
+  }
+
   try {
     const { image } = req.body;
     const apiKey = process.env.GEMINI_API_KEY;
