@@ -54,18 +54,36 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
 
   try {
     const { image } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY is missing' });
-
-    const matches = image.match(/^data:(.+?);base64,(.+)$/);
-    let mimeType = "image/jpeg";
-    let base64Data = image;
     
-    if (matches && matches.length === 3) {
-      mimeType = matches[1];
-      base64Data = matches[2];
-    } else if (image.includes(',')) {
-      base64Data = image.split(',')[1];
+    // 1. Validate payload existence
+    if (!image || typeof image !== 'string') {
+      return res.status(400).json({ error: 'Bad Request: Missing or invalid image payload.' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'Server Error: GEMINI_API_KEY is missing.' });
+
+    // 2. Validate Data URI format
+    const matches = image.match(/^data:(.+?);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return res.status(400).json({ error: 'Bad Request: Image must be a valid base64 data URI.' });
+    }
+
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+
+    // 3. Validate MIME Type
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+    if (!allowedMimeTypes.includes(mimeType)) {
+      return res.status(415).json({ 
+        error: `Unsupported Media Type: ${mimeType} is not allowed. Supported types are JPEG, PNG, WEBP, HEIC.` 
+      });
+    }
+
+    // 4. Validate Size (Approximate base64 decoded size string length * 0.75)
+    const sizeInBytes = base64Data.length * 0.75;
+    if (sizeInBytes > 4 * 1024 * 1024) {
+      return res.status(413).json({ error: 'Payload Too Large: Image exceeds the 4MB limit.' });
     }
 
     const payload = {
@@ -93,7 +111,7 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
       }
     };
 
-    const endpoint = "https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash:generateContent";
+    const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
     const response = await fetch(endpoint, {
       method: "POST",
