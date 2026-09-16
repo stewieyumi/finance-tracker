@@ -349,6 +349,9 @@ const { saveShootEdit } = useShootSaveActions({
       pullLatestData(false);
     },
     onTogglePrivacy: () => setIsPrivacyMode(prev => !prev),
+    onSelectTab: (tab) => setActiveTab(tab),
+    onSelectOpsTab: (sub) => setOpsTab(sub),
+    activeTab,
     onCloseAll: () => {
     setShowDatePickerModal(false);
     setShowYearlyModal(false);

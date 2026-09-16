@@ -1,14 +1,18 @@
 import { useEffect } from "react";
+import { TabType } from "../components/BottomNav";
 
-interface ShortcutHandlers {
+interface KeyboardShortcutsOptions {
   onToggleDatePicker: () => void;
   onToggleDebug: () => void;
   onToggleYearly: () => void;
   onToggleAnalytics: () => void;
   onManualSync: () => void;
   onPullData: () => void;
+  onTogglePrivacy: () => void;
   onCloseAll: () => void;
-  onTogglePrivacy?: () => void;
+  onSelectTab?: (tab: TabType) => void;
+  onSelectOpsTab?: (subTab: "bills" | "inflows" | "gigs") => void;
+  activeTab?: TabType;
 }
 
 export function useKeyboardShortcuts({
@@ -18,71 +22,83 @@ export function useKeyboardShortcuts({
   onToggleAnalytics,
   onManualSync,
   onPullData,
+  onTogglePrivacy,
   onCloseAll,
-  onTogglePrivacy
-}: ShortcutHandlers) {
+  onSelectTab,
+  onSelectOpsTab,
+  activeTab,
+}: KeyboardShortcutsOptions) {
   useEffect(() => {
-const handleGlobalKeyDown = (e: KeyboardEvent) => {
-        const target = e.target as HTMLElement;
-        const isTyping =
-          target &&
-          (target.tagName === "INPUT" ||
-            target.tagName === "TEXTAREA" ||
-            target.tagName === "SELECT" ||
-            target.isContentEditable);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInput =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
 
-        if (e.key === "Escape") {
-          onCloseAll();
-          return;
-        }
+      // Escape always dismisses modals, even if focused on an input
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onCloseAll();
+        return;
+      }
 
-        if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
-          e.preventDefault();
-          onToggleDatePicker();
-          return;
-        }
+      // Do not trigger general single-key shortcuts while typing in forms
+      if (isInput) return;
 
-        if ((e.metaKey || e.ctrlKey) && (e.key === "d" || e.key === "D")) {
-          e.preventDefault();
-          onToggleDebug();
-          return;
-        }
+      const key = e.key.toLowerCase();
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
 
-        if (isTyping || e.metaKey || e.ctrlKey || e.altKey) return;
+      // Tab Navigation (1 - 5 or Cmd+1 - Cmd+5)
+      if (["1", "2", "3", "4", "5"].includes(key)) {
+        e.preventDefault();
+        const tabMap: Record<string, TabType> = {
+          "1": "home",
+          "2": "operations",
+          "3": "wallets",
+          "4": "expenses",
+          "5": "account",
+        };
+        onSelectTab?.(tabMap[key]);
+        return;
+      }
 
-        if (e.key === "s" || e.key === "S") {
-          e.preventDefault();
-          onManualSync();
-          return;
-        }
+      // Operations Sub-Tabs (B, I, G)
+      if (activeTab === "operations" && !isCmdOrCtrl) {
+        if (key === "b") { e.preventDefault(); onSelectOpsTab?.("bills"); return; }
+        if (key === "i") { e.preventDefault(); onSelectOpsTab?.("inflows"); return; }
+        if (key === "g") { e.preventDefault(); onSelectOpsTab?.("gigs"); return; }
+      }
 
-        if (e.key === "r" || e.key === "R") {
-          e.preventDefault();
-          onPullData();
-          return;
-        }
+      // Modal & Analytics Shortcuts
+      if (isCmdOrCtrl && key === "k") {
+        e.preventDefault();
+        onToggleDatePicker();
+      } else if (isCmdOrCtrl && key === "d") {
+        e.preventDefault();
+        onToggleDebug();
+      } else if (!isCmdOrCtrl && key === "y") {
+        e.preventDefault();
+        onToggleYearly();
+      } else if (!isCmdOrCtrl && key === "a") {
+        e.preventDefault();
+        onToggleAnalytics();
+      } else if (!isCmdOrCtrl && key === "s") {
+        e.preventDefault();
+        onManualSync();
+      } else if (!isCmdOrCtrl && key === "r") {
+        e.preventDefault();
+        onPullData();
+      } else if (!isCmdOrCtrl && key === "p") {
+        e.preventDefault();
+        onTogglePrivacy();
+      }
+    };
 
-        if (e.key === "y" || e.key === "Y") {
-          e.preventDefault();
-          onToggleYearly();
-          return;
-        }
-
-        if (e.key === "a" || e.key === "A") {
-          e.preventDefault();
-          onToggleAnalytics();
-          return;
-        }
-
-        if (e.key === "p" || e.key === "P") {
-          e.preventDefault();
-          onTogglePrivacy?.();
-          return;
-        }
-      };
-      
-    window.addEventListener("keydown", handleGlobalKeyDown);
-    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     onToggleDatePicker,
     onToggleDebug,
@@ -90,7 +106,10 @@ const handleGlobalKeyDown = (e: KeyboardEvent) => {
     onToggleAnalytics,
     onManualSync,
     onPullData,
+    onTogglePrivacy,
     onCloseAll,
-    onTogglePrivacy
+    onSelectTab,
+    onSelectOpsTab,
+    activeTab,
   ]);
 }
