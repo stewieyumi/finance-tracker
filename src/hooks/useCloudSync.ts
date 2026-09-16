@@ -229,8 +229,13 @@ export function useCloudSync(
 
       if (res.status === 401) {
         setDebugLog(
-          "❌ AUTH ERROR (401): Invalid passcode."
+          "❌ AUTH ERROR (401): Invalid passcode or token."
         );
+
+        if (token.startsWith("eyJ")) {
+          window.dispatchEvent(new Event("auth-expired"));
+          return false;
+        }
 
         if (retryCount === 0) {
           showToast(
@@ -338,8 +343,13 @@ export function useCloudSync(
 
       if (res.status === 401) {
         setDebugLog(
-          "❌ AUTH ERROR (401): Invalid passcode on pull."
+          "❌ AUTH ERROR (401): Invalid passcode or token on pull."
         );
+
+        if (token.startsWith("eyJ")) {
+          window.dispatchEvent(new Event("auth-expired"));
+          return;
+        }
 
         if (!silent && retryCount === 0) {
           const prompted = promptPasscode();

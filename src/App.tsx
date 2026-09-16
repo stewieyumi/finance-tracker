@@ -1,6 +1,6 @@
 import { roundMoney } from "./utils/currency";
 import React, { useState, useMemo, useRef } from "react";
-import { GoogleLogin, googleLogout } from "@react-oauth/google";
+import { GoogleLogin, googleLogout, useGoogleOneTapLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
@@ -149,6 +149,28 @@ const {
     localStorage.removeItem("ft_sync_passcode");
     showToast("Signed out of Google");
   };
+
+  useGoogleOneTapLogin({
+    onSuccess: handleGoogleSuccess,
+    onError: () => console.log("One Tap Auto-Login Failed"),
+    auto_select: true,
+  });
+
+  React.useEffect(() => {
+    const handleAuthExpired = () => {
+      showToast("🔄 Session expired. Refreshing...");
+      localStorage.removeItem("ft_sync_passcode");
+      
+      if ((window as any).google?.accounts?.id) {
+        (window as any).google.accounts.id.prompt();
+      } else {
+        handleGoogleLogout();
+      }
+    };
+    
+    window.addEventListener("auth-expired", handleAuthExpired);
+    return () => window.removeEventListener("auth-expired", handleAuthExpired);
+  }, []);
 
   const importInputRef = useRef<HTMLInputElement>(null);
   const paydaySplitInProgressRef = useRef(false);
