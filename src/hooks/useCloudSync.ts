@@ -461,7 +461,8 @@ export function useCloudSync(
   };
 
   const forceManualSync = async () => {
-    const success = await pushToCloud(globalData);
+    const snapshot = latestDataRef.current;
+    const success = await pushToCloud(snapshot);
 
     if (success) {
       showToast("☁️ Saved & synced to cloud");
