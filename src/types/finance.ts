@@ -153,3 +153,13 @@ export interface EditFormData {
   baseAmount?: number;
   monthAmount?: number | string;
 }
+
+export interface TransactionHistoryItem {
+  id: string;
+  title: string;
+  amount: number;
+  date: string;
+  type: "expense" | "bill" | "inflow";
+  wallet?: string;
+  category?: string;
+}

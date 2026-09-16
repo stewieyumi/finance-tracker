@@ -1,9 +1,9 @@
 import { roundMoney } from "./utils/currency";
 import React, { useState, useMemo, useRef } from "react";
-import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
+import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { getMonthKey, getAdjacentMonth } from "./utils/dateHelpers";
-import { UnifiedFinanceData, WalletState, EditFormData } from "./types/finance";
+import { UnifiedFinanceData, WalletState, EditFormData, TransactionHistoryItem } from "./types/finance";
 import { buildFinancialSummary } from "./utils/summaryHelpers";
 import { getWalletForBill } from "./utils/financeHelpers";
 
@@ -222,7 +222,9 @@ const { saveShootEdit } = useShootSaveActions({
     paydayAllocations,
     remainingBuffer
   ,
-    billPaydayAllocations
+    billPaydayAllocations,
+    allTransactions,
+    recentTransactions
   } = useFinanceCalculations(globalData, selectedMonth);
 
   const isModalOpen =
@@ -654,6 +656,43 @@ const copySummaryToClipboard = async () => {
               />
             </ErrorBoundary>
 
+            
+            <ErrorBoundary>
+              <div className="bg-[#101014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-2">
+                    <History size={13} className="text-purple-400" /> Recent Transactions
+                  </h2>
+                  <button onClick={() => setActiveTab("account")} className="text-[10px] text-zinc-500 hover:text-white transition">View All</button>
+                </div>
+                <div className="space-y-2">
+                  {recentTransactions.length === 0 ? (
+                    <div className="py-4 text-center text-zinc-500 text-xs italic">No transactions yet.</div>
+                  ) : (
+                    recentTransactions.map((tx: TransactionHistoryItem) => (
+                      <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-[#14141a] border border-white/[0.04]">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-950/50 border-emerald-500/20 text-emerald-400' : tx.type === 'bill' ? 'bg-blue-950/50 border-blue-500/20 text-blue-400' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}>
+                            {tx.type === 'inflow' ? <ArrowDownLeft size={14}/> : tx.type === 'bill' ? <Calendar size={14}/> : <Receipt size={14}/>}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="privacy-blur text-xs font-semibold text-zinc-200 truncate">{tx.title}</div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-zinc-500 mt-0.5">
+                              <span className="privacy-blur uppercase text-blue-400/80 font-semibold">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
+                              <span>•</span><span className="whitespace-nowrap shrink-0">{tx.date}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className={`privacy-blur text-xs font-bold font-mono shrink-0 ml-2 ${tx.amount > 0 ? "text-emerald-400" : "text-zinc-100"}`}>
+                          {tx.amount > 0 ? "+" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </ErrorBoundary>
+
             <button onClick={copySummaryToClipboard} aria-label="Copy summary to clipboard" className="w-full bg-[#121217]/90 hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition text-xs shadow-md">
               <Copy size={14} /> Copy Summary
             </button>
@@ -767,7 +806,42 @@ const copySummaryToClipboard = async () => {
                 <button onClick={exportBackup} className="w-full bg-[#1a1a22] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Download size={14} /> Export JSON Backup</button>
                 <button onClick={() => importInputRef.current?.click()} className="w-full bg-[#1a1a22] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Upload size={14} /> Import JSON Backup</button>
               </div>
-              <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} className="hidden" />
+                            <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} className="hidden" />
+            </div>
+
+            <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl rounded-3xl p-5 sm:p-8 animate-in fade-in duration-300">
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/[0.06]">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><History size={16} className="text-purple-400"/> Full Ledger</h3>
+                <span className="text-xs text-zinc-500 font-mono">{allTransactions.length} records</span>
+              </div>
+              
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                {allTransactions.length === 0 ? (
+                  <div className="py-8 text-center text-zinc-500 text-xs italic">No history available.</div>
+                ) : (
+                  allTransactions.map((tx: TransactionHistoryItem) => (
+                    <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-[#14141a] border border-white/[0.04] hover:bg-white/[0.02] transition">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-950/50 border-emerald-500/20 text-emerald-400' : tx.type === 'bill' ? 'bg-blue-950/50 border-blue-500/20 text-blue-400' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}>
+                          {tx.type === 'inflow' ? <ArrowDownLeft size={14}/> : tx.type === 'bill' ? <Calendar size={14}/> : <Receipt size={14}/>}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="privacy-blur text-xs font-semibold text-zinc-200 truncate">{tx.title}</div>
+                          <div className="flex items-center gap-1.5 text-[9px] text-zinc-500 mt-0.5">
+                            <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400 font-medium whitespace-nowrap shrink-0">{tx.category || tx.type}</span>
+                            <span>•</span>
+                            <span className="privacy-blur uppercase text-blue-400/80 font-semibold">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
+                            <span>•</span><span className="whitespace-nowrap shrink-0">{tx.date}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`privacy-blur text-xs font-bold font-mono shrink-0 ml-2 ${tx.amount > 0 ? "text-emerald-400" : "text-zinc-100"}`}>
+                        {tx.amount > 0 ? "+" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}

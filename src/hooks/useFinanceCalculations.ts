@@ -69,7 +69,53 @@ const effectiveAmount = getEffectiveBillAmount(
   targetOverride
 );      const isOverridden = targetOverride !== undefined;
 
-      return {
+        const allTransactions = useMemo(() => {
+    const txs: import("../types/finance").TransactionHistoryItem[] = [];
+
+    // 1. Expenses
+    (globalData.library?.expenses || []).forEach(e => {
+      txs.push({ id: e.id, title: e.merchant, amount: -e.amount, date: e.date, type: "expense", wallet: e.wallet, category: e.category });
+    });
+
+    // 2. Paid Bills
+    globalData.library?.bills?.forEach(b => {
+      Object.entries(globalData.logs || {}).forEach(([monthKey, log]) => {
+        if (log.billsPaid?.includes(b.id)) {
+          const d = parseMonthKey(monthKey);
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(b.dueDay || "1").padStart(2, '0');
+          const override = log.billOverrides?.[b.id];
+          const amt = override !== undefined ? override : b.amount;
+          txs.push({ id: `${b.id}_${monthKey}`, title: `${b.name} (${monthKey.split(" ")[0]})`, amount: -amt, date: `${year}-${month}-${day}`, type: "bill", wallet: b.wallet || "maya", category: b.type });
+        }
+      });
+    });
+
+    // 3. Collected Inflows
+    globalData.library?.receivables?.forEach(r => {
+      Object.entries(globalData.logs || {}).forEach(([monthKey, log]) => {
+        const recLog = log.recsCollected?.[r.id];
+        if (recLog && recLog.amountReceived > 0) {
+          let txDate = r.date;
+          if (!txDate) {
+            const d = parseMonthKey(monthKey);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = r.frequency === "Monthly" ? String(r.monthlyDay || "15").padStart(2, '0') : "15";
+            txDate = `${year}-${month}-${day}`;
+          }
+          txs.push({ id: `${r.id}_${monthKey}`, title: `${r.name}`, amount: recLog.amountReceived, date: txDate, type: "inflow", wallet: r.wallet || "maya", category: r.category });
+        }
+      });
+    });
+
+    return txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [globalData]);
+
+  const recentTransactions = useMemo(() => allTransactions.slice(0, 5), [allTransactions]);
+
+  return {
         ...b,
         amount: effectiveAmount,
         baseAmount: b.amount,
@@ -133,7 +179,53 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
       const receivableAmount = Math.max(0, parseFloat(String(r.amount)) || 0);
       const collected = receivableAmount > 0 && amountReceived >= receivableAmount;
 
-      return {
+        const allTransactions = useMemo(() => {
+    const txs: import("../types/finance").TransactionHistoryItem[] = [];
+
+    // 1. Expenses
+    (globalData.library?.expenses || []).forEach(e => {
+      txs.push({ id: e.id, title: e.merchant, amount: -e.amount, date: e.date, type: "expense", wallet: e.wallet, category: e.category });
+    });
+
+    // 2. Paid Bills
+    globalData.library?.bills?.forEach(b => {
+      Object.entries(globalData.logs || {}).forEach(([monthKey, log]) => {
+        if (log.billsPaid?.includes(b.id)) {
+          const d = parseMonthKey(monthKey);
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(b.dueDay || "1").padStart(2, '0');
+          const override = log.billOverrides?.[b.id];
+          const amt = override !== undefined ? override : b.amount;
+          txs.push({ id: `${b.id}_${monthKey}`, title: `${b.name} (${monthKey.split(" ")[0]})`, amount: -amt, date: `${year}-${month}-${day}`, type: "bill", wallet: b.wallet || "maya", category: b.type });
+        }
+      });
+    });
+
+    // 3. Collected Inflows
+    globalData.library?.receivables?.forEach(r => {
+      Object.entries(globalData.logs || {}).forEach(([monthKey, log]) => {
+        const recLog = log.recsCollected?.[r.id];
+        if (recLog && recLog.amountReceived > 0) {
+          let txDate = r.date;
+          if (!txDate) {
+            const d = parseMonthKey(monthKey);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = r.frequency === "Monthly" ? String(r.monthlyDay || "15").padStart(2, '0') : "15";
+            txDate = `${year}-${month}-${day}`;
+          }
+          txs.push({ id: `${r.id}_${monthKey}`, title: `${r.name}`, amount: recLog.amountReceived, date: txDate, type: "inflow", wallet: r.wallet || "maya", category: r.category });
+        }
+      });
+    });
+
+    return txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [globalData]);
+
+  const recentTransactions = useMemo(() => allTransactions.slice(0, 5), [allTransactions]);
+
+  return {
         ...r,
         amountReceived,
         collected,
@@ -237,7 +329,55 @@ const fundProgressPercent = useMemo(() => {
   const totalAllocatedPerPayout = Object.values(paydayAllocations).reduce((a, b) => a + b, 0);
   const remainingBuffer = Math.round((perPayoutSalary - totalAllocatedPerPayout) * 100) / 100;
 
+    const allTransactions = useMemo(() => {
+    const txs: import("../types/finance").TransactionHistoryItem[] = [];
+
+    // 1. Expenses
+    (globalData.library?.expenses || []).forEach(e => {
+      txs.push({ id: e.id, title: e.merchant, amount: -e.amount, date: e.date, type: "expense", wallet: e.wallet, category: e.category });
+    });
+
+    // 2. Paid Bills
+    globalData.library?.bills?.forEach(b => {
+      Object.entries(globalData.logs || {}).forEach(([monthKey, log]) => {
+        if (log.billsPaid?.includes(b.id)) {
+          const d = parseMonthKey(monthKey);
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(b.dueDay || "1").padStart(2, '0');
+          const override = log.billOverrides?.[b.id];
+          const amt = override !== undefined ? override : b.amount;
+          txs.push({ id: `${b.id}_${monthKey}`, title: `${b.name} (${monthKey.split(" ")[0]})`, amount: -amt, date: `${year}-${month}-${day}`, type: "bill", wallet: b.wallet || "maya", category: b.type });
+        }
+      });
+    });
+
+    // 3. Collected Inflows
+    globalData.library?.receivables?.forEach(r => {
+      Object.entries(globalData.logs || {}).forEach(([monthKey, log]) => {
+        const recLog = log.recsCollected?.[r.id];
+        if (recLog && recLog.amountReceived > 0) {
+          let txDate = r.date;
+          if (!txDate) {
+            const d = parseMonthKey(monthKey);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = r.frequency === "Monthly" ? String(r.monthlyDay || "15").padStart(2, '0') : "15";
+            txDate = `${year}-${month}-${day}`;
+          }
+          txs.push({ id: `${r.id}_${monthKey}`, title: `${r.name}`, amount: recLog.amountReceived, date: txDate, type: "inflow", wallet: r.wallet || "maya", category: r.category });
+        }
+      });
+    });
+
+    return txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [globalData]);
+
+  const recentTransactions = useMemo(() => allTransactions.slice(0, 5), [allTransactions]);
+
   return {
+    allTransactions,
+    recentTransactions,
     billPaydayAllocations,
     activeBills,
     activeReceivables,
