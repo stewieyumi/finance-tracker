@@ -32,7 +32,6 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
   const toggleReceivableStatus = (receivable: ReceivableViewModel) => {
     const targetMonth = receivable.targetMonthForDue || selectedMonth;
     const receivableAmount = Math.max(0, parseFloat(String(receivable.amount)) || 0);
-    if (receivableAmount < 0) { showToast("Amount cannot be negative"); return; }
     
     const targetWallet = receivable.wallet || "maya";
 
@@ -41,16 +40,42 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
       const currentRecord = monthLog.recsCollected?.[receivable.id] || { amountReceived: 0, collected: false };
       const currentAmount = Math.max(0, parseFloat(String(currentRecord.amountReceived)) || 0);
 
-      const isCurrentlyCompleted = currentAmount >= receivableAmount;
-      const newAmountReceived = isCurrentlyCompleted || currentAmount > 0 ? 0 : receivableAmount;
-      const newCollected = newAmountReceived >= receivableAmount;
+      let newAmountReceived = 0;
+      let newCollected = false;
+
+      if (receivableAmount === 0) {
+        // Zero-amount logic: manually toggle boolean completion
+        newAmountReceived = 0;
+        newCollected = !currentRecord.collected;
+      } else {
+        // Amount logic: If ANY payment exists (partial or full), clicking toggles it to 0 (Pending) and refunds.
+        // If it is 0 (Pending), clicking sets it to full amount (Completed).
+        const hasAnyPayment = currentAmount > 0;
+        if (hasAnyPayment) {
+          newAmountReceived = 0;
+          newCollected = false;
+        } else {
+          newAmountReceived = receivableAmount;
+          newCollected = true;
+        }
+      }
       
       const amountDelta = roundMoney(newAmountReceived - currentAmount);
       const nextWallets = { ...prev.wallets };
-      nextWallets[targetWallet] = roundMoney(Math.max(0, (nextWallets[targetWallet] || 0) + amountDelta));
+      if (nextWallets[targetWallet] !== undefined) {
+        nextWallets[targetWallet] = roundMoney(Math.max(0, nextWallets[targetWallet] + amountDelta));
+      }
 
       const today = new Date(); 
       const todayStr = today.toISOString();
+
+      const nextPaymentDates = { ...(monthLog.paymentDates || {}) };
+      if (newCollected || newAmountReceived > 0) {
+        nextPaymentDates[receivable.id] = todayStr;
+      } else {
+        // Clean up the timestamp if returning to Pending
+        delete nextPaymentDates[receivable.id];
+      }
 
       return {
         ...prev,
@@ -59,7 +84,7 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
           ...prev.logs, 
           [targetMonth]: { 
             ...monthLog, 
-            paymentDates: { ...(monthLog.paymentDates || {}), [receivable.id]: todayStr }, 
+            paymentDates: nextPaymentDates, 
             recsCollected: { ...(monthLog.recsCollected || {}), [receivable.id]: { amountReceived: newAmountReceived, collected: newCollected } } 
           } 
         },
@@ -72,7 +97,6 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
     if (!Number.isFinite(amount) || amount <= 0) return;
     const targetMonth = receivable.targetMonthForDue || selectedMonth;
     const receivableAmount = Math.max(0, parseFloat(String(receivable.amount)) || 0);
-    if (receivableAmount < 0) { showToast("Amount cannot be negative"); return; }
     
     const targetWallet = receivable.wallet || "maya";
 
@@ -85,7 +109,9 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
       const amountDelta = roundMoney(newAmount - currentAmount);
       
       const nextWallets = { ...prev.wallets };
-      nextWallets[targetWallet] = roundMoney((nextWallets[targetWallet] || 0) + amountDelta);
+      if (nextWallets[targetWallet] !== undefined) {
+        nextWallets[targetWallet] = roundMoney(nextWallets[targetWallet] + amountDelta);
+      }
 
       const today = new Date(); 
       const todayStr = today.toISOString();

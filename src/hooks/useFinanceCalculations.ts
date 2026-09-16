@@ -131,7 +131,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
 
       const amountReceived = Math.max(0, parseFloat(String(log.amountReceived)) || 0);
       const receivableAmount = Math.max(0, parseFloat(String(r.amount)) || 0);
-      const collected = receivableAmount > 0 && amountReceived >= receivableAmount;
+      const collected = receivableAmount > 0 ? amountReceived >= receivableAmount : !!log.collected;
 
   return {
         ...r,
