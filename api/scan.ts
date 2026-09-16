@@ -10,8 +10,7 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY is missing' });
 
-    // Safely extract mime type and base64 string regardless of image type
-    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    const matches = image.match(/^data:(.+?);base64,(.+)$/);
     let mimeType = "image/jpeg";
     let base64Data = image;
     
@@ -25,15 +24,26 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
     const payload = {
       contents: [{
         parts: [
-          { text: "Extract the following details from this receipt: 'merchant' (string), 'amount' (number), 'date' (YYYY-MM-DD), 'category' (string). For category, strictly choose one of: 'Food & Dining', 'Transport', 'Utilities', 'Laundry & Home', 'Shopping', 'Other'." },
+          { text: "Extract the following details from this receipt: 'merchant' (string), 'amount' (number), 'date' (YYYY-MM-DD), 'category' (string). For category, strictly choose from: 'Food & Dining', 'Transport', 'Utilities', 'Laundry & Home', 'Shopping', 'Other'." },
           { inline_data: { mime_type: mimeType, data: base64Data } }
         ]
       }],
-      // FORCE GEMINI TO RETURN PURE JSON, NO MARKDOWN
-      generationConfig: { responseMimeType: "application/json" }
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            merchant: { type: "STRING" },
+            amount: { type: "NUMBER" },
+            date: { type: "STRING" },
+            category: { type: "STRING" }
+          },
+          required: ["merchant", "amount", "date", "category"]
+        }
+      }
     };
 
-    const response = await fetch(`[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$){apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -48,6 +58,6 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
     return res.status(200).json(result);
   } catch (error: any) {
     console.error("AI Scan Error:", error.message || error);
-    return res.status(500).json({ error: "Failed to process receipt" });
+    return res.status(500).json({ error: "Failed to process receipt: " + (error.message || "") });
   }
 }

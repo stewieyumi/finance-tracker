@@ -38,39 +38,60 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
     setShowForm(true);
 
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        const base64 = reader.result as string;
-        
-        const res = await fetch("/api/scan", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: base64 })
-        });
+      const img = new Image();
+      img.onload = async () => {
+        // Compress massive iPhone photos down to max 1000px and 70% JPEG quality
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 1000;
+        const MAX_HEIGHT = 1000;
+        let width = img.width;
+        let height = img.height;
 
-        if (!res.ok) {
-          showToast("❌ Scan failed. Ensure GEMINI_API_KEY is set in Vercel.");
-          setIsScanning(false);
-          return;
+        if (width > height) {
+          if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
+        } else {
+          if (height > MAX_HEIGHT) { width = Math.round((width * MAX_HEIGHT) / height); height = MAX_HEIGHT; }
         }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
 
-        const data = await res.json();
+        const base64 = canvas.toDataURL("image/jpeg", 0.7);
 
-        setForm(prev => ({
-          ...prev,
-          merchant: data.merchant || "",
-          amount: data.amount ? String(data.amount) : "",
-          category: data.category || "Other",
-          date: data.date || getLocalToday()
-        }));
-        
-        showToast("✨ Receipt scanned successfully!");
-        setIsScanning(false);
-        if (fileInputRef.current) fileInputRef.current.value = "";
+        try {
+          const res = await fetch("/api/scan", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: base64 })
+          });
+          const data = await res.json();
+          
+          if (!res.ok || data.error) {
+            showToast("❌ Scan failed: " + (data.error || "Server error"));
+            setIsScanning(false);
+            return;
+          }
+
+          setForm(prev => ({
+            ...prev,
+            merchant: data.merchant || "",
+            amount: data.amount ? String(data.amount) : "",
+            category: data.category || "Other",
+            date: data.date || getLocalToday()
+          }));
+          
+          showToast("✨ Receipt scanned successfully!");
+        } catch (err) {
+          showToast("❌ Server failed to read receipt.");
+        } finally {
+          setIsScanning(false);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        }
       };
+      img.src = URL.createObjectURL(file);
     } catch (err) {
-      showToast("❌ Scan failed. Please enter manually.");
+      showToast("❌ Image processing failed.");
       setIsScanning(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
