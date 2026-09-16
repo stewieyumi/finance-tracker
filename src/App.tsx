@@ -154,6 +154,7 @@ const {
     onSuccess: handleGoogleSuccess,
     onError: () => console.log("One Tap Auto-Login Failed"),
     auto_select: true,
+    disabled: !!googleUser,
   });
 
   React.useEffect(() => {
