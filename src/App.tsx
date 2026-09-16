@@ -472,11 +472,11 @@ const copySummaryToClipboard = async () => {
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-1 gap-3">
-          <div>
+        <div className="flex flex-col gap-3.5 pb-2">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-bold tracking-tight text-white">
-                Financial Dashboard
+                Dashboard
               </h1>
               <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium no-privacy-blur border transition-all ${
                 !isOnline
@@ -486,134 +486,75 @@ const copySummaryToClipboard = async () => {
                   : "bg-emerald-950/40 border-emerald-800/40 text-emerald-400"
               }`}>
                 {!isOnline ? (
-                  <>
-                    <WifiOff size={10} className="text-amber-400" />
-                    <span>Offline (Local)</span>
-                  </>
+                  <><WifiOff size={10} className="text-amber-400" /><span>Offline</span></>
                 ) : isSyncing ? (
-                  <>
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
-                    <span>Syncing...</span>
-                  </>
+                  <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" /><span>Syncing...</span></>
                 ) : (
-                  <>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    <span>Live</span>
-                  </>
+                  <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span>Live</span></>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-2 mt-1.5">
-              <div className="relative inline-block">
-                <button
-                  type="button"
-                  aria-label="View Keyboard Shortcuts"
-                  onClick={() => setShowShortcutsHelp(prev => !prev)}
-                  className="text-[11px] font-medium no-privacy-blur text-zinc-400 hover:text-zinc-200 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 shadow-sm"
-                  title="View Keyboard Shortcuts"
-                >
-                  <span>⌨️</span>
-                  <span className="font-medium">Shortcuts</span>
+            <div className="flex items-center gap-2">
+              {/* DESKTOP-ONLY UTILITIES */}
+              <div className="hidden md:flex items-center gap-2 mr-2 pr-4 border-r border-white/[0.08]">
+                <div className="relative">
+                  <button onClick={() => setShowShortcutsHelp(prev => !prev)} className="text-[11px] font-medium text-zinc-400 hover:text-zinc-200 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
+                    <span>⌨️</span> Shortcuts
+                  </button>
+                  {showShortcutsHelp && (
+                    <div className="absolute right-0 mt-2 w-64 p-3 bg-[#121216] border border-zinc-800 rounded-xl shadow-2xl backdrop-blur-md text-xs z-[100]">
+                      <div className="flex items-center justify-between pb-1.5 border-b border-zinc-800/80 mb-2">
+                        <span className="text-zinc-300 font-semibold flex items-center gap-1.5"><span>⌨️</span> Shortcuts</span>
+                        <button onClick={() => setShowShortcutsHelp(false)} className="text-zinc-500 hover:text-zinc-300">✕</button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Month</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">⌘K</kbd></div>
+                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Yearly</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">Y</kbd></div>
+                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Analytics</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">A</kbd></div>
+                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Sync</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">S</kbd></div>
+                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Diagnostic</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">⌘D</kbd></div>
+                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Close</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">Esc</kbd></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <button onClick={forceManualSync} className="h-7 w-7 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-blue-500/50 flex items-center justify-center text-zinc-400 hover:text-blue-400 transition shadow-sm" title="Save & Sync (S)">
+                  <Cloud size={13} className={isSyncing ? "animate-pulse text-blue-400" : ""} />
                 </button>
-
-                {showShortcutsHelp && (
-                  <div 
-                    className="absolute left-0 mt-2 z-50 w-64 p-3 bg-[#121216] border border-zinc-800 rounded-xl shadow-2xl backdrop-blur-md text-xs space-y-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex items-center justify-between pb-1.5 border-b border-zinc-800/80">
-                      <span className="text-zinc-300 font-semibold flex items-center gap-1.5">
-                        <span>⌨️</span> Shortcuts
-                      </span>
-                      <button
-                        type="button"
-                        aria-label="Close shortcuts help"
-                        onClick={() => setShowShortcutsHelp(false)}
-                        className="text-zinc-500 hover:text-zinc-300 text-xs px-1"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                      <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50">
-                        <span className="text-zinc-400">Month</span>
-                        <kbd className="bg-zinc-800 text-zinc-200 px-1.5 py-0.5 rounded font-mono text-[10px]">⌘K</kbd>
-                      </div>
-                      <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50">
-                        <span className="text-zinc-400">Yearly</span>
-                        <kbd className="bg-zinc-800 text-zinc-200 px-1.5 py-0.5 rounded font-mono text-[10px]">Y</kbd>
-                      </div>
-                      <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50">
-                        <span className="text-zinc-400">Analytics</span>
-                        <kbd className="bg-zinc-800 text-zinc-200 px-1.5 py-0.5 rounded font-mono text-[10px]">A</kbd>
-                      </div>
-                      <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50">
-                        <span className="text-zinc-400">Cloud Sync</span>
-                        <kbd className="bg-zinc-800 text-zinc-200 px-1.5 py-0.5 rounded font-mono text-[10px]">S</kbd>
-                      </div>
-                      <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50">
-                        <span className="text-zinc-400">Diagnostics</span>
-                        <kbd className="bg-zinc-800 text-zinc-200 px-1.5 py-0.5 rounded font-mono text-[10px]">⌘D</kbd>
-                      </div>
-                      <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50">
-                        <span className="text-zinc-400">Close</span>
-                        <kbd className="bg-zinc-800 text-zinc-200 px-1.5 py-0.5 rounded font-mono text-[10px]">Esc</kbd>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <button onClick={() => pullLatestData(false)} className="h-7 w-7 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-emerald-500/50 flex items-center justify-center text-zinc-400 hover:text-emerald-400 transition shadow-sm" title="Pull Data (R)">
+                  <RefreshCw size={12} className={isSyncing ? "animate-spin text-emerald-400" : ""} />
+                </button>
               </div>
 
+              {/* PRIVACY TOGGLE */}
               <button 
                 onClick={() => setIsPrivacyMode(prev => !prev)} 
-                aria-label={isPrivacyMode ? "Show Balances" : "Hide/Blur Balances for Screenshot"}
-                title={isPrivacyMode ? "Show Balances" : "Hide/Blur Balances for Screenshot"} 
-                className={`h-6 w-6 rounded-md border flex items-center justify-center transition shadow-sm ${
+                aria-label={isPrivacyMode ? "Show Balances" : "Hide Balances"}
+                className={`h-8 w-8 rounded-full border flex items-center justify-center transition shadow-sm ${
                   isPrivacyMode
                     ? "bg-amber-500/20 border-amber-500/60 text-amber-300"
                     : "bg-zinc-900/80 hover:bg-zinc-800 border-zinc-800 text-zinc-400 hover:text-zinc-200"
                 }`}
               >
-                {isPrivacyMode ? <EyeOff size={11} /> : <Eye size={11} />}
-              </button>
-
-              <button 
-                onClick={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} 
-                aria-label="App Settings"
-                title="Settings" 
-                className="h-6 w-6 rounded-md bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-amber-500/50 text-zinc-400 hover:text-amber-400 flex items-center justify-center transition shadow-sm"
-              >
-                <Settings size={11} />
-              </button>
-              
-              
-
-              <button 
-                onClick={forceManualSync} 
-                aria-label="Save and Sync"
-                title="Save & Sync (Press S)" 
-                className="h-6 w-6 rounded-md bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-blue-500/50 flex items-center justify-center text-zinc-400 hover:text-blue-400 transition shadow-sm"
-              >
-                <Cloud size={12} className={isSyncing ? "animate-pulse text-blue-400" : ""} />
-              </button>
-
-              <button 
-                onClick={() => pullLatestData(false)} 
-                aria-label="Refresh and Pull Cloud Data"
-                title="Refresh & Pull Cloud Data (Press R)" 
-                className="h-6 w-6 rounded-md bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-emerald-500/50 flex items-center justify-center text-zinc-400 hover:text-emerald-400 transition shadow-sm"
-              >
-                <RefreshCw size={11} className={isSyncing ? "animate-spin text-emerald-400" : ""} />
+                {isPrivacyMode ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-[#121217] border border-white/[0.08] px-3 py-1.5 rounded-xl text-xs shadow-md">
+              <Calendar size={13} className="text-blue-400 cursor-pointer" onClick={() => setShowDatePickerModal(true)} />
+              <select value={selectedMonth} onChange={(e) => { if (e.target.value === "CUSTOM_DATE_JUMP") setShowDatePickerModal(true); else setSelectedMonth(e.target.value); }} className="bg-transparent text-white font-semibold outline-none cursor-pointer">
+                {dropdownMonths.map(m => <option key={m} value={m} className="bg-[#121216]">{m}</option>)}
+                <option disabled>──────────</option>
+                <option value="CUSTOM_DATE_JUMP" className="bg-[#121216] font-bold text-blue-400">Select Month...</option>
+              </select>
+            </div>
+
             <button 
               onClick={() => setShowAnalyticsModal(true)} 
-              className="flex items-center gap-1.5 bg-[#121217] border border-amber-500/30 hover:border-amber-400/60 text-amber-300 hover:text-amber-200 px-3 py-1 rounded-xl text-xs shadow-md transition font-medium"
+              className="flex items-center gap-1.5 bg-[#121217] border border-amber-500/30 hover:border-amber-400/60 text-amber-300 px-3 py-1.5 rounded-xl text-xs shadow-md transition font-medium"
             >
               <Sparkles size={13} className="text-amber-400" />
               <span>Runway</span>
@@ -621,20 +562,11 @@ const copySummaryToClipboard = async () => {
 
             <button 
               onClick={() => setShowYearlyModal(true)} 
-              className="flex items-center gap-1.5 bg-[#121217] border border-emerald-500/30 hover:border-emerald-400/60 text-emerald-300 hover:text-emerald-200 px-3 py-1 rounded-xl text-xs shadow-md transition font-medium"
+              className="flex items-center gap-1.5 bg-[#121217] border border-emerald-500/30 hover:border-emerald-400/60 text-emerald-300 px-3 py-1.5 rounded-xl text-xs shadow-md transition font-medium"
             >
               <BarChart2 size={13} className="text-emerald-400" />
-              <span>Year</span>
+              <span>Yearly</span>
             </button>
-
-            <div className="flex items-center gap-1.5 bg-[#121217] border border-white/[0.08] px-3 py-1 rounded-xl text-xs shadow-md">
-              <Calendar size={13} className="text-blue-400 cursor-pointer" onClick={() => setShowDatePickerModal(true)} />
-              <select value={selectedMonth} onChange={(e) => { if (e.target.value === "CUSTOM_DATE_JUMP") setShowDatePickerModal(true); else setSelectedMonth(e.target.value); }} className="bg-transparent text-white font-semibold outline-none cursor-pointer">
-                {dropdownMonths.map(m => <option key={m} value={m} className="bg-[#121216]">{m}</option>)}
-                <option disabled>──────────</option>
-                <option value="CUSTOM_DATE_JUMP" className="bg-[#121216] font-bold text-blue-400">Select Month/Year...</option>
-              </select>
-            </div>
           </div>
         </div>
 
