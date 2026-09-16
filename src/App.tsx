@@ -1,5 +1,5 @@
 import { roundMoney } from "./utils/currency";
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import { GoogleLogin, googleLogout, useGoogleOneTapLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
@@ -9,7 +9,7 @@ import { UnifiedFinanceData, WalletState, EditFormData, TransactionHistoryItem }
 import { buildFinancialSummary } from "./utils/summaryHelpers";
 import { getWalletForBill } from "./utils/financeHelpers";
 
-import { useCloudSync } from "./hooks/useCloudSync";
+import { useCloudSync, getLocalPasscode } from "./hooks/useCloudSync";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import { useFinanceCalculations } from "./hooks/useFinanceCalculations";
@@ -100,15 +100,44 @@ const formatDateTime = (dateStr: string) => {
   }
 };
 
+
+function hasUsableGoogleToken(token: string): boolean {
+  if (!token) return false;
+
+  try {
+    const decoded = jwtDecode<{ exp?: number }>(token);
+
+    if (!decoded.exp) {
+      return false;
+    }
+
+    // Treat a token expiring within 30 seconds as unusable so we do not
+    // start another request with a token that is about to expire.
+    return decoded.exp * 1000 > Date.now() + 30_000;
+  } catch {
+    return false;
+  }
+}
+
 export default function App() {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
   const [globalData, setGlobalData] = useState<UnifiedFinanceData>(safeLoadAll);
+  const commitDataChangeRef = useRef<
+    React.Dispatch<React.SetStateAction<UnifiedFinanceData>>
+  >(setGlobalData);
+
+  const syncedSetGlobalData = useCallback(
+    (action: React.SetStateAction<UnifiedFinanceData>) => {
+      commitDataChangeRef.current(action);
+    },
+    []
+  );
   const [selectedMonth, setSelectedMonth] = useState<string>(() => getMonthKey(new Date()));
 const {
   commitWallet,
   incrementWallet
 } = useWalletActions({
-  setGlobalData
+  setGlobalData: syncedSetGlobalData
 });
   const [showDatePickerModal, setShowDatePickerModal] = useState(false);
   const [showYearlyModal, setShowYearlyModal] = useState(false);
@@ -129,15 +158,29 @@ const {
 
   const handleGoogleSuccess = (credentialResponse: any) => {
     try {
-      const decoded: any = jwtDecode(credentialResponse.credential);
+      const credential = String(credentialResponse?.credential || "");
+
+      if (!credential || !hasUsableGoogleToken(credential)) {
+        showToast("Google sign-in returned an invalid or expired session");
+        return;
+      }
+
+      const decoded: any = jwtDecode(credential);
+
       setGoogleUser(decoded);
-      localStorage.setItem("ft_google_user", JSON.stringify(decoded));
-      
-      // Temporarily use the JWT as the master passcode for backend sync
-      localStorage.setItem("ft_sync_passcode", credentialResponse.credential);
-      
+      localStorage.setItem(
+        "ft_google_user",
+        JSON.stringify(decoded)
+      );
+
+      // Store only the current Google ID token for server-side verification.
+      localStorage.setItem(
+        "ft_sync_passcode",
+        credential
+      );
+
       showToast(`Welcome, ${decoded.name || "User"}!`);
-    } catch (e) {
+    } catch {
       showToast("Failed to decode Google token");
     }
   };
@@ -154,7 +197,7 @@ const {
     onSuccess: handleGoogleSuccess,
     onError: () => console.log("One Tap Auto-Login Failed"),
     auto_select: true,
-    disabled: !!googleUser,
+    disabled: !!googleUser && hasUsableGoogleToken(getLocalPasscode()),
   });
 
   React.useEffect(() => {
@@ -208,7 +251,7 @@ const {
   React.useEffect(() => {
     const needsMigration = globalData.library?.bills?.some(b => !b.wallet);
     if (needsMigration) {
-      setGlobalData(prev => ({
+      syncedSetGlobalData(prev => ({
         ...prev,
         library: {
           ...prev.library,
@@ -228,7 +271,7 @@ const {
   toggleBillStatus,
   deleteBill
 } = useBillActions({
-    setGlobalData,
+    setGlobalData: syncedSetGlobalData,
   selectedMonth,
   showToast
 });
@@ -239,7 +282,7 @@ const {
   addPayment,
   deleteReceivable
 } = useReceivableActions({
-  setGlobalData,
+  setGlobalData: syncedSetGlobalData,
   selectedMonth,
   showToast
 });
@@ -249,18 +292,18 @@ const {
   toggleShootCompletion,
   deleteShoot
 } = useShootActions({
-  setGlobalData,
+  setGlobalData: syncedSetGlobalData,
   showToast
 });
 
 const { resetMonthOverride } = useBillEditActions({
-  setGlobalData,
+  setGlobalData: syncedSetGlobalData,
   selectedMonth,
   showToast
 });
 
 const { saveBillEdit } = useBillSaveActions({
-  setGlobalData,
+  setGlobalData: syncedSetGlobalData,
   selectedMonth,
   editingId,
   editForm,
@@ -269,7 +312,7 @@ const { saveBillEdit } = useBillSaveActions({
 });
 
 const { saveReceivableEdit } = useReceivableSaveActions({
-  setGlobalData,
+  setGlobalData: syncedSetGlobalData,
   editingId,
   editForm,
   setEditingId,
@@ -277,7 +320,7 @@ const { saveReceivableEdit } = useReceivableSaveActions({
 });
 
 const { saveShootEdit } = useShootSaveActions({
-  setGlobalData,
+  setGlobalData: syncedSetGlobalData,
   editingId,
   editForm,
   setEditingId,
@@ -290,8 +333,11 @@ const { saveShootEdit } = useShootSaveActions({
     debugLog,
     setDebugLog,
     forceManualSync,
-    pullLatestData
+    pullLatestData,
+    commitDataChange
   } = useCloudSync(globalData, setGlobalData, showToast);
+
+  commitDataChangeRef.current = commitDataChange;
 
   const {
     activeBills,
@@ -409,7 +455,7 @@ ${allocList}`
 
       if (!confirmed) return;
 
-      setGlobalData(prev => {
+      syncedSetGlobalData(prev => {
         const executions = prev.paydaySplitExecutions || [];
 
         if (executions.includes(executionKey)) {
@@ -520,7 +566,7 @@ const copySummaryToClipboard = async () => {
               : Date.now()
           };
 
-          setGlobalData(importedData);
+          syncedSetGlobalData(importedData);
           showToast("Imported backup successfully");
         }
       } catch (err) {

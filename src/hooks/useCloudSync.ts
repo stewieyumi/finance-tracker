@@ -50,7 +50,6 @@ export function useCloudSync(
   const isFirstMount = useRef(true);
   const isRemoteUpdate = useRef(false);
   const isDirtyRef = useRef(false);
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const latestDataRef = useRef(globalData);
 
@@ -290,6 +289,41 @@ export function useCloudSync(
     }
   };
 
+  /**
+   * Commit a real data mutation:
+   * local React state -> local persistence/broadcast effect -> cloud push.
+   *
+   * This intentionally does NOT run for form typing or arbitrary renders.
+   */
+  const commitDataChange = useCallback(
+    (action: React.SetStateAction<UnifiedFinanceData>) => {
+      const current = latestDataRef.current;
+
+      const nextRaw =
+        typeof action === "function"
+          ? (action as (prev: UnifiedFinanceData) => UnifiedFinanceData)(current)
+          : action;
+
+      if (!nextRaw || nextRaw === current) {
+        return;
+      }
+
+      const nextData: UnifiedFinanceData = {
+        ...nextRaw,
+        updatedAt: Date.now()
+      };
+
+      latestDataRef.current = nextData;
+      isDirtyRef.current = true;
+
+      // The mutation is already committed locally. Push this exact snapshot
+      // instead of waiting for a globalData debounce effect.
+      setGlobalData(nextData);
+      void pushToCloud(nextData);
+    },
+    [pushToCloud, setGlobalData]
+  );
+
   const pullLatestData = async (
     silent = false,
     retryCount = 0
@@ -427,10 +461,6 @@ export function useCloudSync(
   };
 
   const forceManualSync = async () => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
     const success = await pushToCloud(globalData);
 
     if (success) {
@@ -445,45 +475,36 @@ export function useCloudSync(
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      showToast("📶 Back online - syncing...");
 
+      // If an explicit committed mutation happened while offline,
+      // retry that pending mutation when connectivity returns.
       if (isDirtyRef.current) {
-        pushToCloud(latestDataRef.current);
+        void pushToCloud(latestDataRef.current);
       } else {
-        pullLatestData(true);
+        void pullLatestData(true);
       }
     };
 
     const handleOffline = () => {
       setIsOnline(false);
-      showToast(
-        "⚠️ Offline - changes saved locally"
-      );
+      showToast("⚠️ Offline - changes saved locally");
     };
 
     const handleFocus = () => {
-      pullLatestData(true);
+      void pullLatestData(true);
     };
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     window.addEventListener("focus", handleFocus);
 
-    pullLatestData(true);
+    // One initial read is useful for cross-device changes made while
+    // this app was closed. This is no longer a 15-second polling loop.
+    void pullLatestData(true);
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        if (isDirtyRef.current) {
-          if (debounceTimerRef.current) {
-            clearTimeout(debounceTimerRef.current);
-          }
-
-          pushToCloud(latestDataRef.current);
-        }
-      } else if (
-        document.visibilityState === "visible"
-      ) {
-        pullLatestData(true);
+      if (document.visibilityState === "visible") {
+        void pullLatestData(true);
       }
     };
 
@@ -492,54 +513,14 @@ export function useCloudSync(
       handleVisibilityChange
     );
 
-    const handlePageHide = () => {
-      if (isDirtyRef.current) {
-        if (debounceTimerRef.current) {
-          clearTimeout(debounceTimerRef.current);
-        }
-
-        pushToCloud(latestDataRef.current);
-      }
-    };
-
-    window.addEventListener(
-      "pagehide",
-      handlePageHide
-    );
-
-    const pollInterval = setInterval(() => {
-      if (
-        document.visibilityState === "visible"
-      ) {
-        pullLatestData(true);
-      }
-    }, 15000);
-
     return () => {
-      window.removeEventListener(
-        "online",
-        handleOnline
-      );
-      window.removeEventListener(
-        "offline",
-        handleOffline
-      );
-      window.removeEventListener(
-        "focus",
-        handleFocus
-      );
-
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("focus", handleFocus);
       window.removeEventListener(
         "visibilitychange",
         handleVisibilityChange
       );
-
-      window.removeEventListener(
-        "pagehide",
-        handlePageHide
-      );
-
-      clearInterval(pollInterval);
     };
   }, []);
 
@@ -628,29 +609,14 @@ export function useCloudSync(
       });
     } catch (e) {
       console.warn(
-        "localStorage write failed",
+        "localStorage/broadcast persistence failed",
         e
       );
     }
-
-    isDirtyRef.current = true;
-
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    debounceTimerRef.current = setTimeout(() => {
-      pushToCloud(globalData);
-    }, 1200);
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
   }, [globalData]);
 
   return {
+    commitDataChange,
     isSyncing,
     isOnline,
     debugLog,
