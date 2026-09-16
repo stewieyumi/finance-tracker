@@ -3,7 +3,9 @@ import {
   getEffectiveBillAmount,
   getWalletForBill,
   computeBillPerPaydayAmount,
-  computeBaselineScale
+  computeBaselineScale,
+  getReceivableStatus,
+  applyWalletTransaction
 } from "./financeHelpers";
 import { countPaydaysUntil } from "./dateHelpers";
 
@@ -125,5 +127,61 @@ describe("getEffectiveBillAmount (existing helper, sanity check)", () => {
 
   it("falls back to the base amount without an override", () => {
     expect(getEffectiveBillAmount(599, undefined)).toBe(599);
+  });
+});
+
+describe("Receivable State Transitions", () => {
+  it("Pending: 0 received means uncollected and full amount remaining", () => {
+    const { isCollected, remaining } = getReceivableStatus(1000, 0, false);
+    expect(isCollected).toBe(false);
+    expect(remaining).toBe(1000);
+  });
+
+  it("Partial payment: received < amount means uncollected and partial remaining", () => {
+    const { isCollected, remaining } = getReceivableStatus(1000, 400, false);
+    expect(isCollected).toBe(false);
+    expect(remaining).toBe(600);
+  });
+
+  it("Full payment: received === amount means collected and 0 remaining", () => {
+    const { isCollected, remaining } = getReceivableStatus(1000, 1000, false);
+    expect(isCollected).toBe(true);
+    expect(remaining).toBe(0);
+  });
+
+  it("Overpayment: received > amount means collected and 0 remaining", () => {
+    const { isCollected, remaining } = getReceivableStatus(1000, 1500, false);
+    expect(isCollected).toBe(true);
+    expect(remaining).toBe(0);
+  });
+
+  it("Zero-amount Pending: amount is 0 and manually false means uncollected", () => {
+    const { isCollected, remaining } = getReceivableStatus(0, 0, false);
+    expect(isCollected).toBe(false);
+    expect(remaining).toBe(0);
+  });
+
+  it("Zero-amount Completed: amount is 0 and manually true means collected", () => {
+    const { isCollected, remaining } = getReceivableStatus(0, 0, true);
+    expect(isCollected).toBe(true);
+    expect(remaining).toBe(0);
+  });
+});
+
+describe("Expense & Wallet Tracking Logic", () => {
+  it("Wallet deduction: correctly subtracts expense amount from balance", () => {
+    expect(applyWalletTransaction(5000, -1500)).toBe(3500);
+  });
+
+  it("Wallet refund: correctly restores balance when expense is deleted", () => {
+    expect(applyWalletTransaction(3500, 1500)).toBe(5000);
+  });
+
+  it("Insufficient funds: prevents wallet balance from going negative during deduction", () => {
+    expect(applyWalletTransaction(1000, -2500)).toBe(0);
+  });
+
+  it("Decimal precision: handles JS floating point safely during deductions", () => {
+    expect(applyWalletTransaction(100.55, -50.10)).toBe(50.45);
   });
 });

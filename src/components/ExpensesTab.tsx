@@ -4,6 +4,7 @@ import { Camera, UploadCloud, ScanLine, Plus, Receipt, Trash2, CheckCircle2 } fr
 import { UnifiedFinanceData, Expense, ExpenseCategory } from "../types/finance";
 import { generateId } from "../utils/idHelpers";
 import { getLocalPasscode } from "../hooks/useCloudSync";
+import { applyWalletTransaction } from "../utils/financeHelpers";
 
 const EXPENSE_CATEGORIES: ExpenseCategory[] = ["Food & Dining", "Transport", "Utilities", "Laundry & Home", "Shopping", "Other"];
 
@@ -137,7 +138,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
       const nextWallets = { ...prev.wallets };
       // Instantly deduct from the chosen liquid wallet
       if (nextWallets[form.wallet] !== undefined) {
-        nextWallets[form.wallet] = roundMoney(Math.max(0, nextWallets[form.wallet] - amount));
+        nextWallets[form.wallet] = applyWalletTransaction(nextWallets[form.wallet], -amount);
       }
 
       return {
@@ -162,7 +163,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
     setGlobalData(prev => {
       const nextWallets = { ...prev.wallets };
       if (nextWallets[exp.wallet] !== undefined) {
-        nextWallets[exp.wallet] = roundMoney(nextWallets[exp.wallet] + exp.amount); // Refund
+        nextWallets[exp.wallet] = applyWalletTransaction(nextWallets[exp.wallet], exp.amount); // Refund
       }
       return {
         ...prev,

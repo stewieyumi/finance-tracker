@@ -5,7 +5,7 @@ import {
   ReceivableViewModel
 } from "../types/finance";
 import { DEFAULT_TARGET_FUND } from "../constants/config";
-import { getEffectiveBillAmount, getWalletForBill, computeBillPerPaydayAmount, computeBaselineScale } from "../utils/financeHelpers";
+import { getEffectiveBillAmount, getWalletForBill, computeBillPerPaydayAmount, computeBaselineScale, getReceivableStatus } from "../utils/financeHelpers";
 import {
   parseMonthKey,
   parseDateKey,
@@ -129,14 +129,16 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
         collected: false
       };
 
-      const amountReceived = Math.max(0, parseFloat(String(log.amountReceived)) || 0);
-      const receivableAmount = Math.max(0, parseFloat(String(r.amount)) || 0);
-      const collected = receivableAmount > 0 ? amountReceived >= receivableAmount : !!log.collected;
+      const parsedAmount = parseFloat(String(r.amount)) || 0;
+      const parsedReceived = parseFloat(String(log.amountReceived)) || 0;
+      
+      const { isCollected } = getReceivableStatus(parsedAmount, parsedReceived, log.collected);
+      const amountReceived = Math.max(0, parsedReceived);
 
   return {
         ...r,
         amountReceived,
-        collected,
+        collected: isCollected,
         targetMonthForDue
       };
     }).sort((a, b) => {

@@ -40,3 +40,25 @@ export function computeBaselineScale(
   const leftoverAfterBills = Math.max(0, perPayoutSalary - totalBillObligations);
   return totalBaselineTarget > 0 ? Math.min(1, leftoverAfterBills / totalBaselineTarget) : 0;
 }
+
+export function getReceivableStatus(
+  amount: number,
+  amountReceived: number,
+  isManuallyCollected: boolean
+) {
+  const safeAmount = Math.max(0, amount || 0);
+  const safeReceived = Math.max(0, amountReceived || 0);
+  
+  const remaining = Math.max(0, safeAmount - safeReceived);
+  const isCollected = safeAmount > 0 ? safeReceived >= safeAmount : !!isManuallyCollected;
+  
+  return { isCollected, remaining };
+}
+
+export function applyWalletTransaction(
+  currentBalance: number,
+  delta: number
+): number {
+  const safeBalance = currentBalance || 0;
+  return Math.round(Math.max(0, safeBalance + delta) * 100) / 100;
+}
