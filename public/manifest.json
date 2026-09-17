@@ -1,10 +1,7 @@
 {
   "name": "Finance Tracker",
   "short_name": "Finance",
-  "description": "Personal finance and freelance production tracker.",
   "start_url": "/",
-  "scope": "/",
-  "id": "/",
   "display": "standalone",
   "background_color": "#09090b",
   "theme_color": "#09090b",
