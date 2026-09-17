@@ -26,9 +26,9 @@ describe("getWalletForBill", () => {
     expect(getWalletForBill("SPayLater")).toBe("maribank");
   });
 
-  it("routes Shared Japan Trip bills to GoTyme, not MariBank", () => {
-    expect(getWalletForBill("Shared Japan Trip 1")).toBe("gotyme");
-    expect(getWalletForBill("Shared Japan Trip 2")).toBe("gotyme");
+  it("routes Shared Japan Trip bills to BPI (Japan fund), not GoTyme or MariBank", () => {
+    expect(getWalletForBill("Shared Japan Trip 1")).toBe("bpi");
+    expect(getWalletForBill("Shared Japan Trip 2")).toBe("bpi");
   });
 
   it("falls back to Maya for everything else, in full (not halved)", () => {
@@ -40,7 +40,7 @@ describe("getWalletForBill", () => {
 
   it("is case-insensitive", () => {
     expect(getWalletForBill("unobank loan")).toBe("gcash");
-    expect(getWalletForBill("SHARED JAPAN TRIP 2")).toBe("gotyme");
+    expect(getWalletForBill("SHARED JAPAN TRIP 2")).toBe("bpi");
   });
 });
 

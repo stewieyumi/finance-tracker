@@ -5,7 +5,7 @@ export function getEffectiveBillAmount(
   return override !== undefined ? override : baseAmount;
 }
 
-export type Wallet = "maya" | "gcash" | "maribank" | "gotyme";
+export type Wallet = "maya" | "gcash" | "maribank" | "gotyme" | "bpi" | "cash" | string;
 
 export function getWalletForBill(name: string, walletProp?: string): Wallet {
   if (walletProp) return walletProp as Wallet;
@@ -24,8 +24,9 @@ export function getWalletForBill(name: string, walletProp?: string): Wallet {
     return "maribank";
   }
 
+  // Japan travel fund now lives in BPI (was GoTyme). See BPI migration.
   if (n.includes("shared") || n.includes("japan trip")) {
-    return "gotyme";
+    return "bpi";
   }
 
   return "maya";
