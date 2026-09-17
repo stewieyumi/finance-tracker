@@ -32,8 +32,6 @@ interface SyncPayload {
   settings?: unknown;
 }
 
-const APP_AUTH_SECRET = process.env.APP_AUTH_SECRET;
-
 const redis = new Redis({
   url: process.env.KV_REST_API_URL || "",
   token: process.env.KV_REST_API_TOKEN || ""
@@ -101,6 +99,8 @@ export default async function handler(
   req: VercelApiRequest,
   res: VercelApiResponse
 ) {
+  const appAuthSecret = process.env.APP_AUTH_SECRET;
+
   if (req.method === "OPTIONS") {
     res.setHeader(
       "Access-Control-Allow-Methods",
@@ -115,7 +115,7 @@ export default async function handler(
     return res.status(200).end();
   }
 
-  if (!APP_AUTH_SECRET) {
+  if (!appAuthSecret) {
     return res.status(500).json({
       error: "Server configuration error: Missing APP_AUTH_SECRET."
     });
@@ -142,7 +142,7 @@ export default async function handler(
   let isAuthenticated = false;
 
   // 1. Dev Shortcut (Master Passcode)
-  if (clientToken === APP_AUTH_SECRET) {
+  if (clientToken === appAuthSecret) {
     USER_REDIS_KEY = "finance_data";
     isAuthenticated = true;
   } 
