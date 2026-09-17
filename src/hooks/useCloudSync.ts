@@ -55,16 +55,11 @@ export function useCloudSync(
 
   latestDataRef.current = globalData;
 
+  // Interactive passcode entry now happens via Settings > Sync (Google
+  // login or manual passcode input there). This function intentionally
+  // does not prompt — it exists only so callers can check "is there
+  // nothing we can do here" without a network round trip.
   const promptPasscode = useCallback((): string | null => {
-    const current = getLocalPasscode();
-
-    const entered = null as any;
-
-    if (entered !== null) {
-      setLocalPasscode(entered);
-      return (entered as any)?.trim();
-    }
-
     return null;
   }, []);
 
