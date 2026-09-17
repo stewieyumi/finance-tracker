@@ -101,23 +101,7 @@ const formatDateTime = (dateStr: string) => {
 };
 
 
-function hasUsableGoogleToken(token: string): boolean {
-  if (!token) return false;
 
-  try {
-    const decoded = jwtDecode<{ exp?: number }>(token);
-
-    if (!decoded.exp) {
-      return false;
-    }
-
-    // Treat a token expiring within 30 seconds as unusable so we do not
-    // start another request with a token that is about to expire.
-    return decoded.exp * 1000 > Date.now() + 30_000;
-  } catch {
-    return false;
-  }
-}
 
 export default function App() {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
