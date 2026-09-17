@@ -160,8 +160,8 @@ const {
     try {
       const credential = String(credentialResponse?.credential || "");
 
-      if (!credential || !hasUsableGoogleToken(credential)) {
-        showToast("Google sign-in returned an invalid or expired session");
+      if (!credential) {
+        showToast("Google sign-in returned no credential");
         return;
       }
 
@@ -173,7 +173,7 @@ const {
         JSON.stringify(decoded)
       );
 
-      // Store only the current Google ID token for server-side verification.
+      // Store the Google ID token for secure server-side sync
       localStorage.setItem(
         "ft_sync_passcode",
         credential
@@ -197,7 +197,7 @@ const {
     onSuccess: handleGoogleSuccess,
     onError: () => console.log("One Tap Auto-Login Failed"),
     auto_select: true,
-    disabled: !!googleUser && hasUsableGoogleToken(getLocalPasscode()),
+    disabled: !!googleUser,
   });
 
   React.useEffect(() => {
