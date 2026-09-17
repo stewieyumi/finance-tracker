@@ -187,12 +187,26 @@ const {
     showToast("Signed out of Google");
   };
 
+  // Runs on every mount, even if already "logged in" (googleUser restored
+  // from localStorage) — with auto_select:true this silently refreshes the
+  // ID token in the background instead of only recovering reactively after
+  // a 401. Proactive refresh: re-arm this by remounting the prompt every
+  // 45 minutes so the ~1hr-lived token never gets a chance to fully expire.
   useGoogleOneTapLogin({
     onSuccess: handleGoogleSuccess,
-    onError: () => console.log("One Tap Auto-Login Failed"),
+    onError: () => console.log("One Tap silent refresh failed"),
     auto_select: true,
-    disabled: !!googleUser,
   });
+
+  React.useEffect(() => {
+    if (!googleUser) return;
+    const refreshInterval = setInterval(() => {
+      if ((window as any).google?.accounts?.id) {
+        (window as any).google.accounts.id.prompt();
+      }
+    }, 45 * 60 * 1000);
+    return () => clearInterval(refreshInterval);
+  }, [googleUser]);
 
   React.useEffect(() => {
     const handleAuthExpired = () => {
