@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Settings, Briefcase, Target, Save, Cloud, Database, ArrowRightLeft } from "lucide-react";
+import { X, Settings, Briefcase, Target, Save, Cloud, Database, ArrowRightLeft, Download, Upload } from "lucide-react";
 import { UnifiedFinanceData } from "../types/finance";
 import { getWalletForBill } from "../utils/financeHelpers";
 
@@ -13,6 +13,8 @@ interface SettingsModalProps {
   debugLog: string;
   onForcePush: () => void | Promise<void>;
   onForcePull: () => void | Promise<void>;
+  onExport: () => void;
+  onImportClick: () => void;
 }
 
 const PRESETS = {
@@ -21,7 +23,7 @@ const PRESETS = {
   personal: { label: "Personal / Student", inflows: "INCOME & ALLOWANCE", gigs: "TASKS & HUSTLES", inflowCats: ["Allowance", "Salary", "Gift", "Side Hustle", "Other"], gigCats: ["Part-time", "Errand", "Online Selling", "Other"] }
 };
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab = "general", onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab = "general", onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull, onExport, onImportClick }) => {
   const [activeTab, setActiveTab] = useState<"general"|"baselines"|"wallets"|"sync">(initialTab);
 
   useEffect(() => {
@@ -244,6 +246,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                 <button onClick={onForcePush} className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><Cloud size={13} /> Push Data</button>
                 <button onClick={onForcePull} className="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/30 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><Database size={13} /> Pull Data</button>
               </div>
+              
+              <div className="flex flex-col gap-2 pt-2 border-t border-white/[0.05]">
+                <button onClick={onExport} className="w-full bg-[#1a1a22] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Download size={13} /> Export JSON Backup</button>
+                <button onClick={onImportClick} className="w-full bg-[#1a1a22] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Upload size={13} /> Import JSON Backup</button>
+              </div>
+
+              <details className="mt-4 bg-[#09090c] border border-white/[0.05] rounded-xl p-3 group">
+                <summary className="text-[10px] text-zinc-400 font-semibold cursor-pointer outline-none flex items-center justify-between uppercase tracking-wider" style={{ listStyle: "none" }}>
+                  <span>System & AI Scanner Debug Logs</span>
+                  <span className="text-zinc-600 text-[9px]">Tap to view</span>
+                </summary>
+                <div className="mt-3 pt-3 border-t border-white/[0.05] space-y-3">
+                  <div>
+                    <div className="text-[10px] text-blue-400 font-bold mb-1 uppercase tracking-wider">Cloud Sync Log</div>
+                    <pre className="text-[10px] text-zinc-400 font-mono overflow-auto whitespace-pre-wrap break-words bg-[#0b0b0d] p-2 rounded-lg border border-white/[0.05]">{debugLog || 'No sync activity yet.'}</pre>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-purple-400 font-bold mb-1 uppercase tracking-wider">AI Scanner Log</div>
+                    <pre className="text-[10px] text-zinc-500 font-mono overflow-auto max-h-32 whitespace-pre-wrap break-words bg-[#0b0b0d] p-2 rounded-lg border border-white/[0.05]">
+                      {(() => {
+                        if (typeof window === 'undefined') return '';
+                        try {
+                          const log = window.localStorage.getItem('scanner_debug_log');
+                          return log ? JSON.stringify(JSON.parse(log), null, 2) : 'No recent scans.';
+                        } catch (e) {
+                          return window.localStorage.getItem('scanner_debug_log') || 'No recent scans.';
+                        }
+                      })()}
+                    </pre>
+                  </div>
+                </div>
+              </details>
               <button onClick={handleMigrateWallets} className="w-full mt-2 bg-amber-900/30 hover:bg-amber-800/40 text-amber-400 border border-amber-800/50 font-semibold py-2.5 rounded-xl text-xs transition">
                 ⚡ Force Legacy Bill Migration
               </button>

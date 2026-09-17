@@ -729,6 +729,8 @@ const copySummaryToClipboard = async () => {
         />
 
         <SettingsModal
+          onExport={exportBackup}
+          onImportClick={() => importInputRef.current?.click()}
           isOpen={showSettingsModal}
           initialTab={settingsInitialTab}
           onClose={() => setShowSettingsModal(false)}
@@ -982,37 +984,8 @@ const copySummaryToClipboard = async () => {
 
               <div className="flex flex-col gap-3 max-w-xs mx-auto w-full">
                 <button onClick={() => setShowSettingsModal(true)} className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl transition shadow-lg shadow-blue-900/20">Open Settings & Sync</button>
-                <button onClick={exportBackup} className="w-full bg-[#1a1a22] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Download size={14} /> Export JSON Backup</button>
-                <button onClick={() => importInputRef.current?.click()} className="w-full bg-[#1a1a22] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Upload size={14} /> Import JSON Backup</button>
               </div>
-                            
-                <details className="mt-4 bg-[#14141a] border border-zinc-800 rounded-xl p-3 group">
-                  <summary className="text-xs text-zinc-400 font-semibold cursor-pointer outline-none flex items-center justify-between" style={{ listStyle: "none" }}>
-                    <span>System & Network Debug Logs</span>
-                    <span className="text-zinc-600 text-[10px]">Tap to view</span>
-                  </summary>
-                  <div className="mt-3 pt-3 border-t border-zinc-800/80 space-y-3">
-                    <div>
-                      <div className="text-[10px] text-blue-400 font-bold mb-1 uppercase tracking-wider">Cloud Sync Log</div>
-                      <pre className="text-[10px] text-zinc-400 font-mono overflow-auto whitespace-pre-wrap break-words bg-[#0b0b0d] p-2 rounded-lg border border-white/[0.05]">{debugLog || 'No sync activity yet.'}</pre>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-purple-400 font-bold mb-1 uppercase tracking-wider">AI Scanner Log</div>
-                      <pre className="text-[10px] text-zinc-500 font-mono overflow-auto max-h-32 whitespace-pre-wrap break-words bg-[#0b0b0d] p-2 rounded-lg border border-white/[0.05]">
-                        {(() => {
-                          if (typeof window === 'undefined') return '';
-                          try {
-                            const log = window.localStorage.getItem('scanner_debug_log');
-                            return log ? JSON.stringify(JSON.parse(log), null, 2) : 'No recent scans.';
-                          } catch (e) {
-                            return window.localStorage.getItem('scanner_debug_log') || 'No recent scans.';
-                          }
-                        })()}
-                      </pre>
-                    </div>
-                  </div>
-                </details>
-                <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} className="hidden" />
+              <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} className="hidden" />
             </div>
 
             <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl rounded-3xl p-5 sm:p-8 animate-in fade-in duration-300">
