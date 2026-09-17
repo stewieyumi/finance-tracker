@@ -513,6 +513,13 @@ export function useCloudSync(
       "visibilitychange",
       handleVisibilityChange
     );
+    // Silent background poll every 20s to detect cross-device mutations automatically
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === "visible" && navigator.onLine) {
+        void pullLatestData(true);
+      }
+    }, 20000);
+
 
     return () => {
       window.removeEventListener("online", handleOnline);
@@ -522,6 +529,7 @@ export function useCloudSync(
         "visibilitychange",
         handleVisibilityChange
       );
+      clearInterval(pollInterval);
     };
   }, []);
 

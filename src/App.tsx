@@ -137,6 +137,11 @@ const {
 
   const [googleUser, setGoogleUser] = useState<any>(() => {
     const saved = localStorage.getItem("ft_google_user");
+    const passcode = localStorage.getItem("ft_sync_passcode");
+    if (saved && !passcode) {
+      localStorage.removeItem("ft_google_user");
+      return null;
+    }
     return saved ? JSON.parse(saved) : null;
   });
 
@@ -641,6 +646,16 @@ const copySummaryToClipboard = async () => {
                 </button>
               </div>
 
+                            {/* MOBILE ONE-TAP REFRESH */}
+              <button 
+                onClick={() => pullLatestData(false)} 
+                aria-label="Refresh Data"
+                className="md:hidden h-8 w-8 rounded-full border border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-emerald-400 transition shadow-sm"
+                title="Refresh Data"
+              >
+                <RefreshCw size={13} className={isSyncing ? "animate-spin text-emerald-400" : ""} />
+              </button>
+
               {/* PRIVACY TOGGLE */}
               <button 
                 onClick={() => setIsPrivacyMode(prev => !prev)} 
@@ -772,21 +787,24 @@ const copySummaryToClipboard = async () => {
                     <div className="py-4 text-center text-zinc-500 text-xs italic">No transactions yet.</div>
                   ) : (
                     recentTransactions.map((tx: TransactionHistoryItem) => (
-                      <div key={tx.id} className="flex items-center justify-between p-3 rounded-xl bg-[#14141a] border border-white/[0.04]">
-                        <div className="flex items-center gap-3 overflow-hidden">
+                      <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#14141a] border border-white/[0.04]">
+                        <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
                           <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-950/50 border-emerald-500/20 text-emerald-400' : tx.type === 'bill' ? 'bg-blue-950/50 border-blue-500/20 text-blue-400' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}>
                             {tx.type === 'inflow' ? <ArrowDownLeft size={14}/> : tx.type === 'bill' ? <Calendar size={14}/> : <Receipt size={14}/>}
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="privacy-blur text-xs font-semibold text-zinc-200 truncate">{tx.title}</div>
                             <div className="flex items-center gap-1.5 text-[9px] text-zinc-500 mt-0.5">
-                              <span className="privacy-blur uppercase text-blue-400/80 font-semibold">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
-                              <span>•</span><span className="whitespace-nowrap shrink-0">{formatDateTime(tx.date)}</span>
+                              <span className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-zinc-300 font-medium truncate max-w-[90px]">{tx.category || tx.type}</span>
+                              <span className="privacy-blur uppercase text-blue-400/80 font-semibold truncate max-w-[80px]">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
                             </div>
                           </div>
                         </div>
-                        <div className={`privacy-blur text-xs font-bold font-mono shrink-0 ml-2 ${tx.amount > 0 ? "text-emerald-400" : "text-zinc-100"}`}>
-                          {tx.amount > 0 ? "+" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        <div className="flex flex-col items-end shrink-0">
+                          <span className={`privacy-blur text-xs font-bold font-mono ${tx.amount > 0 ? "text-emerald-400" : "text-zinc-100"}`}>
+                            {tx.amount > 0 ? "+" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          </span>
+                          <span className="text-[10px] text-zinc-500 mt-0.5 whitespace-nowrap">{formatDateTime(tx.date)}</span>
                         </div>
                       </div>
                     ))
@@ -898,7 +916,7 @@ const copySummaryToClipboard = async () => {
         {activeTab === "wallets" && (
           <WalletsTab
             globalData={globalData}
-            setGlobalData={setGlobalData}
+            setGlobalData={syncedSetGlobalData}
             onCommit={commitWallet}
             onIncrement={incrementWallet}
             onOpenSettings={() => { setSettingsInitialTab("wallets"); setShowSettingsModal(true); }}
@@ -908,7 +926,7 @@ const copySummaryToClipboard = async () => {
         {activeTab === "expenses" && (
           <ExpensesTab
             globalData={globalData}
-            setGlobalData={setGlobalData}
+            setGlobalData={syncedSetGlobalData}
             showToast={showToast}
           />
         )}
