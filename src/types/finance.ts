@@ -112,6 +112,7 @@ export interface AppSettings {
   livingWallet?: string;
   savingsWallet?: string;
   transitWallet?: string;
+  defaultWallet?: string;
   walletLabels?: Record<string, string>;
   customWallets?: CustomWallet[];
 }

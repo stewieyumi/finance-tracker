@@ -31,11 +31,20 @@ describe("getWalletForBill", () => {
     expect(getWalletForBill("Shared Japan Trip 2")).toBe("bpi");
   });
 
-  it("falls back to Maya for everything else, in full (not halved)", () => {
+  it("falls back to Maya by default for unrecognized bills", () => {
     expect(getWalletForBill("Water Bill")).toBe("maya");
     expect(getWalletForBill("Electricity Bill")).toBe("maya");
     expect(getWalletForBill("Macbook Loan")).toBe("maya");
     expect(getWalletForBill("Gym Membership")).toBe("maya");
+  });
+
+  it("honors a configured fallback wallet instead of hardcoded Maya", () => {
+    expect(getWalletForBill("Random New Bill", undefined, "gotyme")).toBe("gotyme");
+    expect(getWalletForBill("Netflix", undefined, "bpi")).toBe("bpi");
+  });
+
+  it("an explicit bill.wallet always wins over both name-matching and the fallback", () => {
+    expect(getWalletForBill("SPayLater", "cash", "gotyme")).toBe("cash");
   });
 
   it("is case-insensitive", () => {

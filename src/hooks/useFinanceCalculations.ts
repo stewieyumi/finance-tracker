@@ -227,7 +227,7 @@ const fundProgressPercent = useMemo(() => {
       paydaysRemaining
     );
 
-    const wallet = getWalletForBill(b.name, b.wallet);
+    const wallet = getWalletForBill(b.name, b.wallet, globalData?.settings?.defaultWallet || "maya");
 
     if (walletSplitTotals[wallet] === undefined) {
       walletSplitTotals[wallet] = 0;

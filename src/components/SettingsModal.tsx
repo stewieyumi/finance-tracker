@@ -34,6 +34,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     baseLivingAllowance: 2500, livingWallet: "gcash",
     baseSavingsTarget: 1000, savingsWallet: "bpi",
     defaultTransitAllocation: 1500, transitWallet: "gotyme",
+    defaultWallet: "maya",
     inflowsLabel: "RECEIVABLES & INFLOWS", gigsLabel: "UPCOMING SHOOTS & GIGS",
     inflowCategories: PRESETS.videographer.inflowCats, gigCategories: PRESETS.videographer.gigCats,
     walletLabels: { maribank: "MariBank", gcash: "GCash", maya: "Maya", gotyme: "GoTyme", bpi: "BPI", cash: "Cash On-Hand" } as Record<string, string>
@@ -53,6 +54,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
         savingsWallet: globalData.settings.savingsWallet || "bpi",
         defaultTransitAllocation: globalData.settings.defaultTransitAllocation ?? 1500,
         transitWallet: globalData.settings.transitWallet || "gotyme",
+        defaultWallet: globalData.settings.defaultWallet || "maya",
         inflowsLabel: globalData.settings.inflowsLabel || "RECEIVABLES & INFLOWS",
         gigsLabel: globalData.settings.gigsLabel || "UPCOMING SHOOTS & GIGS",
         inflowCategories: globalData.settings.inflowCategories?.length ? globalData.settings.inflowCategories : PRESETS.videographer.inflowCats,
@@ -82,6 +84,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
         baseLivingAllowance: Number(form.baseLivingAllowance), livingWallet: form.livingWallet,
         baseSavingsTarget: Number(form.baseSavingsTarget), savingsWallet: form.savingsWallet,
         defaultTransitAllocation: Number(form.defaultTransitAllocation), transitWallet: form.transitWallet,
+        defaultWallet: form.defaultWallet,
         inflowsLabel: form.inflowsLabel, gigsLabel: form.gigsLabel, inflowCategories: form.inflowCategories, gigCategories: form.gigCategories, walletLabels: form.walletLabels
       },
       updatedAt: Date.now()
@@ -205,6 +208,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                   <div>
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Routes To</label>
                     <select value={form.transitWallet} onChange={e => setForm({...form, transitWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 cursor-pointer">
+                      <WalletSelectOptions />
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4">
+                  <div>
+                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Default Wallet for New Bills</label>
+                    <div className="text-[10px] text-zinc-500 mb-2">Pre-selected when you add a bill. Existing bills are unaffected.</div>
+                    <select value={form.defaultWallet} onChange={e => setForm({...form, defaultWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 cursor-pointer">
                       <WalletSelectOptions />
                     </select>
                   </div>

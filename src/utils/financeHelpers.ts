@@ -7,7 +7,16 @@ export function getEffectiveBillAmount(
 
 export type Wallet = "maya" | "gcash" | "maribank" | "gotyme" | "bpi" | "cash" | string;
 
-export function getWalletForBill(name: string, walletProp?: string): Wallet {
+// This name-matching fallback exists ONLY to handle bills created before
+// the `wallet` field existed on Bill. Every new bill created through the
+// Add Bill form now always has an explicit `wallet` set (seeded from
+// settings.defaultWallet), so this heuristic should not gain new rules
+// going forward — it is legacy-data compatibility, not a routing engine.
+export function getWalletForBill(
+  name: string,
+  walletProp?: string,
+  fallbackWallet: string = "maya"
+): Wallet {
   if (walletProp) return walletProp as Wallet;
 
   const n = (name || "").toLowerCase();
@@ -24,12 +33,11 @@ export function getWalletForBill(name: string, walletProp?: string): Wallet {
     return "maribank";
   }
 
-  // Japan travel fund now lives in BPI (was GoTyme). See BPI migration.
   if (n.includes("shared") || n.includes("japan trip")) {
     return "bpi";
   }
 
-  return "maya";
+  return fallbackWallet;
 }
 
 /**

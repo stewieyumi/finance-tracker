@@ -21,20 +21,22 @@ interface BillsTableProps {
   setEditForm: React.Dispatch<React.SetStateAction<EditFormData>>;
   walletLabels?: Record<string, string>;
   customWallets?: CustomWallet[];
+  defaultWallet?: string;
 }
 
 export const BillsTable: React.FC<BillsTableProps> = React.memo(({
   activeBills, selectedMonth, onToggleStatus, onAddBill, onDeleteBill, onSaveEdit, onResetMonthOverride,
-  editingId, setEditingId, editForm, setEditForm, walletLabels, customWallets
+  editingId, setEditingId, editForm, setEditForm, walletLabels, customWallets, defaultWallet = "maya"
 }) => {
   const [isAdding, setIsAdding] = useState(false);
-  const [newBill, setNewBill] = useState({ name: "", amount: "", dueDay: "1", type: "Bill" as BillType, startMonth: selectedMonth, endMonth: selectedMonth, wallet: "maya" });
+  const [newBill, setNewBill] = useState({ name: "", amount: "", dueDay: "1", type: "Bill" as BillType, startMonth: selectedMonth, endMonth: selectedMonth, wallet: defaultWallet });
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [editScope, setEditScope] = useState<"monthOnly" | "default">("monthOnly");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setNewBill(p => ({ ...p, startMonth: selectedMonth, endMonth: selectedMonth })); }, [selectedMonth]);
+  useEffect(() => { setNewBill(p => ({ ...p, wallet: defaultWallet })); }, [defaultWallet]);
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setShowFilterDropdown(false); };
     document.addEventListener("mousedown", handleClickOutside);
@@ -53,7 +55,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
     if (!name || !Number.isFinite(amount) || amount <= 0) return;
 
     onAddBill({ name, amount, dueDay: newBill.dueDay, type: newBill.type, startMonth: newBill.startMonth, endMonth: newBill.endMonth, wallet: newBill.wallet });
-    setNewBill({ name: "", amount: "", dueDay: "1", type: "Bill", startMonth: selectedMonth, endMonth: selectedMonth, wallet: "maya" });
+    setNewBill({ name: "", amount: "", dueDay: "1", type: "Bill", startMonth: selectedMonth, endMonth: selectedMonth, wallet: defaultWallet });
     setIsAdding(false);
   };
 
