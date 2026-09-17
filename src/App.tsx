@@ -299,11 +299,7 @@ const {
   toggleReceivableStatus,
   addPayment,
   deleteReceivable
-} = useReceivableActions({
-  setGlobalData: syncedSetGlobalData,
-  selectedMonth,
-  showToast
-});
+} = useReceivableActions({ globalData, setGlobalData: syncedSetGlobalData, selectedMonth, showToast });
 
 const {
   addShoot: handleAddShoot,

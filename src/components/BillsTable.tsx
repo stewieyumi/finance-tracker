@@ -27,7 +27,7 @@ interface BillsTableProps {
 
 export const BillsTable: React.FC<BillsTableProps> = React.memo(({
   activeBills, selectedMonth, onToggleStatus, onAddBill, onDeleteBill, onSaveEdit, onResetMonthOverride,
-  editingId, setEditingId, editForm, setEditForm, walletLabels, customWallets, defaultWallet = "maya"
+  editingId, setEditingId, editForm, setEditForm, walletLabels, customWallets, defaultWallet = "main"
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newBill, setNewBill] = useState({ name: "", amount: "", dueDay: "1", type: "Bill" as BillType, startMonth: selectedMonth, endMonth: selectedMonth, wallet: defaultWallet });
@@ -228,8 +228,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Wallet Route</label>
-                  <select value={editForm.wallet || "maya"} onChange={(e) => setEditForm({ ...editForm, wallet: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-blue-500 disabled:opacity-50">
-                    <option value="maribank">{walletLabels?.maribank || "MariBank"}</option><option value="gotyme">{walletLabels?.gotyme || "GoTyme"}</option><option value="bpi">{walletLabels?.bpi || "BPI"}</option>
+                  <select value={editForm.wallet || defaultWallet} onChange={(e) => setEditForm({ ...editForm, wallet: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-blue-500 disabled:opacity-50">
                     {customWallets?.map(cw => <option key={cw.id} value={cw.id}>{cw.label}</option>)}
                   </select>
                 </div>
@@ -297,7 +296,6 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Wallet Route</label>
                   <select value={newBill.wallet} onChange={(e) => setNewBill({ ...newBill, wallet: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-blue-500">
-                    <option value="maribank">{walletLabels?.maribank || "MariBank"}</option><option value="gotyme">{walletLabels?.gotyme || "GoTyme"}</option><option value="bpi">{walletLabels?.bpi || "BPI"}</option>
                     {customWallets?.map(cw => <option key={cw.id} value={cw.id}>{cw.label}</option>)}
                   </select>
                 </div>

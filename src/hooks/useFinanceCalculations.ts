@@ -201,7 +201,10 @@ const fundProgressPercent = useMemo(() => {
   const transitWallet = globalData?.settings?.transitWallet || "gotyme";
   
   const today = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-  const walletSplitTotals: Record<string, number> = { maya: 0, gcash: 0, maribank: 0, gotyme: 0, bpi: 0, cash: 0 };
+  const walletSplitTotals: Record<string, number> = {};
+  (globalData?.settings?.customWallets || []).forEach(w => {
+    walletSplitTotals[w.id] = 0;
+  });
 
   const billPaydayAllocations: { id: string; month: string; wallet: string; amount: number }[] = [];
 
@@ -290,7 +293,7 @@ const fundProgressPercent = useMemo(() => {
           const day = String(b.dueDay || "1").padStart(2, '0');
           const override = log.billOverrides?.[b.id];
           const amt = override !== undefined ? override : b.amount;
-          txs.push({ id: `${b.id}_${monthKey}`, title: `${b.name} (${monthKey.split(" ")[0]})`, amount: -amt, date: log.paymentDates?.[b.id] || `${year}-${month}-${day}`, type: "bill", wallet: b.wallet || "maya", category: b.type });
+          txs.push({ id: `${b.id}_${monthKey}`, title: `${b.name} (${monthKey.split(" ")[0]})`, amount: -amt, date: log.paymentDates?.[b.id] || `${year}-${month}-${day}`, type: "bill", wallet: b.wallet || globalData?.settings?.defaultWallet || "main", category: b.type });
         }
       });
     });
@@ -308,7 +311,7 @@ const fundProgressPercent = useMemo(() => {
             const day = r.frequency === "Monthly" ? String(r.monthlyDay || 15).padStart(2, '0') : "15";
             txDate = `${year}-${month}-${day}`;
           }
-          txs.push({ id: `${r.id}_${monthKey}`, title: `${r.name}`, amount: recLog.amountReceived, date: log.paymentDates?.[r.id] || txDate, type: "inflow", wallet: r.wallet || "maya", category: r.category });
+          txs.push({ id: `${r.id}_${monthKey}`, title: `${r.name}`, amount: recLog.amountReceived, date: log.paymentDates?.[r.id] || txDate, type: "inflow", wallet: r.wallet || globalData?.settings?.defaultWallet || "main", category: r.category });
         }
       });
     });

@@ -40,7 +40,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
   const allWallets = useMemo(() => customWallets || [], [customWallets]);
 
   const [isAdding, setIsAdding] = useState(false);
-  const [newReceivable, setNewReceivable] = useState({ name: "", amount: "", category: "Shoot" as ReceivableCategory, frequency: "By Date" as ReceivableFrequency, biMonthlyDays: [15, 30], monthlyDay: 15, date: "", wallet: "maya" });
+  const [newReceivable, setNewReceivable] = useState({ name: "", amount: "", category: "Shoot" as ReceivableCategory, frequency: "By Date" as ReceivableFrequency, biMonthlyDays: [15, 30], monthlyDay: 15, date: "", wallet: customWallets?.[0]?.id || "main" });
   const [selectedFilter, setSelectedFilter] = useState<"All" | ReceivableCategory>("All");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [payPopoverId, setPayPopoverId] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
       biMonthlyDays: newReceivable.frequency === "Bi-monthly" ? newReceivable.biMonthlyDays : undefined, monthlyDay: newReceivable.frequency === "Monthly" ? newReceivable.monthlyDay : undefined,
       date: newReceivable.frequency === "By Date" ? newReceivable.date : undefined, wallet: newReceivable.wallet
     });
-    setNewReceivable({ name: "", amount: "", category: "Shoot", frequency: "By Date", biMonthlyDays: [15, 30], monthlyDay: 15, date: "", wallet: "maya" });
+    setNewReceivable({ name: "", amount: "", category: "Shoot", frequency: "By Date", biMonthlyDays: [15, 30], monthlyDay: 15, date: "", wallet: customWallets?.[0]?.id || "main" });
     setIsAdding(false);
   };
 
@@ -260,7 +260,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Destination Wallet</label>
-                  <select value={editForm.wallet || "maya"} onChange={(e) => setEditForm({ ...editForm, wallet: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-emerald-500">
+                  <select value={editForm.wallet || customWallets?.[0]?.id || "main"} onChange={(e) => setEditForm({ ...editForm, wallet: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-emerald-500">
                     {allWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                   </select>
                 </div>

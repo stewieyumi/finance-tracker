@@ -3,12 +3,13 @@ import { generateId } from "../utils/idHelpers";
 import { roundMoney } from "../utils/currency";
 
 interface UseReceivableActionsParams {
+  globalData: UnifiedFinanceData;
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
   selectedMonth: string;
   showToast: (message: string) => void;
 }
 
-export function useReceivableActions({ setGlobalData, selectedMonth, showToast }: UseReceivableActionsParams) {
+export function useReceivableActions({ globalData, setGlobalData, selectedMonth, showToast }: UseReceivableActionsParams) {
   
   const addReceivable = (receivable: { name: string; amount: number; category: ReceivableCategory; frequency: ReceivableFrequency; biMonthlyDays?: number[]; monthlyDay?: number; date?: string; wallet?: string; }) => {
     setGlobalData(prev => {
@@ -33,7 +34,7 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
     const targetMonth = receivable.targetMonthForDue || selectedMonth;
     const receivableAmount = Math.max(0, parseFloat(String(receivable.amount)) || 0);
     
-    const targetWallet = receivable.wallet || "maya";
+    const targetWallet = receivable.wallet || globalData.settings?.defaultWallet || "main";
 
     setGlobalData(prev => {
       const monthLog = prev.logs?.[targetMonth] || { billsPaid: [], recsCollected: {} };
@@ -98,7 +99,7 @@ export function useReceivableActions({ setGlobalData, selectedMonth, showToast }
     const targetMonth = receivable.targetMonthForDue || selectedMonth;
     const receivableAmount = Math.max(0, parseFloat(String(receivable.amount)) || 0);
     
-    const targetWallet = receivable.wallet || "maya";
+    const targetWallet = receivable.wallet || globalData.settings?.defaultWallet || "main";
 
     setGlobalData(prev => {
       const monthLog = prev.logs?.[targetMonth] || { billsPaid: [], recsCollected: {} };
