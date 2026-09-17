@@ -5,9 +5,10 @@ import { jwtDecode } from "jwt-decode";
 import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { getMonthKey, getAdjacentMonth } from "./utils/dateHelpers";
-import { UnifiedFinanceData, WalletState, EditFormData, TransactionHistoryItem } from "./types/finance";
+import { UnifiedFinanceData, WalletState, EditFormData, TransactionHistoryItem, PaydayExecution } from "./types/finance";
 import { buildFinancialSummary } from "./utils/summaryHelpers";
 import { getWalletForBill } from "./utils/financeHelpers";
+import { generateId } from "./utils/idHelpers";
 
 import { useCloudSync, getLocalPasscode } from "./hooks/useCloudSync";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -376,6 +377,10 @@ const { saveShootEdit } = useShootSaveActions({
     showAnalyticsModal;
 
   const isEditing = editingId !== null;
+  const nowForEx = new Date();
+  const currentExecutionKey = `${nowForEx.getFullYear()}-${String(nowForEx.getMonth() + 1).padStart(2, "0")}-${String(nowForEx.getDate()).padStart(2, "0")}`;
+  const hasExecutedToday = globalData.paydaySplitExecutions?.some(ex => typeof ex === "string" ? ex === currentExecutionKey : ex.date === currentExecutionKey);
+  const latestExecution = globalData.paydaySplitExecutions?.slice().reverse().find(ex => typeof ex !== "string") as PaydayExecution | undefined;
 
     const { pullProgress } = usePullToRefresh(
     () => {
@@ -440,7 +445,8 @@ const { saveShootEdit } = useShootSaveActions({
     const executionKey =
       `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
-    if (globalData.paydaySplitExecutions?.includes(executionKey)) {
+    const hasExecutedToday = globalData.paydaySplitExecutions?.some(ex => typeof ex === "string" ? ex === executionKey : ex.date === executionKey);
+    if (hasExecutedToday) {
       showToast("⚠️ Payday split already executed today.");
       return;
     }
@@ -493,7 +499,13 @@ ${allocList}`
             return newWallets;
           })(),
           logs: updatedLogs,
-          paydaySplitExecutions: [...executions, executionKey],
+          paydaySplitExecutions: [...executions, {
+            id: generateId("pd"),
+            date: executionKey,
+            timestamp: Date.now(),
+            allocations: paydayAllocations,
+            billContributions: billPaydayAllocations
+          }],
           updatedAt: Date.now()
         };
       });
@@ -502,6 +514,49 @@ ${allocList}`
     } finally {
       paydaySplitInProgressRef.current = false;
     }
+  };
+
+  const handleUndoPaydaySplit = (executionId: string) => {
+    if (!confirm("Reverse this payday distribution? Funds will be subtracted from wallets and bill contributions reset.")) return;
+
+    syncedSetGlobalData(prev => {
+      const executions = prev.paydaySplitExecutions || [];
+      const target = executions.find(ex => typeof ex !== "string" && ex.id === executionId) as PaydayExecution | undefined;
+
+      if (!target) {
+        showToast("Cannot undo a legacy execution.");
+        return prev;
+      }
+
+      const updatedLogs = { ...prev.logs };
+      target.billContributions.forEach(alloc => {
+         const monthLog = updatedLogs[alloc.month] || {};
+         const existingContributions = monthLog.billPaydayContributions || {};
+         updatedLogs[alloc.month] = {
+           ...monthLog,
+           billPaydayContributions: {
+             ...existingContributions,
+             [alloc.id]: Math.max(0, (existingContributions[alloc.id] || 0) - alloc.amount)
+           }
+         };
+      });
+
+      const nextWallets = { ...prev.wallets };
+      Object.entries(target.allocations).forEach(([walletKey, amount]) => {
+        if (nextWallets[walletKey] !== undefined) {
+           nextWallets[walletKey] = roundMoney(Math.max(0, nextWallets[walletKey] - amount));
+        }
+      });
+
+      return {
+        ...prev,
+        wallets: nextWallets,
+        logs: updatedLogs,
+        paydaySplitExecutions: executions.filter(ex => typeof ex === "string" || ex.id !== executionId),
+        updatedAt: Date.now()
+      };
+    });
+    showToast("Payday distribution reversed.");
   };
 
 const copySummaryToClipboard = async () => {
@@ -686,7 +741,9 @@ const copySummaryToClipboard = async () => {
           <div className="space-y-5 sm:space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
             <ErrorBoundary><MilestoneProgressBar currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0} targetFund={targetMilestoneFund} goalName={globalData?.settings?.goalName} /></ErrorBoundary>
             <ErrorBoundary><MetricsSummaryGrid totalLiquid={totalLiquid} fundProgressPercent={fundProgressPercent} totalPendingReceivables={totalPendingReceivables} monthIncomeCollected={monthIncomeCollected} selectedMonth={selectedMonth} /></ErrorBoundary>
-            <ErrorBoundary><ExecutionFlowCard priorityUnpaidSum={priorityUnpaidSum} totalUnpaidCommitments={totalUnpaidCommitments} overdueBills={overdueBills} overdueSum={overdueSum} paydayAllocations={paydayAllocations} onConfigureBaselines={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }} remainingBuffer={remainingBuffer} walletLabels={globalData?.settings?.walletLabels} customWallets={globalData?.settings?.customWallets} onExecutePaydaySplit={handleExecutePaydaySplit} disabled={!isViewingCurrentMonth} /></ErrorBoundary>
+            <ErrorBoundary><ExecutionFlowCard priorityUnpaidSum={priorityUnpaidSum} totalUnpaidCommitments={totalUnpaidCommitments} overdueBills={overdueBills} overdueSum={overdueSum} paydayAllocations={paydayAllocations} onConfigureBaselines={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }} remainingBuffer={remainingBuffer} walletLabels={globalData?.settings?.walletLabels} customWallets={globalData?.settings?.customWallets} onExecutePaydaySplit={handleExecutePaydaySplit} disabled={!isViewingCurrentMonth || hasExecutedToday}
+              latestExecution={latestExecution}
+              onUndoSplit={handleUndoPaydaySplit} /></ErrorBoundary>
             
             <ErrorBoundary>
               <div className="bg-[#101014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl">

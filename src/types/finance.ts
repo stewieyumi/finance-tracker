@@ -117,11 +117,19 @@ export interface AppSettings {
   customWallets?: CustomWallet[];
 }
 
+export interface PaydayExecution {
+  id: string;
+  date: string;
+  timestamp: number;
+  allocations: Record<string, number>;
+  billContributions: { month: string; id: string; amount: number }[];
+}
+
 export interface UnifiedFinanceData {
   settings?: AppSettings;
   targetFund?: number;
   updatedAt?: number;
-  paydaySplitExecutions?: string[];
+  paydaySplitExecutions?: (string | PaydayExecution)[];
   wallets: WalletState;
   library: {
     bills: Bill[];

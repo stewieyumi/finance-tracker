@@ -1,6 +1,6 @@
 import React from "react";
-import { Zap, Banknote, AlertCircle, ArrowRight, Settings } from "lucide-react";
-import { Bill } from "../types/finance";
+import { Zap, Banknote, AlertCircle, ArrowRight, Settings, CheckCircle2 } from "lucide-react";
+import { Bill, PaydayExecution } from "../types/finance";
 
 interface ExecutionFlowCardProps {
   priorityUnpaidSum: number;
@@ -14,6 +14,8 @@ interface ExecutionFlowCardProps {
   customWallets?: import("../types/finance").CustomWallet[];
   onExecutePaydaySplit: () => void;
   disabled?: boolean;
+  latestExecution?: PaydayExecution;
+  onUndoSplit?: (id: string) => void;
 }
 
 export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
@@ -27,7 +29,9 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
   walletLabels,
   customWallets,
   onExecutePaydaySplit,
-  disabled = false
+  disabled = false,
+  latestExecution,
+  onUndoSplit
 }) => {
   const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2 });
 
@@ -103,13 +107,24 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
           </div>
         </div>
 
+                {latestExecution && onUndoSplit && (
+          <div className="mt-3 flex items-center justify-between bg-zinc-900/40 border border-zinc-800/80 p-2.5 rounded-xl">
+             <div className="flex items-center gap-2">
+                <CheckCircle2 size={13} className="text-emerald-400" />
+                <span className="text-[11px] text-zinc-300">Distributed {latestExecution.date}</span>
+             </div>
+             <button onClick={() => onUndoSplit(latestExecution.id)} className="text-[10px] px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-lg transition font-medium">
+               Undo
+             </button>
+          </div>
+        )}
         <button
           type="button"
           onClick={onExecutePaydaySplit}
           disabled={disabled}
-          className="mt-3 w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 text-white font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/20 no-privacy-blur"
+          className="mt-3 w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white font-semibold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/20 no-privacy-blur"
         >
-          <span>{disabled ? "Switch to current month to distribute" : "Auto-Distribute to Wallets"}</span>
+          <span>{disabled ? "Distribution locked / completed" : "Auto-Distribute to Wallets"}</span>
           <ArrowRight size={13} />
         </button>
       </div>
