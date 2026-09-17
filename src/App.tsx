@@ -94,7 +94,7 @@ const formatDateTime = (dateStr: string) => {
   try {
     const d = dateStr.includes("T") ? new Date(dateStr) : new Date(dateStr + "T12:00:00");
     if (isNaN(d.getTime())) return dateStr;
-    return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    return d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric" });
   } catch {
     return dateStr;
   }
@@ -949,21 +949,28 @@ const copySummaryToClipboard = async () => {
                             
                 <details className="mt-4 bg-[#14141a] border border-zinc-800 rounded-xl p-3 group">
                   <summary className="text-xs text-zinc-400 font-semibold cursor-pointer outline-none flex items-center justify-between" style={{ listStyle: "none" }}>
-                    <span>AI Scanner Debug Logs</span>
+                    <span>System & Network Debug Logs</span>
                     <span className="text-zinc-600 text-[10px]">Tap to view</span>
                   </summary>
-                  <div className="mt-3 pt-3 border-t border-zinc-800/80">
-                    <pre className="text-[10px] text-zinc-500 font-mono overflow-auto max-h-48 whitespace-pre-wrap break-words">
-                      {(() => {
-                        if (typeof window === 'undefined') return '';
-                        try {
-                          const log = window.localStorage.getItem('scanner_debug_log');
-                          return log ? JSON.stringify(JSON.parse(log), null, 2) : 'No recent scans.';
-                        } catch (e) {
-                          return window.localStorage.getItem('scanner_debug_log') || 'No recent scans.';
-                        }
-                      })()}
-                    </pre>
+                  <div className="mt-3 pt-3 border-t border-zinc-800/80 space-y-3">
+                    <div>
+                      <div className="text-[10px] text-blue-400 font-bold mb-1 uppercase tracking-wider">Cloud Sync Log</div>
+                      <pre className="text-[10px] text-zinc-400 font-mono overflow-auto whitespace-pre-wrap break-words bg-[#0b0b0d] p-2 rounded-lg border border-white/[0.05]">{debugLog || 'No sync activity yet.'}</pre>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-purple-400 font-bold mb-1 uppercase tracking-wider">AI Scanner Log</div>
+                      <pre className="text-[10px] text-zinc-500 font-mono overflow-auto max-h-32 whitespace-pre-wrap break-words bg-[#0b0b0d] p-2 rounded-lg border border-white/[0.05]">
+                        {(() => {
+                          if (typeof window === 'undefined') return '';
+                          try {
+                            const log = window.localStorage.getItem('scanner_debug_log');
+                            return log ? JSON.stringify(JSON.parse(log), null, 2) : 'No recent scans.';
+                          } catch (e) {
+                            return window.localStorage.getItem('scanner_debug_log') || 'No recent scans.';
+                          }
+                        })()}
+                      </pre>
+                    </div>
                   </div>
                 </details>
                 <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} className="hidden" />
