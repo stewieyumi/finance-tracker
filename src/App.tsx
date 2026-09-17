@@ -170,6 +170,8 @@ const {
         "ft_sync_passcode",
         credential
       );
+      // Save profile for Meta-style Welcome Back screen
+      localStorage.setItem("ft_last_profile", JSON.stringify({ name: decoded.name, email: decoded.email, picture: decoded.picture }));
 
       showToast(`Welcome, ${decoded.name || "User"}!`);
     } catch {
@@ -958,6 +960,12 @@ const copySummaryToClipboard = async () => {
                     <div className="text-sm font-bold text-white">{googleUser.name}</div>
                     <div className="text-[10px] text-zinc-400 mb-2">{googleUser.email}</div>
                     <button onClick={handleGoogleLogout} className="w-full bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/30 font-semibold py-2.5 rounded-xl text-xs transition">Sign Out</button>
+                  </div>
+                ) : getLocalPasscode() ? (
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <div className="text-sm font-bold text-amber-400">Dev Admin Mode</div>
+                    <div className="text-[10px] text-zinc-400 mb-2">Master passcode is active</div>
+                    <button onClick={() => { localStorage.removeItem("ft_sync_passcode"); window.location.reload(); }} className="w-full bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/20 font-semibold py-2.5 rounded-xl text-xs transition">Exit Dev Mode</button>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2 w-full">
