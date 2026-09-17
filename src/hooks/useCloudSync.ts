@@ -514,12 +514,34 @@ export function useCloudSync(
       "visibilitychange",
       handleVisibilityChange
     );
-    // Silent background poll every 20s to detect cross-device mutations automatically
-    const pollInterval = setInterval(() => {
-      if (document.visibilityState === "visible" && navigator.onLine) {
-        void pullLatestData(true);
+
+    // Fast real-time background version check (every 3 seconds)
+    const pollInterval = setInterval(async () => {
+      // Only poll if the app is visible, online, and the user isn't actively typing
+      if (document.visibilityState === "visible" && navigator.onLine && !isDirtyRef.current) {
+        try {
+          const token = getLocalPasscode();
+          if (!token) return;
+          
+          const res = await fetch(`/api/sync?version_only=true&t=${Date.now()}`, {
+            headers: { "x-sync-passcode": token },
+            cache: "no-store"
+          });
+          
+          if (res.ok) {
+            const data = await res.json();
+            const cloudUpdatedAt = data?.updatedAt || 0;
+            const localUpdatedAt = latestDataRef.current?.updatedAt || 0;
+            
+            // If the cloud has a newer timestamp, trigger a full, silent UI update!
+            if (cloudUpdatedAt > localUpdatedAt) {
+               void pullLatestData(true);
+            }
+          }
+        } catch (e) {}
       }
-    }, 20000);
+    }, 3000);
+    
 
 
     return () => {

@@ -176,7 +176,13 @@ export default async function handler(
 
   try {
     if (req.method === "GET") {
-      const data = await redis.get(USER_REDIS_KEY);
+      const isVersionCheck = req.url?.includes("version_only=true");
+      const data: any = await redis.get(USER_REDIS_KEY);
+      
+      // If the client only wants to know if there's an update, send the tiny timestamp
+      if (isVersionCheck && data?.updatedAt) {
+        return res.status(200).json({ updatedAt: data.updatedAt });
+      }
 
       return res.status(200).json(data || {});
     }
