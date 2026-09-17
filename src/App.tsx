@@ -141,7 +141,7 @@ const {
 
   const [googleUser, setGoogleUser] = useState<any>(() => {
     const saved = localStorage.getItem("ft_google_user");
-    const passcode = localStorage.getItem("ft_sync_passcode");
+    const passcode = localStorage.getItem("ft_google_token");
     if (saved && !passcode) {
       localStorage.removeItem("ft_google_user");
       return null;
@@ -168,7 +168,7 @@ const {
 
       // Store the Google ID token for secure server-side sync
       localStorage.setItem(
-        "ft_sync_passcode",
+        "ft_google_token",
         credential
       );
       // Save profile for Meta-style Welcome Back screen
@@ -184,7 +184,7 @@ const {
     googleLogout();
     setGoogleUser(null);
     localStorage.removeItem("ft_google_user");
-    localStorage.removeItem("ft_sync_passcode");
+    localStorage.removeItem("ft_google_token");
     showToast("Signed out of Google");
   };
 
@@ -212,7 +212,7 @@ const {
   React.useEffect(() => {
     const handleAuthExpired = () => {
       showToast("🔄 Session expired. Refreshing...");
-      localStorage.removeItem("ft_sync_passcode");
+      localStorage.removeItem("ft_google_token");
       
       if ((window as any).google?.accounts?.id) {
         (window as any).google.accounts.id.prompt((notification: any) => {
@@ -230,22 +230,7 @@ const {
     return () => window.removeEventListener("auth-expired", handleAuthExpired);
   }, []);
 
-  // 🛠 SECRET DEV MODE SHORTCUT (Cmd/Ctrl + Shift + M)
-  React.useEffect(() => {
-    const handleDevShortcut = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'm') {
-        e.preventDefault();
-        const code = window.prompt("🛠 DEV ADMIN MODE 🛠\nEnter master sync passcode to override Google Auth:");
-        if (code) {
-          localStorage.setItem("ft_sync_passcode", code);
-          showToast("🔑 Master passcode applied. Reloading workspace...");
-          setTimeout(() => window.location.reload(), 1000);
-        }
-      }
-    };
-    window.addEventListener("keydown", handleDevShortcut);
-    return () => window.removeEventListener("keydown", handleDevShortcut);
-  }, []);
+
 
 
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -837,12 +822,6 @@ const copySummaryToClipboard = async () => {
                     <div className="text-sm font-bold text-white">{googleUser.name}</div>
                     <div className="text-[10px] text-zinc-400 mb-2">{googleUser.email}</div>
                     <button onClick={handleGoogleLogout} className="w-full bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/30 font-semibold py-2.5 rounded-xl text-xs transition">Sign Out</button>
-                  </div>
-                ) : getLocalPasscode() ? (
-                  <div className="flex flex-col items-center gap-2 w-full">
-                    <div className="text-sm font-bold text-amber-400">Dev Admin Mode</div>
-                    <div className="text-[10px] text-zinc-400 mb-2">Master passcode is active</div>
-                    <button onClick={() => { localStorage.removeItem("ft_sync_passcode"); window.location.reload(); }} className="w-full bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 border border-rose-500/20 font-semibold py-2.5 rounded-xl text-xs transition">Exit Dev Mode</button>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2 w-full">

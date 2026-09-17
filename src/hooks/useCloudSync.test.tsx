@@ -28,7 +28,7 @@ describe('useCloudSync', () => {
     vi.stubGlobal('BroadcastChannel', MockBroadcastChannel);
 
     localStorageMock.clear();
-    localStorageMock.setItem('ft_sync_passcode', 'eyJhbGci.test.token');
+    localStorageMock.setItem('ft_google_token', 'Bearer eyJhbGci.test.token');
   });
 
   afterEach(() => {
@@ -64,7 +64,7 @@ describe('useCloudSync', () => {
     expect(mockFetch).toHaveBeenCalledWith('/api/sync', expect.objectContaining({
       method: 'PUT',
       headers: expect.objectContaining({
-        'x-sync-passcode': 'eyJhbGci.test.token'
+        'Authorization': 'Bearer eyJhbGci.test.token'
       })
     }));
   });
@@ -94,7 +94,7 @@ describe('useCloudSync', () => {
   });
 
   it('silently ignores pullLatestData if unauthenticated', async () => {
-    localStorageMock.removeItem('ft_sync_passcode');
+    localStorageMock.removeItem('ft_google_token');
 
     const mockSetGlobalData = vi.fn();
     const mockShowToast = vi.fn();

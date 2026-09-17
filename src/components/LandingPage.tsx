@@ -71,7 +71,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoogleSuccess }) => 
               </div>
             </div>
             
-            <p className="text-[10px] text-zinc-600 mt-10 font-medium">Protected by Dev Mode Admin Passcode</p>
+            
           </div>
         )}
       </div>

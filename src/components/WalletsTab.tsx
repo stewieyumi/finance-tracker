@@ -40,11 +40,39 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?\n\nIts balance will be permanently removed from your Total Liquid Cash.`)) return;
+    if (!confirm(`Are you sure you want to delete "${name}"?
+
+Its balance will be permanently removed from your Total Liquid Cash. Any bills or transactions using this account will be automatically reassigned to another available account.`)) return;
     setGlobalData(prev => {
       const nextWallets = { ...prev.wallets };
       delete nextWallets[id];
-      return { ...prev, settings: { ...(prev.settings || {}), customWallets: prev.settings?.customWallets?.filter(w => w.id !== id) || [] }, wallets: nextWallets, updatedAt: Date.now() };
+      
+      const remainingCustom = prev.settings?.customWallets?.filter(w => w.id !== id) || [];
+      const fallbackWallet = remainingCustom.length > 0 ? remainingCustom[0].id : "main";
+      
+      const safeW = (wId?: string) => wId === id ? fallbackWallet : wId;
+      const safeWReq = (wId: string) => wId === id ? fallbackWallet : wId;
+
+      return { 
+        ...prev, 
+        settings: { 
+          ...(prev.settings || {}), 
+          customWallets: remainingCustom,
+          milestoneWallet: safeW(prev.settings?.milestoneWallet),
+          livingWallet: safeW(prev.settings?.livingWallet),
+          savingsWallet: safeW(prev.settings?.savingsWallet),
+          transitWallet: safeW(prev.settings?.transitWallet),
+          defaultWallet: safeW(prev.settings?.defaultWallet)
+        }, 
+        library: {
+          ...prev.library,
+          bills: prev.library?.bills.map(b => ({ ...b, wallet: safeW(b.wallet) })) || [],
+          receivables: prev.library?.receivables.map(r => ({ ...r, wallet: safeW(r.wallet) })) || [],
+          expenses: prev.library?.expenses?.map(e => ({ ...e, wallet: safeWReq(e.wallet) })) || []
+        },
+        wallets: nextWallets, 
+        updatedAt: Date.now() 
+      };
     });
   };
 

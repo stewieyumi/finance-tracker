@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { UnifiedFinanceData } from "../types/finance";
 
-const PASSCODE_STORAGE_KEY = "ft_sync_passcode";
+const PASSCODE_STORAGE_KEY = "ft_google_token";
 const DATA_STORAGE_KEY = "ft_master_data_v1";
 const BROADCAST_CHANNEL_NAME = "ft_sync_channel";
 
@@ -159,7 +159,7 @@ export function useCloudSync(
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "x-sync-passcode": token
+          "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify(payload),
         keepalive: true
@@ -369,7 +369,7 @@ export function useCloudSync(
       const res = await fetch(`/api/sync?t=${Date.now()}`, {
         method: "GET",
         headers: {
-          "x-sync-passcode": token
+          "Authorization": `Bearer ${token}`
         },
         cache: "no-store"
       });
@@ -525,7 +525,7 @@ export function useCloudSync(
           if (!token) return;
           
           const res = await fetch(`/api/sync?version_only=true&t=${Date.now()}`, {
-            headers: { "x-sync-passcode": token },
+            headers: { "Authorization": `Bearer ${token}` },
             cache: "no-store"
           });
           
