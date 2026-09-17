@@ -52,19 +52,10 @@ export function buildFinancialSummary({
     totalPendingAmount -
     totalUnpaidCommitments;
 
-  const wl = globalData?.settings?.walletLabels || {};
-  const walletLines = [
-    `  • ${wl.maribank || "MariBank"}: ₱${fmt(globalData?.wallets?.maribank)}`,
-    `  • ${wl.maya || "Maya"}: ₱${fmt(globalData?.wallets?.maya)}`,
-    `  • ${wl.gcash || "GCash"}: ₱${fmt(globalData?.wallets?.gcash)}`,
-    `  • ${wl.gotyme || "GoTyme"}: ₱${fmt(globalData?.wallets?.gotyme)}`,
-    `  • ${wl.bpi || "BPI"}: ₱${fmt(globalData?.wallets?.bpi)}`,
-    `  • ${wl.cash || "Cash On-Hand"}: ₱${fmt(globalData?.wallets?.cash)}`
-  ];
-  (globalData?.settings?.customWallets || []).forEach(cw => {
-    walletLines.push(`  • ${cw.label}: ₱${fmt(globalData?.wallets?.[cw.id])}`);
+  const walletLines = (globalData?.settings?.customWallets || []).map(cw => {
+    return `  • ${cw.label}: ₱${fmt(globalData?.wallets?.[cw.id] || 0)}`;
   });
-  const finalWalletLines = walletLines.join("\n");
+  const finalWalletLines = walletLines.length ? walletLines.join("\n") : "  • No accounts configured";
 
   const billLines =
     unpaid

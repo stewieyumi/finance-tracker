@@ -5,7 +5,7 @@ import { getWalletForBill } from "../utils/financeHelpers";
 
 interface SettingsModalProps {
   isOpen: boolean;
-  initialTab?: "general" | "baselines" | "wallets" | "sync";
+  initialTab?: "general" | "baselines" | "sync";
   onClose: () => void;
   globalData: UnifiedFinanceData;
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
@@ -110,9 +110,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
 
   const WalletSelectOptions = () => (
     <>
-      <option value="maribank">{form.walletLabels?.maribank || "MariBank"}</option><option value="bpi">{form.walletLabels?.bpi || "BPI"}</option>
-      <option value="maya">{form.walletLabels?.maya || "Maya"}</option><option value="gcash">{form.walletLabels?.gcash || "GCash"}</option>
-      <option value="gotyme">{form.walletLabels?.gotyme || "GoTyme"}</option><option value="cash">{form.walletLabels?.cash || "Cash On-Hand"}</option>
       {globalData.settings?.customWallets?.map(cw => <option key={cw.id} value={cw.id}>{cw.label}</option>)}
     </>
   );
@@ -131,7 +128,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
         <div className="flex gap-4 border-b border-white/[0.06] mb-5 overflow-x-auto whitespace-nowrap hide-scrollbar">
           <button onClick={() => setActiveTab("general")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'general' ? 'text-white border-b-2 border-blue-500' : 'text-zinc-500 hover:text-zinc-300'}`}>General</button>
           <button onClick={() => setActiveTab("baselines")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'baselines' ? 'text-white border-b-2 border-purple-500' : 'text-zinc-500 hover:text-zinc-300'}`}>Flow & Baselines</button>
-          <button onClick={() => setActiveTab("wallets")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'wallets' ? 'text-white border-b-2 border-emerald-500' : 'text-zinc-500 hover:text-zinc-300'}`}>Wallets</button>
+          
           <button onClick={() => setActiveTab("sync")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'sync' ? 'text-white border-b-2 border-amber-500' : 'text-zinc-500 hover:text-zinc-300'}`}>Cloud Sync</button>
         </div>
 
@@ -222,22 +219,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                     </select>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "wallets" && (
-            <div className="space-y-4 animate-in fade-in duration-200">
-              <div className="text-xs text-zinc-400 mb-4">Rename the wallets to match your actual banking setup. These names will update across the entire dashboard.</div>
-              <div className="grid grid-cols-2 gap-3">
-                {['maribank', 'maya', 'gcash', 'gotyme', 'bpi', 'cash'].map(key => (
-                  <div key={key}>
-                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">
-                      {key === 'maribank' ? 'Bank 1 (Default Main)' : key === 'maya' ? 'E-Wallet 1' : key === 'gcash' ? 'E-Wallet 2' : key === 'gotyme' ? 'Digital Bank' : key === 'bpi' ? 'Bank 2 (Vault)' : 'Cash'}
-                    </label>
-                    <input type="text" value={(form.walletLabels as any)[key]} onChange={e => setForm({...form, walletLabels: {...form.walletLabels, [key]: e.target.value}})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-emerald-500" />
-                  </div>
-                ))}
               </div>
             </div>
           )}

@@ -11,6 +11,7 @@ interface ExecutionFlowCardProps {
   onConfigureBaselines: () => void;
   remainingBuffer: number;
   walletLabels?: Record<string, string>;
+  
   customWallets?: import("../types/finance").CustomWallet[];
   onExecutePaydaySplit: () => void;
   disabled?: boolean;
@@ -95,7 +96,7 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
           <div className="space-y-1.5 text-xs">
             {Object.entries(paydayAllocations).filter(([_, amount]) => amount > 0).map(([walletKey, amount]) => (
               <div key={walletKey} className="flex items-center justify-between py-1 border-b border-white/[0.03]">
-                <span className="privacy-blur text-zinc-400">{walletLabels?.[walletKey] || customWallets?.find(w => w.id === walletKey)?.label || walletKey.charAt(0).toUpperCase() + walletKey.slice(1)}</span>
+                <span className="privacy-blur text-zinc-400">{customWallets?.find(w => w.id === walletKey)?.label || walletKey.charAt(0).toUpperCase() + walletKey.slice(1)}</span>
                 <span className="font-mono font-semibold text-zinc-200">₱{fmt(amount)}</span>
               </div>
             ))}

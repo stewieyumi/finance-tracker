@@ -6,6 +6,7 @@ interface ReceivablesTableProps {
   inflowsLabel?: string;
   inflowCategories?: string[];
   walletLabels?: Record<string, string>;
+  
   customWallets?: CustomWallet[];
   activeReceivables: ReceivableViewModel[];
   selectedMonth: string;
@@ -36,9 +37,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
 }) => {
   const categoriesList = inflowCategories?.length ? inflowCategories : ["Salary", "Shoot", "Edit", "Payment", "Other"];
   const filterList = ["All", ...categoriesList];
-  const allWallets = useMemo(() => [
-    { id: "maya", label: walletLabels?.maya || "Maya" }, { id: "gcash", label: walletLabels?.gcash || "GCash" }, { id: "maribank", label: walletLabels?.maribank || "MariBank" }, { id: "gotyme", label: walletLabels?.gotyme || "GoTyme" }, { id: "bpi", label: walletLabels?.bpi || "BPI" }, { id: "cash", label: walletLabels?.cash || "Cash On-Hand" }, ...(customWallets || []).map(cw => ({ id: cw.id, label: cw.label }))
-  ], [walletLabels, customWallets]);
+  const allWallets = useMemo(() => customWallets || [], [customWallets]);
 
   const [isAdding, setIsAdding] = useState(false);
   const [newReceivable, setNewReceivable] = useState({ name: "", amount: "", category: "Shoot" as ReceivableCategory, frequency: "By Date" as ReceivableFrequency, biMonthlyDays: [15, 30], monthlyDay: 15, date: "", wallet: "maya" });

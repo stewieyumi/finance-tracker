@@ -18,8 +18,9 @@ interface BillsTableProps {
   editingId: string | null;
   setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
   editForm: EditFormData;
-  setEditForm: React.Dispatch<React.SetStateAction<EditFormData>>;
   walletLabels?: Record<string, string>;
+  setEditForm: React.Dispatch<React.SetStateAction<EditFormData>>;
+  
   customWallets?: CustomWallet[];
   defaultWallet?: string;
 }
@@ -121,7 +122,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                 <div className="flex flex-col gap-1.5 mt-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className={`px-1.5 py-0.5 rounded font-medium ${bill.type === "Subscription" ? "bg-purple-950/80 text-purple-300 border border-purple-800/40" : bill.type === "Loan / Installment" ? "bg-amber-950/80 text-amber-300 border border-amber-800/40" : "bg-blue-950/80 text-blue-300 border border-blue-800/40"}`}>{bill.type}</span>
-                    {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{walletLabels?.[bill.wallet!] || bill.wallet}</span>}
+                    {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{customWallets?.find(cw => cw.id === bill.wallet)?.label || bill.wallet}</span>}
                     {bill.dueDay && <span className="font-mono">Day {bill.dueDay}</span>}
                     {bill.paid ? (
                       <span className="px-2 py-0.5 rounded font-semibold tracking-wide bg-emerald-950/30 text-emerald-400/80 border border-emerald-800/30">Settled</span>
@@ -172,7 +173,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${bill.type === "Subscription" ? "bg-purple-950/70 text-purple-300 border border-purple-800/40" : bill.type === "Loan / Installment" ? "bg-amber-950/70 text-amber-300 border border-amber-800/40" : "bg-blue-950/70 text-blue-300 border border-blue-800/40"}`}>{bill.type}</span>
-                      {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{walletLabels?.[bill.wallet!] || bill.wallet}</span>}
+                      {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{customWallets?.find(cw => cw.id === bill.wallet)?.label || bill.wallet}</span>}
                       {bill.dueDay && <span className="text-[11px] text-zinc-400 font-mono">Day {bill.dueDay}</span>}
                       {bill.paid ? (
                         <span className="px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide bg-emerald-950/30 text-emerald-400/80 border border-emerald-800/30">Settled</span>
@@ -228,7 +229,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Wallet Route</label>
                   <select value={editForm.wallet || "maya"} onChange={(e) => setEditForm({ ...editForm, wallet: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-blue-500 disabled:opacity-50">
-                    <option value="maya">{walletLabels?.maya || "Maya"}</option><option value="gcash">{walletLabels?.gcash || "GCash"}</option><option value="maribank">{walletLabels?.maribank || "MariBank"}</option><option value="gotyme">{walletLabels?.gotyme || "GoTyme"}</option><option value="bpi">{walletLabels?.bpi || "BPI"}</option>
+                    <option value="maribank">{walletLabels?.maribank || "MariBank"}</option><option value="gotyme">{walletLabels?.gotyme || "GoTyme"}</option><option value="bpi">{walletLabels?.bpi || "BPI"}</option>
                     {customWallets?.map(cw => <option key={cw.id} value={cw.id}>{cw.label}</option>)}
                   </select>
                 </div>
@@ -296,7 +297,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Wallet Route</label>
                   <select value={newBill.wallet} onChange={(e) => setNewBill({ ...newBill, wallet: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-blue-500">
-                    <option value="maya">{walletLabels?.maya || "Maya"}</option><option value="gcash">{walletLabels?.gcash || "GCash"}</option><option value="maribank">{walletLabels?.maribank || "MariBank"}</option><option value="gotyme">{walletLabels?.gotyme || "GoTyme"}</option><option value="bpi">{walletLabels?.bpi || "BPI"}</option>
+                    <option value="maribank">{walletLabels?.maribank || "MariBank"}</option><option value="gotyme">{walletLabels?.gotyme || "GoTyme"}</option><option value="bpi">{walletLabels?.bpi || "BPI"}</option>
                     {customWallets?.map(cw => <option key={cw.id} value={cw.id}>{cw.label}</option>)}
                   </select>
                 </div>

@@ -29,7 +29,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
     merchant: "",
     amount: "",
     category: "Food & Dining" as ExpenseCategory | string,
-    wallet: "gcash",
+    wallet: "",
     date: getLocalToday()
   });
 
@@ -161,7 +161,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
 
     showToast(`Logged ₱${amount} & deducted from wallet`);
     setShowForm(false);
-    setForm({ merchant: "", amount: "", category: "Food & Dining", wallet: "gcash", date: getLocalToday() });
+    setForm({ merchant: "", amount: "", category: "Food & Dining", wallet: "", date: getLocalToday() });
   };
 
   const handleDelete = (exp: Expense) => {
@@ -186,16 +186,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
   };
 
   const customWallets = globalData.settings?.customWallets || [];
-  const walletLabels = globalData.settings?.walletLabels;
-  const allWallets = [
-    { id: "maya", label: walletLabels?.maya || "Maya" },
-    { id: "gcash", label: walletLabels?.gcash || "GCash" },
-    { id: "maribank", label: walletLabels?.maribank || "MariBank" },
-    { id: "gotyme", label: walletLabels?.gotyme || "GoTyme" },
-    { id: "bpi", label: walletLabels?.bpi || "BPI" },
-    { id: "cash", label: walletLabels?.cash || "Cash On-Hand" },
-    ...customWallets.map(cw => ({ id: cw.id, label: cw.label }))
-  ];
+  
+  const allWallets = customWallets || [];
 
   const expenses = globalData.library?.expenses || [];
   const totalSpent = expenses.reduce((a, b) => a + b.amount, 0);

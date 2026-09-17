@@ -133,7 +133,7 @@ const {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [opsTab, setOpsTab] = useState<"bills" | "inflows" | "gigs">("bills");
-  const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "wallets" | "sync">("general");
+  const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "sync">("general");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormData>({});
@@ -255,6 +255,30 @@ const {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2500);
   };
+
+  
+  // ⚡ SILENT AUTO-MIGRATION FOR BASE WALLETS
+  React.useEffect(() => {
+    if (!globalData.settings?.hasMigratedBaseWallets) {
+      syncedSetGlobalData(prev => {
+        const oldLabels = prev.settings?.walletLabels || {};
+        const existingCustom = prev.settings?.customWallets || [];
+        const baseIds = ['maribank', 'maya', 'gcash', 'gotyme', 'bpi', 'cash'];
+        const defaultColors: Record<string, string> = { maribank: 'text-amber-400', maya: 'text-emerald-400', gcash: 'text-blue-400', gotyme: 'text-cyan-400', bpi: 'text-rose-400', cash: 'text-zinc-300' };
+        const defaultLabels: Record<string, string> = { maribank: 'MariBank', maya: 'Maya', gcash: 'GCash', gotyme: 'GoTyme', bpi: 'BPI', cash: 'Cash On-Hand' };
+
+        const newCustomWallets = [...existingCustom];
+        baseIds.forEach(id => {
+          if (!newCustomWallets.find(w => w.id === id)) {
+            newCustomWallets.push({ id, label: oldLabels[id] || defaultLabels[id], color: defaultColors[id] });
+          }
+        });
+
+        return { ...prev, settings: { ...prev.settings, customWallets: newCustomWallets, hasMigratedBaseWallets: true }, updatedAt: Date.now() };
+      });
+      setTimeout(() => showToast("✨ Migrated base wallets to fully customizable accounts"), 1000);
+    }
+  }, [globalData.settings?.hasMigratedBaseWallets]);
 
   // ⚡ SILENT AUTO-MIGRATION FOR OLD BILLS
   React.useEffect(() => {
@@ -741,7 +765,7 @@ const copySummaryToClipboard = async () => {
           <div className="space-y-5 sm:space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
             <ErrorBoundary><MilestoneProgressBar currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0} targetFund={targetMilestoneFund} goalName={globalData?.settings?.goalName} /></ErrorBoundary>
             <ErrorBoundary><MetricsSummaryGrid totalLiquid={totalLiquid} fundProgressPercent={fundProgressPercent} totalPendingReceivables={totalPendingReceivables} monthIncomeCollected={monthIncomeCollected} selectedMonth={selectedMonth} /></ErrorBoundary>
-            <ErrorBoundary><ExecutionFlowCard priorityUnpaidSum={priorityUnpaidSum} totalUnpaidCommitments={totalUnpaidCommitments} overdueBills={overdueBills} overdueSum={overdueSum} paydayAllocations={paydayAllocations} onConfigureBaselines={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }} remainingBuffer={remainingBuffer} walletLabels={globalData?.settings?.walletLabels} customWallets={globalData?.settings?.customWallets} onExecutePaydaySplit={handleExecutePaydaySplit} disabled={!isViewingCurrentMonth || hasExecutedToday}
+            <ErrorBoundary><ExecutionFlowCard priorityUnpaidSum={priorityUnpaidSum} totalUnpaidCommitments={totalUnpaidCommitments} overdueBills={overdueBills} overdueSum={overdueSum} paydayAllocations={paydayAllocations} onConfigureBaselines={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }} remainingBuffer={remainingBuffer} customWallets={globalData?.settings?.customWallets} onExecutePaydaySplit={handleExecutePaydaySplit} disabled={!isViewingCurrentMonth || hasExecutedToday}
               latestExecution={latestExecution}
               onUndoSplit={handleUndoPaydaySplit} /></ErrorBoundary>
             
@@ -781,7 +805,7 @@ const copySummaryToClipboard = async () => {
               </div>
             </ErrorBoundary>
 
-            <ErrorBoundary><WalletGrid wallets={globalData?.wallets || {}} milestoneWallet={globalData?.settings?.milestoneWallet} walletLabels={globalData?.settings?.walletLabels} customWallets={globalData?.settings?.customWallets} onCommit={commitWallet} onIncrement={incrementWallet} /></ErrorBoundary>
+            <ErrorBoundary><WalletGrid wallets={globalData?.wallets || {}} milestoneWallet={globalData?.settings?.milestoneWallet} customWallets={globalData?.settings?.customWallets} onCommit={commitWallet} onIncrement={incrementWallet} /></ErrorBoundary>
             <button onClick={copySummaryToClipboard} className="w-full bg-[#121217]/90 hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Copy size={14} /> Copy Summary</button>
           </div>
         )}
@@ -793,13 +817,13 @@ const copySummaryToClipboard = async () => {
               <button onClick={() => setOpsTab("inflows")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "inflows" ? "bg-emerald-600/20 text-emerald-400 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)]" : "text-zinc-500 hover:text-zinc-300"}`}>Inflows</button>
               <button onClick={() => setOpsTab("gigs")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "gigs" ? "bg-amber-600/20 text-amber-400 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.3)]" : "text-zinc-500 hover:text-zinc-300"}`}>Gigs & Tasks</button>
             </div>
-            {opsTab === "bills" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><BillsTable activeBills={activeBills} selectedMonth={selectedMonth} onToggleStatus={toggleBillStatus} onAddBill={handleAddBill} onDeleteBill={deleteBill} onSaveEdit={(_, scope) => saveBillEdit(scope)} onResetMonthOverride={resetMonthOverride} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} walletLabels={globalData?.settings?.walletLabels} customWallets={globalData?.settings?.customWallets} defaultWallet={globalData?.settings?.defaultWallet} /></ErrorBoundary></div>}
-            {opsTab === "inflows" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><ReceivablesTable inflowsLabel={globalData?.settings?.inflowsLabel} inflowCategories={globalData?.settings?.inflowCategories} walletLabels={globalData?.settings?.walletLabels} customWallets={globalData?.settings?.customWallets} activeReceivables={activeReceivables} selectedMonth={selectedMonth} onToggleStatus={toggleReceivableStatus} onAddPayment={addPayment} onAddReceivable={handleAddReceivable} onDeleteReceivable={deleteReceivable} onSaveEdit={() => saveReceivableEdit()} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} /></ErrorBoundary></div>}
+            {opsTab === "bills" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><BillsTable activeBills={activeBills} selectedMonth={selectedMonth} onToggleStatus={toggleBillStatus} onAddBill={handleAddBill} onDeleteBill={deleteBill} onSaveEdit={(_, scope) => saveBillEdit(scope)} onResetMonthOverride={resetMonthOverride} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} customWallets={globalData?.settings?.customWallets} defaultWallet={globalData?.settings?.defaultWallet} /></ErrorBoundary></div>}
+            {opsTab === "inflows" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><ReceivablesTable inflowsLabel={globalData?.settings?.inflowsLabel} inflowCategories={globalData?.settings?.inflowCategories} customWallets={globalData?.settings?.customWallets} activeReceivables={activeReceivables} selectedMonth={selectedMonth} onToggleStatus={toggleReceivableStatus} onAddPayment={addPayment} onAddReceivable={handleAddReceivable} onDeleteReceivable={deleteReceivable} onSaveEdit={() => saveReceivableEdit()} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} /></ErrorBoundary></div>}
             {opsTab === "gigs" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><ShootsTable gigsLabel={globalData?.settings?.gigsLabel} gigCategories={globalData?.settings?.gigCategories} activeShoots={activeShoots} selectedMonth={selectedMonth} onToggleCompletion={toggleShootCompletion} onAddShoot={handleAddShoot} onDeleteShoot={deleteShoot} onSaveEdit={() => saveShootEdit()} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} /></ErrorBoundary></div>}
           </div>
         )}
         
-        {activeTab === "wallets" && <WalletsTab globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("wallets"); setShowSettingsModal(true); }} />}
+        {activeTab === "wallets" && <WalletsTab globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} />}
         {activeTab === "expenses" && <ExpensesTab globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />}
 
         {activeTab === "account" && (

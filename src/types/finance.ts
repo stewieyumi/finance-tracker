@@ -64,12 +64,6 @@ export interface Shoot {
 }
 
 export interface WalletState {
-  maribank: number;
-  gcash: number;
-  maya: number;
-  gotyme: number;
-  bpi: number;
-  cash: number;
   [key: string]: number;
 }
 
@@ -97,16 +91,16 @@ export interface CustomWallet {
 }
 
 export interface AppSettings {
-  targetFund: number;
+  targetFund?: number;
   goalName?: string;
   milestoneWallet?: string;
   inflowsLabel?: string;
   gigsLabel?: string;
   inflowCategories?: string[];
   gigCategories?: string[];
-  perPayoutSalary: number;
-  phpToJpyRate: number;
-  defaultTransitAllocation: number;
+  perPayoutSalary?: number;
+  phpToJpyRate?: number;
+  defaultTransitAllocation?: number;
   baseLivingAllowance?: number;
   baseSavingsTarget?: number;
   livingWallet?: string;
@@ -114,6 +108,7 @@ export interface AppSettings {
   transitWallet?: string;
   defaultWallet?: string;
   walletLabels?: Record<string, string>;
+  hasMigratedBaseWallets?: boolean;
   customWallets?: CustomWallet[];
 }
 
