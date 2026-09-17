@@ -290,32 +290,39 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
           {expenses.length === 0 ? (
             <div className="py-8 text-center text-zinc-500 text-xs italic">No expenses logged yet. Tap scan or manual to start tracking.</div>
           ) : (
-            expenses.map(exp => (
-              <div key={exp.id} className="flex items-center justify-between p-3 rounded-xl bg-[#14141a] border border-white/[0.04] group hover:border-white/[0.08] transition">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 text-zinc-400">
-                    <Receipt size={14} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="privacy-blur text-xs font-semibold text-zinc-200 truncate">{exp.merchant}</div>
-                    <div className="flex items-center gap-1.5 text-[9px] text-zinc-500 mt-0.5">
-                      <span className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400 font-medium whitespace-nowrap shrink-0">{exp.category}</span>
-                      <span>•</span>
-                      <span className="whitespace-nowrap shrink-0">{exp.date}</span>
-                      <span>•</span>
-                      <span className="uppercase text-blue-400/80 font-semibold whitespace-nowrap shrink-0">{allWallets.find(w => w.id === exp.wallet)?.label || exp.wallet}</span>
+            expenses.map(exp => {
+              // Format the raw YYYY-MM-DD date into a cleaner format (e.g., "Sep 16, 2026")
+              const dateObj = new Date(exp.date + "T12:00:00");
+              const formattedDate = isNaN(dateObj.getTime()) ? exp.date : dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+              return (
+                <div key={exp.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#14141a] border border-white/[0.04] group hover:border-white/[0.08] transition">
+                  <div className="flex items-center gap-3.5 overflow-hidden flex-1 pr-2">
+                    <div className="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 text-zinc-400">
+                      <Receipt size={15} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="privacy-blur text-[13px] font-semibold text-zinc-100 truncate">{exp.merchant}</div>
+                      <div className="flex items-center gap-2 text-[10px] text-zinc-400 mt-1">
+                        <span className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-zinc-300 font-medium truncate max-w-[90px]">{exp.category}</span>
+                        <span className="privacy-blur uppercase text-blue-400/90 font-bold tracking-wider truncate max-w-[80px]">{allWallets.find(w => w.id === exp.wallet)?.label || exp.wallet}</span>
+                      </div>
                     </div>
                   </div>
+                  
+                  <div className="flex flex-col items-end shrink-0 ml-2">
+                    <div className="flex items-center gap-2">
+                      <span className="privacy-blur text-[13px] font-bold font-mono text-zinc-100">-₱{exp.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                      <button onClick={() => handleDelete(exp)} aria-label="Delete expense" className="text-zinc-500 hover:text-rose-400 transition p-1 bg-white/[0.03] hover:bg-rose-500/10 rounded-lg">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                    {/* mr-[30px] perfectly aligns the date under the amount, ignoring the delete button width */}
+                    <span className="text-[10px] text-zinc-500 font-medium mt-1 whitespace-nowrap mr-[30px]">{formattedDate}</span>
+                  </div>
                 </div>
-                
-                <div className="flex items-center gap-3 shrink-0 ml-2">
-                  <span className="text-xs font-bold font-mono text-zinc-100">-₱{exp.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                  <button onClick={() => handleDelete(exp)} aria-label="Delete expense" className="text-zinc-600 hover:text-rose-400 transition p-1">
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
