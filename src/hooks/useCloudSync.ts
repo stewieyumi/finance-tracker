@@ -365,11 +365,12 @@ export function useCloudSync(
         setIsSyncing(true);
       }
 
-      const res = await fetch("/api/sync", {
+      const res = await fetch(`/api/sync?t=${Date.now()}`, {
         method: "GET",
         headers: {
           "x-sync-passcode": token
-        }
+        },
+        cache: "no-store"
       });
 
       if (res.status === 401) {
