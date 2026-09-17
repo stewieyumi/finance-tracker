@@ -37,6 +37,7 @@ import { WalletsTab } from "./components/WalletsTab";
 import { ExpensesTab } from "./components/ExpensesTab";
 import { BottomNav, TabType } from "./components/BottomNav";
 import { SettingsModal } from "./components/SettingsModal";
+import { LandingPage } from "./components/LandingPage";
 
 function safeLoadAll(): UnifiedFinanceData {
   try {
