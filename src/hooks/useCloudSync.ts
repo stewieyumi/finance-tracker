@@ -355,6 +355,12 @@ export function useCloudSync(
       }
     }
 
+    // No authenticated session means there is nothing to pull.
+    // Do not make a network request with an empty token.
+    if (!token) {
+      return;
+    }
+
     try {
       if (!silent) {
         setIsSyncing(true);
