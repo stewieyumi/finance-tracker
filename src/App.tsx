@@ -553,7 +553,7 @@ ${allocList}`
       const nextWallets = { ...prev.wallets };
       Object.entries(target.allocations).forEach(([walletKey, amount]) => {
         if (nextWallets[walletKey] !== undefined) {
-           nextWallets[walletKey] = roundMoney(Math.max(0, nextWallets[walletKey] - amount));
+           nextWallets[walletKey] = roundMoney(nextWallets[walletKey] - amount);
         }
       });
 

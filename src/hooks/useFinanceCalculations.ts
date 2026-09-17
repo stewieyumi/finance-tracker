@@ -313,6 +313,25 @@ const fundProgressPercent = useMemo(() => {
       });
     });
 
+    
+    // 4. Payday Distributions
+    globalData.paydaySplitExecutions?.forEach(ex => {
+      if (typeof ex === 'string') return;
+      Object.entries(ex.allocations).forEach(([w, amt]) => {
+        if (amt > 0) {
+          txs.push({
+            id: `${ex.id}_${w}`,
+            title: `Payday Allocation`,
+            amount: amt,
+            date: ex.date,
+            type: "inflow",
+            wallet: w,
+            category: "Payday"
+          });
+        }
+      });
+    });
+
     return txs.sort((a, b) => { const dateA = a.date || ""; const dateB = b.date || ""; if (dateA !== dateB) return dateB.localeCompare(dateA); return b.id.localeCompare(a.id); });
   }, [globalData]);
 

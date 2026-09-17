@@ -6,13 +6,11 @@ const DATA_STORAGE_KEY = "ft_master_data_v1";
 const BROADCAST_CHANNEL_NAME = "ft_sync_channel";
 
 export function getLocalPasscode(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem(PASSCODE_STORAGE_KEY) || "";
+  try { return localStorage.getItem(PASSCODE_STORAGE_KEY) || ""; } catch { return ""; }
 }
 
 export function setLocalPasscode(code: string): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(PASSCODE_STORAGE_KEY, code.trim());
+  try { localStorage.setItem(PASSCODE_STORAGE_KEY, code.trim()); } catch {}
 }
 
 function isValidUpdatedAt(value: unknown): value is number {
@@ -106,7 +104,7 @@ export function useCloudSync(
       setGlobalData(incomingData);
 
       try {
-        localStorage.setItem(
+        window.localStorage.setItem(
           DATA_STORAGE_KEY,
           JSON.stringify(incomingData)
         );
@@ -159,7 +157,7 @@ export function useCloudSync(
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Authorization": token.startsWith("Bearer ") ? token : `Bearer ${token}`
         },
         body: JSON.stringify(payload),
         keepalive: true
@@ -369,7 +367,7 @@ export function useCloudSync(
       const res = await fetch(`/api/sync?t=${Date.now()}`, {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${token}`
+          "Authorization": token.startsWith("Bearer ") ? token : `Bearer ${token}`
         },
         cache: "no-store"
       });
@@ -525,7 +523,7 @@ export function useCloudSync(
           if (!token) return;
           
           const res = await fetch(`/api/sync?version_only=true&t=${Date.now()}`, {
-            headers: { "Authorization": `Bearer ${token}` },
+            headers: { "Authorization": token.startsWith("Bearer ") ? token : `Bearer ${token}` },
             cache: "no-store"
           });
           
@@ -631,7 +629,7 @@ export function useCloudSync(
     }
 
     try {
-      localStorage.setItem(
+      window.localStorage.setItem(
         DATA_STORAGE_KEY,
         JSON.stringify(globalData)
       );
