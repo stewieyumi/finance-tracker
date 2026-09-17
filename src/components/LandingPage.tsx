@@ -53,7 +53,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoogleSuccess }) => 
           <div className="w-full flex flex-col items-center animate-in fade-in zoom-in-95 duration-500">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-emerald-500 p-[1px] mb-6 shadow-2xl shadow-blue-900/20">
               <div className="w-full h-full bg-[#0a0a0d] rounded-2xl flex items-center justify-center">
-                <Sparkles className="text-emerald-400" size={28} />
+                <img src="/icon-192.png" alt="Finance Tracker Logo" className="w-9 h-9 object-contain drop-shadow-lg" />
               </div>
             </div>
 

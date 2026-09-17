@@ -761,6 +761,42 @@ const copySummaryToClipboard = async () => {
               </div>
               <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} className="hidden" />
             </div>
+
+            <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl rounded-3xl p-5 sm:p-8 animate-in fade-in duration-300">
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/[0.06]">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><History size={16} className="text-purple-400"/> Transaction History</h3>
+                <span className="text-xs text-zinc-500 font-mono">{allTransactions.length} records</span>
+              </div>
+              
+              <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                {allTransactions.length === 0 ? (
+                  <div className="py-8 text-center text-zinc-500 text-xs italic">No history available.</div>
+                ) : (
+                  allTransactions.map((tx: TransactionHistoryItem) => (
+                    <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#14141a] border border-white/[0.04] group hover:border-white/[0.08] transition">
+                      <div className="flex items-center gap-3.5 overflow-hidden flex-1">
+                        <div className={`w-9 h-9 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-950/50 border-emerald-500/20 text-emerald-400' : tx.type === 'bill' ? 'bg-blue-950/50 border-blue-500/20 text-blue-400' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}>
+                          {tx.type === 'inflow' ? <ArrowDownLeft size={15}/> : tx.type === 'bill' ? <Calendar size={15}/> : <Receipt size={15}/>}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="privacy-blur text-[13px] font-semibold text-zinc-100 truncate">{tx.title}</div>
+                          <div className="flex items-center gap-2 text-[10px] text-zinc-400 mt-1">
+                            <span className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-zinc-300 font-medium truncate max-w-[90px]">{tx.category || tx.type}</span>
+                            <span className="privacy-blur uppercase text-blue-400/90 font-bold tracking-wider truncate max-w-[80px]">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end shrink-0 ml-3">
+                        <span className={`privacy-blur text-[13px] font-bold font-mono ${tx.amount > 0 ? "text-emerald-400" : "text-zinc-100"}`}>
+                          {tx.amount > 0 ? "+" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        </span>
+                        <span className="text-[10px] text-zinc-500 font-medium mt-1 whitespace-nowrap">{formatDateTime(tx.date)}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
