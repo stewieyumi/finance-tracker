@@ -1,11 +1,27 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Edit2, CreditCard, Info } from 'lucide-react';
-import { UnifiedFinanceData } from '../types/finance';
+import { UnifiedFinanceData, CustomWallet } from '../types/finance';
 import { WalletGrid } from './WalletGrid';
 
-interface WalletsTabProps { globalData: UnifiedFinanceData; setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>; onCommit: (key: string, val: number) => void; onIncrement: (key: string, val: number) => void; onOpenSettings?: () => void; }
+interface WalletsTabProps {
+  globalData: UnifiedFinanceData;
+  setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
+  onCommit: (key: string, val: number) => void;
+  onIncrement: (key: string, val: number) => void;
+  onOpenSettings?: () => void;
+}
 
-const COLORS = ["text-rose-400", "text-amber-400", "text-emerald-400", "text-cyan-400", "text-indigo-400", "text-purple-400", "text-pink-400", "text-zinc-300", "text-blue-400"];
+const COLORS = [
+  "text-rose-400", "text-amber-400", "text-emerald-400", 
+  "text-cyan-400", "text-indigo-400", "text-purple-400", 
+  "text-pink-400", "text-zinc-300", "text-blue-400"
+];
+
+const WALLET_NAME_SUGGESTIONS = [
+  "BDO", "BPI", "Metrobank", "UnionBank", "Security Bank",
+  "GCash", "Maya", "GoTyme", "MariBank", "SeaBank",
+  "CIMB", "Tonik", "Cash On-Hand"
+];
 
 export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalData, onCommit, onIncrement }) => {
   const [showAdd, setShowAdd] = useState(false);
@@ -40,9 +56,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?
-
-Its balance will be permanently removed from your Total Liquid Cash. Any bills or transactions using this account will be automatically reassigned to another available account.`)) return;
+    if (!confirm(`Are you sure you want to delete "${name}"?\n\nIts balance will be permanently removed from your Total Liquid Cash. Any bills or transactions using this account will be automatically reassigned to another available account.`)) return;
     setGlobalData(prev => {
       const nextWallets = { ...prev.wallets };
       delete nextWallets[id];
@@ -80,7 +94,7 @@ Its balance will be permanently removed from your Total Liquid Cash. Any bills o
 
   return (
     <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
-      <WalletGrid wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
+      <WalletGrid wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} savingsWallet={globalData.settings?.savingsWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
       <div className="bg-[#101014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4"><h2 className="text-xs font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-2"><CreditCard size={14} className="text-emerald-400" /> Account Management</h2></div>
         {customWallets.length > 0 && !showAdd && (
@@ -98,7 +112,15 @@ Its balance will be permanently removed from your Total Liquid Cash. Any bills o
         )}
         {showAdd ? (
           <form onSubmit={handleAddOrEdit} className="bg-[#14141a] border border-white/[0.06] rounded-xl p-4 space-y-4 shadow-inner">
-            <div><label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Account Name</label><input type="text" placeholder="e.g., Crypto Ledger, Safe Vault..." value={walletName} onChange={e => setWalletName(e.target.value)} autoFocus className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required /></div>
+            <div>
+              <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Account Name</label>
+              <input type="text" list="wallet-name-suggestions" placeholder="e.g., BPI, GCash, Vault..." value={walletName} onChange={e => setWalletName(e.target.value)} autoFocus className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
+              <datalist id="wallet-name-suggestions">
+                {WALLET_NAME_SUGGESTIONS.map(name => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+            </div>
             <div><label className="text-[10px] text-zinc-500 uppercase font-semibold mb-2 block">Accent Color</label>
               <div className="flex items-center flex-wrap gap-3">{COLORS.map(c => <button type="button" key={c} onClick={() => setWalletColor(c)} className={`w-6 h-6 rounded-full bg-current ${c} border-2 transition-all duration-300 ${walletColor === c ? 'border-white scale-110 shadow-[0_0_12px_currentColor]' : 'border-transparent opacity-40 hover:opacity-100 hover:scale-105'}`} />)}</div>
             </div>

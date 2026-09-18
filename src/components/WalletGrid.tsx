@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Plus, X, CreditCard, CheckCircle2 } from 'lucide-react';
 import { WalletState, CustomWallet } from '../types/finance';
 
-interface WalletGridProps { wallets: WalletState; customWallets?: CustomWallet[]; milestoneWallet?: string; onCommit: (key: string, value: number) => void; onIncrement: (key: string, addAmount: number) => void; }
+interface WalletGridProps { wallets: WalletState; customWallets?: CustomWallet[]; milestoneWallet?: string; savingsWallet?: string; onCommit: (key: string, value: number) => void; onIncrement: (key: string, addAmount: number) => void; }
 
-export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, milestoneWallet, customWallets, onCommit, onIncrement }) => {
+export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, milestoneWallet, savingsWallet, customWallets, onCommit, onIncrement }) => {
   const [editingWallet, setEditingWallet] = useState<{ id: string; label: string; color: string; balance: number } | null>(null);
   const [editValue, setEditValue] = useState("");
 
@@ -36,9 +36,26 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           {(customWallets || []).map(w => {
             const currentBalance = wallets[w.id] ?? 0;
-            const displayColor = w.id === milestoneWallet ? 'text-blue-400 font-bold' : (w.color || 'text-zinc-100');
+            const isMilestoneWallet = w.id === milestoneWallet;
+            const isSavingsWallet = w.id === savingsWallet;
+
+            const roleClasses =
+              isMilestoneWallet && isSavingsWallet
+                ? "ring-1 ring-violet-400/40 shadow-[0_0_18px_rgba(167,139,250,0.12)] border-violet-400/30"
+                : isMilestoneWallet
+                  ? "ring-1 ring-blue-500/40 shadow-[0_0_18px_rgba(59,130,246,0.10)] border-blue-500/30"
+                  : isSavingsWallet
+                    ? "ring-1 ring-emerald-500/40 shadow-[0_0_18px_rgba(16,185,129,0.10)] border-emerald-500/30"
+                    : "border-white/[0.05]";
+
+            const displayColor = isMilestoneWallet
+              ? "text-blue-400 font-bold"
+              : isSavingsWallet
+                ? "text-emerald-400 font-bold"
+                : (w.color || "text-zinc-100");
+
             return (
-              <button key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className="flex items-center justify-between w-full bg-[#0b0b0e] border border-white/[0.05] rounded-xl px-3.5 py-3 hover:border-white/[0.12] hover:bg-white/[0.02] active:scale-[0.98] transition-all text-left group">
+              <button key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`flex items-center justify-between w-full bg-[#0b0b0e] border rounded-xl px-3.5 py-3 hover:border-white/[0.12] hover:bg-white/[0.02] active:scale-[0.98] transition-all text-left group ${roleClasses}`}>
                 <span className="privacy-blur text-xs text-zinc-300 font-medium truncate pr-2 group-hover:text-white transition-colors">{w.label}</span>
                 <div className="flex items-baseline gap-0.5 shrink-0">
                   <span className="text-[10px] text-zinc-500 font-mono">₱</span>

@@ -12,7 +12,7 @@ import { getWalletForBill } from "../utils/financeHelpers";
 interface UseBillActionsParams {
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
   selectedMonth: string;
-  showToast: (message: string) => void;
+  showToast: (message: string, action?: { label: string; onClick: () => void }) => void;
 }
 
 export function useBillActions({
@@ -28,100 +28,102 @@ export function useBillActions({
     startMonth: string;
     endMonth: string;
     wallet?: string;
-  }) => {
-    setGlobalData(prev => {
-      const isLoan = bill.type === "Loan / Installment";
+  }): Bill => {
+    const isLoan = bill.type === "Loan / Installment";
 
-      const newBill: Bill = {
-        id: generateId("b"),
-        name: bill.name,
-        amount: bill.amount,
-        dueDay: bill.dueDay,
-        type: bill.type,
-        wallet: bill.wallet,
-        startMonth: isLoan ? bill.startMonth : selectedMonth,
-        endMonth: isLoan ? bill.endMonth : ""
+    const newBill: Bill = {
+      id: generateId("b"),
+      name: bill.name,
+      amount: bill.amount,
+      dueDay: bill.dueDay,
+      type: bill.type,
+      wallet: bill.wallet,
+      startMonth: isLoan ? bill.startMonth : selectedMonth,
+      endMonth: isLoan ? bill.endMonth : ""
+    };
+
+    setGlobalData(prev => ({
+      ...prev,
+      library: {
+        ...prev.library,
+        bills: [...prev.library.bills, newBill]
+      },
+      updatedAt: Date.now()
+    }));
+
+    showToast(`Added ${bill.name}`);
+    return newBill;
+  };
+
+  const toggleBillStatus = (bill: BillViewModel) => {
+    const targetMonth = bill.targetMonthForDue || selectedMonth;
+    const walletKey = bill.wallet || getWalletForBill(bill.name);
+
+    setGlobalData(prev => {
+      const monthLog = prev.logs?.[targetMonth] || {
+        billsPaid: [],
+        recsCollected: {}
       };
+
+      const currentPaid = monthLog.billsPaid || [];
+      const isCurrentlyPaid = currentPaid.includes(bill.id);
+      const willBePaid = !isCurrentlyPaid;
+      const today = new Date(); const todayStr = today.toISOString();
+
+      const nextWallets = { ...prev.wallets };
+      
+      // Auto-deduct or refund the wallet balance
+      if (willBePaid) {
+        nextWallets[walletKey] = roundMoney(Math.max(0, (nextWallets[walletKey] || 0) - bill.amount));
+      } else {
+        nextWallets[walletKey] = roundMoney((nextWallets[walletKey] || 0) + bill.amount);
+      }
 
       return {
         ...prev,
-        library: {
-          ...prev.library,
-          bills: [...prev.library.bills, newBill]
+        wallets: nextWallets,
+        logs: {
+          ...prev.logs,
+          [targetMonth]: {
+            ...monthLog,
+            paymentDates: willBePaid 
+              ? { ...(monthLog.paymentDates || {}), [bill.id]: todayStr }
+              : (()=>{ const pd = {...(monthLog.paymentDates || {})}; delete pd[bill.id]; return pd; })(),
+            billsPaid: isCurrentlyPaid
+              ? currentPaid.filter(id => id !== bill.id)
+              : [...currentPaid, bill.id]
+          }
         },
         updatedAt: Date.now()
       };
     });
 
-    showToast(`Added ${bill.name}`);
+    if (!bill.paid) {
+      showToast(`Paid ₱${bill.amount.toLocaleString()}`, {
+        label: "Undo",
+        onClick: () => toggleBillStatus(bill)
+      });
+    } else {
+      showToast(`Unmarked ₱${bill.amount.toLocaleString()} (refunded to wallet)`);
+    }
   };
 
-const toggleBillStatus = (bill: BillViewModel) => {
-  const targetMonth = bill.targetMonthForDue || selectedMonth;
-  const walletKey = bill.wallet || getWalletForBill(bill.name);
+  const deleteBill = (id: string) => {
+    if (!confirm("Delete this bill from your library?")) return;
 
-  setGlobalData(prev => {
-    const monthLog = prev.logs?.[targetMonth] || {
-      billsPaid: [],
-      recsCollected: {}
-    };
-
-    const currentPaid = monthLog.billsPaid || [];
-    const isCurrentlyPaid = currentPaid.includes(bill.id);
-    const willBePaid = !isCurrentlyPaid;
-    const today = new Date(); const todayStr = today.toISOString();
-
-    const nextWallets = { ...prev.wallets };
-    
-    // Auto-deduct or refund the wallet balance
-    if (willBePaid) {
-      nextWallets[walletKey] = roundMoney(Math.max(0, (nextWallets[walletKey] || 0) - bill.amount));
-    } else {
-      nextWallets[walletKey] = roundMoney((nextWallets[walletKey] || 0) + bill.amount);
-    }
-
-    return {
+    setGlobalData(prev => ({
       ...prev,
-      wallets: nextWallets,
-      logs: {
-        ...prev.logs,
-        [targetMonth]: {
-          ...monthLog,
-          paymentDates: willBePaid 
-            ? { ...(monthLog.paymentDates || {}), [bill.id]: todayStr }
-            : (()=>{ const pd = {...(monthLog.paymentDates || {})}; delete pd[bill.id]; return pd; })(),
-          billsPaid: isCurrentlyPaid
-            ? currentPaid.filter(id => id !== bill.id)
-            : [...currentPaid, bill.id]
-        }
+      library: {
+        ...prev.library,
+        bills: prev.library.bills.filter(
+          bill => bill.id !== id
+        )
       },
       updatedAt: Date.now()
-    };
-  });
+    }));
 
-  if (!bill.paid) {
-    showToast(`Paid ₱${bill.amount.toLocaleString()} (deducted from wallet)`);
-  } else {
-    showToast(`Unmarked ₱${bill.amount.toLocaleString()} (refunded to wallet)`);
-  }
-};
-
-const deleteBill = (id: string) => {
-  if (!confirm("Delete this bill from your library?")) return;
-
-  setGlobalData(prev => ({
-    ...prev,
-    library: {
-      ...prev.library,
-      bills: prev.library.bills.filter(
-        bill => bill.id !== id
-      )
-    },
-    updatedAt: Date.now()
-  }));
-
-  showToast("Bill deleted");
-};
+    showToast("Bill deleted");
+  };
 
   return {
     addBill,

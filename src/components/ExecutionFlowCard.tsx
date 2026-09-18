@@ -17,6 +17,7 @@ interface ExecutionFlowCardProps {
   disabled?: boolean;
   latestExecution?: PaydayExecution;
   onUndoSplit?: (id: string) => void;
+  onClickOverdue?: () => void;
 }
 
 export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
@@ -32,7 +33,8 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
   onExecutePaydaySplit,
   disabled = false,
   latestExecution,
-  onUndoSplit
+  onUndoSplit,
+  onClickOverdue
 }) => {
   const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2 });
 
@@ -64,7 +66,11 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
             </div>
 
             {overdueBills.length > 0 && (
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-orange-950/20 border border-orange-800/30 text-orange-300">
+              <button
+                onClick={onClickOverdue}
+                disabled={!onClickOverdue}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-orange-950/20 border border-orange-800/30 text-orange-300 transition hover:bg-orange-950/35 active:scale-[0.99] disabled:cursor-default"
+              >
                 <span className="flex items-center gap-1.5 no-privacy-blur text-[11px]">
                   <AlertCircle size={13} className="text-orange-400 shrink-0" />
                   {overdueBills.length} Overdue Commitment{overdueBills.length > 1 ? "s" : ""}
@@ -72,7 +78,7 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
                 <span className="font-mono font-bold text-[11px] text-orange-300">
                   ₱{fmt(overdueSum)}
                 </span>
-              </div>
+              </button>
             )}
           </div>
         </div>

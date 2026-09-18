@@ -7,32 +7,37 @@ import { formatDaysRemaining } from "../utils/dateHelpers";
 
 const BILL_TYPES = ["All", "Bill", "Subscription", "Loan / Installment"];
 
+type BillSortOption = "default" | "dueSoon" | "dueDate" | "amountDesc" | "amountAsc" | "nameAsc" | "unpaidFirst";
+
 interface BillsTableProps {
   activeBills: BillViewModel[];
   selectedMonth: string;
   onToggleStatus: (bill: BillViewModel) => void;
-  onAddBill: (bill: { name: string; amount: number; dueDay: string; type: BillType; startMonth: string; endMonth: string; wallet?: string }) => void;
+  onAddBill: (bill: { name: string; amount: number; dueDay: string; type: BillType; startMonth: string; endMonth: string; wallet?: string }) => Bill;
   onDeleteBill: (id: string) => void;
   onSaveEdit: (category: "bills", scope?: "monthOnly" | "default") => void;
   onResetMonthOverride: (billId: string) => void;
   editingId: string | null;
   setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
   editForm: EditFormData;
-  walletLabels?: Record<string, string>;
   setEditForm: React.Dispatch<React.SetStateAction<EditFormData>>;
   
   customWallets?: CustomWallet[];
   defaultWallet?: string;
+  highlightOverdue?: boolean;
 }
 
 export const BillsTable: React.FC<BillsTableProps> = React.memo(({
   activeBills, selectedMonth, onToggleStatus, onAddBill, onDeleteBill, onSaveEdit, onResetMonthOverride,
-  editingId, setEditingId, editForm, setEditForm, walletLabels, customWallets, defaultWallet = "main"
+  editingId, setEditingId, editForm, setEditForm, customWallets, defaultWallet = "main", highlightOverdue = false
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newBill, setNewBill] = useState({ name: "", amount: "", dueDay: "1", type: "Bill" as BillType, startMonth: selectedMonth, endMonth: selectedMonth, wallet: defaultWallet });
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<BillSortOption>("default");
+  const [pendingPriorPayment, setPendingPriorPayment] = useState<{ bill: Bill; month: string } | null>(null);
   const [editScope, setEditScope] = useState<"monthOnly" | "default">("monthOnly");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -45,9 +50,66 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
   }, []);
 
   const filteredBills = useMemo(() => {
-    if (selectedFilter === "All") return activeBills;
-    return activeBills.filter(b => b.type === selectedFilter);
-  }, [activeBills, selectedFilter]);
+    let result = selectedFilter === "All" ? activeBills : activeBills.filter(b => b.type === selectedFilter);
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(b => b.name.toLowerCase().includes(q));
+    }
+    return result;
+  }, [activeBills, selectedFilter, searchQuery]);
+
+  const sortedBills = useMemo(() => {
+    const result = [...filteredBills];
+    switch (sortBy) {
+      case "dueSoon":
+        result.sort((a, b) => {
+          const dayDelta = a.daysLeft - b.daysLeft;
+          if (dayDelta !== 0) return dayDelta;
+          return b.amount - a.amount;
+        });
+        break;
+      case "dueDate":
+        result.sort((a, b) => {
+          const dayDelta = (parseInt(a.dueDay, 10) || 1) - (parseInt(b.dueDay, 10) || 1);
+          if (dayDelta !== 0) return dayDelta;
+          return a.name.localeCompare(b.name);
+        });
+        break;
+      case "amountDesc":
+        result.sort((a, b) => {
+          const amountDelta = b.amount - a.amount;
+          if (amountDelta !== 0) return amountDelta;
+          return a.name.localeCompare(b.name);
+        });
+        break;
+      case "amountAsc":
+        result.sort((a, b) => {
+          const amountDelta = a.amount - b.amount;
+          if (amountDelta !== 0) return amountDelta;
+          return a.name.localeCompare(b.name);
+        });
+        break;
+      case "nameAsc":
+        result.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "unpaidFirst":
+        result.sort((a, b) => {
+          const paidDelta = Number(a.paid) - Number(b.paid);
+          if (paidDelta !== 0) return paidDelta;
+          const dayDelta = (parseInt(a.dueDay, 10) || 1) - (parseInt(b.dueDay, 10) || 1);
+          if (dayDelta !== 0) return dayDelta;
+          return a.name.localeCompare(b.name);
+        });
+        break;
+      case "default":
+      default:
+        break;
+    }
+    return result;
+  }, [filteredBills, sortBy]);
+
+  const firstHalfBills = useMemo(() => sortedBills.filter(b => (parseInt(b.dueDay, 10) || 1) <= 15), [sortedBills]);
+  const secondHalfBills = useMemo(() => sortedBills.filter(b => (parseInt(b.dueDay, 10) || 1) > 15), [sortedBills]);
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,9 +117,13 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
     const amount = parseFloat(newBill.amount);
     if (!name || !Number.isFinite(amount) || amount <= 0) return;
 
-    onAddBill({ name, amount, dueDay: newBill.dueDay, type: newBill.type, startMonth: newBill.startMonth, endMonth: newBill.endMonth, wallet: newBill.wallet });
+    const createdBill = onAddBill({ name, amount, dueDay: newBill.dueDay, type: newBill.type, startMonth: newBill.startMonth, endMonth: newBill.endMonth, wallet: newBill.wallet });
     setNewBill({ name: "", amount: "", dueDay: "1", type: "Bill", startMonth: selectedMonth, endMonth: selectedMonth, wallet: defaultWallet });
     setIsAdding(false);
+
+    if (createdBill.type === "Loan / Installment" && createdBill.startMonth === selectedMonth) {
+      setPendingPriorPayment({ bill: createdBill, month: selectedMonth });
+    }
   };
 
   const handleStartEdit = (bill: BillViewModel) => {
@@ -74,18 +140,115 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
     else setEditForm(prev => ({ ...prev, amount: typeof prev.monthAmount === "number" ? prev.monthAmount : parseFloat(String(prev.monthAmount || 0)) }));
   };
 
+  const renderMobileRow = (bill: BillViewModel) => (
+    <div key={bill.id} className={`p-3 rounded-xl border transition-all ${bill.paid ? "bg-zinc-950/40 border-zinc-900/60 opacity-40" : "bg-[#14141a] border-zinc-800/80 shadow-sm"} ${highlightOverdue && (bill.daysLeft ?? 0) < 0 && !bill.paid ? 'ring-2 ring-orange-500/50' : ''}`}>
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <button onClick={() => onToggleStatus(bill)} className="shrink-0 focus:outline-none">
+              {bill.paid ? <span className="w-5 h-5 rounded-full bg-blue-950/70 border border-blue-500/50 text-blue-400 flex items-center justify-center"><Check size={11} className="stroke-[3]" /></span> : <span className="w-5 h-5 rounded-full bg-rose-950/40 border border-rose-500/40 text-rose-400 flex items-center justify-center"><Circle size={7} className="fill-rose-400/40" /></span>}
+            </button>
+            <span className="privacy-blur text-xs font-semibold text-zinc-100 truncate cursor-pointer hover:text-blue-400" onClick={() => onToggleStatus(bill)}>{bill.name}</span>
+            {bill.isOverridden && <span className="text-[8px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1 rounded shrink-0">adj</span>}
+          </div>
+          <span className={`font-mono text-xs font-bold shrink-0 ${bill.paid ? "text-blue-400" : "text-zinc-100"}`}>₱{bill.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+        </div>
+        <div className="flex items-start justify-between pl-7 text-[10px] text-zinc-400">
+          <div className="flex flex-col gap-1.5 mt-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className={`px-1.5 py-0.5 rounded font-medium ${bill.type === "Subscription" ? "bg-purple-950/80 text-purple-300 border border-purple-800/40" : bill.type === "Loan / Installment" ? "bg-amber-950/80 text-amber-300 border border-amber-800/40" : "bg-blue-950/80 text-blue-300 border border-blue-800/40"}`}>{bill.type}</span>
+              {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{customWallets?.find(cw => cw.id === bill.wallet)?.label || bill.wallet}</span>}
+              {bill.dueDay && <span className="font-mono">Day {bill.dueDay}</span>}
+              {bill.paid ? (
+                <span className="px-2 py-0.5 rounded font-semibold tracking-wide bg-emerald-950/30 text-emerald-400/80 border border-emerald-800/30">Settled</span>
+              ) : (
+                <span className={`px-2 py-0.5 rounded font-semibold tracking-wide ${formatDaysRemaining(bill.daysLeft).tone === "urgent" ? "bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse" : formatDaysRemaining(bill.daysLeft).tone === "overdue" ? "bg-rose-600/25 text-rose-300 border border-rose-500/40" : formatDaysRemaining(bill.daysLeft).tone === "warning" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-slate-800 text-slate-400 border border-slate-700/60"}`}>{formatDaysRemaining(bill.daysLeft).text}</span>
+              )}
+            </div>
+            {bill.type === "Loan / Installment" && <div className="mt-1"><LoanProgressBadge startMonth={bill.startMonth} endMonth={bill.endMonth} targetMonthForDue={bill.targetMonthForDue} isPaid={bill.paid} monthlyAmount={bill.baseAmount} totalPaid={bill.totalLoanPaid} /></div>}
+          </div>
+          <button onClick={() => handleStartEdit(bill)} className="px-2 py-0.5 text-zinc-400 hover:text-amber-300 bg-zinc-800/70 hover:bg-zinc-700/60 border border-zinc-700/40 rounded-md transition flex items-center gap-1 text-[10px] shrink-0 mt-1">
+            <Edit2 size={9} /><span>Edit</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderDesktopRow = (bill: BillViewModel) => (
+    <tr key={bill.id} className={`group transition-all duration-150 ${bill.paid ? "opacity-40" : "hover:bg-white/[0.02]"} ${highlightOverdue && (bill.daysLeft ?? 0) < 0 && !bill.paid ? 'bg-orange-900/10' : ''}`}>
+      <td className="py-2.5 px-2 align-top pt-3">
+        <button onClick={() => onToggleStatus(bill)} className="flex items-center gap-1.5 focus:outline-none">
+          {bill.paid ? <span className="flex items-center justify-center gap-1 w-[85px] text-blue-400 text-[11px] font-semibold bg-blue-950/40 px-2 py-1 rounded-lg border border-blue-600/30 transition-all hover:bg-blue-900/50"><Check size={11} className="stroke-[3]" /> Paid</span> : <span className="flex items-center justify-center gap-1 w-[85px] text-rose-400 text-[11px] font-medium bg-rose-950/30 px-2 py-1 rounded-lg border border-rose-800/30 transition-all hover:bg-rose-900/40"><Circle size={9} className="fill-rose-500/20" /> Pending</span>}
+        </button>
+      </td>
+      <td className="py-2.5 px-2 align-top pt-3 text-zinc-200 truncate font-medium">
+        <div className="flex flex-col">
+          <span className="privacy-blur cursor-pointer hover:text-blue-400 transition-colors" onClick={() => onToggleStatus(bill)}>{bill.name}</span>
+          {bill.isOverridden && <span className="text-[9px] font-mono text-amber-400 flex items-center gap-1">• {selectedMonth.split(" ")[0]} bill adjusted</span>}
+        </div>
+      </td>
+      <td className={`py-2.5 px-2 align-top pt-3 text-right font-mono font-semibold ${bill.paid ? "text-blue-400" : "text-zinc-100"}`}>
+        ₱{bill.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+      </td>
+      <td className="py-2.5 px-2 align-top text-zinc-400 text-[11px]">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${bill.type === "Subscription" ? "bg-purple-950/70 text-purple-300 border border-purple-800/40" : bill.type === "Loan / Installment" ? "bg-amber-950/70 text-amber-300 border border-amber-800/40" : "bg-blue-950/70 text-blue-300 border border-blue-800/40"}`}>{bill.type}</span>
+            {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{customWallets?.find(cw => cw.id === bill.wallet)?.label || bill.wallet}</span>}
+            {bill.dueDay && <span className="text-[11px] text-zinc-400 font-mono">Day {bill.dueDay}</span>}
+            {bill.paid ? (
+              <span className="px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide bg-emerald-950/30 text-emerald-400/80 border border-emerald-800/30">Settled</span>
+            ) : (
+              <span className={`px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide ${formatDaysRemaining(bill.daysLeft).tone === "urgent" ? "bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse" : formatDaysRemaining(bill.daysLeft).tone === "overdue" ? "bg-rose-600/25 text-rose-300 border border-rose-500/40" : formatDaysRemaining(bill.daysLeft).tone === "warning" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-slate-800 text-slate-400 border border-slate-700/60"}`}>{formatDaysRemaining(bill.daysLeft).text}</span>
+            )}
+          </div>
+          {bill.type === "Loan / Installment" && <div className="mt-1"><LoanProgressBadge startMonth={bill.startMonth} endMonth={bill.endMonth} targetMonthForDue={bill.targetMonthForDue} isPaid={bill.paid} monthlyAmount={bill.baseAmount} totalPaid={bill.totalLoanPaid} /></div>}
+        </div>
+      </td>
+      <td className="py-2.5 px-2 align-top text-center whitespace-nowrap pt-2">
+        <div className="inline-flex items-center gap-1 bg-[#1a1a22] p-1 rounded-lg border border-white/[0.05]">
+          <button onClick={() => handleStartEdit(bill)} className="px-2 py-1 text-zinc-400 hover:text-amber-300 hover:bg-white/[0.05] rounded-md text-[10px] flex items-center transition">
+            <Edit2 size={10} className="mr-1"/> Edit
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+
   return (
     <div className="bg-[#101014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl">
-      <div className="flex items-center justify-between mb-3.5">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-2">
+      <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
+        <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-2 shrink-0">
           <Calendar size={13} className="text-blue-400" /> {selectedMonth} Commitments
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <span className="text-[10px] text-zinc-500 font-mono hidden sm:inline">{activeBills.filter(b => b.paid).length}/{activeBills.length} Paid</span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search..."
+            className="h-7 w-20 sm:w-28 px-2.5 rounded-xl border border-white/[0.08] bg-white/[0.04] text-[11px] text-white placeholder:text-zinc-500 outline-none focus:border-blue-500/50 transition-all"
+          />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as BillSortOption)}
+            aria-label="Sort commitments"
+            className="h-7 px-2 rounded-xl border border-white/[0.08] bg-white/[0.04] text-[11px] text-zinc-400 outline-none focus:border-blue-500/50 cursor-pointer max-w-[100px] truncate"
+          >
+            <option value="default">Sort</option>
+            <option value="dueSoon">Due Soon</option>
+            <option value="dueDate">Due Date</option>
+            <option value="amountDesc">Amt: High → Low</option>
+            <option value="amountAsc">Amt: Low → High</option>
+            <option value="nameAsc">Name: A → Z</option>
+            <option value="unpaidFirst">Unpaid First</option>
+          </select>
           <div className="relative" ref={dropdownRef}>
             <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-blue-600/20 border-blue-500/50 text-blue-400" : "bg-white/[0.04] border-white/[0.08] text-zinc-400 hover:text-white"}`}>
               <Filter size={11} className={selectedFilter !== "All" ? "text-blue-400" : "text-zinc-400"} />
-              <span className="text-[11px]">{selectedFilter === "All" ? "Filter" : selectedFilter}</span>
+              <span className="text-[11px] hidden sm:inline">{selectedFilter === "All" ? "Filter" : selectedFilter}</span>
               <ChevronDown size={10} className="text-zinc-500" />
             </button>
             {showFilterDropdown && (
@@ -102,43 +265,25 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
       </div>
 
       {/* MOBILE LIST */}
-      <div className="block md:hidden space-y-2">
+      <div className="block md:hidden space-y-3">
         {filteredBills.length === 0 ? (
-          <div className="py-6 text-center text-zinc-500 text-xs italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} commitments found.</div>
-        ) : filteredBills.map(bill => (
-          <div key={bill.id} className={`p-3 rounded-xl border transition-all ${bill.paid ? "bg-zinc-950/40 border-zinc-900/60 opacity-40" : "bg-[#14141a] border-zinc-800/80 shadow-sm"}`}>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <button onClick={() => onToggleStatus(bill)} className="flex items-center gap-2.5 min-w-0 flex-1 py-1 -my-1 text-left focus:outline-none active:opacity-70 transition">
-                  <span className="shrink-0">
-                    {bill.paid ? <span className="w-5 h-5 rounded-full bg-blue-950/70 border border-blue-500/50 text-blue-400 flex items-center justify-center"><Check size={11} className="stroke-[3]" /></span> : <span className="w-5 h-5 rounded-full bg-rose-950/40 border border-rose-500/40 text-rose-400 flex items-center justify-center"><Circle size={7} className="fill-rose-400/40" /></span>}
-                  </span>
-                  <span className="privacy-blur text-xs font-semibold text-zinc-100 truncate">{bill.name}</span>
-                  {bill.isOverridden && <span className="text-[8px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1 rounded shrink-0">adj</span>}
-                </button>
-                <span className={`font-mono text-xs font-bold shrink-0 ${bill.paid ? "text-blue-400" : "text-zinc-100"}`}>₱{bill.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+          <div className="py-6 text-center text-zinc-500 text-xs italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} commitments found{searchQuery ? ` matching "${searchQuery}"` : ""}.</div>
+        ) : (
+          <>
+            {firstHalfBills.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 px-1">Days 1–15</div>
+                {firstHalfBills.map(bill => renderMobileRow(bill))}
               </div>
-              <div className="flex items-start justify-between pl-7 text-[10px] text-zinc-400">
-                <div className="flex flex-col gap-1.5 mt-1">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className={`px-1.5 py-0.5 rounded font-medium ${bill.type === "Subscription" ? "bg-purple-950/80 text-purple-300 border border-purple-800/40" : bill.type === "Loan / Installment" ? "bg-amber-950/80 text-amber-300 border border-amber-800/40" : "bg-blue-950/80 text-blue-300 border border-blue-800/40"}`}>{bill.type}</span>
-                    {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{customWallets?.find(cw => cw.id === bill.wallet)?.label || bill.wallet}</span>}
-                    {bill.dueDay && <span className="font-mono">Day {bill.dueDay}</span>}
-                    {bill.paid ? (
-                      <span className="px-2 py-0.5 rounded font-semibold tracking-wide bg-emerald-950/30 text-emerald-400/80 border border-emerald-800/30">Settled</span>
-                    ) : (
-                      <span className={`px-2 py-0.5 rounded font-semibold tracking-wide ${formatDaysRemaining(bill.daysLeft).tone === "urgent" ? "bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse" : formatDaysRemaining(bill.daysLeft).tone === "overdue" ? "bg-rose-600/25 text-rose-300 border border-rose-500/40" : formatDaysRemaining(bill.daysLeft).tone === "warning" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-slate-800 text-slate-400 border border-slate-700/60"}`}>{formatDaysRemaining(bill.daysLeft).text}</span>
-                    )}
-                  </div>
-                  {bill.type === "Loan / Installment" && <div className="mt-1"><LoanProgressBadge startMonth={bill.startMonth} endMonth={bill.endMonth} targetMonthForDue={bill.targetMonthForDue} isPaid={bill.paid} monthlyAmount={bill.baseAmount} totalPaid={bill.totalLoanPaid} /></div>}
-                </div>
-                <button onClick={() => handleStartEdit(bill)} className="px-2 py-0.5 text-zinc-400 hover:text-amber-300 bg-zinc-800/70 hover:bg-zinc-700/60 border border-zinc-700/40 rounded-md transition flex items-center gap-1 text-[10px] shrink-0 mt-1">
-                  <Edit2 size={9} /><span>Edit</span>
-                </button>
+            )}
+            {secondHalfBills.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 px-1">Days 16–31</div>
+                {secondHalfBills.map(bill => renderMobileRow(bill))}
               </div>
-            </div>
-          </div>
-        ))}
+            )}
+          </>
+        )}
       </div>
 
       {/* DESKTOP LIST */}
@@ -150,50 +295,26 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
               <th className="py-2.5 px-2 font-semibold">Status</th><th className="py-2.5 px-2 font-semibold">Commitment</th><th className="py-2.5 px-2 font-semibold text-right">Amount</th><th className="py-2.5 px-2 font-semibold">Type & Due Date</th><th className="py-2.5 px-2 font-semibold text-center">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/[0.03]">
-            {filteredBills.length === 0 ? (
-              <tr><td colSpan={5} className="py-6 text-center text-zinc-500 italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} commitments found.</td></tr>
-            ) : filteredBills.map((bill) => (
-              <tr key={bill.id} className={`group transition-all duration-150 ${bill.paid ? "opacity-40" : "hover:bg-white/[0.02]"}`}>
-                <td className="py-2.5 px-2 align-top pt-3">
-                  <button onClick={() => onToggleStatus(bill)} className="flex items-center gap-1.5 focus:outline-none">
-                    {bill.paid ? <span className="flex items-center justify-center gap-1 w-[85px] text-blue-400 text-[11px] font-semibold bg-blue-950/40 px-2 py-1 rounded-lg border border-blue-600/30 transition-all hover:bg-blue-900/50"><Check size={11} className="stroke-[3]" /> Paid</span> : <span className="flex items-center justify-center gap-1 w-[85px] text-rose-400 text-[11px] font-medium bg-rose-950/30 px-2 py-1 rounded-lg border border-rose-800/30 transition-all hover:bg-rose-900/40"><Circle size={9} className="fill-rose-500/20" /> Pending</span>}
-                  </button>
-                </td>
-                <td className="py-2.5 px-2 align-top pt-3 text-zinc-200 truncate font-medium">
-                  <div className="flex flex-col">
-                    <span className="privacy-blur">{bill.name}</span>
-                    {bill.isOverridden && <span className="text-[9px] font-mono text-amber-400 flex items-center gap-1">• {selectedMonth.split(" ")[0]} bill adjusted</span>}
-                  </div>
-                </td>
-                <td className={`py-2.5 px-2 align-top pt-3 text-right font-mono font-semibold ${bill.paid ? "text-blue-400" : "text-zinc-100"}`}>
-                  ₱{bill.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                </td>
-                <td className="py-2.5 px-2 align-top text-zinc-400 text-[11px]">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${bill.type === "Subscription" ? "bg-purple-950/70 text-purple-300 border border-purple-800/40" : bill.type === "Loan / Installment" ? "bg-amber-950/70 text-amber-300 border border-amber-800/40" : "bg-blue-950/70 text-blue-300 border border-blue-800/40"}`}>{bill.type}</span>
-                      {bill.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{customWallets?.find(cw => cw.id === bill.wallet)?.label || bill.wallet}</span>}
-                      {bill.dueDay && <span className="text-[11px] text-zinc-400 font-mono">Day {bill.dueDay}</span>}
-                      {bill.paid ? (
-                        <span className="px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide bg-emerald-950/30 text-emerald-400/80 border border-emerald-800/30">Settled</span>
-                      ) : (
-                        <span className={`px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide ${formatDaysRemaining(bill.daysLeft).tone === "urgent" ? "bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse" : formatDaysRemaining(bill.daysLeft).tone === "overdue" ? "bg-rose-600/25 text-rose-300 border border-rose-500/40" : formatDaysRemaining(bill.daysLeft).tone === "warning" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-slate-800 text-slate-400 border border-slate-700/60"}`}>{formatDaysRemaining(bill.daysLeft).text}</span>
-                      )}
-                    </div>
-                    {bill.type === "Loan / Installment" && <div className="mt-1"><LoanProgressBadge startMonth={bill.startMonth} endMonth={bill.endMonth} targetMonthForDue={bill.targetMonthForDue} isPaid={bill.paid} monthlyAmount={bill.baseAmount} totalPaid={bill.totalLoanPaid} /></div>}
-                  </div>
-                </td>
-                <td className="py-2.5 px-2 align-top text-center whitespace-nowrap pt-2">
-                  <div className="inline-flex items-center gap-1 bg-[#1a1a22] p-1 rounded-lg border border-white/[0.05]">
-                    <button onClick={() => handleStartEdit(bill)} className="px-2 py-1 text-zinc-400 hover:text-amber-300 hover:bg-white/[0.05] rounded-md text-[10px] flex items-center transition">
-                      <Edit2 size={10} className="mr-1"/> Edit
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
+          {filteredBills.length === 0 ? (
+            <tbody>
+              <tr><td colSpan={5} className="py-6 text-center text-zinc-500 italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} commitments found{searchQuery ? ` matching "${searchQuery}"` : ""}.</td></tr>
+            </tbody>
+          ) : (
+            <>
+              {firstHalfBills.length > 0 && (
+                <tbody className="divide-y divide-white/[0.03]">
+                  <tr><td colSpan={5} className="pt-3 pb-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Days 1–15</td></tr>
+                  {firstHalfBills.map(bill => renderDesktopRow(bill))}
+                </tbody>
+              )}
+              {secondHalfBills.length > 0 && (
+                <tbody className="divide-y divide-white/[0.03]">
+                  <tr><td colSpan={5} className="pt-3 pb-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Days 16–31</td></tr>
+                  {secondHalfBills.map(bill => renderDesktopRow(bill))}
+                </tbody>
+              )}
+            </>
+          )}
         </table>
       </div>
 
@@ -332,6 +453,45 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                 <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 transition active:scale-[0.98]"><Plus size={16} /> Add Commitment</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* PRIOR PAYMENT PROMPT MODAL */}
+      {pendingPriorPayment && (
+        <div className="fixed inset-0 z-[250] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#121217] border border-white/[0.08] rounded-3xl p-6 w-full max-w-sm shadow-[0_0_60px_rgba(0,0,0,0.8)] space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-white leading-tight">Was this payment already made?</h3>
+              <p className="text-[11px] text-zinc-400">
+                {pendingPriorPayment.bill.name} starts in {pendingPriorPayment.month}. Marking it as paid will use the normal commitment payment flow for this month.
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setPendingPriorPayment(null)}
+                className="flex-1 py-2.5 bg-white/[0.05] hover:bg-white/[0.1] text-xs font-semibold rounded-xl text-zinc-300 transition"
+              >
+                Leave Unpaid
+              </button>
+              <button
+                onClick={() => {
+                  const billView: BillViewModel = {
+                    ...pendingPriorPayment.bill,
+                    baseAmount: pendingPriorPayment.bill.amount,
+                    paid: false,
+                    targetMonthForDue: pendingPriorPayment.month,
+                    daysLeft: 0,
+                    isOverridden: false
+                  };
+                  onToggleStatus(billView);
+                  setPendingPriorPayment(null);
+                }}
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-xs font-semibold rounded-xl text-white shadow-lg shadow-blue-900/20 transition"
+              >
+                Mark as Paid
+              </button>
+            </div>
           </div>
         </div>
       )}

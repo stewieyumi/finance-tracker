@@ -135,6 +135,8 @@ const {
   const [opsTab, setOpsTab] = useState<"bills" | "inflows" | "gigs">("bills");
   const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "sync">("general");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastAction, setToastAction] = useState<{ label: string; onClick: () => void } | null>(null);
+  const [highlightOverdue, setHighlightOverdue] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormData>({});
   const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(false);
@@ -236,9 +238,20 @@ const {
   const importInputRef = useRef<HTMLInputElement>(null);
   const paydaySplitInProgressRef = useRef(false);
 
-  const showToast = (msg: string) => {
+  const handleJumpToOverdue = () => {
+    setActiveTab("operations");
+    setOpsTab("bills");
+    setTimeout(() => {
+      document.getElementById("operations-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+    setHighlightOverdue(true);
+    setTimeout(() => setHighlightOverdue(false), 2500);
+  };
+
+  const showToast = (msg: string, action?: { label: string; onClick: () => void }) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 2500);
+    setToastAction(action || null);
+    setTimeout(() => { setToastMessage(null); setToastAction(null); }, action ? 4500 : 2500);
   };
 
   
@@ -668,6 +681,14 @@ const copySummaryToClipboard = async () => {
         <div className="fixed top-12 right-6 z-50 flex items-center gap-2 bg-[#181822] text-white text-xs px-4 py-2.5 rounded-xl border border-white/10 shadow-2xl animate-fade-in">
           <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
+          {toastAction && (
+            <button
+              onClick={() => { toastAction.onClick(); setToastMessage(null); setToastAction(null); }}
+              className="ml-1 px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-blue-300 font-semibold transition"
+            >
+              {toastAction.label}
+            </button>
+          )}
         </div>
       )}
 
@@ -746,7 +767,7 @@ const copySummaryToClipboard = async () => {
           <div className="space-y-5 sm:space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
             <ErrorBoundary><MilestoneProgressBar currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0} targetFund={targetMilestoneFund} goalName={globalData?.settings?.goalName} onConfigureGoal={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }} /></ErrorBoundary>
             <ErrorBoundary><MetricsSummaryGrid totalLiquid={totalLiquid} fundProgressPercent={fundProgressPercent} totalPendingReceivables={totalPendingReceivables} monthIncomeCollected={monthIncomeCollected} selectedMonth={selectedMonth} /></ErrorBoundary>
-            <ErrorBoundary><ExecutionFlowCard priorityUnpaidSum={priorityUnpaidSum} totalUnpaidCommitments={totalUnpaidCommitments} overdueBills={overdueBills} overdueSum={overdueSum} paydayAllocations={paydayAllocations} onConfigureBaselines={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }} remainingBuffer={remainingBuffer} customWallets={globalData?.settings?.customWallets} onExecutePaydaySplit={handleExecutePaydaySplit} disabled={!isViewingCurrentMonth || hasExecutedToday}
+            <ErrorBoundary><ExecutionFlowCard priorityUnpaidSum={priorityUnpaidSum} totalUnpaidCommitments={totalUnpaidCommitments} overdueBills={overdueBills} overdueSum={overdueSum} paydayAllocations={paydayAllocations} onConfigureBaselines={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }} remainingBuffer={remainingBuffer} customWallets={globalData?.settings?.customWallets} onExecutePaydaySplit={handleExecutePaydaySplit} disabled={!isViewingCurrentMonth || hasExecutedToday} onClickOverdue={handleJumpToOverdue}
               latestExecution={latestExecution}
               onUndoSplit={handleUndoPaydaySplit} /></ErrorBoundary>
             
@@ -786,19 +807,20 @@ const copySummaryToClipboard = async () => {
               </div>
             </ErrorBoundary>
 
-            <ErrorBoundary><WalletGrid wallets={globalData?.wallets || {}} milestoneWallet={globalData?.settings?.milestoneWallet} customWallets={globalData?.settings?.customWallets} onCommit={commitWallet} onIncrement={incrementWallet} /></ErrorBoundary>
+            <ErrorBoundary><WalletGrid wallets={globalData?.wallets || {}} milestoneWallet={globalData?.settings?.milestoneWallet}
+        savingsWallet={globalData?.settings?.savingsWallet} customWallets={globalData?.settings?.customWallets} onCommit={commitWallet} onIncrement={incrementWallet} /></ErrorBoundary>
             <button onClick={copySummaryToClipboard} className="w-full bg-[#121217]/90 hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Copy size={14} /> Copy Summary</button>
           </div>
         )}
 
         {activeTab === "operations" && (
-          <div className="space-y-4 sm:space-y-5 animate-in fade-in zoom-in-95 duration-400 ease-out">
+          <div id="operations-section" className="space-y-4 sm:space-y-5 animate-in fade-in zoom-in-95 duration-400 ease-out">
             <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] p-1.5 rounded-2xl flex items-center shadow-lg w-full mx-auto">
               <button onClick={() => setOpsTab("bills")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "bills" ? "bg-blue-600/20 text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.3)]" : "text-zinc-500 hover:text-zinc-300"}`}>Commitments</button>
               <button onClick={() => setOpsTab("inflows")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "inflows" ? "bg-emerald-600/20 text-emerald-400 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)]" : "text-zinc-500 hover:text-zinc-300"}`}>Inflows</button>
               <button onClick={() => setOpsTab("gigs")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "gigs" ? "bg-amber-600/20 text-amber-400 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.3)]" : "text-zinc-500 hover:text-zinc-300"}`}>Gigs & Tasks</button>
             </div>
-            {opsTab === "bills" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><BillsTable activeBills={activeBills} selectedMonth={selectedMonth} onToggleStatus={toggleBillStatus} onAddBill={handleAddBill} onDeleteBill={deleteBill} onSaveEdit={(_, scope) => saveBillEdit(scope)} onResetMonthOverride={resetMonthOverride} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} customWallets={globalData?.settings?.customWallets} defaultWallet={globalData?.settings?.defaultWallet} /></ErrorBoundary></div>}
+            {opsTab === "bills" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><BillsTable activeBills={activeBills} selectedMonth={selectedMonth} onToggleStatus={toggleBillStatus} onAddBill={handleAddBill} onDeleteBill={deleteBill} onSaveEdit={(_, scope) => saveBillEdit(scope)} onResetMonthOverride={resetMonthOverride} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} customWallets={globalData?.settings?.customWallets} defaultWallet={globalData?.settings?.defaultWallet} highlightOverdue={highlightOverdue} /></ErrorBoundary></div>}
             {opsTab === "inflows" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><ReceivablesTable inflowsLabel={globalData?.settings?.inflowsLabel} inflowCategories={globalData?.settings?.inflowCategories} customWallets={globalData?.settings?.customWallets} activeReceivables={activeReceivables} selectedMonth={selectedMonth} onToggleStatus={toggleReceivableStatus} onAddPayment={addPayment} onAddReceivable={handleAddReceivable} onDeleteReceivable={deleteReceivable} onSaveEdit={() => saveReceivableEdit()} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} /></ErrorBoundary></div>}
             {opsTab === "gigs" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><ShootsTable gigsLabel={globalData?.settings?.gigsLabel} gigCategories={globalData?.settings?.gigCategories} activeShoots={activeShoots} selectedMonth={selectedMonth} onToggleCompletion={toggleShootCompletion} onAddShoot={handleAddShoot} onDeleteShoot={deleteShoot} onSaveEdit={() => saveShootEdit()} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} /></ErrorBoundary></div>}
           </div>
