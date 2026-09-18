@@ -96,7 +96,11 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
     });
 
     const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
+    if (data.error) {
+      // Forward Gemini's real status (e.g. 503 = overloaded) instead of
+      // always collapsing to 500, so the client can react specifically.
+      return res.status(response.status || 502).json({ error: data.error.message });
+    }
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
     const cleanText = text.replace(/```json/gi, "").replace(/```/g, "").trim();

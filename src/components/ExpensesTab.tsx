@@ -74,7 +74,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "x-sync-passcode": getLocalPasscode()
+              "Authorization": `Bearer ${token}`
             },
             body: JSON.stringify({ image: base64 })
           });
@@ -92,7 +92,13 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
           localStorage.setItem('scanner_debug_log', JSON.stringify(data));
           
           if (!res.ok || data.error) {
-            showToast("Unable to scan this receipt. Please try again or enter the details manually.");
+            const errorText = String(data.error || "").toLowerCase();
+            const isOverloaded = errorText.includes("high demand") || errorText.includes("overloaded") || res.status === 503;
+            showToast(
+              isOverloaded
+                ? "Gemini AI is currently at capacity. Please enter this receipt manually."
+                : "Unable to scan this receipt. Please try again or enter the details manually."
+            );
             return;
           }
 
