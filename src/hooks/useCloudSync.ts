@@ -126,14 +126,11 @@ export function useCloudSync(
       return false;
     }
 
-    let token = getLocalPasscode();
+    let token = getLocalPasscode() || localStorage.getItem("ft_google_token") || localStorage.getItem("ft_sync_passcode") || "";
 
-    if (!token && retryCount === 0) {
-      const prompted = promptPasscode();
-
-      if (prompted) {
-        token = prompted;
-      }
+    if (!token) {
+      setDebugLog("⚠️ PUSH SKIPPED: No Google token available.");
+      return false;
     }
 
     try {
