@@ -335,6 +335,35 @@ const fundProgressPercent = useMemo(() => {
       });
     });
 
+    
+    // 5. Historical/Manual Transactions
+    globalData.library?.manualTransactions?.forEach(mt => {
+      let finalAmt = mt.amount;
+      if (mt.type === 'expense' || mt.type === 'transfer') finalAmt = -mt.amount;
+      
+      txs.push({
+        id: mt.id,
+        title: mt.title,
+        amount: finalAmt,
+        date: mt.date,
+        type: mt.type === 'income' ? 'inflow' : 'expense',
+        wallet: mt.wallet,
+        category: mt.category || mt.type
+      });
+
+      if (mt.type === 'transfer' && mt.destinationWallet) {
+         txs.push({
+          id: mt.id + '_dest',
+          title: mt.title + ' (Receive)',
+          amount: mt.amount,
+          date: mt.date,
+          type: 'inflow',
+          wallet: mt.destinationWallet,
+          category: mt.category || mt.type
+        });
+      }
+    });
+
     return txs.sort((a, b) => { const dateA = a.date || ""; const dateB = b.date || ""; if (dateA !== dateB) return dateB.localeCompare(dateA); return b.id.localeCompare(a.id); });
   }, [globalData]);
 

@@ -6,6 +6,19 @@ export type ShootStatus = "Pencil" | "Confirmed" | "Moved" | "Cancelled";
 
 export type ExpenseCategory = "Food & Dining" | "Transport" | "Utilities" | "Laundry & Home" | "Shopping" | "Other";
 
+export interface ManualTransaction {
+  id: string;
+  title: string;
+  amount: number;
+  type: 'income' | 'expense' | 'transfer';
+  date: string;
+  wallet?: string;
+  destinationWallet?: string;
+  category?: string;
+  note?: string;
+  createdAt: number;
+}
+
 export interface Expense {
   id: string;
   merchant: string;
@@ -132,6 +145,7 @@ export interface UnifiedFinanceData {
     receivables: Receivable[];
     shoots: Shoot[];
     expenses?: Expense[];
+  manualTransactions?: ManualTransaction[];
   };
   logs: {
     [monthKey: string]: MonthLog;

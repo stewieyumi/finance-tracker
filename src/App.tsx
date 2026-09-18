@@ -1,5 +1,6 @@
 import { roundMoney } from "./utils/currency";
 import React, { useState, useMemo, useRef, useCallback } from "react";
+import { HistoricalLedgerModal } from "./components/HistoricalLedgerModal";
 import { GoogleLogin, googleLogout, useGoogleOneTapLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
@@ -139,6 +140,7 @@ const {
   const [highlightOverdue, setHighlightOverdue] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormData>({});
+  const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(false);
 
   const [googleUser, setGoogleUser] = useState<any>(() => {
@@ -858,7 +860,10 @@ const copySummaryToClipboard = async () => {
 
             <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl rounded-3xl p-5 sm:p-8 animate-in fade-in duration-300">
               <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/[0.06]">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><History size={16} className="text-purple-400"/> Transaction History</h3>
+                <div className="flex items-center gap-3">
+  <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><History size={16} className="text-purple-400"/> Transaction History</h3>
+  <button onClick={() => setShowLedgerModal(true)} className="px-2.5 py-1 bg-white/[0.05] hover:bg-white/[0.12] rounded-lg text-[10px] uppercase font-bold tracking-wider transition border border-white/[0.05]">Manage Ledger</button>
+</div>
                 <span className="text-xs text-zinc-500 font-mono">{allTransactions.length} records</span>
               </div>
               
