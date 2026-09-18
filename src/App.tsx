@@ -744,7 +744,7 @@ const copySummaryToClipboard = async () => {
 
         {activeTab === "home" && (
           <div className="space-y-5 sm:space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
-            <ErrorBoundary><MilestoneProgressBar currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0} targetFund={targetMilestoneFund} goalName={globalData?.settings?.goalName} /></ErrorBoundary>
+            <ErrorBoundary><MilestoneProgressBar currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0} targetFund={targetMilestoneFund} goalName={globalData?.settings?.goalName} onConfigureGoal={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }} /></ErrorBoundary>
             <ErrorBoundary><MetricsSummaryGrid totalLiquid={totalLiquid} fundProgressPercent={fundProgressPercent} totalPendingReceivables={totalPendingReceivables} monthIncomeCollected={monthIncomeCollected} selectedMonth={selectedMonth} /></ErrorBoundary>
             <ErrorBoundary><ExecutionFlowCard priorityUnpaidSum={priorityUnpaidSum} totalUnpaidCommitments={totalUnpaidCommitments} overdueBills={overdueBills} overdueSum={overdueSum} paydayAllocations={paydayAllocations} onConfigureBaselines={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }} remainingBuffer={remainingBuffer} customWallets={globalData?.settings?.customWallets} onExecutePaydaySplit={handleExecutePaydaySplit} disabled={!isViewingCurrentMonth || hasExecutedToday}
               latestExecution={latestExecution}

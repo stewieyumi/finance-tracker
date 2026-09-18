@@ -77,6 +77,17 @@ export const DateJumpModal: React.FC<DateJumpModalProps> = ({ isOpen, onClose, o
           </div>
         </div>
 
+        <button
+          onClick={() => {
+            const now = new Date();
+            setJumpMonth(now.toLocaleString("default", { month: "long" }));
+            setJumpYear(String(now.getFullYear()));
+          }}
+          className="w-full text-center text-[11px] text-blue-400 hover:text-blue-300 font-semibold py-1.5 transition"
+        >
+          Jump to Current Month
+        </button>
+
         <div className="flex gap-2 pt-2">
           <button
             onClick={onClose}

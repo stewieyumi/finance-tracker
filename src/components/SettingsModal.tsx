@@ -18,6 +18,7 @@ interface SettingsModalProps {
 }
 
 const PRESETS = {
+  employee: { label: "9-to-5 Employee", inflows: "SALARY & BONUSES", gigs: "SIDE HUSTLES", inflowCats: ["Salary", "Bonus", "13th Month", "Reimbursement", "Other"], gigCats: ["Freelance", "Tutoring", "Online Selling", "Other"] },
   videographer: { label: "Multimedia Artist", inflows: "RECEIVABLES & INFLOWS", gigs: "UPCOMING SHOOTS & GIGS", inflowCats: ["Salary", "Shoot", "Edit", "Payment", "Other"], gigCats: ["Solo Shoot", "Assistant", "Video Edit", "Event", "Commercial", "Other"] },
   freelance: { label: "Freelancer / Dev", inflows: "INVOICES & PAYMENTS", gigs: "FREELANCE PROJECTS", inflowCats: ["Retainer", "Project", "Consulting", "Other"], gigCats: ["Frontend", "Backend", "Fullstack", "Design", "Maintenance", "Other"] },
   personal: { label: "Personal / Student", inflows: "INCOME & ALLOWANCE", gigs: "TASKS & HUSTLES", inflowCats: ["Allowance", "Salary", "Gift", "Side Hustle", "Other"], gigCats: ["Part-time", "Errand", "Online Selling", "Other"] }
@@ -30,7 +31,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     if (isOpen) setActiveTab(initialTab);
   }, [isOpen, initialTab]);
   const [form, setForm] = useState({
-    goalName: "Japan ADB Target Milestone", targetFund: 80000, milestoneWallet: "bpi",
+    goalName: "", targetFund: 0, milestoneWallet: "bpi",
     baseLivingAllowance: 2500, livingWallet: "gcash",
     baseSavingsTarget: 1000, savingsWallet: "bpi",
     defaultTransitAllocation: 1500, transitWallet: "gotyme",
@@ -45,8 +46,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
   useEffect(() => {
     if (isOpen && globalData.settings) {
       setForm({
-        goalName: globalData.settings.goalName || "Japan ADB Target Milestone",
-        targetFund: globalData.settings.targetFund || 80000,
+        goalName: globalData.settings.goalName || "",
+        targetFund: globalData.settings.targetFund || 0,
         milestoneWallet: globalData.settings.milestoneWallet || "bpi",
         baseLivingAllowance: globalData.settings.baseLivingAllowance ?? 2500,
         livingWallet: globalData.settings.livingWallet || "gcash",
@@ -138,7 +139,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-blue-400 uppercase tracking-wider"><Target size={14} /> Main Milestone Goal</div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Goal Name</label><input type="text" value={form.goalName} onChange={e => setForm({...form, goalName: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500" /></div>
+                  <div><label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Goal Name</label><input type="text" value={form.goalName} onChange={e => setForm({...form, goalName: e.target.value})} placeholder="e.g. Japan Trip, Emergency Fund, New Laptop" className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500" /></div>
                   <div><label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Target Amount (₱)</label><input type="number" value={form.targetFund} onChange={e => setForm({...form, targetFund: Number(e.target.value)})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-blue-500" /></div>
                   <div className="col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Linked Wallet (Tracks Progress)</label>

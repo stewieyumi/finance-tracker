@@ -109,13 +109,13 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
           <div key={bill.id} className={`p-3 rounded-xl border transition-all ${bill.paid ? "bg-zinc-950/40 border-zinc-900/60 opacity-40" : "bg-[#14141a] border-zinc-800/80 shadow-sm"}`}>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <button onClick={() => onToggleStatus(bill)} className="shrink-0 focus:outline-none">
+                <button onClick={() => onToggleStatus(bill)} className="flex items-center gap-2.5 min-w-0 flex-1 py-1 -my-1 text-left focus:outline-none active:opacity-70 transition">
+                  <span className="shrink-0">
                     {bill.paid ? <span className="w-5 h-5 rounded-full bg-blue-950/70 border border-blue-500/50 text-blue-400 flex items-center justify-center"><Check size={11} className="stroke-[3]" /></span> : <span className="w-5 h-5 rounded-full bg-rose-950/40 border border-rose-500/40 text-rose-400 flex items-center justify-center"><Circle size={7} className="fill-rose-400/40" /></span>}
-                  </button>
+                  </span>
                   <span className="privacy-blur text-xs font-semibold text-zinc-100 truncate">{bill.name}</span>
                   {bill.isOverridden && <span className="text-[8px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1 rounded shrink-0">adj</span>}
-                </div>
+                </button>
                 <span className={`font-mono text-xs font-bold shrink-0 ${bill.paid ? "text-blue-400" : "text-zinc-100"}`}>₱{bill.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex items-start justify-between pl-7 text-[10px] text-zinc-400">

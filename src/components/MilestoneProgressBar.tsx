@@ -5,23 +5,29 @@ interface MilestoneProgressBarProps {
   currentBalance?: number;
   targetFund?: number;
   goalName?: string;
+  onConfigureGoal?: () => void;
 }
 
 export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = React.memo(({
   currentBalance = 0,
-  targetFund = 80000,
-  goalName
+  targetFund = 0,
+  goalName,
+  onConfigureGoal
 }) => {
-  const percentage = Math.min(100, Math.max(0, (currentBalance / targetFund) * 100));
+  const hasGoal = !!goalName && targetFund > 0;
+  const percentage = hasGoal ? Math.min(100, Math.max(0, (currentBalance / targetFund) * 100)) : 0;
   const fundProgressPercent = percentage.toFixed(1);
 
   return (
-    <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.07] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.5)] rounded-2xl p-4 sm:p-5 transition-all">
+    <div
+      onClick={!hasGoal ? onConfigureGoal : undefined}
+      className={`bg-[#121217]/90 backdrop-blur-xl border border-white/[0.07] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.5)] rounded-2xl p-4 sm:p-5 transition-all ${!hasGoal && onConfigureGoal ? "cursor-pointer hover:border-blue-500/30" : ""}`}
+    >
       <div className="flex justify-between items-center mb-3">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
           <span className="privacy-blur text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
-            {goalName || 'Japan ADB Target Milestone'}
+            {goalName || 'Tap to set a goal...'}
           </span>
         </div>
         <div className="flex items-baseline gap-1.5">
