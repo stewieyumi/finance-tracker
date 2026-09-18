@@ -217,7 +217,7 @@ const fundProgressPercent = useMemo(() => {
 
     const paydaysRemaining = Math.max(
       1,
-      countPaydaysUntil(today, dueDate)
+      countPaydaysUntil(today, dueDate, globalData.settings?.paydayDays)
     );
 
     const alreadyAllocated =

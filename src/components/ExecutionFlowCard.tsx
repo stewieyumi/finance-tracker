@@ -18,6 +18,7 @@ interface ExecutionFlowCardProps {
   latestExecution?: PaydayExecution;
   onUndoSplit?: (id: string) => void;
   onClickOverdue?: () => void;
+  paydayDays?: number[];
 }
 
 export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
@@ -34,9 +35,17 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
   disabled = false,
   latestExecution,
   onUndoSplit,
-  onClickOverdue
+  onClickOverdue,
+  paydayDays
 }) => {
   const fmt = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2 });
+  const pdDays = paydayDays?.length ? paydayDays : [15, 30];
+  const formatOrdinal = (n: number) => {
+    const s = ["th", "st", "nd", "rd"];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
+  const titleText = `Payday Flow (${pdDays.map(formatOrdinal).join(" & ")})`;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
@@ -91,7 +100,7 @@ export const ExecutionFlowCard: React.FC<ExecutionFlowCardProps> = ({
             <div className="flex items-center gap-2">
               <Banknote size={14} className="text-emerald-400" />
               <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                Payday Flow (15th & 30th)
+                {titleText}
               </h2>
             </div>
             <button onClick={onConfigureBaselines} className="text-zinc-500 hover:text-amber-400 transition" title="Configure Baselines & Routing">

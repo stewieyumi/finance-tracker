@@ -91,6 +91,7 @@ export interface CustomWallet {
 }
 
 export interface AppSettings {
+  paydayDays?: number[];
   targetFund?: number;
   goalName?: string;
   milestoneWallet?: string;

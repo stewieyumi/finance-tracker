@@ -31,7 +31,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     if (isOpen) setActiveTab(initialTab);
   }, [isOpen, initialTab]);
   const [form, setForm] = useState({
-    goalName: "", targetFund: 0, milestoneWallet: "bpi",
+    goalName: "", targetFund: 0, paydayDays: [15, 30] as number[], milestoneWallet: "bpi",
     baseLivingAllowance: 2500, livingWallet: "gcash",
     baseSavingsTarget: 1000, savingsWallet: "bpi",
     defaultTransitAllocation: 1500, transitWallet: "gotyme",
@@ -47,7 +47,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     if (isOpen && globalData.settings) {
       setForm({
         goalName: globalData.settings.goalName || "",
-        targetFund: globalData.settings.targetFund || 0,
+        targetFund: globalData.settings.targetFund || 0, paydayDays: globalData.settings.paydayDays || [15, 30],
         milestoneWallet: globalData.settings.milestoneWallet || "bpi",
         baseLivingAllowance: globalData.settings.baseLivingAllowance ?? 2500,
         livingWallet: globalData.settings.livingWallet || "gcash",
@@ -81,7 +81,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
       ...prev,
       settings: {
         ...(prev.settings || {}),
-        targetFund: Number(form.targetFund), goalName: form.goalName, milestoneWallet: form.milestoneWallet,
+        targetFund: Number(form.targetFund),
+        paydayDays: form.paydayDays, goalName: form.goalName, milestoneWallet: form.milestoneWallet,
         baseLivingAllowance: Number(form.baseLivingAllowance), livingWallet: form.livingWallet,
         baseSavingsTarget: Number(form.baseSavingsTarget), savingsWallet: form.savingsWallet,
         defaultTransitAllocation: Number(form.defaultTransitAllocation), transitWallet: form.transitWallet,

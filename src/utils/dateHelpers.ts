@@ -88,9 +88,16 @@ export function getDaysUntil(dueDay: string | number, targetMonthKey: string): n
   return Object.is(days, -0) ? 0 : days;
 }
 
-export function countPaydaysUntil(today: Date, dueDate: Date): number {
-  if (dueDate < today) return 0;
-  let count = 0;
+export function normalizePaydayDays(days?: number[]): number[] {
+  if (!days || !Array.isArray(days) || days.length === 0) return [15, 30];
+  const valid = Array.from(new Set(days.filter(d => Number.isInteger(d) && d >= 1 && d <= 31)));
+  if (valid.length === 0) return [15, 30];
+  return valid.sort((a, b) => a - b);
+}
+
+export function getPaydayDatesInRange(today: Date, dueDate: Date, paydayDays: number[]): Date[] {
+  if (dueDate < today) return [];
+  const dates: Date[] = [];
   let year = today.getFullYear();
   let month = today.getMonth();
   const endYear = dueDate.getFullYear();
@@ -98,15 +105,22 @@ export function countPaydaysUntil(today: Date, dueDate: Date): number {
 
   while (year < endYear || (year === endYear && month <= endMonth)) {
     const lastDay = new Date(year, month + 1, 0).getDate();
-    const paydayDays = [15, Math.min(30, lastDay)];
-    for (const day of paydayDays) {
+    const safeDays = Array.from(new Set(paydayDays.map(d => Math.min(d, lastDay)))).sort((a,b)=>a-b);
+    for (const day of safeDays) {
       const payday = new Date(year, month, day);
-      if (payday >= today && payday <= dueDate) count++;
+      if (payday >= today && payday <= dueDate) {
+        dates.push(payday);
+      }
     }
     month++;
     if (month > 11) { month = 0; year++; }
   }
-  return count;
+  return dates;
+}
+
+export function countPaydaysUntil(today: Date, dueDate: Date, paydayDays?: number[]): number {
+  const normalized = normalizePaydayDays(paydayDays);
+  return getPaydayDatesInRange(today, dueDate, normalized).length;
 }
 
 export function formatDaysRemaining(days: number): { text: string; tone: "urgent" | "warning" | "normal" | "overdue" } {
