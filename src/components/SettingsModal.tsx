@@ -37,7 +37,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     if (isOpen) setActiveTab(initialTab);
   }, [isOpen, initialTab]);
   const [form, setForm] = useState({
-    goalName: "", targetFund: 0, paydayDays: [15, 30] as number[], milestoneWallet: "bpi",
+    goalName: "", targetFund: 0, paydayDays: [15, 30] as number[], milestoneWallet: "bpi", theme: "dark" as "dark" | "light" | "system",
     baseLivingAllowance: 2500, livingWallet: "gcash",
     baseSavingsTarget: 1000, savingsWallet: "bpi",
     defaultTransitAllocation: 1500, transitWallet: "gotyme",
@@ -53,7 +53,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     if (isOpen && globalData.settings) {
       setForm({
         goalName: globalData.settings.goalName || "",
-        targetFund: globalData.settings.targetFund || 0, paydayDays: globalData.settings.paydayDays || [15, 30],
+        targetFund: globalData.settings.targetFund || 0, paydayDays: globalData.settings.paydayDays || [15, 30], theme: globalData.settings.theme || "dark",
         milestoneWallet: globalData.settings.milestoneWallet || "bpi",
         baseLivingAllowance: globalData.settings.baseLivingAllowance ?? 2500,
         livingWallet: globalData.settings.livingWallet || "gcash",
@@ -90,7 +90,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
       settings: {
         ...(prev.settings || {}),
         targetFund: Number(form.targetFund),
-        paydayDays: form.paydayDays, goalName: form.goalName, milestoneWallet: form.milestoneWallet,
+        paydayDays: form.paydayDays, goalName: form.goalName, milestoneWallet: form.milestoneWallet, theme: form.theme,
         baseLivingAllowance: Number(form.baseLivingAllowance), livingWallet: form.livingWallet,
         baseSavingsTarget: Number(form.baseSavingsTarget), savingsWallet: form.savingsWallet,
         defaultTransitAllocation: Number(form.defaultTransitAllocation), transitWallet: form.transitWallet,
@@ -227,6 +227,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                     <select value={form.defaultWallet} onChange={e => setForm({...form, defaultWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 cursor-pointer">
                       <WalletSelectOptions />
                     </select>
+                  </div>
+                </div>
+
+                <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4">
+                  <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-2 block">Appearance</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["dark", "light", "system"] as const).map(opt => (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setForm({...form, theme: opt})}
+                        className={`py-2 rounded-xl text-[11px] font-semibold capitalize transition border ${form.theme === opt ? "bg-blue-600 border-blue-500 text-white" : "bg-[#0b0b0e] border-zinc-800 text-zinc-400 hover:border-zinc-600"}`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
                   </div>
                 </div>
 

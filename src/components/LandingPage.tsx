@@ -23,7 +23,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoogleSuccess }) => 
   };
 
   return (
-    <div className="min-h-screen bg-[#070709] flex flex-col items-center justify-center p-6 text-zinc-300 font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-shell flex flex-col items-center justify-center p-6 text-text-secondary font-sans relative overflow-hidden">
       {/* Background Glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-600/20 blur-[120px] rounded-full pointer-events-none" />
 

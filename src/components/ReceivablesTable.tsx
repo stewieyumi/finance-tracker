@@ -275,7 +275,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Frequency</label>
                   <select value={editForm.frequency || "By Date"} onChange={(e) => setEditForm({ ...editForm, frequency: e.target.value as ReceivableFrequency })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
-                    <option value="By Date">Specific Date</option><option value="Monthly">Monthly</option><option value="Bi-monthly">15th & 30th</option>
+                    <option value="By Date">Specific Date</option><option value="Monthly">Monthly</option><option value="Bi-monthly">Bi-Monthly</option>
                   </select>
                 </div>
                 {editForm.frequency === "Bi-monthly" && (
@@ -371,7 +371,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Frequency</label>
                   <select value={newReceivable.frequency} onChange={(e) => setNewReceivable({ ...newReceivable, frequency: e.target.value as ReceivableFrequency })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
-                    <option value="By Date">Specific Date</option><option value="Monthly">Monthly</option><option value="Bi-monthly">15th & 30th</option>
+                    <option value="By Date">Specific Date</option><option value="Monthly">Monthly</option><option value="Bi-monthly">Bi-Monthly</option>
                   </select>
                 </div>
                 {newReceivable.frequency === "Bi-monthly" && (
