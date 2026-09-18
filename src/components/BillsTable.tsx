@@ -23,6 +23,7 @@ interface BillsTableProps {
   setEditForm: React.Dispatch<React.SetStateAction<EditFormData>>;
   
   customWallets?: CustomWallet[];
+  walletLabels?: Record<string, string>;
   defaultWallet?: string;
   highlightOverdue?: boolean;
 }

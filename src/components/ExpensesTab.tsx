@@ -12,6 +12,7 @@ interface ExpensesTabProps {
   globalData: UnifiedFinanceData;
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
   showToast: (msg: string) => void;
+  walletLabels?: Record<string, string>;
 }
 
 const getLocalToday = () => {

@@ -46,7 +46,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
         nextWallets[newId] = 0;
       }
 
-      return { ...prev, settings: { ...(prev.settings || {}), customWallets: updatedWallets }, wallets: nextWallets, updatedAt: Date.now() };
+      return { ...prev, settings: { ...(prev.settings || {}), customWallets: updatedWallets }, wallets: nextWallets, updatedAt: Date.now() } as any;
     });
     setWalletName(""); setEditingId(null); setShowAdd(false);
   };
@@ -86,7 +86,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
         },
         wallets: nextWallets, 
         updatedAt: Date.now() 
-      };
+      } as any;
     });
   };
 
