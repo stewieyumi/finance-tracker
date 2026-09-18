@@ -53,10 +53,9 @@ export function useCloudSync(
 
   latestDataRef.current = globalData;
 
-  // Interactive passcode entry now happens via Settings > Sync (Google
-  // login or manual passcode input there). This function intentionally
-  // does not prompt — it exists only so callers can check "is there
-  // nothing we can do here" without a network round trip.
+  // Authentication is handled by Google Sign-In in the UI.
+  // This legacy helper remains available for compatibility, but never
+  // prompts for a passcode.
   const promptPasscode = useCallback((): string | null => {
     return null;
   }, []);
@@ -118,15 +117,14 @@ export function useCloudSync(
   );
 
   const pushToCloud = async (
-    dataToSave: UnifiedFinanceData,
-    retryCount = 0
+    dataToSave: UnifiedFinanceData
   ): Promise<boolean> => {
     if (!navigator.onLine) {
       setIsOnline(false);
       return false;
     }
 
-    let token = getLocalPasscode() || localStorage.getItem("ft_google_token") || localStorage.getItem("ft_sync_passcode") || "";
+    const token = getLocalPasscode();
 
     if (!token) {
       setDebugLog("⚠️ PUSH SKIPPED: No Google token available.");
@@ -215,31 +213,10 @@ export function useCloudSync(
 
       if (res.status === 401) {
         setDebugLog(
-          "❌ AUTH ERROR (401): Invalid passcode or token."
+          "❌ AUTH ERROR (401): Google session is invalid or expired."
         );
 
-        if (token.startsWith("eyJ")) {
-          window.dispatchEvent(new Event("auth-expired"));
-          return false;
-        }
-
-        if (retryCount === 0) {
-          showToast(
-            "⚠️ Invalid sync passcode. Please enter a valid key."
-          );
-
-          const prompted = promptPasscode();
-
-          if (prompted) {
-            return await pushToCloud(
-              dataToSave,
-              retryCount + 1
-            );
-          }
-        } else {
-          showToast("❌ Sync unauthorized.");
-        }
-
+        window.dispatchEvent(new Event("auth-expired"));
         return false;
       }
 
@@ -315,8 +292,7 @@ export function useCloudSync(
   );
 
   const pullLatestData = async (
-    silent = false,
-    retryCount = 0
+    silent = false
   ) => {
     if (!navigator.onLine) {
       setIsOnline(false);
@@ -340,15 +316,7 @@ export function useCloudSync(
       return;
     }
 
-    let token = getLocalPasscode();
-
-    if (!token && !silent && retryCount === 0) {
-      const prompted = promptPasscode();
-
-      if (prompted) {
-        token = prompted;
-      }
-    }
+    const token = getLocalPasscode();
 
     // No authenticated session means there is nothing to pull.
     // Do not make a network request with an empty token.
@@ -371,25 +339,10 @@ export function useCloudSync(
 
       if (res.status === 401) {
         setDebugLog(
-          "❌ AUTH ERROR (401): Invalid passcode or token on pull."
+          "❌ AUTH ERROR (401): Google session is invalid or expired."
         );
 
-        if (token.startsWith("eyJ")) {
-          window.dispatchEvent(new Event("auth-expired"));
-          return;
-        }
-
-        if (!silent && retryCount === 0) {
-          const prompted = promptPasscode();
-
-          if (prompted) {
-            return await pullLatestData(
-              silent,
-              retryCount + 1
-            );
-          }
-        }
-
+        window.dispatchEvent(new Event("auth-expired"));
         return;
       }
 
