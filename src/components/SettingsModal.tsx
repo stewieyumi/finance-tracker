@@ -24,6 +24,12 @@ const PRESETS = {
   personal: { label: "Personal / Student", inflows: "INCOME & ALLOWANCE", gigs: "TASKS & HUSTLES", inflowCats: ["Allowance", "Salary", "Gift", "Side Hustle", "Other"], gigCats: ["Part-time", "Errand", "Online Selling", "Other"] }
 };
 
+const formatOrdinal = (n: number) => {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
+
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab = "general", onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull, onExport, onImportClick }) => {
   const [activeTab, setActiveTab] = useState<"general"|"baselines"|"wallets"|"sync">(initialTab);
 
@@ -75,6 +81,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     const p = PRESETS[key];
     setForm(prev => ({ ...prev, inflowsLabel: p.inflows, gigsLabel: p.gigs, inflowCategories: p.inflowCats, gigCategories: p.gigCats }));
   };
+
+  const [newPaydayDay, setNewPaydayDay] = useState(1);
 
   const handleSave = () => {
     setGlobalData(prev => ({
@@ -219,6 +227,49 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                     <select value={form.defaultWallet} onChange={e => setForm({...form, defaultWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 cursor-pointer">
                       <WalletSelectOptions />
                     </select>
+                  </div>
+                </div>
+
+                <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4">
+                  <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Payday Schedule</label>
+                  <div className="text-[10px] text-zinc-500 mb-2">These dates control payday funding and commitment allocation. Not the same as an individual bill's due date.</div>
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {(form.paydayDays.length ? form.paydayDays : [15, 30]).map(day => (
+                      <span key={day} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-blue-950/40 border border-blue-800/40 text-blue-300 text-[11px] font-semibold">
+                        {formatOrdinal(day)}
+                        <button
+                          type="button"
+                          onClick={() => setForm({...form, paydayDays: form.paydayDays.filter(d => d !== day)})}
+                          disabled={form.paydayDays.length <= 1}
+                          className="text-blue-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-800/50 transition"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <select
+                      value={newPaydayDay}
+                      onChange={e => setNewPaydayDay(Number(e.target.value))}
+                      className="flex-1 bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 cursor-pointer"
+                    >
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                        <option key={d} value={d}>{formatOrdinal(d)}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (form.paydayDays.length >= 10) return;
+                        if (form.paydayDays.includes(newPaydayDay)) return;
+                        setForm({...form, paydayDays: [...form.paydayDays, newPaydayDay].sort((a, b) => a - b)});
+                      }}
+                      disabled={form.paydayDays.length >= 10 || form.paydayDays.includes(newPaydayDay)}
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white text-xs font-semibold transition"
+                    >
+                      Add
+                    </button>
                   </div>
                 </div>
               </div>

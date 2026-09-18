@@ -104,6 +104,7 @@ export interface CustomWallet {
 }
 
 export interface AppSettings {
+  theme?: "dark" | "light" | "system";
   paydayDays?: number[];
   targetFund?: number;
   goalName?: string;

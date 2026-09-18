@@ -101,12 +101,21 @@ export function useBillActions({
     });
 
     if (!bill.paid) {
-      showToast(`Paid ₱${bill.amount.toLocaleString()}`, {
-        label: "Undo",
-        onClick: () => toggleBillStatus(bill)
-      });
+      showToast(
+        skipWalletMutation
+          ? `Marked ₱${bill.amount.toLocaleString()} as already paid (no wallet change)`
+          : `Paid ₱${bill.amount.toLocaleString()}`,
+        {
+          label: "Undo",
+          onClick: () => toggleBillStatus(bill, skipWalletMutation)
+        }
+      );
     } else {
-      showToast(`Unmarked ₱${bill.amount.toLocaleString()} (refunded to wallet)`);
+      showToast(
+        skipWalletMutation
+          ? `Unmarked (no wallet change)`
+          : `Unmarked ₱${bill.amount.toLocaleString()} (refunded to wallet)`
+      );
     }
   };
 
