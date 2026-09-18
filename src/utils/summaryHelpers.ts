@@ -18,6 +18,14 @@ interface BuildSummaryParams {
   monthIncomeCollected: number;
 }
 
+
+const formatOrdinal = (n: number) => {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
+
+
 export function buildFinancialSummary({
   activeBills,
   activeReceivables,
@@ -95,7 +103,7 @@ export function buildFinancialSummary({
                 })
               : "Date TBA"
             : r.frequency === "Bi-monthly"
-              ? (r.biMonthlyDays && r.biMonthlyDays.length > 0 ? r.biMonthlyDays.map(d => d + "th").join(" & ") : "15th & 30th")
+              ? (r.biMonthlyDays && r.biMonthlyDays.length > 0 ? r.biMonthlyDays.map(formatOrdinal).join(" & ") : "15th & 30th")
               : `Monthly (Day ${r.monthlyDay || 15})`;
 
         return rec > 0

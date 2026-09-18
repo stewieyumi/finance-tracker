@@ -12,7 +12,7 @@ type BillSortOption = "default" | "dueSoon" | "dueDate" | "amountDesc" | "amount
 interface BillsTableProps {
   activeBills: BillViewModel[];
   selectedMonth: string;
-  onToggleStatus: (bill: BillViewModel) => void;
+  onToggleStatus: (bill: BillViewModel, skipWalletMutation?: boolean) => void;
   onAddBill: (bill: { name: string; amount: number; dueDay: string; type: BillType; startMonth: string; endMonth: string; wallet?: string }) => Bill;
   onDeleteBill: (id: string) => void;
   onSaveEdit: (category: "bills", scope?: "monthOnly" | "default") => void;
@@ -145,13 +145,13 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
     <div key={bill.id} className={`p-3 rounded-xl border transition-all ${bill.paid ? "bg-zinc-950/40 border-zinc-900/60 opacity-40" : "bg-[#14141a] border-zinc-800/80 shadow-sm"} ${highlightOverdue && (bill.daysLeft ?? 0) < 0 && !bill.paid ? 'ring-2 ring-orange-500/50' : ''}`}>
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <button onClick={() => onToggleStatus(bill)} className="shrink-0 focus:outline-none">
+          <button onClick={() => onToggleStatus(bill)} className="flex items-center gap-2.5 min-w-0 flex-1 text-left focus:outline-none group">
+      <div className="shrink-0">
               {bill.paid ? <span className="w-5 h-5 rounded-full bg-blue-950/70 border border-blue-500/50 text-blue-400 flex items-center justify-center"><Check size={11} className="stroke-[3]" /></span> : <span className="w-5 h-5 rounded-full bg-rose-950/40 border border-rose-500/40 text-rose-400 flex items-center justify-center"><Circle size={7} className="fill-rose-400/40" /></span>}
-            </button>
-            <span className="privacy-blur text-xs font-semibold text-zinc-100 truncate cursor-pointer hover:text-blue-400" onClick={() => onToggleStatus(bill)}>{bill.name}</span>
+            </div>
+      <span className="privacy-blur text-xs font-semibold text-zinc-100 truncate group-hover:text-blue-400 transition-colors">{bill.name}</span>
             {bill.isOverridden && <span className="text-[8px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1 rounded shrink-0">adj</span>}
-          </div>
+    </button>
           <span className={`font-mono text-xs font-bold shrink-0 ${bill.paid ? "text-blue-400" : "text-zinc-100"}`}>₱{bill.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
         </div>
         <div className="flex items-start justify-between pl-7 text-[10px] text-zinc-400">
@@ -485,7 +485,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                     daysLeft: 0,
                     isOverridden: false
                   };
-                  onToggleStatus(billView);
+                  onToggleStatus(billView, true);
                   setPendingPriorPayment(null);
                 }}
                 className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-xs font-semibold rounded-xl text-white shadow-lg shadow-blue-900/20 transition"

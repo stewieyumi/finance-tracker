@@ -55,7 +55,7 @@ export function useBillActions({
     return newBill;
   };
 
-  const toggleBillStatus = (bill: BillViewModel) => {
+  const toggleBillStatus = (bill: BillViewModel, skipWalletMutation: boolean = false) => {
     const targetMonth = bill.targetMonthForDue || selectedMonth;
     const walletKey = bill.wallet || getWalletForBill(bill.name);
 
@@ -73,10 +73,12 @@ export function useBillActions({
       const nextWallets = { ...prev.wallets };
       
       // Auto-deduct or refund the wallet balance
-      if (willBePaid) {
-        nextWallets[walletKey] = roundMoney(Math.max(0, (nextWallets[walletKey] || 0) - bill.amount));
-      } else {
-        nextWallets[walletKey] = roundMoney((nextWallets[walletKey] || 0) + bill.amount);
+      if (!skipWalletMutation) {
+        if (willBePaid) {
+          nextWallets[walletKey] = roundMoney(Math.max(0, (nextWallets[walletKey] || 0) - bill.amount));
+        } else {
+          nextWallets[walletKey] = roundMoney((nextWallets[walletKey] || 0) + bill.amount);
+        }
       }
 
       return {

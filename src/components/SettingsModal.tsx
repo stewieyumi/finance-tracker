@@ -80,7 +80,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     setGlobalData(prev => ({
       ...prev,
       settings: {
-        ...(prev.settings || { perPayoutSalary: 15000, phpToJpyRate: 2.7 }),
+        ...(prev.settings || {}),
         targetFund: Number(form.targetFund), goalName: form.goalName, milestoneWallet: form.milestoneWallet,
         baseLivingAllowance: Number(form.baseLivingAllowance), livingWallet: form.livingWallet,
         baseSavingsTarget: Number(form.baseSavingsTarget), savingsWallet: form.savingsWallet,

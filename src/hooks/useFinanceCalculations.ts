@@ -191,7 +191,7 @@ const fundProgressPercent = useMemo(() => {
   const overdueSum = useMemo(() => overdueBills.reduce((a, c) => a + (parseFloat(String(c.amount)) || 0), 0), [overdueBills]);
   const cashShortfall = totalUnpaidCommitments - totalLiquid;
 
-  const perPayoutSalary = globalData?.settings?.perPayoutSalary ?? 15000;
+  const perPayoutSalary = globalData?.settings?.perPayoutSalary ?? 0;
   const baseLivingAllowance = globalData?.settings?.baseLivingAllowance ?? 2500;
   const baseSavingsTarget = globalData?.settings?.baseSavingsTarget ?? 1000;
   const defaultTransit = globalData?.settings?.defaultTransitAllocation ?? 1500;

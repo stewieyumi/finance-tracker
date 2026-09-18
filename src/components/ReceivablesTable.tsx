@@ -21,6 +21,14 @@ interface ReceivablesTableProps {
   setEditForm: React.Dispatch<React.SetStateAction<EditFormData>>;
 }
 
+
+const formatOrdinal = (n: number) => {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
+
+
 const formatShortDate = (dateStr?: string) => {
   if (!dateStr) return "";
   const parts = dateStr.split("-");
@@ -127,7 +135,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="px-1.5 py-0.5 rounded font-medium bg-zinc-800 text-zinc-300">{rec.category || "Other"}</span>
                     {rec.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{allWallets.find(w => w.id === rec.wallet)?.label || rec.wallet}</span>}
-                    {isBiMonthly && <span>{rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(d => d+"th").join(" & ") : "15th & 30th"}</span>}
+                    {isBiMonthly && <span>{rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(formatOrdinal).join(" & ") : "15th & 30th"}</span>}
                     {rec.frequency === "Monthly" && <span>Day {rec.monthlyDay || 15}</span>}
                     {rec.frequency === "By Date" && rec.date && <span>{formatShortDate(rec.date)}</span>}
                   </div>
@@ -197,7 +205,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   </td>
                   <td className="py-3 px-4 text-center whitespace-nowrap">
                     <div className="text-zinc-300 text-xs">
-                      {rec.frequency === "Bi-monthly" && <span className="text-zinc-300 font-medium text-[11px]">{rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(d => d+"th").join(" & ") : "15th & 30th"}</span>}
+                      {rec.frequency === "Bi-monthly" && <span className="text-zinc-300 font-medium text-[11px]">{rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(formatOrdinal).join(" & ") : "15th & 30th"}</span>}
                       {rec.frequency === "Monthly" && <span className="text-zinc-400 text-[11px]">Monthly • Day {rec.monthlyDay || 15}</span>}
                       {rec.frequency === "By Date" && (rec.date ? <span className="inline-flex items-center gap-1 text-zinc-300 font-mono text-[11px]"><Calendar size={10} className="text-zinc-500" />{formatShortDate(rec.date)}</span> : <span className="text-zinc-600">—</span>)}
                     </div>
@@ -270,7 +278,39 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                     <option value="By Date">Specific Date</option><option value="Monthly">Monthly</option><option value="Bi-monthly">15th & 30th</option>
                   </select>
                 </div>
-                {editForm.frequency === "Monthly" && (
+                {editForm.frequency === "Bi-monthly" && (
+          <div className="flex gap-2 mb-3">
+            <div className="flex-1">
+              <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">First Day</label>
+              <select value={editForm.biMonthlyDays?.[0] || 15} onChange={(e) => setEditForm({ ...editForm, biMonthlyDays: [parseInt(e.target.value, 10), editForm.biMonthlyDays?.[1] || 30].sort((a,b)=>a-b) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
+                {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{formatOrdinal(d)}</option>)}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Second Day</label>
+              <select value={editForm.biMonthlyDays?.[1] || 30} onChange={(e) => setEditForm({ ...editForm, biMonthlyDays: [editForm.biMonthlyDays?.[0] || 15, parseInt(e.target.value, 10)].sort((a,b)=>a-b) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
+                {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{formatOrdinal(d)}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+        {editForm.frequency === "Bi-monthly" && (
+          <div className="flex gap-2 mb-3">
+            <div className="flex-1">
+              <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">First Day</label>
+              <select value={editForm.biMonthlyDays?.[0] || 15} onChange={(e) => setEditForm({ ...editForm, biMonthlyDays: [parseInt(e.target.value, 10), editForm.biMonthlyDays?.[1] || 30].sort((a,b)=>a-b) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
+                {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{formatOrdinal(d)}</option>)}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Second Day</label>
+              <select value={editForm.biMonthlyDays?.[1] || 30} onChange={(e) => setEditForm({ ...editForm, biMonthlyDays: [editForm.biMonthlyDays?.[0] || 15, parseInt(e.target.value, 10)].sort((a,b)=>a-b) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
+                {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{formatOrdinal(d)}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+        {editForm.frequency === "Monthly" && (
                   <div className="col-span-1 sm:col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Monthly Day</label>
                     <select value={editForm.monthlyDay || 15} onChange={(e) => setEditForm({ ...editForm, monthlyDay: parseInt(e.target.value, 10) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
@@ -334,7 +374,39 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                     <option value="By Date">Specific Date</option><option value="Monthly">Monthly</option><option value="Bi-monthly">15th & 30th</option>
                   </select>
                 </div>
-                {newReceivable.frequency === "Monthly" && (
+                {newReceivable.frequency === "Bi-monthly" && (
+          <div className="flex gap-2 mb-3">
+            <div className="flex-1">
+              <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">First Day</label>
+              <select value={newReceivable.biMonthlyDays?.[0] || 15} onChange={(e) => setNewReceivable({ ...newReceivable, biMonthlyDays: [parseInt(e.target.value, 10), newReceivable.biMonthlyDays?.[1] || 30].sort((a,b)=>a-b) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
+                {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{formatOrdinal(d)}</option>)}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Second Day</label>
+              <select value={newReceivable.biMonthlyDays?.[1] || 30} onChange={(e) => setNewReceivable({ ...newReceivable, biMonthlyDays: [newReceivable.biMonthlyDays?.[0] || 15, parseInt(e.target.value, 10)].sort((a,b)=>a-b) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
+                {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{formatOrdinal(d)}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+        {newReceivable.frequency === "Bi-monthly" && (
+          <div className="flex gap-2 mb-3">
+            <div className="flex-1">
+              <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">First Day</label>
+              <select value={newReceivable.biMonthlyDays?.[0] || 15} onChange={(e) => setNewReceivable({ ...newReceivable, biMonthlyDays: [parseInt(e.target.value, 10), newReceivable.biMonthlyDays?.[1] || 30].sort((a,b)=>a-b) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
+                {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{formatOrdinal(d)}</option>)}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Second Day</label>
+              <select value={newReceivable.biMonthlyDays?.[1] || 30} onChange={(e) => setNewReceivable({ ...newReceivable, biMonthlyDays: [newReceivable.biMonthlyDays?.[0] || 15, parseInt(e.target.value, 10)].sort((a,b)=>a-b) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
+                {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{formatOrdinal(d)}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+        {newReceivable.frequency === "Monthly" && (
                   <div className="col-span-1 sm:col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Monthly Day</label>
                     <select value={newReceivable.monthlyDay} onChange={(e) => setNewReceivable({ ...newReceivable, monthlyDay: parseInt(e.target.value, 10) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
