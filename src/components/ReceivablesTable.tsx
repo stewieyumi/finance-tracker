@@ -90,7 +90,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-faint font-mono hidden sm:inline">{activeReceivables.filter(r => r.collected).length}/{activeReceivables.length} Received</span>
           <div className="relative" ref={dropdownRef}>
-            <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-emerald-600/20 border-emerald-500/50 text-emerald-400" : "bg-inverse/[0.04] border-border-default text-muted hover:text-white"}`}>
+            <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-emerald-600/20 border-emerald-500/50 text-emerald-400" : "bg-inverse/[0.04] border-border-default text-muted hover:text-primary"}`}>
               <Filter size={11} className={selectedFilter !== "All" ? "text-emerald-400" : "text-muted"} />
               <span className="text-[11px]">{selectedFilter === "All" ? "Filter" : selectedFilter}</span>
               <ChevronDown size={10} className="text-faint" />

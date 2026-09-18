@@ -238,7 +238,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                         key={opt}
                         type="button"
                         onClick={() => setForm({...form, theme: opt})}
-                        className={`py-2 rounded-xl text-[11px] font-semibold capitalize transition border ${form.theme === opt ? "bg-blue-600 border-blue-500 text-white" : "bg-surface-input border-strong text-muted hover:border-zinc-600"}`}
+                        className={`py-2 rounded-xl text-[11px] font-semibold capitalize transition border ${form.theme === opt ? "bg-blue-600 border-blue-500 text-white" : "bg-surface-input border-strong text-muted hover:border-default"}`}
                       >
                         {opt}
                       </button>

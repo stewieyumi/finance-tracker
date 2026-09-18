@@ -33,7 +33,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoogleSuccess }) => 
           <div className="w-full flex flex-col items-center animate-in fade-in zoom-in-95 duration-500">
             <div className="relative mb-5">
               <img src={lastProfile.picture} alt="Profile" className="w-24 h-24 rounded-full border border-inverse/[0.1] shadow-2xl shadow-blue-900/30 object-cover bg-fill" />
-              <div className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 border-[2.5px] border-[#070709] rounded-full shadow-sm"></div>
+              <div className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 border-[2.5px] border-shell rounded-full shadow-sm"></div>
             </div>
             <h1 className="text-2xl font-bold text-strong mb-1 tracking-tight">Welcome back,</h1>
             <h2 className="text-xl font-semibold text-primary mb-8">{lastProfile.name.split(' ')[0]}</h2>

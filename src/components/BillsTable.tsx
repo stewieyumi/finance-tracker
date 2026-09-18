@@ -168,7 +168,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
             </div>
             {bill.type === "Loan / Installment" && <div className="mt-1"><LoanProgressBadge startMonth={bill.startMonth} endMonth={bill.endMonth} targetMonthForDue={bill.targetMonthForDue} isPaid={bill.paid} monthlyAmount={bill.baseAmount} totalPaid={bill.totalLoanPaid} /></div>}
           </div>
-          <button onClick={() => handleStartEdit(bill)} className="px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 hover:bg-zinc-700/60 border border-strong/40 rounded-md transition flex items-center gap-1 text-[10px] shrink-0 mt-1">
+          <button onClick={() => handleStartEdit(bill)} className="px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 hover:bg-fill-strong border border-strong/40 rounded-md transition flex items-center gap-1 text-[10px] shrink-0 mt-1">
             <Edit2 size={9} /><span>Edit</span>
           </button>
         </div>
@@ -247,7 +247,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
             <option value="unpaidFirst">Unpaid First</option>
           </select>
           <div className="relative" ref={dropdownRef}>
-            <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-blue-600/20 border-blue-500/50 text-blue-400" : "bg-inverse/[0.04] border-border-default text-muted hover:text-white"}`}>
+            <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-blue-600/20 border-blue-500/50 text-blue-400" : "bg-inverse/[0.04] border-border-default text-muted hover:text-primary"}`}>
               <Filter size={11} className={selectedFilter !== "All" ? "text-blue-400" : "text-muted"} />
               <span className="text-[11px] hidden sm:inline">{selectedFilter === "All" ? "Filter" : selectedFilter}</span>
               <ChevronDown size={10} className="text-faint" />

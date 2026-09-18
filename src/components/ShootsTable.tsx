@@ -175,7 +175,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-faint font-mono hidden sm:inline">{activeShoots.filter(s => s.completed).length}/{activeShoots.length} Done</span>
           <div className="relative" ref={dropdownRef}>
-            <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-amber-600/20 border-amber-500/50 text-amber-400" : "bg-inverse/[0.04] border-inverse/[0.08] text-muted hover:text-white"}`}>
+            <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-amber-600/20 border-amber-500/50 text-amber-400" : "bg-inverse/[0.04] border-inverse/[0.08] text-muted hover:text-primary"}`}>
               <Filter size={11} className={selectedFilter !== "All" ? "text-amber-400" : "text-muted"} />
               <span className="text-[11px]">{selectedFilter === "All" ? "Filter" : selectedFilter}</span>
               <ChevronDown size={10} className="text-faint" />
