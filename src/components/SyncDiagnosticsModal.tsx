@@ -47,11 +47,11 @@ export const SyncDiagnosticsModal: React.FC<SyncDiagnosticsModalProps> = ({
       }}
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
     >
-      <div className="bg-[#121217] border border-white/[0.08] rounded-3xl p-6 w-full max-w-lg space-y-4 shadow-2xl text-xs font-mono">
-        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+      <div className="bg-surface-elevated border border-inverse/[0.08] rounded-3xl p-6 w-full max-w-lg space-y-4 shadow-2xl text-xs font-mono">
+        <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-2">
             <Wrench size={15} className="text-emerald-400" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-strong">
               Sync & Cloud Diagnostics
             </h3>
           </div>
@@ -59,16 +59,16 @@ export const SyncDiagnosticsModal: React.FC<SyncDiagnosticsModalProps> = ({
           <button
             onClick={onClose}
             aria-label="Close diagnostics"
-            className="text-zinc-500 hover:text-white p-1 rounded-lg transition"
+            className="text-faint hover:text-strong p-1 rounded-lg transition"
             title="Close (Esc)"
           >
             <X size={16} />
           </button>
         </div>
 
-        <div className="space-y-3 text-zinc-300">
-          <div className="bg-[#09090c] p-3.5 rounded-2xl border border-white/[0.05] space-y-1">
-            <div className="text-zinc-500 font-semibold text-[10px] uppercase tracking-wider">
+        <div className="space-y-3 text-secondary">
+          <div className="bg-surface-lowest p-3.5 rounded-2xl border border-inverse/[0.05] space-y-1">
+            <div className="text-faint font-semibold text-[10px] uppercase tracking-wider">
               1. Cloud Endpoint Status
             </div>
 
@@ -87,8 +87,8 @@ export const SyncDiagnosticsModal: React.FC<SyncDiagnosticsModalProps> = ({
             </div>
           </div>
 
-          <div className="bg-[#09090c] p-3.5 rounded-2xl border border-white/[0.05] space-y-1">
-            <div className="text-zinc-500 font-semibold text-[10px] uppercase tracking-wider">
+          <div className="bg-surface-lowest p-3.5 rounded-2xl border border-inverse/[0.05] space-y-1">
+            <div className="text-faint font-semibold text-[10px] uppercase tracking-wider">
               2. Active Local Browser State
             </div>
 
@@ -104,21 +104,21 @@ export const SyncDiagnosticsModal: React.FC<SyncDiagnosticsModalProps> = ({
 
             <div>
               • GoTyme Wallet:{" "}
-              <span className="text-zinc-100">
+              <span className="text-strong">
                 ₱{globalData?.wallets?.gotyme ?? 0}
               </span>
             </div>
 
             <div>
               • Bills in Memory:{" "}
-              <span className="text-zinc-100">
+              <span className="text-strong">
                 {globalData?.library?.bills?.length || 0}
               </span>
             </div>
           </div>
 
-          <div className="bg-[#09090c] p-3.5 rounded-2xl border border-white/[0.05] space-y-1">
-            <div className="text-zinc-500 font-semibold text-[10px] uppercase tracking-wider">
+          <div className="bg-surface-lowest p-3.5 rounded-2xl border border-inverse/[0.05] space-y-1">
+            <div className="text-faint font-semibold text-[10px] uppercase tracking-wider">
               3. Last Cloud Network Action
             </div>
 

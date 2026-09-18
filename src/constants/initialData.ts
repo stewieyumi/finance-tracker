@@ -16,7 +16,7 @@ export const INITIAL_UNIFIED_DATA: UnifiedFinanceData = {
     customWallets: [
       { id: "main", label: "Main Account", color: "text-blue-400" },
       { id: "savings", label: "Savings", color: "text-emerald-400" },
-      { id: "cash", label: "Cash On-Hand", color: "text-zinc-300" }
+      { id: "cash", label: "Cash On-Hand", color: "text-secondary" }
     ]
   },
   targetFund: DEFAULT_TARGET_FUND,

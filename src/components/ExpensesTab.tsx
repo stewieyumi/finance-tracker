@@ -203,22 +203,22 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
     <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
       
       {/* AI Scanner Hero Card */}
-      <div className="bg-[#101014] border border-white/[0.08] rounded-2xl p-5 shadow-xl relative overflow-hidden">
+      <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-5 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500 opacity-50" />
         
         <div className="flex flex-col items-center justify-center text-center space-y-3 py-4">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-900/50 to-purple-900/50 border border-purple-500/30 flex items-center justify-center mb-2 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
             <ScanLine size={24} className="text-purple-400" />
           </div>
-          <h2 className="text-sm font-bold text-white tracking-wide">AI Receipt Scanner</h2>
-          <p className="text-[11px] text-zinc-400 max-w-[240px]">Snap a photo of your receipt. The AI will auto-extract the merchant, amount, and date.</p>
+          <h2 className="text-sm font-bold text-strong tracking-wide">AI Receipt Scanner</h2>
+          <p className="text-[11px] text-muted max-w-[240px]">Snap a photo of your receipt. The AI will auto-extract the merchant, amount, and date.</p>
           
           <div className="flex gap-2 w-full max-w-xs mt-4">
             <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleCapture} className="hidden" />
             <button onClick={() => fileInputRef.current?.click()} className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-purple-900/20">
               <Camera size={14} /> Scan
             </button>
-            <button onClick={() => { setShowForm(true); setIsScanning(false); }} className="flex-1 bg-[#1a1a22] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-300 font-semibold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-md">
+            <button onClick={() => { setShowForm(true); setIsScanning(false); }} className="flex-1 bg-surface-high hover:bg-inverse/[0.06] border border-inverse/[0.06] text-secondary font-semibold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-md">
               <Plus size={14} /> Manual
             </button>
           </div>
@@ -227,10 +227,10 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
 
       {/* Expense Form */}
       {showForm && (
-        <form onSubmit={handleSave} className="bg-[#101014] border border-emerald-500/30 rounded-2xl p-4 shadow-[0_0_30px_rgba(16,185,129,0.05)] animate-in slide-in-from-top-2 duration-300 relative overflow-hidden">
+        <form onSubmit={handleSave} className="bg-surface-low border border-emerald-500/30 rounded-2xl p-4 shadow-[0_0_30px_rgba(16,185,129,0.05)] animate-in slide-in-from-top-2 duration-300 relative overflow-hidden">
           {isScanning && (
-            <div className="absolute inset-0 z-10 bg-[#101014]/80 backdrop-blur-sm flex flex-col items-center justify-center">
-              <div className="w-full max-w-[200px] h-1 bg-zinc-800 rounded-full overflow-hidden mb-3">
+            <div className="absolute inset-0 z-10 bg-surface-low/80 backdrop-blur-sm flex flex-col items-center justify-center">
+              <div className="w-full max-w-[200px] h-1 bg-fill-strong rounded-full overflow-hidden mb-3">
                 <div className="h-full bg-purple-500 w-1/2 animate-[pulse_1s_ease-in-out_infinite]" style={{ animation: 'scan 1.5s infinite linear' }} />
               </div>
               <span className="text-xs font-mono text-purple-400 font-bold animate-pulse">Extracting data...</span>
@@ -240,32 +240,32 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
 
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5"><Receipt size={14}/> Log Expense</h3>
-            <button type="button" onClick={() => setShowForm(false)} className="text-zinc-500 hover:text-white text-[10px] font-semibold">CANCEL</button>
+            <button type="button" onClick={() => setShowForm(false)} className="text-faint hover:text-strong text-[10px] font-semibold">CANCEL</button>
           </div>
 
           <div className="space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-1 sm:col-span-2 min-w-0">
-                <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Merchant / Name</label>
-                <input type="text" value={form.merchant} onChange={e => setForm({...form, merchant: e.target.value})} placeholder="e.g. Starbucks, Laundry..." className="w-full min-w-0 bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs text-white outline-none box-border" required />
+                <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Merchant / Name</label>
+                <input type="text" value={form.merchant} onChange={e => setForm({...form, merchant: e.target.value})} placeholder="e.g. Starbucks, Laundry..." className="w-full min-w-0 bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs text-strong outline-none box-border" required />
               </div>
               <div className="min-w-0">
-                <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Amount (₱)</label>
-                <input type="number" inputMode="decimal" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="0.00" className="w-full min-w-0 bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-emerald-400 outline-none box-border" required />
+                <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Amount (₱)</label>
+                <input type="number" inputMode="decimal" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="0.00" className="w-full min-w-0 bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-emerald-400 outline-none box-border" required />
               </div>
               <div className="min-w-0">
-                <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Date</label>
-                <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full min-w-0 appearance-none bg-[#0b0b0d] border border-zinc-800 focus:border-emerald-500/50 rounded-xl px-2 sm:px-3 py-2.5 text-[11px] text-white outline-none min-h-[38px] box-border" required />
+                <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Date</label>
+                <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full min-w-0 appearance-none bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-2 sm:px-3 py-2.5 text-[11px] text-strong outline-none min-h-[38px] box-border" required />
               </div>
               <div className="min-w-0">
-                <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Category</label>
-                <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full min-w-0 bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-2.5 text-[11px] text-white outline-none min-h-[38px] box-border">
+                <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Category</label>
+                <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-strong outline-none min-h-[38px] box-border">
                   {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="min-w-0">
-                <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Deduct From</label>
-                <select value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full min-w-0 bg-[#0b0b0d] border border-zinc-800 rounded-xl px-2 py-2.5 text-[11px] text-blue-300 font-semibold uppercase outline-none min-h-[38px] box-border">
+                <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Deduct From</label>
+                <select value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-blue-300 font-semibold uppercase outline-none min-h-[38px] box-border">
                   {allWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                 </select>
               </div>
@@ -279,15 +279,15 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
       )}
 
       {/* Recent Expenses Ledger */}
-      <div className="bg-[#101014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl">
+      <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-200">Recent Transactions</h2>
-          <span className="text-[10px] font-mono text-zinc-500">Total: ₱{totalSpent.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-primary">Recent Transactions</h2>
+          <span className="text-[10px] font-mono text-faint">Total: ₱{totalSpent.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
         </div>
 
         <div className="space-y-2">
           {expenses.length === 0 ? (
-            <div className="py-8 text-center text-zinc-500 text-xs italic">No expenses logged yet. Tap scan or manual to start tracking.</div>
+            <div className="py-8 text-center text-faint text-xs italic">No expenses logged yet. Tap scan or manual to start tracking.</div>
           ) : (
             expenses.map(exp => {
               // Format the raw YYYY-MM-DD date into a cleaner format (e.g., "Sep 16, 2026")
@@ -295,15 +295,15 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
               const formattedDate = isNaN(dateObj.getTime()) ? exp.date : dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
               return (
-                <div key={exp.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#14141a] border border-white/[0.04] group hover:border-white/[0.08] transition">
+                <div key={exp.id} className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-inverse/[0.08] transition">
                   <div className="flex items-center gap-3.5 overflow-hidden flex-1 pr-2">
-                    <div className="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 text-zinc-400">
+                    <div className="w-9 h-9 rounded-full bg-fill border border-strong flex items-center justify-center shrink-0 text-muted">
                       <Receipt size={15} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="privacy-blur text-[13px] font-semibold text-zinc-100 truncate">{exp.merchant}</div>
-                      <div className="flex items-center gap-2 text-[10px] text-zinc-400 mt-1">
-                        <span className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-zinc-300 font-medium truncate max-w-[90px]">{exp.category}</span>
+                      <div className="privacy-blur text-[13px] font-semibold text-strong truncate">{exp.merchant}</div>
+                      <div className="flex items-center gap-2 text-[10px] text-muted mt-1">
+                        <span className="bg-fill-strong/80 px-1.5 py-0.5 rounded text-secondary font-medium truncate max-w-[90px]">{exp.category}</span>
                         <span className="privacy-blur uppercase text-blue-400/90 font-bold tracking-wider truncate max-w-[80px]">{allWallets.find(w => w.id === exp.wallet)?.label || exp.wallet}</span>
                       </div>
                     </div>
@@ -311,13 +311,13 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
                   
                   <div className="flex flex-col items-end shrink-0 ml-2">
                     <div className="flex items-center gap-2">
-                      <span className="privacy-blur text-[13px] font-bold font-mono text-zinc-100">-₱{exp.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                      <button onClick={() => handleDelete(exp)} aria-label="Delete expense" className="text-zinc-500 hover:text-rose-400 transition p-1 bg-white/[0.03] hover:bg-rose-500/10 rounded-lg">
+                      <span className="privacy-blur text-[13px] font-bold font-mono text-strong">-₱{exp.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                      <button onClick={() => handleDelete(exp)} aria-label="Delete expense" className="text-faint hover:text-rose-400 transition p-1 bg-inverse/[0.03] hover:bg-rose-500/10 rounded-lg">
                         <Trash2 size={13} />
                       </button>
                     </div>
                     {/* mr-[30px] perfectly aligns the date under the amount, ignoring the delete button width */}
-                    <span className="text-[10px] text-zinc-500 font-medium mt-1 whitespace-nowrap mr-[30px]">{formattedDate}</span>
+                    <span className="text-[10px] text-faint font-medium mt-1 whitespace-nowrap mr-[30px]">{formattedDate}</span>
                   </div>
                 </div>
               );

@@ -1,39 +1,75 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Dark is the default palette (matches the app's original hardcoded look) */
+  --color-inverse: 255 255 255;
+
+  /* Dark is the default palette */
   --bg-app: #0b0b0d;
   --bg-shell: #070709;
+
+  /* Granular surfaces */
   --bg-surface: #14141a;
+  --bg-surface-low: #101014;
   --bg-surface-elevated: #121217;
+  --bg-surface-high: #1a1a22;
   --bg-surface-sunken: #0a0a0d;
+  --bg-surface-lowest: #09090c;
   --bg-surface-input: #0b0b0e;
+  --bg-surface-modal: #121216;
+
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-default: rgba(255, 255, 255, 0.1);
+  --border-strong: #27272a; /* zinc-800 */
+
+  --text-strong: #ffffff;
   --text-primary: #e2e2e8;
   --text-secondary: #d4d4d8;
-  --text-muted: #71717a;
+  --text-muted: #a1a1aa; /* zinc-400 */
+  --text-faint: #71717a; /* zinc-500 */
+  --text-disabled: #52525b; /* zinc-600 */
+
+  --bg-fill-strong: #27272a; /* zinc-800 */
+  --bg-fill: #18181b; /* zinc-900 */
+  --bg-fill-subtle: #09090b; /* zinc-950 */
 }
 
 :root.light {
+  --color-inverse: 0 0 0;
+
   --bg-app: #f4f4f6;
   --bg-shell: #eeeef1;
+
   --bg-surface: #ffffff;
+  --bg-surface-low: #fdfdfd;
   --bg-surface-elevated: #ffffff;
+  --bg-surface-high: #f9f9fb;
   --bg-surface-sunken: #f7f7f9;
+  --bg-surface-lowest: #f4f4f6;
   --bg-surface-input: #ffffff;
+  --bg-surface-modal: #ffffff;
+
   --border-subtle: rgba(0, 0, 0, 0.08);
   --border-default: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.2);
+
+  --text-strong: #000000;
   --text-primary: #18181b;
   --text-secondary: #3f3f46;
-  --text-muted: #71717a;
+  --text-muted: #52525b;
+  --text-faint: #71717a;
+  --text-disabled: #a1a1aa;
+
+  --bg-fill-strong: #e4e4e7;
+  --bg-fill: #f4f4f5;
+  --bg-fill-subtle: #fafafa;
 }
 
 @layer base {
   html, body {
-    overscroll-behavior-y: none; /* Disables native iOS Safari bounce to fix custom pull-to-refresh */
+    overscroll-behavior-y: none;
   }
   body {
     background-color: var(--bg-app);
@@ -48,7 +84,6 @@ input::-webkit-inner-spin-button {
   margin: 0;
 }
 
-/* 1. Blur all explicitly tagged names and all mono-spaced numbers */
 .privacy-mode .font-mono:not(kbd):not(input):not(textarea):not(select),
 .privacy-mode .privacy-blur {
   filter: blur(5.5px) !important;
@@ -57,14 +92,12 @@ input::-webkit-inner-spin-button {
   transition: filter 0.15s ease-in-out;
 }
 
-/* 2. Blur the progress bars */
 .privacy-mode div[style*="width"]:not(button):not(td):not(th):not(col) {
   filter: blur(6px) !important;
   opacity: 0.25 !important;
   transition: filter 0.15s ease-in-out, opacity 0.15s ease-in-out;
 }
 
-/* 3. Strict Exceptions (Never blur inputs, dropdowns, or active buttons) */
 .privacy-mode input,
 .privacy-mode select,
 .privacy-mode textarea,

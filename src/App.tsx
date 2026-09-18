@@ -266,7 +266,7 @@ const {
         const oldLabels = prev.settings?.walletLabels || {};
         const existingCustom = prev.settings?.customWallets || [];
         const baseIds = ['maribank', 'maya', 'gcash', 'gotyme', 'bpi', 'cash'];
-        const defaultColors: Record<string, string> = { maribank: 'text-amber-400', maya: 'text-emerald-400', gcash: 'text-blue-400', gotyme: 'text-cyan-400', bpi: 'text-rose-400', cash: 'text-zinc-300' };
+        const defaultColors: Record<string, string> = { maribank: 'text-amber-400', maya: 'text-emerald-400', gcash: 'text-blue-400', gotyme: 'text-cyan-400', bpi: 'text-rose-400', cash: 'text-secondary' };
         const defaultLabels: Record<string, string> = { maribank: 'MariBank', maya: 'Maya', gcash: 'GCash', gotyme: 'GoTyme', bpi: 'BPI', cash: 'Cash On-Hand' };
 
         const newCustomWallets = [...existingCustom];
@@ -672,7 +672,7 @@ const copySummaryToClipboard = async () => {
 
   return (
     <div className={`min-h-screen bg-shell text-text-secondary px-4 sm:px-6 pb-28 sm:pb-32 pt-[max(2rem,env(safe-area-inset-top))] flex justify-center selection:bg-blue-600 selection:text-white ${isPrivacyMode ? "privacy-mode" : ""}`}>
-      <div className="fixed top-0 left-0 right-0 z-[200] bg-[#070709]/80 backdrop-blur-xl pointer-events-none" style={{ height: "env(safe-area-inset-top)" }} />
+      <div className="fixed top-0 left-0 right-0 z-[200] bg-shell/80 backdrop-blur-xl pointer-events-none" style={{ height: "env(safe-area-inset-top)" }} />
       
       {updateAvailable && (
         <div onClick={() => window.location.reload()} className="fixed top-[calc(env(safe-area-inset-top)+12px)] left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 py-2.5 rounded-full shadow-[0_0_30px_rgba(37,99,235,0.5)] transition-all cursor-pointer animate-in slide-in-from-top-8 duration-500">
@@ -682,7 +682,7 @@ const copySummaryToClipboard = async () => {
       )}
 
       {toastMessage && (
-        <div className="fixed top-12 right-6 z-50 flex items-center gap-2 bg-[#181822] text-white text-xs px-4 py-2.5 rounded-xl border border-white/10 shadow-2xl animate-fade-in">
+        <div className="fixed top-12 right-6 z-50 flex items-center gap-2 bg-surface-high text-strong text-xs px-4 py-2.5 rounded-xl border border-inverse/10 shadow-2xl animate-fade-in">
           <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
           {toastAction && (
@@ -707,58 +707,58 @@ const copySummaryToClipboard = async () => {
         <div className="flex flex-col gap-3.5 pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl font-bold tracking-tight text-white">Dashboard</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-strong">Dashboard</h1>
               <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium no-privacy-blur border transition-all ${!isOnline ? "bg-amber-950/60 border-amber-700/50 text-amber-300" : isSyncing ? "bg-blue-950/60 border-blue-700/50 text-blue-300" : "bg-emerald-950/40 border-emerald-800/40 text-emerald-400"}`}>
                 {!isOnline ? <><WifiOff size={10} className="text-amber-400" /><span>Offline</span></> : isSyncing ? <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" /><span>Syncing...</span></> : <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span>Live</span></>}
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="hidden md:flex items-center gap-2 mr-2 pr-4 border-r border-white/[0.08]">
+              <div className="hidden md:flex items-center gap-2 mr-2 pr-4 border-r border-inverse/[0.08]">
                 <div className="relative">
-                  <button onClick={() => setShowShortcutsHelp(prev => !prev)} className="text-[11px] font-medium text-zinc-400 hover:text-zinc-200 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
+                  <button onClick={() => setShowShortcutsHelp(prev => !prev)} className="text-[11px] font-medium text-muted hover:text-primary bg-fill/80 hover:bg-fill-strong border border-strong px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
                     <span>⌨️</span> Shortcuts
                   </button>
                   {showShortcutsHelp && (
-                    <div className="absolute right-0 mt-2 w-64 p-3 bg-[#121216] border border-zinc-800 rounded-xl shadow-2xl backdrop-blur-md text-xs z-[100]">
-                      <div className="flex items-center justify-between pb-1.5 border-b border-zinc-800/80 mb-2">
-                        <span className="text-zinc-300 font-semibold flex items-center gap-1.5"><span>⌨️</span> Shortcuts</span>
-                        <button onClick={() => setShowShortcutsHelp(false)} className="text-zinc-500 hover:text-zinc-300">✕</button>
+                    <div className="absolute right-0 mt-2 w-64 p-3 bg-surface-modal border border-strong rounded-xl shadow-2xl backdrop-blur-md text-xs z-[100]">
+                      <div className="flex items-center justify-between pb-1.5 border-b border-strong/80 mb-2">
+                        <span className="text-secondary font-semibold flex items-center gap-1.5"><span>⌨️</span> Shortcuts</span>
+                        <button onClick={() => setShowShortcutsHelp(false)} className="text-faint hover:text-secondary">✕</button>
                       </div>
                       <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Tabs</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">1-5</kbd></div>
-                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Ops Views</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">B,I,G</kbd></div>
-                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Month</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">⌘K</kbd></div>
-                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Yearly</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">Y</kbd></div>
-                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Analytics</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">A</kbd></div>
-                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Privacy</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">P</kbd></div>
-                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Pull/Sync</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">R / S</kbd></div>
-                        <div className="flex items-center justify-between bg-zinc-900/60 p-1.5 rounded border border-zinc-800/50"><span className="text-zinc-400">Close</span><kbd className="bg-zinc-800 text-zinc-200 px-1 py-0.5 rounded font-mono">Esc</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Tabs</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">1-5</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Ops Views</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">B,I,G</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Month</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">⌘K</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Yearly</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">Y</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Analytics</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">A</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Privacy</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">P</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Pull/Sync</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">R / S</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Close</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">Esc</kbd></div>
                       </div>
                     </div>
                   )}
                 </div>
-                <button onClick={forceManualSync} className="h-7 w-7 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-blue-500/50 flex items-center justify-center text-zinc-400 hover:text-blue-400 transition shadow-sm" title="Save & Sync (S)"><Cloud size={13} className={isSyncing ? "animate-pulse text-blue-400" : ""} /></button>
-                <button onClick={() => pullLatestData(false)} className="h-7 w-7 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-emerald-500/50 flex items-center justify-center text-zinc-400 hover:text-emerald-400 transition shadow-sm" title="Pull Data (R)"><RefreshCw size={12} className={isSyncing ? "animate-spin text-emerald-400" : ""} /></button>
+                <button onClick={forceManualSync} className="h-7 w-7 rounded-lg bg-fill/80 hover:bg-fill-strong border border-strong hover:border-blue-500/50 flex items-center justify-center text-muted hover:text-blue-400 transition shadow-sm" title="Save & Sync (S)"><Cloud size={13} className={isSyncing ? "animate-pulse text-blue-400" : ""} /></button>
+                <button onClick={() => pullLatestData(false)} className="h-7 w-7 rounded-lg bg-fill/80 hover:bg-fill-strong border border-strong hover:border-emerald-500/50 flex items-center justify-center text-muted hover:text-emerald-400 transition shadow-sm" title="Pull Data (R)"><RefreshCw size={12} className={isSyncing ? "animate-spin text-emerald-400" : ""} /></button>
               </div>
-              <button onClick={() => pullLatestData(false)} aria-label="Refresh Data" className="md:hidden h-8 w-8 rounded-full border border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-emerald-400 transition shadow-sm" title="Refresh Data"><RefreshCw size={13} className={isSyncing ? "animate-spin text-emerald-400" : ""} /></button>
-              <button onClick={() => setIsPrivacyMode(prev => !prev)} aria-label={isPrivacyMode ? "Show Balances" : "Hide Balances"} className={`h-8 w-8 rounded-full border flex items-center justify-center transition shadow-sm ${isPrivacyMode ? "bg-amber-500/20 border-amber-500/60 text-amber-300" : "bg-zinc-900/80 hover:bg-zinc-800 border-zinc-800 text-zinc-400 hover:text-zinc-200"}`}>
+              <button onClick={() => pullLatestData(false)} aria-label="Refresh Data" className="md:hidden h-8 w-8 rounded-full border border-strong bg-fill/80 hover:bg-fill-strong flex items-center justify-center text-muted hover:text-emerald-400 transition shadow-sm" title="Refresh Data"><RefreshCw size={13} className={isSyncing ? "animate-spin text-emerald-400" : ""} /></button>
+              <button onClick={() => setIsPrivacyMode(prev => !prev)} aria-label={isPrivacyMode ? "Show Balances" : "Hide Balances"} className={`h-8 w-8 rounded-full border flex items-center justify-center transition shadow-sm ${isPrivacyMode ? "bg-amber-500/20 border-amber-500/60 text-amber-300" : "bg-fill/80 hover:bg-fill-strong border-strong text-muted hover:text-primary"}`}>
                 {isPrivacyMode ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-[#121217] border border-white/[0.08] px-3 py-1.5 rounded-xl text-xs shadow-md">
+            <div className="flex items-center gap-1.5 bg-surface-elevated border border-inverse/[0.08] px-3 py-1.5 rounded-xl text-xs shadow-md">
               <Calendar size={13} className="text-blue-400 cursor-pointer" onClick={() => setShowDatePickerModal(true)} />
-              <select value={selectedMonth} onChange={(e) => { if (e.target.value === "CUSTOM_DATE_JUMP") setShowDatePickerModal(true); else setSelectedMonth(e.target.value); }} className="bg-transparent text-white font-semibold outline-none cursor-pointer">
-                {dropdownMonths.map(m => <option key={m} value={m} className="bg-[#121216]">{m}</option>)}
+              <select value={selectedMonth} onChange={(e) => { if (e.target.value === "CUSTOM_DATE_JUMP") setShowDatePickerModal(true); else setSelectedMonth(e.target.value); }} className="bg-transparent text-strong font-semibold outline-none cursor-pointer">
+                {dropdownMonths.map(m => <option key={m} value={m} className="bg-surface-modal">{m}</option>)}
                 <option disabled>──────────</option>
-                <option value="CUSTOM_DATE_JUMP" className="bg-[#121216] font-bold text-blue-400">Select Month...</option>
+                <option value="CUSTOM_DATE_JUMP" className="bg-surface-modal font-bold text-blue-400">Select Month...</option>
               </select>
             </div>
-            <button onClick={() => setShowAnalyticsModal(true)} className="flex items-center gap-1.5 bg-[#121217] border border-amber-500/30 hover:border-amber-400/60 text-amber-300 px-3 py-1.5 rounded-xl text-xs shadow-md transition font-medium"><Sparkles size={13} className="text-amber-400" /><span>Runway</span></button>
-            <button onClick={() => setShowYearlyModal(true)} className="flex items-center gap-1.5 bg-[#121217] border border-emerald-500/30 hover:border-emerald-400/60 text-emerald-300 px-3 py-1.5 rounded-xl text-xs shadow-md transition font-medium"><BarChart2 size={13} className="text-emerald-400" /><span>Yearly</span></button>
+            <button onClick={() => setShowAnalyticsModal(true)} className="flex items-center gap-1.5 bg-surface-elevated border border-amber-500/30 hover:border-amber-400/60 text-amber-300 px-3 py-1.5 rounded-xl text-xs shadow-md transition font-medium"><Sparkles size={13} className="text-amber-400" /><span>Runway</span></button>
+            <button onClick={() => setShowYearlyModal(true)} className="flex items-center gap-1.5 bg-surface-elevated border border-emerald-500/30 hover:border-emerald-400/60 text-emerald-300 px-3 py-1.5 rounded-xl text-xs shadow-md transition font-medium"><BarChart2 size={13} className="text-emerald-400" /><span>Yearly</span></button>
           </div>
         </div>
 
@@ -779,33 +779,33 @@ const copySummaryToClipboard = async () => {
               onUndoSplit={handleUndoPaydaySplit} /></ErrorBoundary>
             
             <ErrorBoundary>
-              <div className="bg-[#101014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl">
+              <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-2"><History size={13} className="text-purple-400" /> Recent Transactions</h2>
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><History size={13} className="text-purple-400" /> Recent Transactions</h2>
                 </div>
                 <div className="space-y-2">
                   {recentTransactions.length === 0 ? (
-                    <div className="py-4 text-center text-zinc-500 text-xs italic">No transactions yet.</div>
+                    <div className="py-4 text-center text-faint text-xs italic">No transactions yet.</div>
                   ) : (
                     recentTransactions.map((tx: TransactionHistoryItem) => (
-                      <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#14141a] border border-white/[0.04] group hover:border-white/[0.08] transition">
+                      <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-inverse/[0.08] transition">
                         <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
-                          <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-950/50 border-emerald-500/20 text-emerald-400' : tx.type === 'bill' ? 'bg-blue-950/50 border-blue-500/20 text-blue-400' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}>
+                          <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-950/50 border-emerald-500/20 text-emerald-400' : tx.type === 'bill' ? 'bg-blue-950/50 border-blue-500/20 text-blue-400' : 'bg-fill border-strong text-muted'}`}>
                             {tx.type === 'inflow' ? <ArrowDownLeft size={14}/> : tx.type === 'bill' ? <Calendar size={14}/> : <Receipt size={14}/>}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="privacy-blur text-[13px] font-semibold text-zinc-200 truncate">{tx.title}</div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-zinc-500 mt-0.5">
-                              <span className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-zinc-300 font-medium truncate max-w-[90px]">{tx.category || tx.type}</span>
+                            <div className="privacy-blur text-[13px] font-semibold text-primary truncate">{tx.title}</div>
+                            <div className="flex items-center gap-1.5 text-[9px] text-faint mt-0.5">
+                              <span className="bg-fill-strong/80 px-1.5 py-0.5 rounded text-secondary font-medium truncate max-w-[90px]">{tx.category || tx.type}</span>
                               <span className="privacy-blur uppercase text-blue-400/80 font-bold truncate max-w-[80px]">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
                             </div>
                           </div>
                         </div>
                         <div className="flex flex-col items-end shrink-0">
-                          <span className={`privacy-blur text-[13px] font-bold font-mono ${tx.amount > 0 ? "text-emerald-400" : "text-zinc-100"}`}>
+                          <span className={`privacy-blur text-[13px] font-bold font-mono ${tx.amount > 0 ? "text-emerald-400" : "text-strong"}`}>
                             {tx.amount > 0 ? "+" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                           </span>
-                          <span className="text-[10px] text-zinc-500 mt-0.5 whitespace-nowrap">{formatDateTime(tx.date)}</span>
+                          <span className="text-[10px] text-faint mt-0.5 whitespace-nowrap">{formatDateTime(tx.date)}</span>
                         </div>
                       </div>
                     ))
@@ -816,16 +816,16 @@ const copySummaryToClipboard = async () => {
 
             <ErrorBoundary><WalletGrid wallets={globalData?.wallets || {}} milestoneWallet={globalData?.settings?.milestoneWallet}
         savingsWallet={globalData?.settings?.savingsWallet} customWallets={globalData?.settings?.customWallets} onCommit={commitWallet} onIncrement={incrementWallet} /></ErrorBoundary>
-            <button onClick={copySummaryToClipboard} className="w-full bg-[#121217]/90 hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Copy size={14} /> Copy Summary</button>
+            <button onClick={copySummaryToClipboard} className="w-full bg-surface-elevated/90 hover:bg-inverse/[0.06] border border-inverse/[0.06] text-primary font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Copy size={14} /> Copy Summary</button>
           </div>
         )}
 
         {activeTab === "operations" && (
           <div id="operations-section" className="space-y-4 sm:space-y-5 animate-in fade-in zoom-in-95 duration-400 ease-out">
-            <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] p-1.5 rounded-2xl flex items-center shadow-lg w-full mx-auto">
-              <button onClick={() => setOpsTab("bills")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "bills" ? "bg-blue-600/20 text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.3)]" : "text-zinc-500 hover:text-zinc-300"}`}>Commitments</button>
-              <button onClick={() => setOpsTab("inflows")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "inflows" ? "bg-emerald-600/20 text-emerald-400 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)]" : "text-zinc-500 hover:text-zinc-300"}`}>Inflows</button>
-              <button onClick={() => setOpsTab("gigs")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "gigs" ? "bg-amber-600/20 text-amber-400 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.3)]" : "text-zinc-500 hover:text-zinc-300"}`}>Gigs & Tasks</button>
+            <div className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.08] p-1.5 rounded-2xl flex items-center shadow-lg w-full mx-auto">
+              <button onClick={() => setOpsTab("bills")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "bills" ? "bg-blue-600/20 text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.3)]" : "text-faint hover:text-secondary"}`}>Commitments</button>
+              <button onClick={() => setOpsTab("inflows")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "inflows" ? "bg-emerald-600/20 text-emerald-400 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)]" : "text-faint hover:text-secondary"}`}>Inflows</button>
+              <button onClick={() => setOpsTab("gigs")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "gigs" ? "bg-amber-600/20 text-amber-400 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.3)]" : "text-faint hover:text-secondary"}`}>Gigs & Tasks</button>
             </div>
             {opsTab === "bills" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><BillsTable activeBills={activeBills} selectedMonth={selectedMonth} onToggleStatus={toggleBillStatus} onAddBill={handleAddBill} onDeleteBill={deleteBill} onSaveEdit={(_, scope) => saveBillEdit(scope)} onResetMonthOverride={resetMonthOverride} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} customWallets={globalData?.settings?.customWallets} defaultWallet={globalData?.settings?.defaultWallet} highlightOverdue={highlightOverdue} /></ErrorBoundary></div>}
             {opsTab === "inflows" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><ReceivablesTable inflowsLabel={globalData?.settings?.inflowsLabel} inflowCategories={globalData?.settings?.inflowCategories} customWallets={globalData?.settings?.customWallets} activeReceivables={activeReceivables} selectedMonth={selectedMonth} onToggleStatus={toggleReceivableStatus} onAddPayment={addPayment} onAddReceivable={handleAddReceivable} onDeleteReceivable={deleteReceivable} onSaveEdit={() => saveReceivableEdit()} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} /></ErrorBoundary></div>}
@@ -838,19 +838,19 @@ const copySummaryToClipboard = async () => {
 
         {activeTab === "account" && (
           <div className="space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
-            <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl rounded-3xl p-8 text-center flex flex-col items-center justify-center min-h-[30vh]">
-              <h3 className="text-white font-bold text-lg mb-4">Account</h3>
-              <div className="w-full bg-[#1a1a22] border border-white/[0.06] rounded-2xl p-4 mb-4 flex flex-col items-center gap-3 shadow-md">
+            <div className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.08] shadow-2xl rounded-3xl p-8 text-center flex flex-col items-center justify-center min-h-[30vh]">
+              <h3 className="text-strong font-bold text-lg mb-4">Account</h3>
+              <div className="w-full bg-surface-high border border-inverse/[0.06] rounded-2xl p-4 mb-4 flex flex-col items-center gap-3 shadow-md">
                 {googleUser ? (
                   <div className="flex flex-col items-center gap-2 w-full">
-                    {googleUser.picture && <img src={googleUser.picture} alt="Profile" className="w-12 h-12 rounded-full border border-zinc-700 shadow-md" />}
-                    <div className="text-sm font-bold text-white">{googleUser.name}</div>
-                    <div className="text-[10px] text-zinc-400 mb-2">{googleUser.email}</div>
+                    {googleUser.picture && <img src={googleUser.picture} alt="Profile" className="w-12 h-12 rounded-full border border-strong shadow-md" />}
+                    <div className="text-sm font-bold text-strong">{googleUser.name}</div>
+                    <div className="text-[10px] text-muted mb-2">{googleUser.email}</div>
                     <button onClick={handleGoogleLogout} className="w-full bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 border border-rose-500/30 font-semibold py-2.5 rounded-xl text-xs transition">Sign Out</button>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2 w-full">
-                    <div className="text-xs text-zinc-400 text-center mb-2">Sign in to sync your data securely.</div>
+                    <div className="text-xs text-muted text-center mb-2">Sign in to sync your data securely.</div>
                     <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => showToast("Google Sign-In Failed")} theme="filled_black" shape="pill" />
                   </div>
                 )}
@@ -861,38 +861,38 @@ const copySummaryToClipboard = async () => {
               <input ref={importInputRef} type="file" accept="application/json" onChange={handleImportFile} className="hidden" />
             </div>
 
-            <div className="bg-[#121217]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl rounded-3xl p-5 sm:p-8 animate-in fade-in duration-300">
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/[0.06]">
+            <div className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.08] shadow-2xl rounded-3xl p-5 sm:p-8 animate-in fade-in duration-300">
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-inverse/[0.06]">
                 <div className="flex items-center gap-3">
-  <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"><History size={16} className="text-purple-400"/> Transaction History</h3>
-  <button onClick={() => setShowLedgerModal(true)} className="px-2.5 py-1 bg-white/[0.05] hover:bg-white/[0.12] rounded-lg text-[10px] uppercase font-bold tracking-wider transition border border-white/[0.05]">Manage Ledger</button>
+  <h3 className="text-sm font-bold text-strong uppercase tracking-wider flex items-center gap-2"><History size={16} className="text-purple-400"/> Transaction History</h3>
+  <button onClick={() => setShowLedgerModal(true)} className="px-2.5 py-1 bg-inverse/[0.05] hover:bg-inverse/[0.12] rounded-lg text-[10px] uppercase font-bold tracking-wider transition border border-inverse/[0.05]">Manage Ledger</button>
 </div>
-                <span className="text-xs text-zinc-500 font-mono">{allTransactions.length} records</span>
+                <span className="text-xs text-faint font-mono">{allTransactions.length} records</span>
               </div>
               
               <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
                 {allTransactions.length === 0 ? (
-                  <div className="py-8 text-center text-zinc-500 text-xs italic">No history available.</div>
+                  <div className="py-8 text-center text-faint text-xs italic">No history available.</div>
                 ) : (
                   allTransactions.map((tx: TransactionHistoryItem) => (
-                    <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#14141a] border border-white/[0.04] group hover:border-white/[0.08] transition">
+                    <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-inverse/[0.08] transition">
                       <div className="flex items-center gap-3.5 overflow-hidden flex-1">
-                        <div className={`w-9 h-9 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-950/50 border-emerald-500/20 text-emerald-400' : tx.type === 'bill' ? 'bg-blue-950/50 border-blue-500/20 text-blue-400' : 'bg-zinc-900 border-zinc-800 text-zinc-400'}`}>
+                        <div className={`w-9 h-9 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-950/50 border-emerald-500/20 text-emerald-400' : tx.type === 'bill' ? 'bg-blue-950/50 border-blue-500/20 text-blue-400' : 'bg-fill border-strong text-muted'}`}>
                           {tx.type === 'inflow' ? <ArrowDownLeft size={15}/> : tx.type === 'bill' ? <Calendar size={15}/> : <Receipt size={15}/>}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="privacy-blur text-[13px] font-semibold text-zinc-100 truncate">{tx.title}</div>
-                          <div className="flex items-center gap-2 text-[10px] text-zinc-400 mt-1">
-                            <span className="bg-zinc-800/80 px-1.5 py-0.5 rounded text-zinc-300 font-medium truncate max-w-[90px]">{tx.category || tx.type}</span>
+                          <div className="privacy-blur text-[13px] font-semibold text-strong truncate">{tx.title}</div>
+                          <div className="flex items-center gap-2 text-[10px] text-muted mt-1">
+                            <span className="bg-fill-strong/80 px-1.5 py-0.5 rounded text-secondary font-medium truncate max-w-[90px]">{tx.category || tx.type}</span>
                             <span className="privacy-blur uppercase text-blue-400/90 font-bold tracking-wider truncate max-w-[80px]">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
                           </div>
                         </div>
                       </div>
                       <div className="flex flex-col items-end shrink-0 ml-3">
-                        <span className={`privacy-blur text-[13px] font-bold font-mono ${tx.amount > 0 ? "text-emerald-400" : "text-zinc-100"}`}>
+                        <span className={`privacy-blur text-[13px] font-bold font-mono ${tx.amount > 0 ? "text-emerald-400" : "text-strong"}`}>
                           {tx.amount > 0 ? "+" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                         </span>
-                        <span className="text-[10px] text-zinc-500 font-medium mt-1 whitespace-nowrap">{formatDateTime(tx.date)}</span>
+                        <span className="text-[10px] text-faint font-medium mt-1 whitespace-nowrap">{formatDateTime(tx.date)}</span>
                       </div>
                     </div>
                   ))
