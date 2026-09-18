@@ -84,19 +84,19 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
   const handleCustomPaySubmit = (rec: ReceivableViewModel) => { const val = parseFloat(customPayAmount); if (val > 0) { onAddPayment(rec, val); setCustomPayAmount(""); setPayPopoverId(null); } };
 
   return (
-    <div className="bg-[#101014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl w-full">
+    <div className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-xl w-full">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-2"><ArrowDownLeft size={13} className="text-emerald-400" />{selectedMonth} {inflowsLabel || 'Receivables & Inflows'}</h2>
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-zinc-500 font-mono hidden sm:inline">{activeReceivables.filter(r => r.collected).length}/{activeReceivables.length} Received</span>
           <div className="relative" ref={dropdownRef}>
-            <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-emerald-600/20 border-emerald-500/50 text-emerald-400" : "bg-white/[0.04] border-white/[0.08] text-zinc-400 hover:text-white"}`}>
+            <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-emerald-600/20 border-emerald-500/50 text-emerald-400" : "bg-white/[0.04] border-border-default text-zinc-400 hover:text-white"}`}>
               <Filter size={11} className={selectedFilter !== "All" ? "text-emerald-400" : "text-zinc-400"} />
               <span className="text-[11px]">{selectedFilter === "All" ? "Filter" : selectedFilter}</span>
               <ChevronDown size={10} className="text-zinc-500" />
             </button>
             {showFilterDropdown && (
-              <div className="absolute right-0 mt-1.5 w-40 bg-[#181822]/95 backdrop-blur-xl border border-white/[0.1] rounded-xl shadow-2xl p-1 z-30 space-y-0.5">
+              <div className="absolute right-0 mt-1.5 w-40 bg-surface-elevated/95 backdrop-blur-xl border border-border-default rounded-xl shadow-2xl p-1 z-30 space-y-0.5">
                 {filterList.map(cat => (
                   <button key={cat} onClick={() => { setSelectedFilter(cat); setShowFilterDropdown(false); }} className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition flex items-center justify-between ${selectedFilter === cat ? "bg-emerald-600/20 text-emerald-400 font-semibold" : "text-zinc-300 hover:bg-white/[0.06]"}`}>
                     <span>{cat}</span>{selectedFilter === cat && <Check size={11} className="text-emerald-400" />}
@@ -116,7 +116,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
           const isBiMonthly = rec.frequency === "Bi-monthly";
           const received = rec.amountReceived || 0;
           return (
-            <div key={rec.id} className={`p-3 rounded-xl border transition-all ${rec.collected ? "bg-zinc-950/40 border-zinc-900/60 opacity-50" : "bg-[#14141a] border-zinc-800/80 shadow-sm"}`}>
+            <div key={rec.id} className={`p-3 rounded-xl border transition-all ${rec.collected ? "bg-zinc-950/40 border-zinc-900/60 opacity-50" : "bg-surface-sunken border-zinc-800/80 shadow-sm"}`}>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
@@ -135,7 +135,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="px-1.5 py-0.5 rounded font-medium bg-zinc-800 text-zinc-300">{rec.category || "Other"}</span>
                     {rec.wallet && <span className="bg-zinc-800/80 text-zinc-300 border border-zinc-700/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{allWallets.find(w => w.id === rec.wallet)?.label || rec.wallet}</span>}
-                    {isBiMonthly && <span>{rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(formatOrdinal).join(" & ") : "15th & 30th"}</span>}
+                    {isBiMonthly && <span>Bi-Monthly ({rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(formatOrdinal).join(" & ") : "15th & 30th"})</span>}
                     {rec.frequency === "Monthly" && <span>Day {rec.monthlyDay || 15}</span>}
                     {rec.frequency === "By Date" && rec.date && <span>{formatShortDate(rec.date)}</span>}
                   </div>
@@ -151,7 +151,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 </div>
                 {payPopoverId === rec.id && (
                   <div className="mt-2 pt-2 border-t border-zinc-800/60 flex items-center gap-1.5">
-                    <input type="number" inputMode="decimal" placeholder="₱ Amount" value={customPayAmount} onChange={(e) => setCustomPayAmount(e.target.value)} className="w-24 bg-[#0b0b0d] border border-zinc-700 rounded px-2 py-1 text-xs text-white font-mono outline-none" />
+                    <input type="number" inputMode="decimal" placeholder="₱ Amount" value={customPayAmount} onChange={(e) => setCustomPayAmount(e.target.value)} className="w-24 bg-surface-input border border-zinc-700 rounded px-2 py-1 text-xs text-white font-mono outline-none" />
                     <button onClick={() => handleCustomPaySubmit(rec)} className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-semibold">Add</button>
                     <button onClick={() => setPayPopoverId(null)} className="p-1 text-zinc-400 hover:text-white"><X size={12} /></button>
                   </div>
@@ -164,9 +164,9 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
 
       {/* DESKTOP LIST */}
       <div className="hidden lg:block overflow-x-auto pb-2">
-        <table className="w-full text-left text-xs min-w-[850px]">
+        <table className="w-full table-fixed text-left text-xs min-w-[650px]">
           <thead>
-            <tr className="text-zinc-400 border-b border-white/[0.06] text-[11px] uppercase tracking-wider">
+            <tr className="text-zinc-400 border-b border-border-subtle text-[11px] uppercase tracking-wider">
               <th className="py-3 px-4 font-semibold w-[15%]">STATUS</th>
               <th className="py-3 px-4 font-semibold w-[25%]">RECEIVABLE</th>
               <th className="py-3 px-4 font-semibold text-right w-[15%]">AMOUNT</th>
@@ -205,7 +205,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   </td>
                   <td className="py-3 px-4 text-center whitespace-nowrap">
                     <div className="text-zinc-300 text-xs">
-                      {rec.frequency === "Bi-monthly" && <span className="text-zinc-300 font-medium text-[11px]">{rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(formatOrdinal).join(" & ") : "15th & 30th"}</span>}
+                      {rec.frequency === "Bi-monthly" && <span className="text-zinc-300 font-medium text-[11px]">Bi-Monthly ({rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(formatOrdinal).join(" & ") : "15th & 30th"})</span>}
                       {rec.frequency === "Monthly" && <span className="text-zinc-400 text-[11px]">Monthly • Day {rec.monthlyDay || 15}</span>}
                       {rec.frequency === "By Date" && (rec.date ? <span className="inline-flex items-center gap-1 text-zinc-300 font-mono text-[11px]"><Calendar size={10} className="text-zinc-500" />{formatShortDate(rec.date)}</span> : <span className="text-zinc-600">—</span>)}
                     </div>
@@ -221,8 +221,8 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                       <button onClick={() => handleStartEdit(rec)} className="whitespace-nowrap shrink-0 px-2 py-1 text-zinc-400 hover:text-amber-300 hover:bg-white/[0.05] rounded-md text-[11px] flex items-center transition"><Edit2 size={10} className="mr-1" /> Edit</button>
                     </div>
                     {payPopoverId === rec.id && (
-                      <div className="absolute right-3 top-9 z-20 bg-[#181822] border border-white/[0.1] rounded-xl p-2 shadow-2xl flex items-center gap-1.5">
-                        <input type="number" inputMode="decimal" placeholder="+₱" value={customPayAmount} onChange={(e) => setCustomPayAmount(e.target.value)} className="w-20 bg-[#0b0b0d] border border-zinc-700 rounded px-1.5 py-0.5 text-xs text-white font-mono outline-none text-right" />
+                      <div className="absolute right-3 top-9 z-20 bg-surface-elevated border border-border-default rounded-xl p-2 shadow-2xl flex items-center gap-1.5">
+                        <input type="number" inputMode="decimal" placeholder="+₱" value={customPayAmount} onChange={(e) => setCustomPayAmount(e.target.value)} className="w-20 bg-surface-input border border-zinc-700 rounded px-1.5 py-0.5 text-xs text-white font-mono outline-none text-right" />
                         <button onClick={() => handleCustomPaySubmit(rec)} className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-medium">Add</button>
                         <button onClick={() => setPayPopoverId(null)} className="p-1 text-zinc-400 hover:text-white"><X size={11} /></button>
                       </div>
@@ -242,7 +242,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
       {/* EDIT MODAL */}
       {editingId && activeReceivables.some(r => r.id === editingId) && (
         <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => { if(e.target === e.currentTarget) handleCancelEdit(); }}>
-          <div className="bg-[#121217] border border-white/[0.08] rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
+          <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400"><Edit2 size={18} /></div>
@@ -253,28 +253,28 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
             <div className="space-y-4">
               <div>
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Inflow Name</label>
-                <input type="text" value={editForm.name || ""} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" />
+                <input type="text" value={editForm.name || ""} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Amount (₱)</label>
-                  <input type="number" inputMode="decimal" step="0.01" value={editForm.amount ?? ""} onChange={(e) => setEditForm({ ...editForm, amount: parseFloat(e.target.value) || 0 })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-white outline-none focus:border-emerald-500" />
+                  <input type="number" inputMode="decimal" step="0.01" value={editForm.amount ?? ""} onChange={(e) => setEditForm({ ...editForm, amount: parseFloat(e.target.value) || 0 })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-white outline-none focus:border-emerald-500" />
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Category</label>
-                  <select value={editForm.category || "Salary"} onChange={(e) => setEditForm({ ...editForm, category: e.target.value as ReceivableCategory })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
+                  <select value={editForm.category || "Salary"} onChange={(e) => setEditForm({ ...editForm, category: e.target.value as ReceivableCategory })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
                     {categoriesList.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Destination Wallet</label>
-                  <select value={editForm.wallet || customWallets?.[0]?.id || "main"} onChange={(e) => setEditForm({ ...editForm, wallet: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-emerald-500">
+                  <select value={editForm.wallet || customWallets?.[0]?.id || "main"} onChange={(e) => setEditForm({ ...editForm, wallet: e.target.value })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-emerald-500">
                     {allWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Frequency</label>
-                  <select value={editForm.frequency || "By Date"} onChange={(e) => setEditForm({ ...editForm, frequency: e.target.value as ReceivableFrequency })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
+                  <select value={editForm.frequency || "By Date"} onChange={(e) => setEditForm({ ...editForm, frequency: e.target.value as ReceivableFrequency })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
                     <option value="By Date">Specific Date</option><option value="Monthly">Monthly</option><option value="Bi-monthly">Bi-Monthly</option>
                   </select>
                 </div>
@@ -282,13 +282,13 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
           <div className="flex gap-2 mb-3">
             <div className="flex-1">
               <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">First Day</label>
-              <select value={editForm.biMonthlyDays?.[0] || 15} onChange={(e) => setEditForm({ ...editForm, biMonthlyDays: [parseInt(e.target.value, 10), editForm.biMonthlyDays?.[1] || 30].sort((a,b)=>a-b) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
+              <select value={editForm.biMonthlyDays?.[0] || 15} onChange={(e) => setEditForm({ ...editForm, biMonthlyDays: [parseInt(e.target.value, 10), editForm.biMonthlyDays?.[1] || 30].sort((a,b)=>a-b) })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
                 {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{formatOrdinal(d)}</option>)}
               </select>
             </div>
             <div className="flex-1">
               <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Second Day</label>
-              <select value={editForm.biMonthlyDays?.[1] || 30} onChange={(e) => setEditForm({ ...editForm, biMonthlyDays: [editForm.biMonthlyDays?.[0] || 15, parseInt(e.target.value, 10)].sort((a,b)=>a-b) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
+              <select value={editForm.biMonthlyDays?.[1] || 30} onChange={(e) => setEditForm({ ...editForm, biMonthlyDays: [editForm.biMonthlyDays?.[0] || 15, parseInt(e.target.value, 10)].sort((a,b)=>a-b) })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
                 {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{formatOrdinal(d)}</option>)}
               </select>
             </div>
@@ -297,7 +297,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
         {editForm.frequency === "Monthly" && (
                   <div className="col-span-1 sm:col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Monthly Day</label>
-                    <select value={editForm.monthlyDay || 15} onChange={(e) => setEditForm({ ...editForm, monthlyDay: parseInt(e.target.value, 10) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
+                    <select value={editForm.monthlyDay || 15} onChange={(e) => setEditForm({ ...editForm, monthlyDay: parseInt(e.target.value, 10) })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
                       {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Day {d}</option>)}
                     </select>
                   </div>
@@ -305,7 +305,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 {editForm.frequency === "By Date" && (
                   <div className="col-span-1 sm:col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Specific Date</label>
-                    <input type="date" value={editForm.date || ""} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" />
+                    <input type="date" value={editForm.date || ""} onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" />
                   </div>
                 )}
               </div>
@@ -321,7 +321,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
       {/* ADD MODAL */}
       {isAdding && (
         <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => { if(e.target === e.currentTarget) setIsAdding(false); }}>
-          <div className="bg-[#121217] border border-white/[0.08] rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
+          <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400"><Plus size={18} /></div>
@@ -333,28 +333,28 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
             <form onSubmit={handleAddSubmit} className="space-y-4">
               <div>
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Inflow Name</label>
-                <input type="text" value={newReceivable.name} onChange={(e) => setNewReceivable({ ...newReceivable, name: e.target.value })} autoFocus placeholder="e.g. Salary, Client Payment" className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
+                <input type="text" value={newReceivable.name} onChange={(e) => setNewReceivable({ ...newReceivable, name: e.target.value })} autoFocus placeholder="e.g. Salary, Client Payment" className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Amount (₱)</label>
-                  <input type="number" inputMode="decimal" step="0.01" value={newReceivable.amount} onChange={(e) => setNewReceivable({ ...newReceivable, amount: e.target.value })} placeholder="0.00" className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-white outline-none focus:border-emerald-500" required />
+                  <input type="number" inputMode="decimal" step="0.01" value={newReceivable.amount} onChange={(e) => setNewReceivable({ ...newReceivable, amount: e.target.value })} placeholder="0.00" className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-white outline-none focus:border-emerald-500" required />
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Category</label>
-                  <select value={newReceivable.category} onChange={(e) => setNewReceivable({ ...newReceivable, category: e.target.value as ReceivableCategory })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
+                  <select value={newReceivable.category} onChange={(e) => setNewReceivable({ ...newReceivable, category: e.target.value as ReceivableCategory })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
                     {categoriesList.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Destination Wallet</label>
-                  <select value={newReceivable.wallet} onChange={(e) => setNewReceivable({ ...newReceivable, wallet: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-emerald-500">
+                  <select value={newReceivable.wallet} onChange={(e) => setNewReceivable({ ...newReceivable, wallet: e.target.value })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-emerald-500">
                     {allWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Frequency</label>
-                  <select value={newReceivable.frequency} onChange={(e) => setNewReceivable({ ...newReceivable, frequency: e.target.value as ReceivableFrequency })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
+                  <select value={newReceivable.frequency} onChange={(e) => setNewReceivable({ ...newReceivable, frequency: e.target.value as ReceivableFrequency })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
                     <option value="By Date">Specific Date</option><option value="Monthly">Monthly</option><option value="Bi-monthly">Bi-Monthly</option>
                   </select>
                 </div>
@@ -362,13 +362,13 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
           <div className="flex gap-2 mb-3">
             <div className="flex-1">
               <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">First Day</label>
-              <select value={newReceivable.biMonthlyDays?.[0] || 15} onChange={(e) => setNewReceivable({ ...newReceivable, biMonthlyDays: [parseInt(e.target.value, 10), newReceivable.biMonthlyDays?.[1] || 30].sort((a,b)=>a-b) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
+              <select value={newReceivable.biMonthlyDays?.[0] || 15} onChange={(e) => setNewReceivable({ ...newReceivable, biMonthlyDays: [parseInt(e.target.value, 10), newReceivable.biMonthlyDays?.[1] || 30].sort((a,b)=>a-b) })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
                 {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{formatOrdinal(d)}</option>)}
               </select>
             </div>
             <div className="flex-1">
               <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Second Day</label>
-              <select value={newReceivable.biMonthlyDays?.[1] || 30} onChange={(e) => setNewReceivable({ ...newReceivable, biMonthlyDays: [newReceivable.biMonthlyDays?.[0] || 15, parseInt(e.target.value, 10)].sort((a,b)=>a-b) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
+              <select value={newReceivable.biMonthlyDays?.[1] || 30} onChange={(e) => setNewReceivable({ ...newReceivable, biMonthlyDays: [newReceivable.biMonthlyDays?.[0] || 15, parseInt(e.target.value, 10)].sort((a,b)=>a-b) })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none">
                 {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{formatOrdinal(d)}</option>)}
               </select>
             </div>
@@ -377,7 +377,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
         {newReceivable.frequency === "Monthly" && (
                   <div className="col-span-1 sm:col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Monthly Day</label>
-                    <select value={newReceivable.monthlyDay} onChange={(e) => setNewReceivable({ ...newReceivable, monthlyDay: parseInt(e.target.value, 10) })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
+                    <select value={newReceivable.monthlyDay} onChange={(e) => setNewReceivable({ ...newReceivable, monthlyDay: parseInt(e.target.value, 10) })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
                       {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Day {d}</option>)}
                     </select>
                   </div>
@@ -385,7 +385,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 {newReceivable.frequency === "By Date" && (
                   <div className="col-span-1 sm:col-span-2">
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Specific Date</label>
-                    <input type="date" value={newReceivable.date} onChange={(e) => setNewReceivable({ ...newReceivable, date: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" />
+                    <input type="date" value={newReceivable.date} onChange={(e) => setNewReceivable({ ...newReceivable, date: e.target.value })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" />
                   </div>
                 )}
               </div>

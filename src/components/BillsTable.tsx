@@ -142,7 +142,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
   };
 
   const renderMobileRow = (bill: BillViewModel) => (
-    <div key={bill.id} className={`p-3 rounded-xl border transition-all ${bill.paid ? "bg-zinc-950/40 border-zinc-900/60 opacity-40" : "bg-[#14141a] border-zinc-800/80 shadow-sm"} ${highlightOverdue && (bill.daysLeft ?? 0) < 0 && !bill.paid ? 'ring-2 ring-orange-500/50' : ''}`}>
+    <div key={bill.id} className={`p-3 rounded-xl border transition-all ${bill.paid ? "bg-zinc-950/40 border-zinc-900/60 opacity-40" : "bg-surface-sunken border-zinc-800/80 shadow-sm"} ${highlightOverdue && (bill.daysLeft ?? 0) < 0 && !bill.paid ? 'ring-2 ring-orange-500/50' : ''}`}>
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-2">
           <button onClick={() => onToggleStatus(bill)} className="flex items-center gap-2.5 min-w-0 flex-1 text-left focus:outline-none group">
@@ -218,7 +218,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
   );
 
   return (
-    <div className="bg-[#101014] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl">
+    <div className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-xl">
       <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
         <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-200 flex items-center gap-2 shrink-0">
           <Calendar size={13} className="text-blue-400" /> {selectedMonth} Commitments
@@ -230,13 +230,13 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search..."
-            className="h-7 w-20 sm:w-28 px-2.5 rounded-xl border border-white/[0.08] bg-white/[0.04] text-[11px] text-white placeholder:text-zinc-500 outline-none focus:border-blue-500/50 transition-all"
+            className="h-7 w-20 sm:w-28 px-2.5 rounded-xl border border-border-default bg-white/[0.04] text-[11px] text-white placeholder:text-zinc-500 outline-none focus:border-blue-500/50 transition-all"
           />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as BillSortOption)}
             aria-label="Sort commitments"
-            className="h-7 px-2 rounded-xl border border-white/[0.08] bg-white/[0.04] text-[11px] text-zinc-400 outline-none focus:border-blue-500/50 cursor-pointer max-w-[100px] truncate"
+            className="h-7 px-2 rounded-xl border border-border-default bg-white/[0.04] text-[11px] text-zinc-400 outline-none focus:border-blue-500/50 cursor-pointer max-w-[100px] truncate"
           >
             <option value="default">Sort</option>
             <option value="dueSoon">Due Soon</option>
@@ -247,13 +247,13 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
             <option value="unpaidFirst">Unpaid First</option>
           </select>
           <div className="relative" ref={dropdownRef}>
-            <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-blue-600/20 border-blue-500/50 text-blue-400" : "bg-white/[0.04] border-white/[0.08] text-zinc-400 hover:text-white"}`}>
+            <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-blue-600/20 border-blue-500/50 text-blue-400" : "bg-white/[0.04] border-border-default text-zinc-400 hover:text-white"}`}>
               <Filter size={11} className={selectedFilter !== "All" ? "text-blue-400" : "text-zinc-400"} />
               <span className="text-[11px] hidden sm:inline">{selectedFilter === "All" ? "Filter" : selectedFilter}</span>
               <ChevronDown size={10} className="text-zinc-500" />
             </button>
             {showFilterDropdown && (
-              <div className="absolute right-0 mt-1.5 w-44 bg-[#181822]/95 backdrop-blur-xl border border-white/[0.1] rounded-xl shadow-2xl p-1 z-30 space-y-0.5">
+              <div className="absolute right-0 mt-1.5 w-44 bg-surface-elevated/95 backdrop-blur-xl border border-border-default rounded-xl shadow-2xl p-1 z-30 space-y-0.5">
                 {BILL_TYPES.map(type => (
                   <button key={type} onClick={() => { setSelectedFilter(type); setShowFilterDropdown(false); }} className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition flex items-center justify-between ${selectedFilter === type ? "bg-blue-600/20 text-blue-400 font-semibold" : "text-zinc-300 hover:bg-white/[0.06]"}`}>
                     <span>{type}</span>{selectedFilter === type && <Check size={11} className="text-blue-400" />}
@@ -326,7 +326,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
       {/* EDIT MODAL */}
       {editingId && activeBills.some(b => b.id === editingId) && (
         <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => { if(e.target === e.currentTarget) handleCancelEdit(); }}>
-          <div className="bg-[#121217] border border-white/[0.08] rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
+          <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400"><Edit2 size={18} /></div>
@@ -341,28 +341,28 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
               </div>
               <div>
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Commitment Name</label>
-                <input type="text" value={editForm.name || ""} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500 disabled:opacity-50" />
+                <input type="text" value={editForm.name || ""} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500 disabled:opacity-50" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Amount (₱)</label>
-                  <input type="number" inputMode="decimal" step="0.01" value={editForm.amount ?? ""} onChange={(e) => { const val = parseFloat(e.target.value) || 0; setEditForm(prev => ({ ...prev, amount: val, ...(editScope === "monthOnly" ? { monthAmount: val } : { baseAmount: val }) })); }} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-white outline-none focus:border-blue-500" />
+                  <input type="number" inputMode="decimal" step="0.01" value={editForm.amount ?? ""} onChange={(e) => { const val = parseFloat(e.target.value) || 0; setEditForm(prev => ({ ...prev, amount: val, ...(editScope === "monthOnly" ? { monthAmount: val } : { baseAmount: val }) })); }} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-white outline-none focus:border-blue-500" />
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Wallet Route</label>
-                  <select value={editForm.wallet || defaultWallet} onChange={(e) => setEditForm({ ...editForm, wallet: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-blue-500 disabled:opacity-50">
+                  <select value={editForm.wallet || defaultWallet} onChange={(e) => setEditForm({ ...editForm, wallet: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-blue-500 disabled:opacity-50">
                     {customWallets?.map(cw => <option key={cw.id} value={cw.id}>{cw.label}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Type</label>
-                  <select value={editForm.type || "Bill"} onChange={(e) => setEditForm({ ...editForm, type: e.target.value as BillType })} disabled={editScope === "monthOnly"} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500 disabled:opacity-50">
+                  <select value={editForm.type || "Bill"} onChange={(e) => setEditForm({ ...editForm, type: e.target.value as BillType })} disabled={editScope === "monthOnly"} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500 disabled:opacity-50">
                     <option value="Bill">Bill</option><option value="Subscription">Subscription</option><option value="Loan / Installment">Loan / Installment</option>
                   </select>
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Due Date</label>
-                  <select value={editForm.dueDay || "1"} onChange={(e) => setEditForm({ ...editForm, dueDay: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500 disabled:opacity-50">
+                  <select value={editForm.dueDay || "1"} onChange={(e) => setEditForm({ ...editForm, dueDay: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500 disabled:opacity-50">
                     {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Day {d}</option>)}
                   </select>
                 </div>
@@ -371,13 +371,13 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Start Month</label>
-                    <select value={editForm.startMonth || selectedMonth} onChange={(e) => setEditForm({ ...editForm, startMonth: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none disabled:opacity-50">
+                    <select value={editForm.startMonth || selectedMonth} onChange={(e) => setEditForm({ ...editForm, startMonth: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none disabled:opacity-50">
                       {ALL_MONTH_YEAR_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">End Month</label>
-                    <select value={editForm.endMonth || selectedMonth} onChange={(e) => setEditForm({ ...editForm, endMonth: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none disabled:opacity-50">
+                    <select value={editForm.endMonth || selectedMonth} onChange={(e) => setEditForm({ ...editForm, endMonth: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none disabled:opacity-50">
                       {ALL_MONTH_YEAR_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
@@ -396,7 +396,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
       {/* ADD MODAL */}
       {isAdding && (
         <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => { if(e.target === e.currentTarget) setIsAdding(false); }}>
-          <div className="bg-[#121217] border border-white/[0.08] rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
+          <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400"><Plus size={18} /></div>
@@ -408,28 +408,28 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
             <form onSubmit={handleAddSubmit} className="space-y-4">
               <div>
                 <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Commitment Name</label>
-                <input type="text" value={newBill.name} onChange={(e) => setNewBill({ ...newBill, name: e.target.value })} autoFocus placeholder="e.g. Internet Bill" className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500" required />
+                <input type="text" value={newBill.name} onChange={(e) => setNewBill({ ...newBill, name: e.target.value })} autoFocus placeholder="e.g. Internet Bill" className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500" required />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Amount (₱)</label>
-                  <input type="number" inputMode="decimal" step="0.01" value={newBill.amount} onChange={(e) => setNewBill({ ...newBill, amount: e.target.value })} placeholder="0.00" className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-white outline-none focus:border-blue-500" required />
+                  <input type="number" inputMode="decimal" step="0.01" value={newBill.amount} onChange={(e) => setNewBill({ ...newBill, amount: e.target.value })} placeholder="0.00" className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-white outline-none focus:border-blue-500" required />
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Wallet Route</label>
-                  <select value={newBill.wallet} onChange={(e) => setNewBill({ ...newBill, wallet: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-blue-500">
+                  <select value={newBill.wallet} onChange={(e) => setNewBill({ ...newBill, wallet: e.target.value })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-blue-500">
                     {customWallets?.map(cw => <option key={cw.id} value={cw.id}>{cw.label}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Type</label>
-                  <select value={newBill.type} onChange={(e) => setNewBill({ ...newBill, type: e.target.value as BillType })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500">
+                  <select value={newBill.type} onChange={(e) => setNewBill({ ...newBill, type: e.target.value as BillType })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500">
                     <option value="Bill">Bill</option><option value="Subscription">Subscription</option><option value="Loan / Installment">Loan / Installment</option>
                   </select>
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Due Date</label>
-                  <select value={newBill.dueDay} onChange={(e) => setNewBill({ ...newBill, dueDay: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500">
+                  <select value={newBill.dueDay} onChange={(e) => setNewBill({ ...newBill, dueDay: e.target.value })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500">
                     {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={String(d)}>Day {d}</option>)}
                   </select>
                 </div>
@@ -438,13 +438,13 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">Start Month</label>
-                    <select value={newBill.startMonth} onChange={(e) => setNewBill({ ...newBill, startMonth: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500">
+                    <select value={newBill.startMonth} onChange={(e) => setNewBill({ ...newBill, startMonth: e.target.value })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500">
                       {ALL_MONTH_YEAR_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1.5 block">End Month</label>
-                    <select value={newBill.endMonth} onChange={(e) => setNewBill({ ...newBill, endMonth: e.target.value })} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500">
+                    <select value={newBill.endMonth} onChange={(e) => setNewBill({ ...newBill, endMonth: e.target.value })} className="w-full bg-surface-input border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-blue-500">
                       {ALL_MONTH_YEAR_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
@@ -461,11 +461,11 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
       {/* PRIOR PAYMENT PROMPT MODAL */}
       {pendingPriorPayment && (
         <div className="fixed inset-0 z-[250] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-[#121217] border border-white/[0.08] rounded-3xl p-6 w-full max-w-sm shadow-[0_0_60px_rgba(0,0,0,0.8)] space-y-4">
+          <div className="bg-surface-elevated border border-border-default rounded-3xl p-6 w-full max-w-sm shadow-[0_0_60px_rgba(0,0,0,0.8)] space-y-4">
             <div className="space-y-1">
               <h3 className="text-sm font-bold text-white leading-tight">Was this payment already made?</h3>
               <p className="text-[11px] text-zinc-400">
-                {pendingPriorPayment.bill.name} starts in {pendingPriorPayment.month}. Marking it as paid will use the normal commitment payment flow for this month.
+                {pendingPriorPayment.bill.name} starts in {pendingPriorPayment.month}. This marks the bill as already paid for this month without changing your wallet balance.
               </p>
             </div>
             <div className="flex gap-2 pt-2">
