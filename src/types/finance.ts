@@ -122,6 +122,7 @@ export interface AppSettings {
   savingsWallet?: string;
   transitWallet?: string;
   defaultWallet?: string;
+  expenseWallets?: Record<string, string>;
   walletLabels?: Record<string, string>;
   hasMigratedBaseWallets?: boolean;
   customWallets?: CustomWallet[];

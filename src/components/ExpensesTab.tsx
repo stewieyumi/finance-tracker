@@ -4,7 +4,7 @@ import { Camera, UploadCloud, ScanLine, Plus, Receipt, Trash2, CheckCircle2 } fr
 import { UnifiedFinanceData, Expense, ExpenseCategory } from "../types/finance";
 import { generateId } from "../utils/idHelpers";
 import { getLocalPasscode } from "../hooks/useCloudSync";
-import { applyWalletTransaction, getDefaultWalletId } from "../utils/financeHelpers";
+import { applyWalletTransaction, getDefaultExpenseWalletId, getDefaultWalletId } from "../utils/financeHelpers";
 
 const EXPENSE_CATEGORIES: ExpenseCategory[] = ["Food & Dining", "Transport", "Utilities", "Laundry & Home", "Shopping", "Other"];
 
@@ -30,7 +30,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
     merchant: "",
     amount: "",
     category: "Food & Dining" as ExpenseCategory | string,
-    wallet: getDefaultWalletId(globalData.settings, globalData.wallets),
+    wallet: getDefaultExpenseWalletId("Food & Dining", globalData.settings, globalData.wallets),
     date: getLocalToday()
   });
 
@@ -109,11 +109,14 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
           }
 
           const parsed = data.parsed || {};
+          const scannedCategory = parsed.category || "Other";
+
           setForm(prev => ({
             ...prev,
             merchant: parsed.merchant || "",
             amount: parsed.amount ? String(parsed.amount) : "",
-            category: parsed.category || "Other",
+            category: scannedCategory,
+            wallet: getDefaultExpenseWalletId(scannedCategory, globalData.settings, globalData.wallets),
             date: parsed.date || getLocalToday()
           }));
           
@@ -177,7 +180,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
       merchant: "",
       amount: "",
       category: "Food & Dining",
-      wallet: getDefaultWalletId(globalData.settings, globalData.wallets),
+      wallet: getDefaultExpenseWalletId("Food & Dining", globalData.settings, globalData.wallets),
       date: getLocalToday()
     });
   };
@@ -270,7 +273,18 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
               </div>
               <div className="min-w-0">
                 <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Category</label>
-                <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-strong outline-none min-h-[38px] box-border">
+                <select
+                  value={form.category}
+                  onChange={e => {
+                    const category = e.target.value;
+                    setForm(prev => ({
+                      ...prev,
+                      category,
+                      wallet: getDefaultExpenseWalletId(category, globalData.settings, globalData.wallets)
+                    }));
+                  }}
+                  className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-strong outline-none min-h-[38px] box-border"
+                >
                   {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>

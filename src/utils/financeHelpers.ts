@@ -1,3 +1,5 @@
+import type { AppSettings } from "../types/finance";
+
 export function getEffectiveBillAmount(
   baseAmount: number,
   override?: number
@@ -206,6 +208,29 @@ export function getDefaultWalletId(
   );
 
   return firstAvailableWallet?.id || "";
+}
+
+/**
+ * Returns the configured wallet for a new expense category.
+ *
+ * A category-specific route wins when it points to a valid wallet.
+ * Otherwise, the normal default wallet fallback is used.
+ */
+export function getDefaultExpenseWalletId(
+  category: string,
+  settings?: AppSettings,
+  wallets?: Record<string, number>
+): string {
+  const configuredWallet = settings?.expenseWallets?.[category];
+
+  if (
+    configuredWallet &&
+    (!wallets || wallets[configuredWallet] !== undefined)
+  ) {
+    return configuredWallet;
+  }
+
+  return getDefaultWalletId(settings, wallets);
 }
 
 export function applyWalletTransaction(

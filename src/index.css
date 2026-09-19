@@ -109,6 +109,19 @@
   }
 
 
+  .settings-legacy-migration-button {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+  }
+
+  :root:not(.light) .settings-legacy-migration-button {
+    background: rgba(120, 53, 15, .3);
+    border-color: rgba(146, 64, 14, .5);
+    color: #fbbf24;
+  }
+
+
 
   :root:not(.light) .chip-blue { background: rgba(30, 58, 138, .58); border-color: rgba(96, 165, 250, .45); color: #93c5fd; }
   :root:not(.light) .chip-purple { background: rgba(88, 28, 135, .58); border-color: rgba(192, 132, 252, .4); color: #d8b4fe; }

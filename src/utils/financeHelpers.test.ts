@@ -8,7 +8,8 @@ import {
   hasPaydayExecutionOnDate,
   getReceivableStatus,
   applyWalletTransaction,
-  getDefaultWalletId
+  getDefaultWalletId,
+  getDefaultExpenseWalletId
 } from "./financeHelpers";
 import { countPaydaysUntil } from "./dateHelpers";
 
@@ -250,6 +251,57 @@ describe("getDefaultWalletId", () => {
         { savings: 1000 }
       )
     ).toBe("");
+  });
+});
+
+describe("getDefaultExpenseWalletId", () => {
+  const settings = {
+    defaultWallet: "maribank",
+    expenseWallets: {
+      "Food & Dining": "gcash",
+      Transport: "gotyme",
+      Utilities: "maya",
+      "Laundry & Home": "gcash",
+      Shopping: "bpi",
+      Other: "maribank"
+    },
+    customWallets: [
+      { id: "maribank", label: "MariBank" },
+      { id: "gcash", label: "GCash" },
+      { id: "maya", label: "Maya" },
+      { id: "gotyme", label: "GoTyme" },
+      { id: "bpi", label: "BPI" }
+    ]
+  };
+
+  const wallets = {
+    maribank: 5000,
+    gcash: 2500,
+    maya: 1500,
+    gotyme: 1000,
+    bpi: 500
+  };
+
+  it("uses the configured wallet for the expense category", () => {
+    expect(getDefaultExpenseWalletId("Food & Dining", settings, wallets)).toBe("gcash");
+    expect(getDefaultExpenseWalletId("Transport", settings, wallets)).toBe("gotyme");
+    expect(getDefaultExpenseWalletId("Utilities", settings, wallets)).toBe("maya");
+  });
+
+  it("falls back to the normal default wallet when a category has no route", () => {
+    expect(getDefaultExpenseWalletId("Unmapped Category", settings, wallets)).toBe("maribank");
+  });
+
+  it("falls back when the category route points to a missing wallet", () => {
+    const invalidSettings = {
+      ...settings,
+      expenseWallets: {
+        ...settings.expenseWallets,
+        Shopping: "deleted-wallet"
+      }
+    };
+
+    expect(getDefaultExpenseWalletId("Shopping", invalidSettings, wallets)).toBe("maribank");
   });
 });
 

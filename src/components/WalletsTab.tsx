@@ -67,6 +67,13 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
       const safeW = (wId?: string) => wId === id ? fallbackWallet : wId;
       const safeWReq = (wId: string) => wId === id ? fallbackWallet : wId;
 
+      const safeExpenseWallets = Object.fromEntries(
+        Object.entries(prev.settings?.expenseWallets || {}).map(([category, wId]) => [
+          category,
+          safeWReq(wId)
+        ])
+      );
+
       return { 
         ...prev, 
         settings: { 
@@ -76,7 +83,8 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
           livingWallet: safeW(prev.settings?.livingWallet),
           savingsWallet: safeW(prev.settings?.savingsWallet),
           transitWallet: safeW(prev.settings?.transitWallet),
-          defaultWallet: safeW(prev.settings?.defaultWallet)
+          defaultWallet: safeW(prev.settings?.defaultWallet),
+          expenseWallets: safeExpenseWallets
         }, 
         library: {
           ...prev.library,

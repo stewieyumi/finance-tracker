@@ -48,11 +48,7 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
                     ? "ring-1 ring-emerald-500/40 shadow-[0_0_18px_rgba(16,185,129,0.10)] border-emerald-500/30"
                     : "border-inverse/[0.05]";
 
-            const displayColor = isMilestoneWallet
-              ? "text-blue-400 font-bold"
-              : isSavingsWallet
-                ? "text-emerald-400 font-bold"
-                : (w.color || "text-strong");
+            const displayColor = `${w.color || "text-strong"} font-bold`;
 
             return (
               <button key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`flex items-center justify-between w-full bg-surface-input border rounded-xl px-3.5 py-3 hover:border-inverse/[0.12] hover:bg-inverse/[0.02] active:scale-[0.98] transition-all text-left group ${roleClasses}`}>

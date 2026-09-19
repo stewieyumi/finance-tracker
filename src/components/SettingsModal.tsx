@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Settings, Briefcase, Target, Save, Cloud, Database, ArrowRightLeft, Download, Upload } from "lucide-react";
 import { UnifiedFinanceData } from "../types/finance";
-import { getWalletForBill } from "../utils/financeHelpers";
+import { getDefaultExpenseWalletId, getWalletForBill } from "../utils/financeHelpers";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -24,6 +24,15 @@ const PRESETS = {
   personal: { label: "Personal / Student", inflows: "INCOME & ALLOWANCE", gigs: "TASKS & HUSTLES", inflowCats: ["Allowance", "Salary", "Gift", "Side Hustle", "Other"], gigCats: ["Part-time", "Errand", "Online Selling", "Other"] }
 };
 
+const EXPENSE_CATEGORIES = [
+  "Food & Dining",
+  "Transport",
+  "Utilities",
+  "Laundry & Home",
+  "Shopping",
+  "Other"
+] as const;
+
 const formatOrdinal = (n: number) => {
   const s = ["th", "st", "nd", "rd"];
   const v = n % 100;
@@ -42,6 +51,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     baseSavingsTarget: 1000, savingsWallet: "bpi",
     defaultTransitAllocation: 1500, transitWallet: "gotyme",
     defaultWallet: "main",
+    expenseWallets: {} as Record<string, string>,
     inflowsLabel: "RECEIVABLES & INFLOWS", gigsLabel: "UPCOMING SHOOTS & GIGS",
     inflowCategories: PRESETS.videographer.inflowCats, gigCategories: PRESETS.videographer.gigCats,
     walletLabels: { maribank: "MariBank", gcash: "GCash", maya: "Maya", gotyme: "GoTyme", bpi: "BPI", cash: "Cash On-Hand" } as Record<string, string>
@@ -62,6 +72,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
         defaultTransitAllocation: globalData.settings.defaultTransitAllocation ?? 1500,
         transitWallet: globalData.settings.transitWallet || "gotyme",
         defaultWallet: globalData.settings.defaultWallet || "main",
+        expenseWallets: Object.fromEntries(
+          EXPENSE_CATEGORIES.map(category => [
+            category,
+            globalData.settings?.expenseWallets?.[category] ||
+              getDefaultExpenseWalletId(category, globalData.settings, globalData.wallets)
+          ])
+        ),
         inflowsLabel: globalData.settings.inflowsLabel || "RECEIVABLES & INFLOWS",
         gigsLabel: globalData.settings.gigsLabel || "UPCOMING SHOOTS & GIGS",
         inflowCategories: globalData.settings.inflowCategories?.length ? globalData.settings.inflowCategories : PRESETS.videographer.inflowCats,
@@ -95,6 +112,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
         baseSavingsTarget: Number(form.baseSavingsTarget), savingsWallet: form.savingsWallet,
         defaultTransitAllocation: Number(form.defaultTransitAllocation), transitWallet: form.transitWallet,
         defaultWallet: form.defaultWallet,
+        expenseWallets: form.expenseWallets,
         inflowsLabel: form.inflowsLabel, gigsLabel: form.gigsLabel, inflowCategories: form.inflowCategories, gigCategories: form.gigCategories, walletLabels: form.walletLabels
       },
       updatedAt: Date.now()
@@ -231,6 +249,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                 </div>
 
                 <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
+                  <div className="mb-3">
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Expense Routing</label>
+                    <div className="text-[10px] text-faint">Choose the wallet automatically used for each new expense category.</div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {EXPENSE_CATEGORIES.map(category => (
+                      <div key={category} className="space-y-1.5">
+                        <label className="text-[10px] text-muted font-semibold block">{category}</label>
+                        <select
+                          value={form.expenseWallets[category] || ""}
+                          onChange={e => setForm({
+                            ...form,
+                            expenseWallets: {
+                              ...form.expenseWallets,
+                              [category]: e.target.value
+                            }
+                          })}
+                          className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer"
+                        >
+                          <WalletSelectOptions />
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
                   <label className="text-[10px] text-faint uppercase font-semibold mb-2 block">Appearance</label>
                   <div className="grid grid-cols-3 gap-2">
                     {(["dark", "light", "system"] as const).map(opt => (
@@ -257,7 +303,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                           type="button"
                           onClick={() => setForm({...form, paydayDays: form.paydayDays.filter(d => d !== day)})}
                           disabled={form.paydayDays.length <= 1}
-                          className="text-blue-400 hover:text-strong disabled:opacity-30 disabled:cursor-not-allowed w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-800/50 transition"
+                          className="text-blue-400 hover:text-strong disabled:opacity-30 disabled:cursor-not-allowed w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-500/10 transition"
                         >
                           ×
                         </button>
@@ -282,7 +328,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                         setForm({...form, paydayDays: [...form.paydayDays, newPaydayDay].sort((a, b) => a - b)});
                       }}
                       disabled={form.paydayDays.length >= 10 || form.paydayDays.includes(newPaydayDay)}
-                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white text-xs font-semibold transition"
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-fill-strong disabled:cursor-not-allowed text-white text-xs font-semibold transition"
                     >
                       Add
                     </button>
@@ -341,7 +387,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                   </div>
                 </div>
               </details>
-              <button onClick={handleMigrateWallets} className="w-full mt-2 bg-amber-900/30 hover:bg-amber-800/40 text-amber-400 border border-amber-800/50 font-semibold py-2.5 rounded-xl text-xs transition">
+              <button onClick={handleMigrateWallets} className="settings-legacy-migration-button w-full mt-2 font-semibold py-2.5 rounded-xl text-xs transition">
                 ⚡ Force Legacy Bill Migration
               </button>
             </div>
