@@ -218,7 +218,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500 opacity-50" />
         
         <div className="flex flex-col items-center justify-center text-center space-y-3 py-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-900/50 to-purple-900/50 border border-purple-500/30 flex items-center justify-center mb-2 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
+          <div className="w-12 h-12 rounded-2xl scanner-icon border flex items-center justify-center mb-2 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
             <ScanLine size={24} className="text-purple-400" />
           </div>
           <h2 className="text-sm font-bold text-strong tracking-wide">AI Receipt Scanner</h2>

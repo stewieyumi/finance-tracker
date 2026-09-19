@@ -251,7 +251,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                   <div className="text-[10px] text-faint mb-2">These dates control payday funding and commitment allocation. Not the same as an individual bill's due date.</div>
                   <div className="flex flex-wrap gap-1.5 mb-3">
                     {(form.paydayDays.length ? form.paydayDays : [15, 30]).map(day => (
-                      <span key={day} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-blue-950/40 border border-blue-800/40 text-blue-300 text-[11px] font-semibold">
+                      <span key={day} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg chip-blue text-[11px] font-semibold">
                         {formatOrdinal(day)}
                         <button
                           type="button"

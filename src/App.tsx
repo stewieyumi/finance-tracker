@@ -709,7 +709,7 @@ const copySummaryToClipboard = async () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-bold tracking-tight text-strong">Dashboard</h1>
-              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium no-privacy-blur border transition-all ${!isOnline ? "bg-amber-950/60 border-amber-700/50 text-amber-300" : isSyncing ? "bg-blue-950/60 border-blue-700/50 text-blue-300" : "bg-emerald-950/40 border-emerald-800/40 text-emerald-400"}`}>
+              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium no-privacy-blur transition-all ${!isOnline ? "chip-amber" : isSyncing ? "chip-blue" : "chip-emerald"}`}>
                 {!isOnline ? <><WifiOff size={10} className="text-amber-400" /><span>Offline</span></> : isSyncing ? <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" /><span>Syncing...</span></> : <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span>Live</span></>}
               </div>
             </div>
@@ -791,7 +791,7 @@ const copySummaryToClipboard = async () => {
                     recentTransactions.map((tx: TransactionHistoryItem) => (
                       <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-inverse/[0.08] transition">
                         <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
-                          <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-950/50 border-emerald-500/20 text-emerald-400' : tx.type === 'bill' ? 'bg-blue-950/50 border-blue-500/20 text-blue-400' : 'bg-fill border-strong text-muted'}`}>
+                          <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-950/50 border-emerald-500/20 text-emerald-400' : tx.type === 'bill' ? 'transaction-bill-icon' : 'bg-fill border-strong text-muted'}`}>
                             {tx.type === 'inflow' ? <ArrowDownLeft size={14}/> : tx.type === 'bill' ? <Calendar size={14}/> : <Receipt size={14}/>}
                           </div>
                           <div className="min-w-0 flex-1">
