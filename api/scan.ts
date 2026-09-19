@@ -35,7 +35,10 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
   }
 
   if (!isAuthenticated) {
-    return res.status(401).json({ error: 'Unauthorized: Invalid Google token.' });
+    return res.status(401).json({
+      error: 'Unauthorized: Invalid Google token.',
+      code: 'AUTH_EXPIRED'
+    });
   }
 
   try {
@@ -97,9 +100,14 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
 
     const data = await response.json();
     if (data.error) {
-      // Forward Gemini's real status (e.g. 503 = overloaded) instead of
-      // always collapsing to 500, so the client can react specifically.
-      return res.status(response.status || 502).json({ error: data.error.message });
+      // Preserve Gemini's status so the client can distinguish
+      // capacity/rate-limit failures from other scanner errors.
+      return res.status(response.status || 502).json({
+        error: data.error.message,
+        code: response.status === 429 || response.status === 503
+          ? 'AI_CAPACITY'
+          : 'AI_ERROR'
+      });
     }
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";

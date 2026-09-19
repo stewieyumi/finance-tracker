@@ -4,7 +4,7 @@ import { DEFAULT_TARGET_FUND } from "./config";
 export const INITIAL_UNIFIED_DATA: UnifiedFinanceData = {
   settings: {
     targetFund: DEFAULT_TARGET_FUND,
-    perPayoutSalary: 0,
+    perPayoutSalary: 15000,
     phpToJpyRate: 2.70,
     defaultTransitAllocation: 1500,
     hasMigratedBaseWallets: true,

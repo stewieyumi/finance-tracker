@@ -94,12 +94,29 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
           
           if (!res.ok || data.error) {
             const errorText = String(data.error || "").toLowerCase();
-            const isOverloaded = errorText.includes("high demand") || errorText.includes("overloaded") || res.status === 503;
-            showToast(
-              isOverloaded
-                ? "Gemini AI is currently at capacity. Please enter this receipt manually."
-                : "Unable to scan this receipt. Please try again or enter the details manually."
-            );
+            const isAuthExpired =
+              res.status === 401 ||
+              data.code === "AUTH_EXPIRED";
+
+            const isOverloaded =
+              data.code === "AI_CAPACITY" ||
+              errorText.includes("high demand") ||
+              errorText.includes("overloaded") ||
+              errorText.includes("resource exhausted") ||
+              res.status === 429 ||
+              res.status === 503;
+
+            if (isAuthExpired) {
+              window.dispatchEvent(new Event("auth-expired"));
+              showToast("🔄 Session expired. Refreshing sign-in...");
+            } else {
+              showToast(
+                isOverloaded
+                  ? "Gemini AI is currently at capacity. Please enter this receipt manually."
+                  : "Unable to scan this receipt. Please try again or enter the details manually."
+              );
+            }
+
             return;
           }
 
