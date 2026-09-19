@@ -168,11 +168,11 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
           <thead>
             <tr className="text-muted border-b border-border-subtle text-[11px] uppercase tracking-wider">
               <th className="py-3 px-4 font-semibold w-[15%]">STATUS</th>
-              <th className="py-3 px-4 font-semibold w-[25%]">RECEIVABLE</th>
+              <th className="py-3 px-4 font-semibold w-[20%]">RECEIVABLE</th>
               <th className="py-3 px-4 font-semibold text-right w-[15%]">AMOUNT</th>
               <th className="py-3 px-4 font-semibold text-center w-[15%]">CATEGORY</th>
-              <th className="py-3 px-4 font-semibold text-center w-[15%]">SCHEDULE</th>
-              <th className="py-3 px-4 font-semibold text-right w-[15%]">ACTION</th>
+              <th className="py-3 px-4 font-semibold text-center w-[17%] min-w-[140px]">SCHEDULE</th>
+              <th className="py-3 px-4 font-semibold text-right w-[18%] min-w-[150px]">ACTION</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-subtle">
@@ -203,15 +203,15 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                       {rec.wallet && <span className="chip-wallet px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{allWallets.find(w => w.id === rec.wallet)?.label || rec.wallet}</span>}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-center whitespace-nowrap">
-                    <div className="text-secondary text-xs">
+                  <td className="py-3 px-4 text-center">
+                    <div className="text-secondary text-xs min-w-0 break-words leading-tight">
                       {rec.frequency === "Bi-monthly" && <span className="text-secondary font-medium text-[11px]">Bi-Monthly ({rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(formatOrdinal).join(" & ") : "15th & 30th"})</span>}
                       {rec.frequency === "Monthly" && <span className="text-muted text-[11px]">Monthly • Day {rec.monthlyDay || 15}</span>}
                       {rec.frequency === "By Date" && (rec.date ? <span className="inline-flex items-center gap-1 text-secondary font-mono text-[11px]"><Calendar size={10} className="text-faint" />{formatShortDate(rec.date)}</span> : <span className="text-disabled">—</span>)}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-right relative">
-                    <div className="flex flex-wrap items-center gap-1 justify-end">
+                  <td className="py-3 px-4 text-right relative min-w-[150px]">
+                    <div className="flex flex-nowrap items-center gap-1 justify-end whitespace-nowrap">
                       {!rec.collected && (
                         <>
                           {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} title="Add 1st/2nd half payment" className="whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[9px] font-mono chip-cyan rounded transition">+1/2</button>}

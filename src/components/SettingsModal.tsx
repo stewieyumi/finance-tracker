@@ -143,7 +143,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
   );
 
   return (
-    <div className="fixed inset-0 z-[110] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (modalRef.current && !modalRef.current.contains(e.target as Node)) onClose(); }}>
+    <div className="settings-modal-backdrop fixed inset-0 z-[110] backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (modalRef.current && !modalRef.current.contains(e.target as Node)) onClose(); }}>
       <div ref={modalRef} className="bg-surface-elevated border border-inverse/[0.08] rounded-3xl p-6 w-full max-w-lg shadow-2xl">
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06] mb-4">
           <div className="flex items-center gap-2">
@@ -212,7 +212,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                   </div>
                 </div>
 
-                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 grid grid-cols-2 gap-3">
+                <div className="bg-surface-sunken border border-emerald-500/20 rounded-2xl p-4 grid grid-cols-2 gap-3 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-emerald-400" />
+                  <div className="col-span-2 flex items-center justify-between mb-0.5">
+                    <div>
+                      <div className="text-[10px] text-emerald-500 uppercase font-bold tracking-wider">Savings</div>
+                      <div className="text-[10px] text-faint mt-0.5">
+                        Set your savings allocation and destination wallet.
+                      </div>
+                    </div>
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_currentColor]" />
+                  </div>
                   <div>
                     <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Savings Target (₱)</label>
                     <input type="number" value={form.baseSavingsTarget} onChange={e => setForm({...form, baseSavingsTarget: Number(e.target.value)})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-purple-500" />

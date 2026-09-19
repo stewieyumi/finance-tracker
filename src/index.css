@@ -109,6 +109,14 @@
   }
 
 
+  .settings-modal-backdrop {
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  :root:not(.light) .settings-modal-backdrop {
+    background: rgba(0, 0, 0, 0.85);
+  }
+
   .settings-legacy-migration-button {
     background: #fffbeb;
     color: #b45309;
