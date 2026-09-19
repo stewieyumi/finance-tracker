@@ -396,7 +396,8 @@ const { saveShootEdit } = useShootSaveActions({
     showDatePickerModal ||
     showYearlyModal ||
     showAnalyticsModal ||
-    showAnalyticsModal;
+    showSettingsModal ||
+    showLedgerModal;
 
   const isEditing = editingId !== null;
   const nowForEx = new Date();
