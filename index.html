@@ -13,6 +13,28 @@
     <link rel="manifest" href="/manifest.json" />
     
     <title>Finance Tracker</title>
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem("ft_master_data_v1");
+          const data = saved ? JSON.parse(saved) : null;
+          const theme = data?.settings?.theme || "dark";
+          const root = document.documentElement;
+
+          if (theme === "system") {
+            root.classList.add(
+              window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light"
+            );
+          } else {
+            root.classList.add(theme === "light" ? "light" : "dark");
+          }
+        } catch {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
   
     <!-- PWA / Apple Native Feel Tags -->
     
