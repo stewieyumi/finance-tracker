@@ -469,7 +469,7 @@ const { saveShootEdit } = useShootSaveActions({
       `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
     const hasExecutedToday = globalData.paydaySplitExecutions?.some(ex => typeof ex === "string" ? ex === executionKey : ex.date === executionKey);
-    if (hasExecutedToday) {
+    if (hasPaydayExecutionOnDate(globalData.paydaySplitExecutions, executionKey)) {
       showToast("⚠️ Payday split already executed today.");
       return;
     }
@@ -495,7 +495,7 @@ ${allocList}`
       syncedSetGlobalData(prev => {
         const executions = prev.paydaySplitExecutions || [];
 
-        if (executions.includes(executionKey)) {
+        if (hasPaydayExecutionOnDate(executions, executionKey)) {
           return prev;
         }
 
