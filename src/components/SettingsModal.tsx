@@ -251,13 +251,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                   <div className="text-[10px] text-faint mb-2">These dates control payday funding and commitment allocation. Not the same as an individual bill's due date.</div>
                   <div className="flex flex-wrap gap-1.5 mb-3">
                     {(form.paydayDays.length ? form.paydayDays : [15, 30]).map(day => (
-                      <span key={day} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-blue-950/40 border border-blue-800/40 text-blue-300 text-[11px] font-semibold">
+                      <span key={day} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[11px] font-semibold">
                         {formatOrdinal(day)}
                         <button
                           type="button"
                           onClick={() => setForm({...form, paydayDays: form.paydayDays.filter(d => d !== day)})}
                           disabled={form.paydayDays.length <= 1}
-                          className="text-blue-400 hover:text-strong disabled:opacity-30 disabled:cursor-not-allowed w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-800/50 transition"
+                          className="text-blue-600 dark:text-blue-400 hover:text-strong disabled:opacity-30 disabled:cursor-not-allowed w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-500/20 dark:hover:bg-blue-500/30 transition"
                         >
                           ×
                         </button>
@@ -282,7 +282,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                         setForm({...form, paydayDays: [...form.paydayDays, newPaydayDay].sort((a, b) => a - b)});
                       }}
                       disabled={form.paydayDays.length >= 10 || form.paydayDays.includes(newPaydayDay)}
-                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white text-xs font-semibold transition"
+                      className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-fill-strong disabled:text-disabled disabled:cursor-not-allowed text-white text-xs font-semibold transition"
                     >
                       Add
                     </button>
@@ -306,8 +306,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
               </div>
               
               <div className="grid grid-cols-2 gap-2 pt-2">
-                <button onClick={onForcePush} className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><Cloud size={13} /> Push Data</button>
-                <button onClick={onForcePull} className="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/30 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><Database size={13} /> Pull Data</button>
+                <button onClick={onForcePush} className="bg-blue-500/10 hover:bg-blue-500/20 dark:bg-blue-500/20 dark:hover:bg-blue-500/30 text-blue-600 dark:text-blue-400 border border-blue-500/30 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><Cloud size={13} /> Push Data</button>
+                <button onClick={onForcePull} className="bg-emerald-500/10 hover:bg-emerald-500/20 dark:bg-emerald-500/20 dark:hover:bg-emerald-500/30 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><Database size={13} /> Pull Data</button>
               </div>
               
               <div className="flex flex-col gap-2 pt-2 border-t border-inverse/[0.05]">
@@ -341,7 +341,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                   </div>
                 </div>
               </details>
-              <button onClick={handleMigrateWallets} className="w-full mt-2 bg-amber-900/30 hover:bg-amber-800/40 text-amber-400 border border-amber-800/50 font-semibold py-2.5 rounded-xl text-xs transition">
+              <button onClick={handleMigrateWallets} className="w-full mt-2 bg-amber-500/10 hover:bg-amber-500/20 dark:bg-amber-500/20 dark:hover:bg-amber-500/30 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-semibold py-2.5 rounded-xl text-xs transition">
                 ⚡ Force Legacy Bill Migration
               </button>
             </div>

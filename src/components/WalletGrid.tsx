@@ -48,16 +48,15 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
                     ? "ring-1 ring-emerald-500/40 shadow-[0_0_18px_rgba(16,185,129,0.10)] border-emerald-500/30"
                     : "border-inverse/[0.05]";
 
-            const displayColor = isMilestoneWallet
-              ? "text-blue-400 font-bold"
-              : isSavingsWallet
-                ? "text-emerald-400 font-bold"
-                : (w.color || "text-strong");
+            const displayColor = w.color || "text-strong";
 
             return (
               <button key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`flex items-center justify-between w-full bg-surface-input border rounded-xl px-3.5 py-3 hover:border-inverse/[0.12] hover:bg-inverse/[0.02] active:scale-[0.98] transition-all text-left group ${roleClasses}`}>
-                <span className="privacy-blur text-xs text-secondary font-medium truncate pr-2 group-hover:text-strong transition-colors">{w.label}</span>
-                <div className="flex items-baseline gap-0.5 shrink-0">
+                <div className="flex items-center gap-2 truncate">
+                  {isMilestoneWallet && isSavingsWallet ? <div className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" /> : isMilestoneWallet ? <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" /> : isSavingsWallet ? <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" /> : null}
+                  <span className="privacy-blur text-xs text-secondary font-medium truncate group-hover:text-strong transition-colors">{w.label}</span>
+                </div>
+                <div className="flex items-baseline gap-0.5 shrink-0 ml-2">
                   <span className="text-[10px] text-faint font-mono">₱</span>
                   <span className={`font-bold font-mono tracking-tight ${displayColor} text-xs`}>{currentBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>

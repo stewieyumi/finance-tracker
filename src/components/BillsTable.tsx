@@ -157,7 +157,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
         <div className="flex items-start justify-between pl-7 text-[10px] text-muted">
           <div className="flex flex-col gap-1.5 mt-1">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className={`px-1.5 py-0.5 rounded font-medium ${bill.type === "Subscription" ? "bg-purple-950/80 text-purple-300 border border-purple-800/40" : bill.type === "Loan / Installment" ? "bg-amber-950/80 text-amber-300 border border-amber-800/40" : "bg-blue-950/80 text-blue-300 border border-blue-800/40"}`}>{bill.type}</span>
+              <span className={`px-1.5 py-0.5 rounded font-medium ${bill.type === "Subscription" ? "bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400 border border-purple-500/20" : bill.type === "Loan / Installment" ? "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-500/20" : "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border border-blue-500/20"}`}>{bill.type}</span>
               {bill.wallet && <span className="bg-fill-strong/80 text-secondary border border-strong/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{customWallets?.find(cw => cw.id === bill.wallet)?.label || bill.wallet}</span>}
               {bill.dueDay && <span className="font-mono">Day {bill.dueDay}</span>}
               {bill.paid ? (
@@ -180,7 +180,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
     <tr key={bill.id} className={`group transition-all duration-150 ${bill.paid ? "opacity-40" : "hover:bg-inverse/[0.02]"} ${highlightOverdue && (bill.daysLeft ?? 0) < 0 && !bill.paid ? 'bg-orange-900/10' : ''}`}>
       <td className="py-2.5 px-2 align-top pt-3">
         <button onClick={() => onToggleStatus(bill)} className="flex items-center gap-1.5 focus:outline-none">
-          {bill.paid ? <span className="flex items-center justify-center gap-1 w-[85px] text-blue-400 text-[11px] font-semibold bg-blue-950/40 px-2 py-1 rounded-lg border border-blue-600/30 transition-all hover:bg-blue-900/50"><Check size={11} className="stroke-[3]" /> Paid</span> : <span className="flex items-center justify-center gap-1 w-[85px] text-rose-400 text-[11px] font-medium bg-rose-950/30 px-2 py-1 rounded-lg border border-rose-800/30 transition-all hover:bg-rose-900/40"><Circle size={9} className="fill-rose-500/20" /> Pending</span>}
+          {bill.paid ? <span className="flex items-center justify-center gap-1 w-[85px] text-blue-600 dark:text-blue-400 text-[11px] font-semibold bg-blue-500/10 dark:bg-blue-500/20 px-2 py-1 rounded-lg border border-blue-500/30 transition-all hover:bg-blue-500/20 dark:hover:bg-blue-500/30"><Check size={11} className="stroke-[3]" /> Paid</span> : <span className="flex items-center justify-center gap-1 w-[85px] text-rose-600 dark:text-rose-400 text-[11px] font-medium bg-rose-500/10 dark:bg-rose-500/20 px-2 py-1 rounded-lg border border-rose-500/30 transition-all hover:bg-rose-500/20 dark:hover:bg-rose-500/30"><Circle size={9} className="fill-rose-500/20" /> Pending</span>}
         </button>
       </td>
       <td className="py-2.5 px-2 align-top pt-3 text-primary truncate font-medium">
@@ -195,7 +195,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
       <td className="py-2.5 px-2 align-top text-muted text-[11px]">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${bill.type === "Subscription" ? "bg-purple-950/70 text-purple-300 border border-purple-800/40" : bill.type === "Loan / Installment" ? "bg-amber-950/70 text-amber-300 border border-amber-800/40" : "bg-blue-950/70 text-blue-300 border border-blue-800/40"}`}>{bill.type}</span>
+            <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${bill.type === "Subscription" ? "bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400 border border-purple-500/20" : bill.type === "Loan / Installment" ? "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-500/20" : "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border border-blue-500/20"}`}>{bill.type}</span>
             {bill.wallet && <span className="bg-fill-strong/80 text-secondary border border-strong/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{customWallets?.find(cw => cw.id === bill.wallet)?.label || bill.wallet}</span>}
             {bill.dueDay && <span className="text-[11px] text-muted font-mono">Day {bill.dueDay}</span>}
             {bill.paid ? (

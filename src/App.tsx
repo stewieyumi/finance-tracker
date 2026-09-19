@@ -708,8 +708,8 @@ const copySummaryToClipboard = async () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-bold tracking-tight text-strong">Dashboard</h1>
-              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium no-privacy-blur border transition-all ${!isOnline ? "bg-amber-950/60 border-amber-700/50 text-amber-300" : isSyncing ? "bg-blue-950/60 border-blue-700/50 text-blue-300" : "bg-emerald-950/40 border-emerald-800/40 text-emerald-400"}`}>
-                {!isOnline ? <><WifiOff size={10} className="text-amber-400" /><span>Offline</span></> : isSyncing ? <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" /><span>Syncing...</span></> : <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span>Live</span></>}
+              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium no-privacy-blur border transition-all ${!isOnline ? "bg-amber-500/10 dark:bg-amber-500/20 border-amber-500/30 text-amber-600 dark:text-amber-400" : isSyncing ? "bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400" : "bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"}`}>
+                {!isOnline ? <><WifiOff size={10} className="text-amber-600 dark:text-amber-400" /><span>Offline</span></> : isSyncing ? <><span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 animate-ping" /><span>Syncing...</span></> : <><span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" /><span>Live</span></>}
               </div>
             </div>
 
@@ -790,20 +790,20 @@ const copySummaryToClipboard = async () => {
                     recentTransactions.map((tx: TransactionHistoryItem) => (
                       <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-inverse/[0.08] transition">
                         <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
-                          <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-950/50 border-emerald-500/20 text-emerald-400' : tx.type === 'bill' ? 'bg-blue-950/50 border-blue-500/20 text-blue-400' : 'bg-fill border-strong text-muted'}`}>
+                          <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : tx.type === 'bill' ? 'bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400' : 'bg-fill border-strong text-muted'}`}>
                             {tx.type === 'inflow' ? <ArrowDownLeft size={14}/> : tx.type === 'bill' ? <Calendar size={14}/> : <Receipt size={14}/>}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="privacy-blur text-[13px] font-semibold text-primary truncate">{tx.title}</div>
                             <div className="flex items-center gap-1.5 text-[9px] text-faint mt-0.5">
                               <span className="bg-fill-strong/80 px-1.5 py-0.5 rounded text-secondary font-medium truncate max-w-[90px]">{tx.category || tx.type}</span>
-                              <span className="privacy-blur uppercase text-blue-400/80 font-bold truncate max-w-[80px]">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
+                              <span className="privacy-blur uppercase text-blue-600/80 dark:text-blue-400/80 font-bold truncate max-w-[80px]">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
                             </div>
                           </div>
                         </div>
                         <div className="flex flex-col items-end shrink-0">
-                          <span className={`privacy-blur text-[13px] font-bold font-mono ${tx.amount > 0 ? "text-emerald-400" : "text-strong"}`}>
-                            {tx.amount > 0 ? "+" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          <span className={`privacy-blur text-[13px] font-bold font-mono ${tx.amount > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-strong"}`}>
+                            {tx.amount > 0 ? "+" : "-"}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                           </span>
                           <span className="text-[10px] text-faint mt-0.5 whitespace-nowrap">{formatDateTime(tx.date)}</span>
                         </div>
@@ -877,20 +877,20 @@ const copySummaryToClipboard = async () => {
                   allTransactions.map((tx: TransactionHistoryItem) => (
                     <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-inverse/[0.08] transition">
                       <div className="flex items-center gap-3.5 overflow-hidden flex-1">
-                        <div className={`w-9 h-9 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-950/50 border-emerald-500/20 text-emerald-400' : tx.type === 'bill' ? 'bg-blue-950/50 border-blue-500/20 text-blue-400' : 'bg-fill border-strong text-muted'}`}>
+                        <div className={`w-9 h-9 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' : tx.type === 'bill' ? 'bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400' : 'bg-fill border-strong text-muted'}`}>
                           {tx.type === 'inflow' ? <ArrowDownLeft size={15}/> : tx.type === 'bill' ? <Calendar size={15}/> : <Receipt size={15}/>}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="privacy-blur text-[13px] font-semibold text-strong truncate">{tx.title}</div>
                           <div className="flex items-center gap-2 text-[10px] text-muted mt-1">
                             <span className="bg-fill-strong/80 px-1.5 py-0.5 rounded text-secondary font-medium truncate max-w-[90px]">{tx.category || tx.type}</span>
-                            <span className="privacy-blur uppercase text-blue-400/90 font-bold tracking-wider truncate max-w-[80px]">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
+                            <span className="privacy-blur uppercase text-blue-600/90 dark:text-blue-400/90 font-bold tracking-wider truncate max-w-[80px]">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
                           </div>
                         </div>
                       </div>
                       <div className="flex flex-col items-end shrink-0 ml-3">
-                        <span className={`privacy-blur text-[13px] font-bold font-mono ${tx.amount > 0 ? "text-emerald-400" : "text-strong"}`}>
-                          {tx.amount > 0 ? "+" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        <span className={`privacy-blur text-[13px] font-bold font-mono ${tx.amount > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-strong"}`}>
+                          {tx.amount > 0 ? "+" : "-"}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                         </span>
                         <span className="text-[10px] text-faint font-medium mt-1 whitespace-nowrap">{formatDateTime(tx.date)}</span>
                       </div>

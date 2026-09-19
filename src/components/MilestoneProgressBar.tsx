@@ -35,7 +35,7 @@ export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = React.m
           <span className="text-sm sm:text-base font-bold text-strong font-mono tracking-tight">
             {currentBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </span>
-          <span className="text-[11px] font-semibold text-blue-400 font-mono bg-blue-950/50 border border-blue-800/40 px-2 py-0.5 rounded-full ml-1">
+          <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 font-mono bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 px-2 py-0.5 rounded-full ml-1">
             {fundProgressPercent}%
           </span>
         </div>

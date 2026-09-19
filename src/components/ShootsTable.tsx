@@ -207,7 +207,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                   </button>
                   <span className={`privacy-blur text-xs font-semibold truncate ${shoot.completed ? "line-through text-faint" : "text-strong"}`}>{shoot.title}</span>
                 </div>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 ${shoot.status === "Confirmed" ? "bg-emerald-950/80 text-emerald-300 border border-emerald-800/40" : shoot.status === "Pencil" ? "bg-amber-950/80 text-amber-300 border border-amber-800/40" : "bg-fill-strong text-secondary border border-strong/40"}`}>{shoot.status}</span>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 ${shoot.status === "Confirmed" ? "bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" : shoot.status === "Pencil" ? "bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20" : "bg-fill-strong text-secondary border border-strong/40"}`}>{shoot.status}</span>
               </div>
               <div className="flex items-center justify-between pl-6 text-[10px] text-muted">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -246,7 +246,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
               <tr key={shoot.id} className={`group transition-all duration-150 ${shoot.completed ? "opacity-45" : "hover:bg-inverse/[0.02]"}`}>
                 <td className="py-3 px-4 whitespace-nowrap">
                   <button onClick={() => onToggleCompletion(shoot.id)} className="flex items-center gap-1.5 focus:outline-none">
-                    {shoot.completed ? <span className="flex items-center justify-center gap-1 w-[72px] text-emerald-400 text-[10px] font-bold bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-600/30 shadow-[0_0_10px_rgba(16,185,129,0.1)]"><Check size={10} className="stroke-[3]" /> Settled</span> : <span className="flex items-center justify-center gap-1 w-[72px] text-muted text-[10px] font-medium bg-fill/40 px-2 py-0.5 rounded-lg border border-strong/30"><Circle size={6} /> Active</span>}
+                    {shoot.completed ? <span className="flex items-center justify-center gap-1 w-[72px] text-emerald-600 dark:text-emerald-400 text-[10px] font-bold bg-emerald-500/10 dark:bg-emerald-500/20 px-2 py-0.5 rounded-lg border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.1)]"><Check size={10} className="stroke-[3]" /> Settled</span> : <span className="flex items-center justify-center gap-1 w-[72px] text-secondary text-[10px] font-medium bg-fill-strong/40 dark:bg-fill-strong px-2 py-0.5 rounded-lg border border-strong"><Circle size={6} className="text-muted" /> Active</span>}
                   </button>
                 </td>
                 <td className="py-3 px-4 text-primary font-medium"><span className={`privacy-blur ${shoot.completed ? "line-through text-faint" : ""}`}>{shoot.title}</span></td>
@@ -254,10 +254,10 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                   {shoot.date ? (shoot.date === todayStr ? <span className="inline-flex items-center gap-1 text-rose-400 font-bold text-[10px] bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md shadow-[0_0_10px_rgba(244,63,94,0.1)]"><Calendar size={10} className="text-rose-400" />DUE TODAY</span> : <span className="inline-flex items-center gap-1 text-secondary font-mono text-[11px]"><Calendar size={10} className="text-faint" />{formatShortDate(shoot.date)}</span>) : <span className="text-disabled">—</span>}
                 </td>
                 <td className="py-3 px-4 text-center whitespace-nowrap">
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${shoot.status === "Confirmed" ? "bg-emerald-950/70 text-emerald-300 border border-emerald-800/40" : shoot.status === "Pencil" ? "bg-amber-950/70 text-amber-300 border border-amber-800/40" : "bg-fill-strong text-secondary border border-strong/40"}`}>{shoot.status}</span>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${shoot.status === "Confirmed" ? "bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" : shoot.status === "Pencil" ? "bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20" : "bg-fill-strong text-secondary border border-strong/40"}`}>{shoot.status}</span>
                 </td>
                 <td className="py-3 px-4 text-center whitespace-nowrap">
-                  <span className="bg-surface-high border border-inverse/[0.08] px-2 py-0.5 rounded-md text-[10px] font-medium text-amber-300/90">{shoot.category}</span>
+                  <span className="bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/20 px-2 py-0.5 rounded-md text-[10px] font-medium text-amber-600 dark:text-amber-400">{shoot.category}</span>
                 </td>
                 <td className="py-3 px-4 text-right whitespace-nowrap">
                   <div className="inline-flex items-center gap-1 justify-end shrink-0">

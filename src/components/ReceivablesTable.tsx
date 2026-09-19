@@ -142,8 +142,8 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   <div className="flex items-center gap-1 shrink-0">
                     {!rec.collected && (
                       <>
-                        {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} className="whitespace-nowrap shrink-0 px-1.5 py-0.5 bg-cyan-950/70 text-cyan-300 border border-cyan-800/40 rounded text-[9px] font-medium hover:bg-cyan-900/50">+1/2</button>}
-                        <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} className="whitespace-nowrap shrink-0 px-1.5 py-0.5 bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 rounded text-[9px] font-medium">+₱</button>
+                        {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} className="whitespace-nowrap shrink-0 px-1.5 py-0.5 bg-cyan-500/10 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400 border border-cyan-500/30 rounded text-[9px] font-medium hover:bg-cyan-500/20 dark:hover:bg-cyan-500/30">+1/2</button>}
+                        <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} className="whitespace-nowrap shrink-0 px-1.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-500/30 rounded text-[9px] font-medium hover:bg-emerald-500/20 dark:hover:bg-emerald-500/30">+₱</button>
                       </>
                     )}
                     <button onClick={() => handleStartEdit(rec)} className="whitespace-nowrap shrink-0 px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 rounded text-[10px]">Edit</button>
@@ -203,8 +203,8 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                       {rec.wallet && <span className="bg-fill-strong/80 text-secondary border border-strong/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{allWallets.find(w => w.id === rec.wallet)?.label || rec.wallet}</span>}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-center whitespace-nowrap">
-                    <div className="text-secondary text-xs">
+                  <td className="py-3 px-4 text-center">
+                    <div className="text-secondary text-xs truncate max-w-[150px]" title={rec.frequency === "Bi-monthly" ? `Bi-Monthly (${rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(formatOrdinal).join(" & ") : "15th & 30th"})` : undefined}>
                       {rec.frequency === "Bi-monthly" && <span className="text-secondary font-medium text-[11px]">Bi-Monthly ({rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(formatOrdinal).join(" & ") : "15th & 30th"})</span>}
                       {rec.frequency === "Monthly" && <span className="text-muted text-[11px]">Monthly • Day {rec.monthlyDay || 15}</span>}
                       {rec.frequency === "By Date" && (rec.date ? <span className="inline-flex items-center gap-1 text-secondary font-mono text-[11px]"><Calendar size={10} className="text-faint" />{formatShortDate(rec.date)}</span> : <span className="text-disabled">—</span>)}
@@ -214,8 +214,8 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                     <div className="inline-flex items-center gap-1 justify-end shrink-0">
                       {!rec.collected && (
                         <>
-                          {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} title="Add 1st/2nd half payment" className="whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[9px] font-mono bg-cyan-950/60 text-cyan-300 hover:bg-cyan-900/60 border border-cyan-700/40 rounded transition">+1/2</button>}
-                          <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} title="Add custom payment" className="whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[10px] font-mono bg-emerald-950/60 text-emerald-400 hover:bg-emerald-900/60 border border-emerald-700/40 rounded transition">+₱</button>
+                          {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} title="Add 1st/2nd half payment" className="whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[9px] font-mono bg-cyan-500/10 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/20 dark:hover:bg-cyan-500/30 border border-cyan-500/30 rounded transition">+1/2</button>}
+                          <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} title="Add custom payment" className="whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[10px] font-mono bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 dark:hover:bg-emerald-500/30 border border-emerald-500/30 rounded transition">+₱</button>
                         </>
                       )}
                       <button onClick={() => handleStartEdit(rec)} className="whitespace-nowrap shrink-0 px-2 py-1 text-muted hover:text-amber-300 hover:bg-inverse/[0.05] rounded-md text-[11px] flex items-center transition"><Edit2 size={10} className="mr-1" /> Edit</button>
