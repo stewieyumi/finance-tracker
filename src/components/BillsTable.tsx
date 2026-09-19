@@ -147,7 +147,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
         <div className="flex items-center justify-between gap-2">
           <button onClick={() => onToggleStatus(bill)} className="flex items-center gap-2.5 min-w-0 flex-1 text-left focus:outline-none group">
       <div className="shrink-0">
-              {bill.paid ? <span className="w-5 h-5 rounded-full bg-blue-950/70 border border-blue-500/50 text-blue-400 flex items-center justify-center"><Check size={11} className="stroke-[3]" /></span> : <span className="w-5 h-5 rounded-full bg-rose-950/40 border border-rose-500/40 text-rose-400 flex items-center justify-center"><Circle size={7} className="fill-rose-400/40" /></span>}
+              {bill.paid ? <span className="w-5 h-5 rounded-full chip-blue flex items-center justify-center"><Check size={11} className="stroke-[3]" /></span> : <span className="w-5 h-5 rounded-full chip-rose flex items-center justify-center"><Circle size={7} className="fill-current/40" /></span>}
             </div>
       <span className="privacy-blur text-xs font-semibold text-strong truncate group-hover:text-blue-400 transition-colors">{bill.name}</span>
             {bill.isOverridden && <span className="text-[8px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1 rounded shrink-0">adj</span>}
@@ -157,13 +157,13 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
         <div className="flex items-start justify-between pl-7 text-[10px] text-muted">
           <div className="flex flex-col gap-1.5 mt-1">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className={`px-1.5 py-0.5 rounded font-medium ${bill.type === "Subscription" ? "bg-purple-950/80 text-purple-300 border border-purple-800/40" : bill.type === "Loan / Installment" ? "bg-amber-950/80 text-amber-300 border border-amber-800/40" : "bg-blue-950/80 text-blue-300 border border-blue-800/40"}`}>{bill.type}</span>
-              {bill.wallet && <span className="bg-fill-strong/80 text-secondary border border-strong/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{customWallets?.find(cw => cw.id === bill.wallet)?.label || bill.wallet}</span>}
+              <span className={`px-1.5 py-0.5 rounded font-medium ${bill.type === "Subscription" ? "chip-purple" : bill.type === "Loan / Installment" ? "chip-amber" : "chip-blue"}`}>{bill.type}</span>
+              {bill.wallet && <span className="chip-wallet px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{customWallets?.find(cw => cw.id === bill.wallet)?.label || bill.wallet}</span>}
               {bill.dueDay && <span className="font-mono">Day {bill.dueDay}</span>}
               {bill.paid ? (
-                <span className="px-2 py-0.5 rounded font-semibold tracking-wide bg-emerald-950/30 text-emerald-400/80 border border-emerald-800/30">Settled</span>
+                <span className="px-2 py-0.5 rounded font-semibold tracking-wide chip-emerald">Settled</span>
               ) : (
-                <span className={`px-2 py-0.5 rounded font-semibold tracking-wide ${formatDaysRemaining(bill.daysLeft).tone === "urgent" ? "bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse" : formatDaysRemaining(bill.daysLeft).tone === "overdue" ? "bg-rose-600/25 text-rose-300 border border-rose-500/40" : formatDaysRemaining(bill.daysLeft).tone === "warning" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-slate-800 text-slate-400 border border-slate-700/60"}`}>{formatDaysRemaining(bill.daysLeft).text}</span>
+              <span className={`px-2 py-0.5 rounded font-semibold tracking-wide ${formatDaysRemaining(bill.daysLeft).tone === "urgent" ? "chip-rose animate-pulse" : formatDaysRemaining(bill.daysLeft).tone === "overdue" ? "chip-rose" : formatDaysRemaining(bill.daysLeft).tone === "warning" ? "chip-amber" : "chip-neutral"}`}>{formatDaysRemaining(bill.daysLeft).text}</span>
               )}
             </div>
             {bill.type === "Loan / Installment" && <div className="mt-1"><LoanProgressBadge startMonth={bill.startMonth} endMonth={bill.endMonth} targetMonthForDue={bill.targetMonthForDue} isPaid={bill.paid} monthlyAmount={bill.baseAmount} totalPaid={bill.totalLoanPaid} /></div>}
@@ -180,7 +180,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
     <tr key={bill.id} className={`group transition-all duration-150 ${bill.paid ? "opacity-40" : "hover:bg-inverse/[0.02]"} ${highlightOverdue && (bill.daysLeft ?? 0) < 0 && !bill.paid ? 'bg-orange-900/10' : ''}`}>
       <td className="py-2.5 px-2 align-top pt-3">
         <button onClick={() => onToggleStatus(bill)} className="flex items-center gap-1.5 focus:outline-none">
-          {bill.paid ? <span className="flex items-center justify-center gap-1 w-[85px] text-blue-400 text-[11px] font-semibold bg-blue-950/40 px-2 py-1 rounded-lg border border-blue-600/30 transition-all hover:bg-blue-900/50"><Check size={11} className="stroke-[3]" /> Paid</span> : <span className="flex items-center justify-center gap-1 w-[85px] text-rose-400 text-[11px] font-medium bg-rose-950/30 px-2 py-1 rounded-lg border border-rose-800/30 transition-all hover:bg-rose-900/40"><Circle size={9} className="fill-rose-500/20" /> Pending</span>}
+          {bill.paid ? <span className="flex items-center justify-center gap-1 w-[85px] text-[11px] font-semibold chip-blue px-2 py-1 rounded-lg transition-all"><Check size={11} className="stroke-[3]" /> Paid</span> : <span className="flex items-center justify-center gap-1 w-[85px] text-[11px] font-medium chip-rose px-2 py-1 rounded-lg transition-all"><Circle size={9} className="fill-current/20" /> Pending</span>}
         </button>
       </td>
       <td className="py-2.5 px-2 align-top pt-3 text-primary truncate font-medium">
@@ -195,13 +195,13 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
       <td className="py-2.5 px-2 align-top text-muted text-[11px]">
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${bill.type === "Subscription" ? "bg-purple-950/70 text-purple-300 border border-purple-800/40" : bill.type === "Loan / Installment" ? "bg-amber-950/70 text-amber-300 border border-amber-800/40" : "bg-blue-950/70 text-blue-300 border border-blue-800/40"}`}>{bill.type}</span>
-            {bill.wallet && <span className="bg-fill-strong/80 text-secondary border border-strong/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{customWallets?.find(cw => cw.id === bill.wallet)?.label || bill.wallet}</span>}
+            <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${bill.type === "Subscription" ? "chip-purple" : bill.type === "Loan / Installment" ? "chip-amber" : "chip-blue"}`}>{bill.type}</span>
+            {bill.wallet && <span className="chip-wallet px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{customWallets?.find(cw => cw.id === bill.wallet)?.label || bill.wallet}</span>}
             {bill.dueDay && <span className="text-[11px] text-muted font-mono">Day {bill.dueDay}</span>}
             {bill.paid ? (
-              <span className="px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide bg-emerald-950/30 text-emerald-400/80 border border-emerald-800/30">Settled</span>
+              <span className="px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide chip-emerald">Settled</span>
             ) : (
-              <span className={`px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide ${formatDaysRemaining(bill.daysLeft).tone === "urgent" ? "bg-red-500/20 text-red-400 border border-red-500/40 animate-pulse" : formatDaysRemaining(bill.daysLeft).tone === "overdue" ? "bg-rose-600/25 text-rose-300 border border-rose-500/40" : formatDaysRemaining(bill.daysLeft).tone === "warning" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-slate-800 text-slate-400 border border-slate-700/60"}`}>{formatDaysRemaining(bill.daysLeft).text}</span>
+              <span className={`px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide ${formatDaysRemaining(bill.daysLeft).tone === "urgent" ? "chip-rose animate-pulse" : formatDaysRemaining(bill.daysLeft).tone === "overdue" ? "chip-rose" : formatDaysRemaining(bill.daysLeft).tone === "warning" ? "chip-amber" : "chip-neutral"}`}>{formatDaysRemaining(bill.daysLeft).text}</span>
             )}
           </div>
           {bill.type === "Loan / Installment" && <div className="mt-1"><LoanProgressBadge startMonth={bill.startMonth} endMonth={bill.endMonth} targetMonthForDue={bill.targetMonthForDue} isPaid={bill.paid} monthlyAmount={bill.baseAmount} totalPaid={bill.totalLoanPaid} /></div>}

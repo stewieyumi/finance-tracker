@@ -121,7 +121,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <button onClick={() => onToggleStatus(rec)} className="shrink-0 focus:outline-none">
-                      {rec.collected ? <span className="w-4 h-4 rounded-full bg-emerald-950/70 border border-emerald-500/50 text-emerald-400 flex items-center justify-center"><Check size={9} className="stroke-[3]" /></span> : <span className="w-4 h-4 rounded-full bg-amber-950/40 border border-amber-500/40 text-amber-400 flex items-center justify-center"><Hourglass size={8} /></span>}
+                      {rec.collected ? <span className="w-4 h-4 rounded-full chip-emerald flex items-center justify-center"><Check size={9} className="stroke-[3]" /></span> : <span className="w-4 h-4 rounded-full chip-amber flex items-center justify-center"><Hourglass size={8} /></span>}
                     </button>
                     <span className="privacy-blur text-xs font-semibold text-strong truncate">{rec.name}</span>
                   </div>
@@ -131,10 +131,10 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                     {!rec.collected && received > 0 && <div className="text-[9px] text-cyan-400 font-mono">+₱{received.toLocaleString("en-US")} rec'd</div>}
                   </div>
                 </div>
-                <div className="flex items-center justify-between pl-6 text-[10px] text-muted">
+                <div className="flex flex-col gap-2 pl-6 text-[10px] text-muted sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="px-1.5 py-0.5 rounded font-medium bg-fill-strong text-secondary">{rec.category || "Other"}</span>
-                    {rec.wallet && <span className="bg-fill-strong/80 text-secondary border border-strong/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{allWallets.find(w => w.id === rec.wallet)?.label || rec.wallet}</span>}
+                    <span className={`px-1.5 py-0.5 rounded font-medium ${rec.category === "Salary" ? "chip-cyan" : rec.category === "Shoot" ? "chip-amber" : rec.category === "Edit" ? "chip-purple" : "chip-neutral"}`}>{rec.category || "Other"}</span>
+                    {rec.wallet && <span className="chip-wallet px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{allWallets.find(w => w.id === rec.wallet)?.label || rec.wallet}</span>}
                     {isBiMonthly && <span>Bi-Monthly ({rec.biMonthlyDays && rec.biMonthlyDays.length > 0 ? rec.biMonthlyDays.map(formatOrdinal).join(" & ") : "15th & 30th"})</span>}
                     {rec.frequency === "Monthly" && <span>Day {rec.monthlyDay || 15}</span>}
                     {rec.frequency === "By Date" && rec.date && <span>{formatShortDate(rec.date)}</span>}
@@ -142,8 +142,8 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   <div className="flex items-center gap-1 shrink-0">
                     {!rec.collected && (
                       <>
-                        {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} className="whitespace-nowrap shrink-0 px-1.5 py-0.5 bg-cyan-950/70 text-cyan-300 border border-cyan-800/40 rounded text-[9px] font-medium hover:bg-cyan-900/50">+1/2</button>}
-                        <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} className="whitespace-nowrap shrink-0 px-1.5 py-0.5 bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 rounded text-[9px] font-medium">+₱</button>
+                        {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} className="whitespace-nowrap shrink-0 px-1.5 py-0.5 chip-cyan rounded text-[9px] font-medium">+1/2</button>}
+                        <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} className="whitespace-nowrap shrink-0 px-1.5 py-0.5 chip-emerald rounded text-[9px] font-medium">+₱</button>
                       </>
                     )}
                     <button onClick={() => handleStartEdit(rec)} className="whitespace-nowrap shrink-0 px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 rounded text-[10px]">Edit</button>
@@ -175,7 +175,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
               <th className="py-3 px-4 font-semibold text-right w-[15%]">ACTION</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/[0.03]">
+          <tbody className="divide-y divide-border-subtle">
             {filteredReceivables.length === 0 ? (
               <tr><td colSpan={6} className="py-8 text-center text-faint italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} receivables found.</td></tr>
             ) : filteredReceivables.map(rec => {
@@ -186,7 +186,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 <tr key={rec.id} className={`group transition-all duration-150 ${rec.collected ? "opacity-45" : "hover:bg-inverse/[0.02]"}`}>
                   <td className="py-3 px-4 whitespace-nowrap">
                     <button onClick={() => onToggleStatus(rec)} className="flex items-center gap-1.5 focus:outline-none">
-                      {rec.collected ? <span className="flex items-center justify-center gap-1 w-[82px] text-emerald-400 text-[10px] font-semibold bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-600/30"><Check size={10} className="stroke-[3]" /> Received</span> : isPartial ? <span className="flex items-center justify-center gap-1 w-[82px] text-cyan-400 text-[10px] font-semibold bg-cyan-950/40 px-2 py-0.5 rounded-lg border border-cyan-600/30"><CreditCard size={9} /> Partial</span> : <span className="flex items-center justify-center gap-1 w-[82px] text-amber-400 text-[10px] font-medium bg-amber-950/30 px-2 py-0.5 rounded-lg border border-amber-800/30"><Hourglass size={8} /> Pending</span>}
+                      {rec.collected ? <span className="flex items-center justify-center gap-1 w-[82px] text-[10px] font-semibold chip-emerald px-2 py-0.5 rounded-lg"><Check size={10} className="stroke-[3]" /> Received</span> : isPartial ? <span className="flex items-center justify-center gap-1 w-[82px] text-[10px] font-semibold chip-cyan px-2 py-0.5 rounded-lg"><CreditCard size={9} /> Partial</span> : <span className="flex items-center justify-center gap-1 w-[82px] text-[10px] font-medium chip-amber px-2 py-0.5 rounded-lg"><Hourglass size={8} /> Pending</span>}
                     </button>
                   </td>
                   <td className="py-3 px-4 text-primary font-medium"><span className="privacy-blur">{rec.name}</span></td>
@@ -199,8 +199,8 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   </td>
                   <td className="py-3 px-4 text-center whitespace-nowrap">
                     <div className="flex flex-col items-center gap-1">
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${rec.category === "Salary" ? "bg-cyan-950/70 text-cyan-300 border border-cyan-800/40" : rec.category === "Shoot" ? "bg-amber-950/70 text-amber-300 border border-amber-800/40" : rec.category === "Edit" ? "bg-purple-950/70 text-purple-300 border border-purple-800/40" : "bg-fill-strong text-secondary border border-strong/40"}`}>{rec.category || "Other"}</span>
-                      {rec.wallet && <span className="bg-fill-strong/80 text-secondary border border-strong/40 px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{allWallets.find(w => w.id === rec.wallet)?.label || rec.wallet}</span>}
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${rec.category === "Salary" ? "chip-cyan" : rec.category === "Shoot" ? "chip-amber" : rec.category === "Edit" ? "chip-purple" : "chip-neutral"}`}>{rec.category || "Other"}</span>
+                      {rec.wallet && <span className="chip-wallet px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">{allWallets.find(w => w.id === rec.wallet)?.label || rec.wallet}</span>}
                     </div>
                   </td>
                   <td className="py-3 px-4 text-center whitespace-nowrap">
@@ -210,12 +210,12 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                       {rec.frequency === "By Date" && (rec.date ? <span className="inline-flex items-center gap-1 text-secondary font-mono text-[11px]"><Calendar size={10} className="text-faint" />{formatShortDate(rec.date)}</span> : <span className="text-disabled">—</span>)}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-right whitespace-nowrap relative">
-                    <div className="inline-flex items-center gap-1 justify-end shrink-0">
+                  <td className="py-3 px-4 text-right relative">
+                    <div className="flex flex-wrap items-center gap-1 justify-end">
                       {!rec.collected && (
                         <>
-                          {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} title="Add 1st/2nd half payment" className="whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[9px] font-mono bg-cyan-950/60 text-cyan-300 hover:bg-cyan-900/60 border border-cyan-700/40 rounded transition">+1/2</button>}
-                          <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} title="Add custom payment" className="whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[10px] font-mono bg-emerald-950/60 text-emerald-400 hover:bg-emerald-900/60 border border-emerald-700/40 rounded transition">+₱</button>
+                          {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} title="Add 1st/2nd half payment" className="whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[9px] font-mono chip-cyan rounded transition">+1/2</button>}
+                          <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} title="Add custom payment" className="whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[10px] font-mono chip-emerald rounded transition">+₱</button>
                         </>
                       )}
                       <button onClick={() => handleStartEdit(rec)} className="whitespace-nowrap shrink-0 px-2 py-1 text-muted hover:text-amber-300 hover:bg-inverse/[0.05] rounded-md text-[11px] flex items-center transition"><Edit2 size={10} className="mr-1" /> Edit</button>
