@@ -4,7 +4,7 @@ import { Camera, UploadCloud, ScanLine, Plus, Receipt, Trash2, CheckCircle2 } fr
 import { UnifiedFinanceData, Expense, ExpenseCategory } from "../types/finance";
 import { generateId } from "../utils/idHelpers";
 import { getLocalPasscode } from "../hooks/useCloudSync";
-import { applyWalletTransaction } from "../utils/financeHelpers";
+import { applyWalletTransaction, getDefaultWalletId } from "../utils/financeHelpers";
 
 const EXPENSE_CATEGORIES: ExpenseCategory[] = ["Food & Dining", "Transport", "Utilities", "Laundry & Home", "Shopping", "Other"];
 
@@ -30,7 +30,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
     merchant: "",
     amount: "",
     category: "Food & Dining" as ExpenseCategory | string,
-    wallet: "",
+    wallet: getDefaultWalletId(globalData.settings, globalData.wallets),
     date: getLocalToday()
   });
 
@@ -137,7 +137,14 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const amount = parseFloat(form.amount);
+    const walletId = form.wallet || getDefaultWalletId(globalData.settings, globalData.wallets);
+
     if (!form.merchant || isNaN(amount) || amount <= 0) return;
+
+    if (!walletId || globalData.wallets[walletId] === undefined) {
+      showToast("⚠️ Please select a valid wallet before saving the expense.");
+      return;
+    }
 
     setGlobalData(prev => {
       const newExpense: Expense = {
@@ -145,15 +152,13 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
         merchant: form.merchant,
         amount,
         category: form.category,
-        wallet: form.wallet,
+        wallet: walletId,
         date: form.date
       };
 
       const nextWallets = { ...prev.wallets };
       // Instantly deduct from the chosen liquid wallet
-      if (nextWallets[form.wallet] !== undefined) {
-        nextWallets[form.wallet] = applyWalletTransaction(nextWallets[form.wallet], -amount);
-      }
+      nextWallets[walletId] = applyWalletTransaction(nextWallets[walletId], -amount);
 
       return {
         ...prev,
@@ -168,7 +173,13 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
 
     showToast(`Logged ₱${amount} & deducted from wallet`);
     setShowForm(false);
-    setForm({ merchant: "", amount: "", category: "Food & Dining", wallet: "", date: getLocalToday() });
+    setForm({
+      merchant: "",
+      amount: "",
+      category: "Food & Dining",
+      wallet: getDefaultWalletId(globalData.settings, globalData.wallets),
+      date: getLocalToday()
+    });
   };
 
   const handleDelete = (exp: Expense) => {
