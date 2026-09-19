@@ -5,7 +5,8 @@ import {
   computeBillPerPaydayAmount,
   computeBaselineScale,
   getReceivableStatus,
-  applyWalletTransaction
+  applyWalletTransaction,
+  getDefaultWalletId
 } from "./financeHelpers";
 import { countPaydaysUntil } from "./dateHelpers";
 
@@ -174,6 +175,41 @@ describe("Receivable State Transitions", () => {
     const { isCollected, remaining } = getReceivableStatus(0, 0, true);
     expect(isCollected).toBe(true);
     expect(remaining).toBe(0);
+  });
+});
+
+describe("getDefaultWalletId", () => {
+  it("uses the configured default wallet when it exists", () => {
+    expect(
+      getDefaultWalletId(
+        {
+          defaultWallet: "main",
+          customWallets: [{ id: "main" }, { id: "savings" }]
+        },
+        { main: 5000, savings: 1000 }
+      )
+    ).toBe("main");
+  });
+
+  it("falls back to the first available custom wallet when the configured wallet is invalid", () => {
+    expect(
+      getDefaultWalletId(
+        {
+          defaultWallet: "missing",
+          customWallets: [{ id: "savings" }, { id: "cash" }]
+        },
+        { savings: 1000, cash: 500 }
+      )
+    ).toBe("savings");
+  });
+
+  it("returns an empty value when no usable wallet is configured", () => {
+    expect(
+      getDefaultWalletId(
+        { defaultWallet: "missing", customWallets: [{ id: "missing" }] },
+        { savings: 1000 }
+      )
+    ).toBe("");
   });
 });
 
