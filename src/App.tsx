@@ -8,7 +8,13 @@ import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { getMonthKey, getAdjacentMonth } from "./utils/dateHelpers";
 import { UnifiedFinanceData, WalletState, EditFormData, TransactionHistoryItem, PaydayExecution } from "./types/finance";
 import { buildFinancialSummary } from "./utils/summaryHelpers";
-import { getWalletForBill } from "./utils/financeHelpers";
+import {
+  getWalletForBill,
+  computeBillPerPaydayAmount,
+  computeScaledBaselineAllocations,
+  hasPaydayExecutionOnDate,
+  getReceivableStatus
+} from "./utils/financeHelpers";
 import { generateId } from "./utils/idHelpers";
 
 import { useCloudSync, getLocalPasscode } from "./hooks/useCloudSync";

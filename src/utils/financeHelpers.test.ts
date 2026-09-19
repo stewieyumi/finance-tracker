@@ -279,7 +279,7 @@ describe("hasPaydayExecutionOnDate — prevents duplicate payday funding", () =>
   it("recognizes current execution objects", () => {
     expect(
       hasPaydayExecutionOnDate(
-        [{ date: "2026-09-15", timestamp: 1, allocations: {} }],
+        [{ date: "2026-09-15" }],
         "2026-09-15"
       )
     ).toBe(true);
