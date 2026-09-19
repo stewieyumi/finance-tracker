@@ -126,20 +126,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
 
   return (
     <div className="fixed inset-0 z-[110] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (modalRef.current && !modalRef.current.contains(e.target as Node)) onClose(); }}>
-      <div ref={modalRef} className="bg-[#121217] border border-white/[0.08] rounded-3xl p-6 w-full max-w-lg shadow-2xl">
-        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-4">
+      <div ref={modalRef} className="bg-surface-elevated border border-inverse/[0.08] rounded-3xl p-6 w-full max-w-lg shadow-2xl">
+        <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06] mb-4">
           <div className="flex items-center gap-2">
-            <Settings size={18} className="text-zinc-300" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">App Settings</h3>
+            <Settings size={18} className="text-secondary" />
+            <h3 className="text-sm font-bold uppercase tracking-wider text-strong">App Settings</h3>
           </div>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white transition"><X size={18} /></button>
+          <button onClick={onClose} className="text-faint hover:text-strong transition"><X size={18} /></button>
         </div>
 
-        <div className="flex gap-4 border-b border-white/[0.06] mb-5 overflow-x-auto whitespace-nowrap hide-scrollbar">
-          <button onClick={() => setActiveTab("general")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'general' ? 'text-white border-b-2 border-blue-500' : 'text-zinc-500 hover:text-zinc-300'}`}>General</button>
-          <button onClick={() => setActiveTab("baselines")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'baselines' ? 'text-white border-b-2 border-purple-500' : 'text-zinc-500 hover:text-zinc-300'}`}>Flow & Baselines</button>
+        <div className="flex gap-4 border-b border-inverse/[0.06] mb-5 overflow-x-auto whitespace-nowrap hide-scrollbar">
+          <button onClick={() => setActiveTab("general")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'general' ? 'text-strong border-b-2 border-blue-500' : 'text-faint hover:text-secondary'}`}>General</button>
+          <button onClick={() => setActiveTab("baselines")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'baselines' ? 'text-strong border-b-2 border-purple-500' : 'text-faint hover:text-secondary'}`}>Flow & Baselines</button>
           
-          <button onClick={() => setActiveTab("sync")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'sync' ? 'text-white border-b-2 border-amber-500' : 'text-zinc-500 hover:text-zinc-300'}`}>Cloud Sync</button>
+          <button onClick={() => setActiveTab("sync")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'sync' ? 'text-strong border-b-2 border-amber-500' : 'text-faint hover:text-secondary'}`}>Cloud Sync</button>
         </div>
 
         <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-1">
@@ -148,11 +148,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-blue-400 uppercase tracking-wider"><Target size={14} /> Main Milestone Goal</div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Goal Name</label><input type="text" value={form.goalName} onChange={e => setForm({...form, goalName: e.target.value})} placeholder="e.g. Japan Trip, Emergency Fund, New Laptop" className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500" /></div>
-                  <div><label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Target Amount (₱)</label><input type="number" value={form.targetFund} onChange={e => setForm({...form, targetFund: Number(e.target.value)})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-blue-500" /></div>
+                  <div><label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Goal Name</label><input type="text" value={form.goalName} onChange={e => setForm({...form, goalName: e.target.value})} placeholder="e.g. Japan Trip, Emergency Fund, New Laptop" className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-blue-500" /></div>
+                  <div><label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Target Amount (₱)</label><input type="number" value={form.targetFund} onChange={e => setForm({...form, targetFund: Number(e.target.value)})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-blue-500" /></div>
                   <div className="col-span-2">
-                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Linked Wallet (Tracks Progress)</label>
-                    <select value={form.milestoneWallet} onChange={e => setForm({...form, milestoneWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-blue-500 cursor-pointer">
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Linked Wallet (Tracks Progress)</label>
+                    <select value={form.milestoneWallet} onChange={e => setForm({...form, milestoneWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-blue-500 cursor-pointer">
                       <WalletSelectOptions />
                     </select>
                   </div>
@@ -163,12 +163,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                 <div className="flex items-center gap-2 text-xs font-semibold text-amber-400 uppercase tracking-wider"><Briefcase size={14} /> Dashboard Terminology</div>
                 <div className="flex gap-2">
                   {(Object.keys(PRESETS) as Array<keyof typeof PRESETS>).map(k => (
-                    <button key={k} onClick={() => applyPreset(k)} className="flex-1 bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.05] py-2 px-1 rounded-lg text-[10px] text-zinc-300 transition focus:bg-amber-500/20 focus:text-amber-300 focus:border-amber-500/40">{PRESETS[k].label}</button>
+                    <button key={k} onClick={() => applyPreset(k)} className="flex-1 bg-inverse/[0.03] hover:bg-inverse/[0.08] border border-inverse/[0.05] py-2 px-1 rounded-lg text-[10px] text-secondary transition focus:bg-amber-500/20 focus:text-amber-300 focus:border-amber-500/40">{PRESETS[k].label}</button>
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div><label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Receivables Title</label><input type="text" value={form.inflowsLabel} onChange={e => setForm({...form, inflowsLabel: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500" /></div>
-                  <div><label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Gigs/Tasks Title</label><input type="text" value={form.gigsLabel} onChange={e => setForm({...form, gigsLabel: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500" /></div>
+                  <div><label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Receivables Title</label><input type="text" value={form.inflowsLabel} onChange={e => setForm({...form, inflowsLabel: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-amber-500" /></div>
+                  <div><label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Gigs/Tasks Title</label><input type="text" value={form.gigsLabel} onChange={e => setForm({...form, gigsLabel: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-amber-500" /></div>
                 </div>
               </div>
             </div>
@@ -176,69 +176,69 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
 
           {activeTab === "baselines" && (
             <div className="space-y-5 animate-in fade-in duration-200">
-              <div className="text-xs text-zinc-400 mb-2">Configure the default amounts injected into your wallets during the 15th/30th Payday Distribution. (Note: These scale down safely if your bills consume too much of your paycheck).</div>
+              <div className="text-xs text-muted mb-2">Configure the default amounts injected into your wallets during the 15th/30th Payday Distribution. (Note: These scale down safely if your bills consume too much of your paycheck).</div>
               
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-purple-400 uppercase tracking-wider"><ArrowRightLeft size={14} /> Routing Rules</div>
                 
-                <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4 grid grid-cols-2 gap-3">
+                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Living Allowance (₱)</label>
-                    <input type="number" value={form.baseLivingAllowance} onChange={e => setForm({...form, baseLivingAllowance: Number(e.target.value)})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-purple-500" />
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Living Allowance (₱)</label>
+                    <input type="number" value={form.baseLivingAllowance} onChange={e => setForm({...form, baseLivingAllowance: Number(e.target.value)})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-purple-500" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Routes To</label>
-                    <select value={form.livingWallet} onChange={e => setForm({...form, livingWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 cursor-pointer">
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Routes To</label>
+                    <select value={form.livingWallet} onChange={e => setForm({...form, livingWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
                       <WalletSelectOptions />
                     </select>
                   </div>
                 </div>
 
-                <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4 grid grid-cols-2 gap-3">
+                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Savings Target (₱)</label>
-                    <input type="number" value={form.baseSavingsTarget} onChange={e => setForm({...form, baseSavingsTarget: Number(e.target.value)})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-purple-500" />
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Savings Target (₱)</label>
+                    <input type="number" value={form.baseSavingsTarget} onChange={e => setForm({...form, baseSavingsTarget: Number(e.target.value)})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-purple-500" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Routes To</label>
-                    <select value={form.savingsWallet} onChange={e => setForm({...form, savingsWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 cursor-pointer">
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Routes To</label>
+                    <select value={form.savingsWallet} onChange={e => setForm({...form, savingsWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
                       <WalletSelectOptions />
                     </select>
                   </div>
                 </div>
 
-                <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4 grid grid-cols-2 gap-3">
+                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Transit / Misc (₱)</label>
-                    <input type="number" value={form.defaultTransitAllocation} onChange={e => setForm({...form, defaultTransitAllocation: Number(e.target.value)})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none focus:border-purple-500" />
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Transit / Misc (₱)</label>
+                    <input type="number" value={form.defaultTransitAllocation} onChange={e => setForm({...form, defaultTransitAllocation: Number(e.target.value)})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-purple-500" />
                   </div>
                   <div>
-                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Routes To</label>
-                    <select value={form.transitWallet} onChange={e => setForm({...form, transitWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 cursor-pointer">
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Routes To</label>
+                    <select value={form.transitWallet} onChange={e => setForm({...form, transitWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
                       <WalletSelectOptions />
                     </select>
                   </div>
                 </div>
 
-                <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4">
+                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
                   <div>
-                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Default Wallet for New Bills</label>
-                    <div className="text-[10px] text-zinc-500 mb-2">Pre-selected when you add a bill. Existing bills are unaffected.</div>
-                    <select value={form.defaultWallet} onChange={e => setForm({...form, defaultWallet: e.target.value})} className="w-full bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 cursor-pointer">
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Default Wallet for New Bills</label>
+                    <div className="text-[10px] text-faint mb-2">Pre-selected when you add a bill. Existing bills are unaffected.</div>
+                    <select value={form.defaultWallet} onChange={e => setForm({...form, defaultWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
                       <WalletSelectOptions />
                     </select>
                   </div>
                 </div>
 
-                <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4">
-                  <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-2 block">Appearance</label>
+                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
+                  <label className="text-[10px] text-faint uppercase font-semibold mb-2 block">Appearance</label>
                   <div className="grid grid-cols-3 gap-2">
                     {(["dark", "light", "system"] as const).map(opt => (
                       <button
                         key={opt}
                         type="button"
                         onClick={() => setForm({...form, theme: opt})}
-                        className={`py-2 rounded-xl text-[11px] font-semibold capitalize transition border ${form.theme === opt ? "bg-blue-600 border-blue-500 text-white" : "bg-[#0b0b0e] border-zinc-800 text-zinc-400 hover:border-zinc-600"}`}
+                        className={`py-2 rounded-xl text-[11px] font-semibold capitalize transition border ${form.theme === opt ? "bg-blue-600 border-blue-500 text-white" : "bg-surface-input border-strong text-muted hover:border-default"}`}
                       >
                         {opt}
                       </button>
@@ -246,9 +246,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                   </div>
                 </div>
 
-                <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4">
-                  <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Payday Schedule</label>
-                  <div className="text-[10px] text-zinc-500 mb-2">These dates control payday funding and commitment allocation. Not the same as an individual bill's due date.</div>
+                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
+                  <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Payday Schedule</label>
+                  <div className="text-[10px] text-faint mb-2">These dates control payday funding and commitment allocation. Not the same as an individual bill's due date.</div>
                   <div className="flex flex-wrap gap-1.5 mb-3">
                     {(form.paydayDays.length ? form.paydayDays : [15, 30]).map(day => (
                       <span key={day} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-blue-950/40 border border-blue-800/40 text-blue-300 text-[11px] font-semibold">
@@ -257,7 +257,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                           type="button"
                           onClick={() => setForm({...form, paydayDays: form.paydayDays.filter(d => d !== day)})}
                           disabled={form.paydayDays.length <= 1}
-                          className="text-blue-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-800/50 transition"
+                          className="text-blue-400 hover:text-strong disabled:opacity-30 disabled:cursor-not-allowed w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-800/50 transition"
                         >
                           ×
                         </button>
@@ -268,7 +268,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                     <select
                       value={newPaydayDay}
                       onChange={e => setNewPaydayDay(Number(e.target.value))}
-                      className="flex-1 bg-[#0b0b0e] border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-purple-500 cursor-pointer"
+                      className="flex-1 bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer"
                     >
                       {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
                         <option key={d} value={d}>{formatOrdinal(d)}</option>
@@ -293,15 +293,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
           )}
 
           {activeTab === "sync" && (
-            <div className="space-y-4 animate-in fade-in duration-200 text-xs font-mono text-zinc-300">
-              <div className="bg-[#09090c] p-3.5 rounded-2xl border border-white/[0.05] space-y-1">
-                <div className="text-zinc-500 font-semibold text-[10px] uppercase tracking-wider mb-2">Cloud Status</div>
+            <div className="space-y-4 animate-in fade-in duration-200 text-xs font-mono text-secondary">
+              <div className="bg-surface-lowest p-3.5 rounded-2xl border border-inverse/[0.05] space-y-1">
+                <div className="text-faint font-semibold text-[10px] uppercase tracking-wider mb-2">Cloud Status</div>
                 <div>• Endpoint: <span className="text-emerald-400 font-bold">/api/sync</span></div>
                 <div>• Auth: <span className="text-blue-400">Secure Passcode</span></div>
                 <div>• Local Liquid: <span className="text-emerald-400 font-bold">₱{totalLiquid.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>
               </div>
-              <div className="bg-[#09090c] p-3.5 rounded-2xl border border-white/[0.05] space-y-1">
-                <div className="text-zinc-500 font-semibold text-[10px] uppercase tracking-wider mb-2">Network Log</div>
+              <div className="bg-surface-lowest p-3.5 rounded-2xl border border-inverse/[0.05] space-y-1">
+                <div className="text-faint font-semibold text-[10px] uppercase tracking-wider mb-2">Network Log</div>
                 <div className="text-[11px] text-amber-300 break-all">{debugLog || "No network action triggered yet."}</div>
               </div>
               
@@ -310,24 +310,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                 <button onClick={onForcePull} className="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/30 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><Database size={13} /> Pull Data</button>
               </div>
               
-              <div className="flex flex-col gap-2 pt-2 border-t border-white/[0.05]">
-                <button onClick={onExport} className="w-full bg-[#1a1a22] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Download size={13} /> Export JSON Backup</button>
-                <button onClick={onImportClick} className="w-full bg-[#1a1a22] hover:bg-white/[0.06] border border-white/[0.06] text-zinc-200 font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Upload size={13} /> Import JSON Backup</button>
+              <div className="flex flex-col gap-2 pt-2 border-t border-inverse/[0.05]">
+                <button onClick={onExport} className="w-full bg-surface-high hover:bg-inverse/[0.06] border border-inverse/[0.06] text-primary font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Download size={13} /> Export JSON Backup</button>
+                <button onClick={onImportClick} className="w-full bg-surface-high hover:bg-inverse/[0.06] border border-inverse/[0.06] text-primary font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Upload size={13} /> Import JSON Backup</button>
               </div>
 
-              <details className="mt-4 bg-[#09090c] border border-white/[0.05] rounded-xl p-3 group">
-                <summary className="text-[10px] text-zinc-400 font-semibold cursor-pointer outline-none flex items-center justify-between uppercase tracking-wider" style={{ listStyle: "none" }}>
+              <details className="mt-4 bg-surface-lowest border border-inverse/[0.05] rounded-xl p-3 group">
+                <summary className="text-[10px] text-muted font-semibold cursor-pointer outline-none flex items-center justify-between uppercase tracking-wider" style={{ listStyle: "none" }}>
                   <span>System & AI Scanner Debug Logs</span>
-                  <span className="text-zinc-600 text-[9px]">Tap to view</span>
+                  <span className="text-disabled text-[9px]">Tap to view</span>
                 </summary>
-                <div className="mt-3 pt-3 border-t border-white/[0.05] space-y-3">
+                <div className="mt-3 pt-3 border-t border-inverse/[0.05] space-y-3">
                   <div>
                     <div className="text-[10px] text-blue-400 font-bold mb-1 uppercase tracking-wider">Cloud Sync Log</div>
-                    <pre className="text-[10px] text-zinc-400 font-mono overflow-auto whitespace-pre-wrap break-words bg-[#0b0b0d] p-2 rounded-lg border border-white/[0.05]">{debugLog || 'No sync activity yet.'}</pre>
+                    <pre className="text-[10px] text-muted font-mono overflow-auto whitespace-pre-wrap break-words bg-surface-input p-2 rounded-lg border border-inverse/[0.05]">{debugLog || 'No sync activity yet.'}</pre>
                   </div>
                   <div>
                     <div className="text-[10px] text-purple-400 font-bold mb-1 uppercase tracking-wider">AI Scanner Log</div>
-                    <pre className="text-[10px] text-zinc-500 font-mono overflow-auto max-h-32 whitespace-pre-wrap break-words bg-[#0b0b0d] p-2 rounded-lg border border-white/[0.05]">
+                    <pre className="text-[10px] text-faint font-mono overflow-auto max-h-32 whitespace-pre-wrap break-words bg-surface-input p-2 rounded-lg border border-inverse/[0.05]">
                       {(() => {
                         if (typeof window === 'undefined') return '';
                         try {

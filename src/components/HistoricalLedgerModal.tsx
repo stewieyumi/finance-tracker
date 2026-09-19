@@ -146,44 +146,44 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
 
   return (
     <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex flex-col justify-end sm:justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bg-[#121217] border border-white/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-lg shadow-[0_0_60px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
-        <div className="flex items-center justify-between p-5 border-b border-white/[0.05]">
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider">{view === 'form' ? (editingId ? 'Edit Transaction' : 'New Transaction') : 'Historical Ledger'}</h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white p-2 rounded-full hover:bg-white/[0.05] transition"><X size={18} /></button>
+      <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-lg shadow-[0_0_60px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
+        <div className="flex items-center justify-between p-5 border-b border-inverse/[0.05]">
+          <h2 className="text-sm font-bold text-strong uppercase tracking-wider">{view === 'form' ? (editingId ? 'Edit Transaction' : 'New Transaction') : 'Historical Ledger'}</h2>
+          <button onClick={onClose} className="text-faint hover:text-strong p-2 rounded-full hover:bg-inverse/[0.05] transition"><X size={18} /></button>
         </div>
 
         <div className="overflow-y-auto p-5">
           {view === 'list' ? (
             <div className="space-y-4">
-              <button onClick={openAdd} className="w-full py-3.5 border border-dashed border-white/[0.15] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-zinc-400 hover:text-emerald-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">
+              <button onClick={openAdd} className="w-full py-3.5 border border-dashed border-inverse/[0.15] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted hover:text-emerald-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">
                 <Plus size={15} /> Add Manual Transaction
               </button>
               <div className="space-y-2">
-                {transactions.length === 0 && <div className="text-center text-xs text-zinc-500 py-6 italic">No manual transactions recorded.</div>}
+                {transactions.length === 0 && <div className="text-center text-xs text-faint py-6 italic">No manual transactions recorded.</div>}
                 {transactions.map(tx => (
-                  <div key={tx.id} className="bg-[#14141a] border border-white/[0.04] p-3.5 rounded-xl">
+                  <div key={tx.id} className="bg-surface border border-inverse/[0.04] p-3.5 rounded-xl">
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="text-xs font-bold text-zinc-200">{tx.title}</div>
-                        <div className="text-[10px] text-zinc-500 mt-0.5">{tx.date} • {tx.type.toUpperCase()}</div>
+                        <div className="text-xs font-bold text-primary">{tx.title}</div>
+                        <div className="text-[10px] text-faint mt-0.5">{tx.date} • {tx.type.toUpperCase()}</div>
                       </div>
-                      <div className={`text-xs font-mono font-bold ${tx.type === 'income' ? 'text-emerald-400' : tx.type === 'expense' ? 'text-zinc-100' : 'text-blue-400'}`}>
+                      <div className={`text-xs font-mono font-bold ${tx.type === 'income' ? 'text-emerald-400' : tx.type === 'expense' ? 'text-strong' : 'text-blue-400'}`}>
                         {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}₱{tx.amount.toLocaleString()}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.02]">
-                      <div className="text-[10px] text-zinc-400 flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 bg-zinc-800 rounded">{customWallets.find(w => w.id === tx.wallet)?.label || tx.wallet}</span>
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-inverse/[0.02]">
+                      <div className="text-[10px] text-muted flex items-center gap-1.5">
+                        <span className="px-1.5 py-0.5 bg-fill-strong rounded">{customWallets.find(w => w.id === tx.wallet)?.label || tx.wallet}</span>
                         {tx.type === 'transfer' && (
                           <>
                             <ArrowRight size={10} />
-                            <span className="px-1.5 py-0.5 bg-zinc-800 rounded">{customWallets.find(w => w.id === tx.destinationWallet)?.label || tx.destinationWallet}</span>
+                            <span className="px-1.5 py-0.5 bg-fill-strong rounded">{customWallets.find(w => w.id === tx.destinationWallet)?.label || tx.destinationWallet}</span>
                           </>
                         )}
                       </div>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openEdit(tx)} className="p-1.5 text-zinc-500 hover:text-amber-400 rounded hover:bg-amber-500/10 transition"><Edit2 size={13}/></button>
-                        <button onClick={() => handleDelete(tx)} className="p-1.5 text-zinc-500 hover:text-rose-400 rounded hover:bg-rose-500/10 transition"><Trash2 size={13}/></button>
+                        <button onClick={() => openEdit(tx)} className="p-1.5 text-faint hover:text-amber-400 rounded hover:bg-amber-500/10 transition"><Edit2 size={13}/></button>
+                        <button onClick={() => handleDelete(tx)} className="p-1.5 text-faint hover:text-rose-400 rounded hover:bg-rose-500/10 transition"><Trash2 size={13}/></button>
                       </div>
                     </div>
                   </div>
@@ -192,38 +192,38 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
             </div>
           ) : (
             <form onSubmit={handleSave} className="space-y-4">
-              <div className="grid grid-cols-3 gap-2 bg-[#09090c] p-1.5 rounded-xl border border-white/[0.05]">
+              <div className="grid grid-cols-3 gap-2 bg-surface-lowest p-1.5 rounded-xl border border-inverse/[0.05]">
                 {['expense', 'income', 'transfer'].map(t => (
-                  <button key={t} type="button" onClick={() => setForm({...form, type: t as any})} className={`py-2 text-[10px] font-bold uppercase rounded-lg transition ${form.type === t ? (t === 'income' ? 'bg-emerald-500/20 text-emerald-400' : t === 'expense' ? 'bg-zinc-800 text-white' : 'bg-blue-500/20 text-blue-400') : 'text-zinc-500 hover:bg-white/[0.02]'}`}>
+                  <button key={t} type="button" onClick={() => setForm({...form, type: t as any})} className={`py-2 text-[10px] font-bold uppercase rounded-lg transition ${form.type === t ? (t === 'income' ? 'bg-emerald-500/20 text-emerald-400' : t === 'expense' ? 'bg-fill-strong text-white' : 'bg-blue-500/20 text-blue-400') : 'text-faint hover:bg-inverse/[0.02]'}`}>
                     {t}
                   </button>
                 ))}
               </div>
               <div>
-                <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Title / Description</label>
-                <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" placeholder="e.g., Backdated Salary, Bank Transfer..." />
+                <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Title / Description</label>
+                <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500" placeholder="e.g., Backdated Salary, Bank Transfer..." />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Amount</label>
-                  <input type="number" step="0.01" required value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500 font-mono" placeholder="0.00" />
+                  <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Amount</label>
+                  <input type="number" step="0.01" required value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500 font-mono" placeholder="0.00" />
                 </div>
                 <div>
-                  <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">Date</label>
-                  <input type="date" required value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" />
+                  <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Date</label>
+                  <input type="date" required value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">{form.type === 'transfer' ? 'From Wallet' : 'Wallet'}</label>
-                  <select required value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
+                  <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">{form.type === 'transfer' ? 'From Wallet' : 'Wallet'}</label>
+                  <select required value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500">
                     {customWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                   </select>
                 </div>
                 {form.type === 'transfer' && (
                   <div>
-                    <label className="text-[10px] text-zinc-500 uppercase font-semibold mb-1 block">To Wallet</label>
-                    <select required value={form.destinationWallet} onChange={e => setForm({...form, destinationWallet: e.target.value})} className="w-full bg-[#0b0b0d] border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500">
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">To Wallet</label>
+                    <select required value={form.destinationWallet} onChange={e => setForm({...form, destinationWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500">
                       <option value="" disabled>Select...</option>
                       {customWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                     </select>
@@ -231,7 +231,7 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
                 )}
               </div>
               <div className="flex gap-2 pt-3">
-                <button type="button" onClick={() => setView('list')} className="flex-1 py-3 bg-white/[0.05] hover:bg-white/[0.1] text-xs font-semibold rounded-xl transition">Cancel</button>
+                <button type="button" onClick={() => setView('list')} className="flex-1 py-3 bg-inverse/[0.05] hover:bg-inverse/[0.1] text-xs font-semibold rounded-xl transition">Cancel</button>
                 <button type="submit" className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl transition shadow-lg shadow-emerald-900/20">{editingId ? 'Update' : 'Save'}</button>
               </div>
             </form>

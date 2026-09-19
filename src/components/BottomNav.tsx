@@ -18,7 +18,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-[#09090b]/75 backdrop-blur-2xl border-t border-white/[0.05] pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface-lowest/75 backdrop-blur-2xl border-t border-inverse/[0.05] pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-center justify-around sm:justify-center sm:gap-12 px-4 py-2 mx-auto w-full max-w-md">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -29,10 +29,10 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
               key={tab.id}
               onClick={() => onChange(tab.id as TabType)}
               className={`flex flex-col items-center justify-center w-[72px] h-[52px] rounded-xl transition-all duration-300 ${
-                isActive ? tab.activeBg : "hover:bg-white/[0.02]"
+                isActive ? tab.activeBg : "hover:bg-inverse/[0.02]"
               }`}
             >
-              <div className={`transition-all duration-300 ${isActive ? tab.activeColor : "text-zinc-500 scale-100"}`}>
+              <div className={`transition-all duration-300 ${isActive ? tab.activeColor : "text-faint scale-100"}`}>
                 <Icon size={isActive ? 22 : 24} strokeWidth={isActive ? 2.5 : 2} />
               </div>
               {isActive && (

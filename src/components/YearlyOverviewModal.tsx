@@ -129,26 +129,26 @@ const fallbackStartMonth = getMonthKey(new Date());
     >
       <div
         ref={modalBoxRef}
-        className="bg-[#121217] border border-white/[0.09] rounded-3xl p-5 sm:p-6 w-full max-w-lg space-y-5 shadow-[0_24px_64px_rgba(0,0,0,0.8)] max-h-[88vh] overflow-y-auto"
+        className="bg-surface-elevated border border-inverse/[0.09] rounded-3xl p-5 sm:p-6 w-full max-w-lg space-y-5 shadow-[0_24px_64px_rgba(0,0,0,0.8)] max-h-[88vh] overflow-y-auto"
       >
-        <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-2.5">
             <Calendar size={16} className="text-blue-400" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-strong">
               Yearly Overview
             </h3>
 
             <div className="relative" ref={yearDropdownRef}>
               <button
                 onClick={() => setShowYearDropdown(prev => !prev)}
-                className="h-7 px-2.5 rounded-xl bg-[#0a0a0d] hover:bg-white/[0.08] border border-white/[0.08] text-xs font-mono font-bold text-blue-400 flex items-center gap-1.5 transition"
+                className="h-7 px-2.5 rounded-xl bg-surface-sunken hover:bg-inverse/[0.08] border border-inverse/[0.08] text-xs font-mono font-bold text-blue-400 flex items-center gap-1.5 transition"
               >
                 <span>{activeYear}</span>
-                <ChevronDown size={11} className="text-zinc-500" />
+                <ChevronDown size={11} className="text-faint" />
               </button>
 
               {showYearDropdown && (
-                <div className="absolute left-0 mt-1.5 w-28 bg-[#181822]/95 backdrop-blur-xl border border-white/[0.1] rounded-xl shadow-2xl p-1 z-30 space-y-0.5 max-h-48 overflow-y-auto">
+                <div className="absolute left-0 mt-1.5 w-28 bg-surface-high/95 backdrop-blur-xl border border-inverse/[0.1] rounded-xl shadow-2xl p-1 z-30 space-y-0.5 max-h-48 overflow-y-auto">
                   {YEAR_LIST.map(y => (
                     <button
                       key={y}
@@ -156,7 +156,7 @@ const fallbackStartMonth = getMonthKey(new Date());
                       className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-mono transition flex items-center justify-between ${
                         activeYear === y
                           ? "bg-blue-600/20 text-blue-400 font-bold"
-                          : "text-zinc-300 hover:bg-white/[0.06]"
+                          : "text-secondary hover:bg-inverse/[0.06]"
                       }`}
                     >
                       <span>{y}</span>
@@ -170,7 +170,7 @@ const fallbackStartMonth = getMonthKey(new Date());
 
           <button
             onClick={onClose}
-            className="text-zinc-500 hover:text-white p-1 rounded-lg transition"
+            className="text-faint hover:text-strong p-1 rounded-lg transition"
             title="Close (Esc)"
           >
             <X size={16} />
@@ -178,34 +178,34 @@ const fallbackStartMonth = getMonthKey(new Date());
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4">
-            <div className="text-[10px] uppercase font-semibold text-zinc-500 tracking-wider">
+          <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
+            <div className="text-[10px] uppercase font-semibold text-faint tracking-wider">
               {activeYear} Commitments
             </div>
             <div className="text-base font-bold font-mono text-rose-400 mt-1">
               ₱{yearlyStats.totalYearCommitments.toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </div>
-            <div className="text-[10px] text-zinc-500 mt-1 font-mono">
+            <div className="text-[10px] text-faint mt-1 font-mono">
               Paid: ₱{yearlyStats.totalYearPaid.toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </div>
           </div>
 
-          <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4">
-            <div className="text-[10px] uppercase font-semibold text-zinc-500 tracking-wider">
+          <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
+            <div className="text-[10px] uppercase font-semibold text-faint tracking-wider">
               {activeYear} Projected Inflows
             </div>
             <div className="text-base font-bold font-mono text-emerald-400 mt-1">
               ₱{yearlyStats.totalYearProjectedIncome.toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </div>
-            <div className="text-[10px] text-zinc-500 mt-1 font-mono">
+            <div className="text-[10px] text-faint mt-1 font-mono">
               Collected: ₱{yearlyStats.totalYearCollected.toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </div>
           </div>
         </div>
 
-        <div className="bg-[#0a0a0d] border border-white/[0.05] rounded-2xl p-4">
+        <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
           <div className="flex justify-between items-center text-xs">
-            <span className="text-zinc-400 font-medium">Net Projected {activeYear} Surplus:</span>
+            <span className="text-muted font-medium">Net Projected {activeYear} Surplus:</span>
             <span className={`font-mono font-bold text-sm ${yearlyStats.netYearBalance >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
               ₱{yearlyStats.netYearBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </span>
@@ -214,7 +214,7 @@ const fallbackStartMonth = getMonthKey(new Date());
 
         <button
           onClick={onClose}
-          className="w-full bg-white/[0.08] hover:bg-white/[0.12] text-white text-xs font-semibold py-2.5 rounded-xl transition"
+          className="w-full bg-inverse/[0.08] hover:bg-inverse/[0.12] text-strong text-xs font-semibold py-2.5 rounded-xl transition"
         >
           Done
         </button>

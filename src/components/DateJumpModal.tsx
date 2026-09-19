@@ -39,24 +39,24 @@ export const DateJumpModal: React.FC<DateJumpModalProps> = ({ isOpen, onClose, o
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-      <div className="bg-[#14141a] border border-white/[0.08] rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
-        <div className="flex items-center justify-between pb-2 border-b border-white/[0.05]">
+      <div className="bg-surface border border-inverse/[0.08] rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
+        <div className="flex items-center justify-between pb-2 border-b border-inverse/[0.05]">
           <div className="flex items-center gap-2">
             <Calendar size={16} className="text-blue-400" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white">Jump to Specific Date</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-strong">Jump to Specific Date</h3>
           </div>
-          <button onClick={onClose} className="text-zinc-500 hover:text-white p-1 rounded-lg transition">
+          <button onClick={onClose} className="text-faint hover:text-strong p-1 rounded-lg transition">
             <X size={16} />
           </button>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1.5">Month</label>
+            <label className="text-[10px] uppercase font-semibold text-muted block mb-1.5">Month</label>
             <select
               value={jumpMonth}
               onChange={(e) => setJumpMonth(e.target.value)}
-              className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white outline-none w-full cursor-pointer"
+              className="bg-surface-input border border-inverse/[0.08] rounded-xl px-3 py-2 text-xs text-strong outline-none w-full cursor-pointer"
             >
               {MONTH_LIST.map(m => (
                 <option key={m} value={m}>{m}</option>
@@ -64,11 +64,11 @@ export const DateJumpModal: React.FC<DateJumpModalProps> = ({ isOpen, onClose, o
             </select>
           </div>
           <div>
-            <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1.5">Year</label>
+            <label className="text-[10px] uppercase font-semibold text-muted block mb-1.5">Year</label>
             <select
               value={jumpYear}
               onChange={(e) => setJumpYear(e.target.value)}
-              className="bg-[#0b0b0e] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white font-mono outline-none w-full cursor-pointer"
+              className="bg-surface-input border border-inverse/[0.08] rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none w-full cursor-pointer"
             >
               {YEAR_LIST.map(y => (
                 <option key={y} value={y}>{y}</option>
@@ -91,7 +91,7 @@ export const DateJumpModal: React.FC<DateJumpModalProps> = ({ isOpen, onClose, o
         <div className="flex gap-2 pt-2">
           <button
             onClick={onClose}
-            className="w-1/2 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 text-xs font-semibold py-2 rounded-xl transition"
+            className="w-1/2 bg-inverse/[0.04] hover:bg-inverse/[0.08] text-secondary text-xs font-semibold py-2 rounded-xl transition"
           >
             Cancel
           </button>

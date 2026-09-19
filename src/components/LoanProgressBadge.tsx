@@ -56,24 +56,24 @@ export const LoanProgressBadge: React.FC<LoanProgressBadgeProps> = ({
   const isCompleted = remainingMonths === 0;
 
   return (
-    <div className="mt-2 pt-2 border-t border-white/[0.06] flex flex-col gap-1.5 text-[11px]">
-      <div className="flex items-center justify-between text-zinc-400">
+    <div className="mt-2 pt-2 border-t border-inverse/[0.06] flex flex-col gap-1.5 text-[11px]">
+      <div className="flex items-center justify-between text-muted">
         <span>
           {isCompleted ? (
             <span className="text-emerald-400 font-medium">✓ Completed</span>
           ) : (
             <>
-              Month <strong className="text-zinc-200">{elapsedMonths}</strong> of {totalMonths}
-              <span className="text-zinc-500 ml-1">({remainingMonths} left)</span>
+              Month <strong className="text-primary">{elapsedMonths}</strong> of {totalMonths}
+              <span className="text-faint ml-1">({remainingMonths} left)</span>
             </>
           )}
         </span>
-        <span className="font-mono text-zinc-300">
+        <span className="font-mono text-secondary">
           ₱{remainingBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })} remaining
         </span>
       </div>
 
-      <div className="w-full bg-zinc-800/80 h-1.5 rounded-full overflow-hidden">
+      <div className="w-full bg-fill-strong/80 h-1.5 rounded-full overflow-hidden">
         <div
           className={`h-full transition-all duration-500 rounded-full ${
             isCompleted ? "bg-emerald-400" : "bg-blue-500"
