@@ -1,219 +1,231 @@
-# FINANCE TRACKER — AI DEVELOPMENT MASTER INSTRUCTIONS
+# FINANCE TRACKER — DEVELOPMENT INSTRUCTIONS
 
-## 1. PROJECT CONTEXT
+Finance Tracker is a personal finance and freelance production management
+application built by Wyndell while learning software development.
 
-Project: Finance Tracker
+Wyndell is the product owner, primary tester, and final decision-maker.
 
-Repository:
-stewieyumi/finance-tracker
+## 1. DEVELOPMENT PHILOSOPHY
 
-Stack:
+Prefer the smallest reasonable change.
 
-* React
-* TypeScript
-* Vite
-* Tailwind CSS
-* GitHub
-* Node/npm
-
-Purpose:
-Finance Tracker is being developed as a real public-facing product with the eventual goal of monetization.
-
-This is NOT treated as a disposable prototype.
-
-All development should prioritize:
-
-1. Correctness
-2. Financial-data safety
-3. Security
-4. Maintainability
-5. Testability
-6. UI/UX quality
-7. Performance
-8. Public-launch readiness
-9. Monetization readiness
-
-# 2. AI TEAM ROLES
-
-## ChatGPT
-
-Primary role:
-
-* Product architect
-* Technical planner
-* Problem solver
-* Code reviewer
-* Architecture reviewer
-* AI workflow coordinator
-
-ChatGPT should help determine:
-
-* What should actually be built
-* Why it should be built
-* What files/components are likely affected
-* What should NOT be changed
-* Potential regressions
-* Acceptance criteria
-* Testing requirements
-
-ChatGPT should NOT automatically assume that the first implementation idea is the correct architecture.
-
-## Jules
-
-Primary role:
-
-* Repository-level implementation agent
-* GitHub task execution
-* Large refactoring
-* Multi-file changes
-* Automated testing
-* Build verification
-
-Jules should implement clearly scoped tasks.
-
-Jules should not independently redesign the product or modify unrelated systems.
-
-## Gemini
-
-Primary role:
-
-* Independent engineering opinion
-* Code review
-* Alternative implementation ideas
-* Google ecosystem integration
-* Secondary debugging/reasoning
-
-Gemini should be treated as an independent second opinion rather than automatically trusted over another AI.
-
-## Claude / Claude Code
-
-Optional role:
-
-* Deep code review
-* Architecture review
-* Complex debugging
-* Alternative implementation
-* Interactive repository development
-
-Claude should be used as an independent reviewer or implementation agent when appropriate.
-
-# 3. SOURCE OF TRUTH
+The goal is not to generate the most code.
+The goal is to make the requested change correctly while keeping the
+existing application understandable and maintainable.
 
 The repository is the source of truth.
 
-Do not rely solely on previous AI responses.
+Always inspect the current repository before making code-specific claims.
 
-Before making significant changes:
+Do not rely on old AI summaries, screenshots, exported codebases, or
+previous conversations when the current repository can answer the question.
 
-* Inspect the actual repository.
-* Inspect the current implementation.
-* Check current branches and git status.
-* Check existing utilities/hooks/components before creating new ones.
+## 2. DEFAULT WORKFLOW
 
-Never assume that a previous AI's description of the repository is still accurate.
+Wyndell describes the problem or desired change.
 
-# 4. COMMUNICATION STANDARD
+ChatGPT:
 
-All AI communication should be:
+1. Inspects the current repository.
+2. Identifies the likely cause and affected files.
+3. Explains the change briefly.
+4. Provides the smallest practical patch or exact commands.
+5. Identifies anything that should not be changed.
 
-* Precise
-* Direct
-* Technical when necessary
-* Explicit about assumptions
-* Explicit about uncertainty
-* Focused on the requested task
+Wyndell applies the change.
 
-Do not say something is fixed unless it has actually been verified.
+Wyndell provides the resulting diff or command output.
 
-Do not say:
-"Everything should work."
+ChatGPT audits the actual result for:
 
-Prefer:
-"Typecheck passed. 65/65 tests passed. Build passed. I did not verify the production deployment."
+- Correctness
+- Unintended changes
+- Regressions
+- Unnecessary complexity
+- Changes outside the requested scope
 
-Always distinguish:
+Then run appropriate verification and perform required manual testing.
+
+Do not require unnecessary AI agents, planning documents, branches,
+pull requests, or review stages for small low-risk changes.
+
+## 3. LOW-RISK CHANGES
+
+Examples:
+
+- UI fixes
+- Theme fixes
+- Copy/text changes
+- Spacing and layout changes
+- Small isolated bugs
+- Simple responsive fixes
+
+Default workflow:
+
+Wyndell + ChatGPT.
+
+Gemini, Claude, and Jules are optional.
+
+Small low-risk changes may be committed directly to main after the
+diff has been inspected and appropriate verification has passed.
+
+## 4. MEDIUM-RISK CHANGES
+
+Examples:
+
+- Multi-file features
+- New components
+- Refactors
+- Shared utility changes
+- Larger non-financial behavior changes
+- Test backfills
+
+Default workflow:
+
+Wyndell + ChatGPT.
+
+Use another AI only when it provides a specific benefit.
+
+Jules may be used when implementation is large, repetitive, or tedious
+to perform manually.
+
+Gemini may be used for visual or UX review.
+
+Claude may be used when shared logic, architecture, or meaningful
+technical risk is involved.
+
+Do not involve every available AI automatically.
+
+## 5. HIGH-RISK CHANGES
+
+Treat these as high risk:
+
+- Financial calculations
+- Wallet mutations
+- Expense mutations
+- Bill payment/unpayment
+- Receivable payment/collection
+- Payday allocation
+- Historical Ledger mutations
+- Financial imports/exports
+- Cloud sync
+- Authentication
+- API behavior
+- Payments/subscriptions
+- User-data isolation
+- Database/schema changes
+- Migrations
+- Anything that could cause financial loss or data loss
+
+For high-risk changes:
+
+1. Understand the existing behavior before changing it.
+2. Explain the proposed behavior.
+3. Identify affected code.
+4. Use Claude for architecture or behavior review when appropriate.
+5. Add or update regression tests when appropriate.
+6. Run typecheck.
+7. Run the full test suite.
+8. Run the production build.
+9. Inspect the actual diff.
+10. Perform manual money-flow or data-flow testing where applicable.
+
+Never treat a high-risk change as an ordinary UI patch.
+
+## 6. CLAUDE
+
+Claude is the senior specialist for:
+
+- Financial correctness
+- Financial behavior
+- Security
+- Authentication
+- Cloud sync
+- Data integrity
+- Schema and migrations
+- Architecture with meaningful consequences
+
+Claude does not need to participate in ordinary UI, copy, theme,
+spacing, or small isolated fixes.
+
+When Claude is used, its output is advisory. Wyndell remains the
+product owner and final decision-maker. ChatGPT remains the primary
+coding partner and coordinates the implementation when needed.
+
+## 7. GEMINI
+
+Gemini is an optional independent visual and UX reviewer.
+
+Use Gemini when useful for:
+
+- Screenshot review
+- Light/dark comparison
+- Mobile/desktop visual review
+- Layout comparison
+- Independent UX feedback
+
+Gemini does not need to participate in ordinary implementation unless
+a visual second opinion is useful.
+
+Gemini does not determine financial correctness.
+
+## 8. JULES
+
+Jules is optional implementation help.
+
+Use Jules when:
+
+- A task is large
+- A change is highly repetitive
+- Many files need similar mechanical changes
+- Manual implementation would be unnecessarily time-consuming
+- A larger implementation would benefit from a dedicated coding agent
+
+Do not use Jules merely because a task touches multiple files.
+
+Jules should not independently redesign the product or modify unrelated
+systems.
+
+Do not use Jules for high-risk financial, security, synchronization,
+authentication, or data-integrity changes without appropriate review.
+
+## 9. VERIFICATION
+
+Never claim a command, test, build, deployment, or behavior passed unless
+it was actually verified.
+
+Use these evidence labels when useful:
 
 VERIFIED
-
-* Actually inspected
-* Actually executed
-* Actually tested
+- Directly inspected or actually executed.
 
 ASSUMED
-
-* Reasonable inference
-* Not directly verified
+- Reasonable inference that has not been directly verified.
 
 UNKNOWN
+- Requires additional inspection or testing.
 
-* Requires additional inspection/testing
-
-# 5. TASK WORKFLOW
-
-Every meaningful feature or bug should follow this process.
-
-STEP 1 — DEFINE THE PROBLEM
-
-The product owner describes:
-
-* What is wrong
-* What is expected
-* What should remain unchanged
-
-If the problem is ambiguous, investigate before coding.
-
-STEP 2 — ANALYZE
-
-Identify:
-
-* Relevant files
-* Relevant components
-* Relevant hooks
-* Relevant business logic
-* Dependencies
-* Potential side effects
-
-Do not immediately start modifying files.
-
-STEP 3 — DEFINE ACCEPTANCE CRITERIA
-
-Before implementation, establish what "done" means.
-
-Example:
-
-* Light mode background becomes light.
-* Text remains readable.
-* Dark mode remains visually unchanged.
-* Mobile layout remains unchanged.
-* No financial calculation code changes.
-* Typecheck passes.
-* Tests pass.
-* Build passes.
-
-STEP 4 — IMPLEMENT
-
-Use the most appropriate AI agent.
-
-Prefer:
-
-* Jules for large repository-level implementation
-* Claude Code for interactive/complex implementation
-* Gemini for secondary implementation or review
-* ChatGPT for architecture/planning/review
-
-STEP 5 — VERIFY
-
-At minimum, when applicable:
+For meaningful code changes, use the appropriate combination of:
 
 npm run typecheck
 npm run test
 npm run build
 
-Never claim a command passed unless it was actually executed.
+Not every microscopic copy or CSS change requires every command, but
+meaningful code changes should receive appropriate verification.
 
-STEP 6 — REVIEW THE DIFF
+For UI changes, perform relevant manual testing in:
 
-Check:
+- Light mode
+- Dark mode
+- Mobile
+- Desktop
+
+Do not claim visual verification unless it was actually performed.
+
+## 10. DIFF REVIEW
+
+Before committing meaningful changes, inspect:
 
 git status
 git diff
@@ -221,386 +233,230 @@ git diff --stat
 
 Look for:
 
-* Unrelated changes
-* Accidental deletions
-* Duplicated logic
-* Unnecessary dependencies
-* Hardcoded values
-* Security problems
-* Business logic changes
-* UI regressions
+- Unrelated changes
+- Accidental deletions
+- Duplicated logic
+- Dead code
+- Unnecessary dependencies
+- Hardcoded values
+- Business logic changes
+- Security problems
+- Unexpected generated files
 
-STEP 7 — INDEPENDENT REVIEW
+The actual diff is more authoritative than an AI summary of the diff.
 
-For important changes, use another AI to review the implementation.
+## 11. GIT SAFETY
+
+Small, low-risk changes may be committed directly to main.
+
+Use a feature branch when the change is high risk, destructive, difficult
+to review, or otherwise benefits from isolation.
+
+Before committing:
+
+git status
+git diff
+git diff --stat
+
+Prefer explicitly staging the files that were intentionally changed.
 
 Example:
 
-Jules implements
-↓
-Gemini or Claude reviews
-↓
-ChatGPT reviews the review
-↓
-Product owner decides
+git add src/components/BillsTable.tsx src/components/ReceivablesTable.tsx
 
-STEP 8 — COMMIT
+Avoid blindly using:
 
-Use focused commits.
+git add .
 
-Good:
+when the working tree may contain unrelated files, backups, exports,
+environment files, or private data.
 
-fix: correct pending receivable status
-
-Bad:
-
-update everything
-
-Commit messages should describe the actual change.
-
-STEP 9 — PUSH / MERGE
-
-Never assume a change is on GitHub merely because it exists locally.
-
-Verify:
-
-git status
-git log --oneline -5
-
-When appropriate:
-
-git push origin <branch>
-
-# 6. GIT SAFETY
-
-Never casually modify main.
-
-Prefer:
-
-main
-↓
-feature/fix branch
-↓
-implementation
-↓
-testing
-↓
-review
-↓
-merge
-
-Do not overwrite working changes without confirmation.
-
-Before destructive operations:
-
-* Check git status.
-* Understand what will be affected.
-* Preserve unrelated work.
-
-# 7. FINANCIAL LOGIC SAFETY
-
-Finance Tracker contains financial calculations.
-
-Treat financial logic as HIGH RISK.
-
-Examples include:
-
-* Payday calculations
-* Wallet allocation
-* Receivables
-* Bills
-* Loans
-* Historical ledger
-* Income
-* Expenses
-* Transfers
-* Baselines
-* Recurring calculations
-
-If the task is UI-only:
-
-DO NOT modify financial calculations.
-
-If financial logic must change:
-
-1. Explain the existing behavior.
-2. Explain the proposed behavior.
-3. Identify affected functions.
-4. Add/update tests.
-5. Run the complete test suite.
-
-# 8. THEME / UI RULES
-
-The application supports:
-
-* Dark
-* Light
-* System
-
-Use the existing semantic theme infrastructure.
-
-Prefer semantic theme classes/tokens.
-
-Avoid introducing:
-
-* Hardcoded dark-only backgrounds
-* Hardcoded white text
-* Hardcoded dark borders
-* Arbitrary CSS override layers
-* Duplicate theme systems
-
-Do not change intentional accent colors unless requested.
-
-Preserve:
-
-* Layout
-* Responsiveness
-* Existing visual hierarchy
-* Accessibility
-* Dark theme appearance
-
-When fixing Light mode, fix the underlying component styling whenever possible rather than masking the problem with large CSS overrides.
-
-# 9. MOBILE RULE
-
-Every UI change must consider mobile.
-
-Do not assume desktop layout is sufficient.
-
-When changing:
-
-* Tables
-* Modals
-* Cards
-* Navigation
-* Forms
-* Buttons
-
-Check mobile behavior.
-
-# 10. SECURITY
+Never overwrite unrelated working changes without understanding them.
 
 Never commit:
 
-* API keys
-* OAuth secrets
-* passwords
-* tokens
-* .env files
-* private credentials
+- API keys
+- OAuth secrets
+- Passwords
+- Tokens
+- .env files
+- Private credentials
+- Private financial exports
+- Private user data
+
+## 12. FINANCIAL SAFETY
+
+Finance Tracker contains financial information and calculations.
+
+Protected behavior includes:
+
+- Wallet balances
+- Expense deductions
+- Bill payments
+- Receivable collections
+- Payday allocation
+- Historical Ledger
+- Financial calculations
+- Financial imports/exports
+- Cloud synchronization
+
+Do not casually refactor protected financial logic during unrelated work.
+
+When financial behavior changes, preserve existing behavior unless the
+requested change explicitly requires a behavior change.
+
+Prefer regression tests that exercise the real implementation rather
+than tests that simply reimplement the same calculation separately.
+
+## 13. THEME AND UI
+
+Finance Tracker supports:
+
+- Dark mode
+- Light mode
+- System mode
+
+Use the existing semantic theme infrastructure.
+
+Prefer existing semantic theme tokens/classes.
+
+Avoid introducing:
+
+- Dark-only backgrounds
+- Hardcoded white text
+- Dark-only borders
+- Duplicate theme systems
+- Large CSS overrides that merely mask component problems
+
+When fixing Light mode, fix the underlying component styling when
+practical.
+
+Preserve intentional accent colors unless the product owner requests
+otherwise.
+
+Preserve:
+
+- Layout
+- Responsiveness
+- Visual hierarchy
+- Accessibility
+- Existing Dark mode appearance
+
+## 14. MOBILE
+
+UI changes should consider mobile when relevant.
+
+Pay particular attention to:
+
+- Tables
+- Modals
+- Cards
+- Navigation
+- Forms
+- Buttons
+- Dense metadata/action layouts
+
+Do not assume a desktop layout automatically works on mobile.
+
+## 15. DEPENDENCIES
+
+Do not add a dependency for a trivial task.
+
+Before adding one:
+
+- Check existing dependencies.
+- Check whether the problem can be solved with existing code.
+- Consider bundle size.
+- Consider maintenance.
+- Consider security.
+
+Prefer the simplest reasonable solution.
+
+## 16. SECURITY
+
+Treat authentication, cloud sync, APIs, payments, and user-data isolation
+as security-sensitive.
 
 Do not expose:
 
-* authentication secrets
-* database credentials
-* payment credentials
-* private user data
+- Authentication secrets
+- Database credentials
+- Payment credentials
+- Tokens
+- Private user data
 
-Treat authentication, cloud sync, and payment systems as security-sensitive.
+Prefer conservative choices when a security tradeoff is uncertain.
 
-# 11. DEPENDENCIES
+## 17. SCOPE CONTROL
 
-Do not add a dependency just because it makes one small task easier.
+Do the requested work first.
 
-Before adding a dependency:
+Do not expand a small task into an unrelated refactor merely because
+another issue is discovered.
 
-* Check whether existing libraries already solve the problem.
-* Consider bundle size.
-* Consider maintenance.
-* Consider security.
-* Explain why it is needed.
+If another problem is noticed:
 
-# 12. TESTING PHILOSOPHY
+- Mention it briefly.
+- Do not silently fix it unless it is necessary for the requested work.
+- Treat it as a separate follow-up task.
 
-Tests should protect behavior, not merely increase test count.
+## 18. SIMPLICITY RULE
 
-When fixing a bug:
-
-1. Reproduce the bug.
-2. Identify the cause.
-3. Add a regression test when practical.
-4. Implement the fix.
-5. Run the affected tests.
-6. Run the full suite.
-
-Financial calculation changes should have tests.
-
-# 13. AI IMPLEMENTATION RULE
-
-AI agents should not perform broad changes from vague instructions.
-
-Avoid:
-
-"Fix everything."
+Before adding an abstraction, dependency, service, workflow, or AI agent,
+ask whether the problem can be solved more simply.
 
 Prefer:
 
-"Fix the Light-mode text contrast in the Settings modal without changing functionality or business logic. Replace hardcoded neutral text classes with existing semantic theme tokens. Preserve Dark mode. Run typecheck, tests, and build."
-
-# 14. WHEN AN AI FINDS A PROBLEM
-
-The AI should not immediately rewrite the code.
-
-First report:
-
-1. Root cause
-2. Affected files
-3. Why it happens
-4. Proposed fix
-5. Potential side effects
-6. Tests required
-
-Then implement after the scope is clear.
-
-# 15. WHEN AN AI IS UNSURE
-
-Do not guess.
-
-State:
-
-"I found two possible implementations. Option A does X. Option B does Y. The current repository appears to favor A because..."
-
-Then recommend based on documented repository architecture, not personal preference.
-
-# 16. REVIEW FORMAT
-
-When reviewing an AI-generated implementation, use:
-
-## Summary
-
-What the implementation does.
-
-## Correct
-
-What was implemented correctly.
-
-## Problems
-
-Specific issues.
-
-## Risks
-
-Potential regressions or technical debt.
-
-## Missing
-
-Things the implementation failed to address.
-
-## Tests
-
-Tests actually executed.
-
-## Recommendation
-
-Whether the implementation should:
-
-* Be approved
-* Be revised
-* Be rejected
-
-Do not give an approval based only on compilation.
-
-# 17. PUBLIC LAUNCH STANDARD
-
-Before public launch, prioritize:
-
-* Authentication
-* User data isolation
-* Secure cloud storage
-* Error handling
-* Backup/recovery
-* Financial calculation correctness
-* Responsive UI
-* Accessibility
-* Performance
-* Security
-* Privacy
-* Terms/privacy requirements
-* Subscription/payment handling
-* Monitoring
-* Analytics
-* Production deployment
-* Regression testing
-
-# 18. PRODUCT DEVELOPMENT PRIORITY
-
-When deciding what to build next, prioritize:
-
-P0 — Critical
-
-* Security
-* Data integrity
-* Authentication
-* Financial calculation correctness
-* Production-breaking bugs
-
-P1 — Important
-
-* Core user workflows
-* Reliability
-* Mobile UX
-* Performance
-* Important user-facing bugs
-
-P2 — Product quality
-
-* UI polish
-* Analytics
-* Advanced features
-* Convenience features
-
-P3 — Nice to have
-
-* Experimental features
-* Cosmetic improvements
-* Low-impact enhancements
-
-# 19. MASTER RULE
-
-The goal is NOT:
-
-"Make the AI write as much code as possible."
-
-The goal is:
-
-"Build a reliable, maintainable, secure, monetizable product with the smallest reasonable amount of complexity."
-
-Prefer:
-
-* Small changes
-* Clear architecture
-* Tested behavior
-* Reusable systems
-* Explicit decisions
-* Verifiable results
+- Small changes
+- Clear code
+- Existing utilities
+- Existing theme infrastructure
+- Direct solutions
+- Verifiable results
 
 Avoid:
 
-* Quick hacks
-* Giant rewrites
-* Duplicate systems
-* Unverified claims
-* Unnecessary dependencies
-* AI-generated complexity
+- Giant rewrites
+- Duplicate systems
+- Speculative architecture
+- Unnecessary abstractions
+- Unnecessary AI handoffs
+- Unnecessary process
 
-# 20. FINAL PRINCIPLE
+## 19. PRODUCT OWNERSHIP
 
-The human product owner makes the final decision.
+Wyndell is the product owner and final decision-maker.
+
+Wyndell decides:
+
+- Product direction
+- UX
+- Visual design
+- Feature priority
+- Acceptable tradeoffs
 
 AI systems provide:
 
-* Analysis
-* Implementation
-* Review
-* Alternatives
-* Warnings
+- Analysis
+- Implementation help
+- Review
+- Alternatives
+- Warnings
 
-AI systems do not automatically decide:
+AI systems do not override the product owner's product or UX decisions.
 
-* Product direction
-* Pricing
-* User policy
-* Security tradeoffs
-* Architecture changes with major consequences
+## 20. FINAL PRINCIPLE
 
-The objective is to make the product owner better informed and more capable of making those decisions.
+Build Finance Tracker safely, simply, and incrementally.
+
+The objective is not to make AI perform as much work as possible.
+
+The objective is to help Wyndell learn, build, test, and maintain a
+reliable application without unnecessary complexity.
+
+Default to:
+
+Wyndell + ChatGPT.
+
+Bring in Claude, Gemini, or Jules only when there is a specific reason
+their involvement provides meaningful value.
