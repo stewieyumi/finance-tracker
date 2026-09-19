@@ -120,6 +120,30 @@ export function getReceivableStatus(
   return { isCollected, remaining };
 }
 
+export function getDefaultWalletId(
+  settings?: {
+    defaultWallet?: string;
+    customWallets?: { id: string }[];
+  },
+  wallets?: Record<string, number>
+): string {
+  const configuredWallet = settings?.defaultWallet;
+  if (
+    configuredWallet &&
+    (!wallets || wallets[configuredWallet] !== undefined)
+  ) {
+    return configuredWallet;
+  }
+
+  const firstAvailableWallet = settings?.customWallets?.find(
+    wallet =>
+      !!wallet.id &&
+      (!wallets || wallets[wallet.id] !== undefined)
+  );
+
+  return firstAvailableWallet?.id || "";
+}
+
 export function applyWalletTransaction(
   currentBalance: number,
   delta: number
