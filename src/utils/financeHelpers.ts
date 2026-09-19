@@ -242,3 +242,13 @@ export function applyWalletTransaction(
     Math.max(0, safeBalance + delta) * 100
   ) / 100;
 }
+
+export function hasSufficientWalletBalance(
+  currentBalance: number,
+  amount: number
+): boolean {
+  const safeBalance = Number(currentBalance) || 0;
+  const safeAmount = Math.max(0, Number(amount) || 0);
+
+  return safeBalance >= safeAmount;
+}

@@ -7,16 +7,21 @@ import {
 } from "../types/finance";
 
 import { generateId } from "../utils/idHelpers";
-import { getWalletForBill } from "../utils/financeHelpers";
+import {
+  getWalletForBill,
+  hasSufficientWalletBalance
+} from "../utils/financeHelpers";
 import { isValidMonthRange } from "../utils/dateHelpers";
 
 interface UseBillActionsParams {
+  globalData: UnifiedFinanceData;
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
   selectedMonth: string;
   showToast: (message: string, action?: { label: string; onClick: () => void }) => void;
 }
 
 export function useBillActions({
+  globalData,
   setGlobalData,
   selectedMonth,
   showToast
@@ -65,6 +70,23 @@ export function useBillActions({
     const targetMonth = bill.targetMonthForDue || selectedMonth;
     const walletKey = bill.wallet || getWalletForBill(bill.name);
 
+    const isCurrentlyPaid = bill.paid;
+    const willBePaid = !isCurrentlyPaid;
+
+    if (
+      willBePaid &&
+      !skipWalletMutation &&
+      !hasSufficientWalletBalance(
+        globalData.wallets?.[walletKey] ?? 0,
+        bill.amount
+      )
+    ) {
+      showToast(
+        `Insufficient balance in ${globalData.settings?.walletLabels?.[walletKey] || walletKey}. Need ₱${bill.amount.toLocaleString()}`
+      );
+      return;
+    }
+
     setGlobalData(prev => {
       const monthLog = prev.logs?.[targetMonth] || {
         billsPaid: [],
@@ -72,8 +94,6 @@ export function useBillActions({
       };
 
       const currentPaid = monthLog.billsPaid || [];
-      const isCurrentlyPaid = currentPaid.includes(bill.id);
-      const willBePaid = !isCurrentlyPaid;
       const today = new Date(); const todayStr = today.toISOString();
 
       const nextWallets = { ...prev.wallets };

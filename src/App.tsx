@@ -312,7 +312,8 @@ const {
   toggleBillStatus,
   deleteBill
 } = useBillActions({
-    setGlobalData: syncedSetGlobalData,
+  globalData,
+  setGlobalData: syncedSetGlobalData,
   selectedMonth,
   showToast
 });

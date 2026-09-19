@@ -23,6 +23,7 @@ export interface Expense {
   id: string;
   merchant: string;
   amount: number;
+  deductedAmount?: number;
   category: ExpenseCategory | string;
   wallet: string;
   date: string;

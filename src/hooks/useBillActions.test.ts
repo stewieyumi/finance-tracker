@@ -55,6 +55,7 @@ describe("useBillActions - payment mutations", () => {
 
     const { result } = renderHook(() =>
       useBillActions({
+        globalData: createTestData(),
         setGlobalData: mockSetGlobalData,
         selectedMonth: "September 2026",
         showToast: mockShowToast
@@ -94,6 +95,7 @@ describe("useBillActions - payment mutations", () => {
 
     const { result } = renderHook(() =>
       useBillActions({
+        globalData: createTestData(),
         setGlobalData: mockSetGlobalData,
         selectedMonth: "September 2026",
         showToast: mockShowToast
@@ -120,6 +122,7 @@ describe("useBillActions - payment mutations", () => {
 
     const { result } = renderHook(() =>
       useBillActions({
+        globalData: createTestData(),
         setGlobalData: mockSetGlobalData,
         selectedMonth: "September 2026",
         showToast: mockShowToast
@@ -149,6 +152,7 @@ describe("useBillActions - payment mutations", () => {
 
     const { result } = renderHook(() =>
       useBillActions({
+        globalData: createTestData(),
         setGlobalData: mockSetGlobalData,
         selectedMonth: "September 2026",
         showToast: mockShowToast
@@ -166,6 +170,75 @@ describe("useBillActions - payment mutations", () => {
     expect(nextData.wallets.maya).toBe(4000);
   });
 
+  it("rejects a bill payment when the routed wallet cannot cover the full amount", () => {
+    const mockSetGlobalData = vi.fn();
+    const mockShowToast = vi.fn();
+
+    const initialData = createTestData();
+    initialData.wallets.maya = 500;
+
+    const hookData = createTestData();
+    hookData.wallets.maya = 500;
+
+    const bill = createBill({
+      amount: 1000
+    });
+
+    const { result } = renderHook(() =>
+      useBillActions({
+        globalData: hookData,
+        setGlobalData: mockSetGlobalData,
+        selectedMonth: "September 2026",
+        showToast: mockShowToast
+      })
+    );
+
+    act(() => {
+      result.current.toggleBillStatus(bill);
+    });
+
+    expect(mockSetGlobalData).not.toHaveBeenCalled();
+    expect(initialData.wallets.maya).toBe(500);
+    expect(mockShowToast).toHaveBeenCalledWith(
+      "Insufficient balance in maya. Need ₱1,000"
+    );
+  });
+
+  it("allows a bill payment when the wallet has exactly enough balance", () => {
+    const mockSetGlobalData = vi.fn();
+    const mockShowToast = vi.fn();
+
+    const initialData = createTestData();
+    initialData.wallets.maya = 1000;
+
+    const hookData = createTestData();
+    hookData.wallets.maya = 1000;
+
+    const bill = createBill({
+      amount: 1000
+    });
+
+    const { result } = renderHook(() =>
+      useBillActions({
+        globalData: hookData,
+        setGlobalData: mockSetGlobalData,
+        selectedMonth: "September 2026",
+        showToast: mockShowToast
+      })
+    );
+
+    act(() => {
+      result.current.toggleBillStatus(bill);
+    });
+
+    const nextData = getStateUpdaterResult(mockSetGlobalData, initialData);
+    const monthLog = nextData.logs["September 2026"];
+
+    expect(nextData.wallets.maya).toBe(0);
+    expect(monthLog.billsPaid).toContain("bill-test-1");
+    expect(monthLog.paymentDates?.["bill-test-1"]).toBeDefined();
+  });
+
   it("uses the legacy bill-name mapping when no wallet is explicitly set", () => {
     const mockSetGlobalData = vi.fn();
     const mockShowToast = vi.fn();
@@ -180,6 +253,7 @@ describe("useBillActions - payment mutations", () => {
 
     const { result } = renderHook(() =>
       useBillActions({
+        globalData: createTestData(),
         setGlobalData: mockSetGlobalData,
         selectedMonth: "September 2026",
         showToast: mockShowToast

@@ -4,7 +4,12 @@ import { Camera, UploadCloud, ScanLine, Plus, Receipt, Trash2, CheckCircle2 } fr
 import { UnifiedFinanceData, Expense, ExpenseCategory } from "../types/finance";
 import { generateId } from "../utils/idHelpers";
 import { getLocalPasscode } from "../hooks/useCloudSync";
-import { applyWalletTransaction, getDefaultExpenseWalletId, getDefaultWalletId } from "../utils/financeHelpers";
+import {
+  applyWalletTransaction,
+  hasSufficientWalletBalance,
+  getDefaultExpenseWalletId,
+  getDefaultWalletId
+} from "../utils/financeHelpers";
 
 const EXPENSE_CATEGORIES: ExpenseCategory[] = ["Food & Dining", "Transport", "Utilities", "Laundry & Home", "Shopping", "Other"];
 
@@ -166,11 +171,19 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
       return;
     }
 
+    if (!hasSufficientWalletBalance(globalData.wallets[walletId], amount)) {
+      showToast(
+        `Insufficient balance in ${globalData.settings?.walletLabels?.[walletId] || walletId}. Need ₱${amount.toLocaleString()}`
+      );
+      return;
+    }
+
     setGlobalData(prev => {
       const newExpense: Expense = {
         id: generateId("exp"),
         merchant: form.merchant,
         amount,
+         deductedAmount: amount,
         category: form.category,
         wallet: walletId,
         date: form.date
@@ -203,12 +216,14 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
   };
 
   const handleDelete = (exp: Expense) => {
-    if (!confirm(`Delete ${exp.merchant} and refund ₱${exp.amount} back to your wallet?`)) return;
+    const refundAmount = exp.deductedAmount ?? exp.amount;
+
+    if (!confirm(`Delete ${exp.merchant} and refund ₱${refundAmount} back to your wallet?`)) return;
 
     setGlobalData(prev => {
       const nextWallets = { ...prev.wallets };
       if (nextWallets[exp.wallet] !== undefined) {
-        nextWallets[exp.wallet] = applyWalletTransaction(nextWallets[exp.wallet], exp.amount); // Refund
+        nextWallets[exp.wallet] = applyWalletTransaction(nextWallets[exp.wallet], refundAmount); // Refund
       }
       return {
         ...prev,
