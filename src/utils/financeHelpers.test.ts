@@ -4,6 +4,8 @@ import {
   getWalletForBill,
   computeBillPerPaydayAmount,
   computeBaselineScale,
+  computeScaledBaselineAllocations,
+  hasPaydayExecutionOnDate,
   getReceivableStatus,
   applyWalletTransaction,
   getDefaultWalletId
@@ -108,6 +110,44 @@ describe("computeBillPerPaydayAmount — prevents double-funding", () => {
 
   it("treats 0 paydaysRemaining the same as 1 (avoids divide-by-zero)", () => {
     expect(computeBillPerPaydayAmount(500, 0, 0)).toBe(500);
+  });
+});
+
+describe("computeScaledBaselineAllocations — keeps buffer from going negative", () => {
+  it("never lets rounded baselines exceed the room left after bills", () => {
+    const allocations = computeScaledBaselineAllocations(
+      11529.59,
+      15000,
+      2500,
+      1000,
+      1500
+    );
+
+    expect(allocations).toEqual({
+      living: 1735.21,
+      savings: 694.08,
+      transit: 1041.12
+    });
+
+    expect(
+      Math.round(
+        (allocations.living + allocations.savings + allocations.transit) * 100
+      ) / 100
+    ).toBeLessThanOrEqual(3470.41);
+  });
+
+  it("clamps later baselines when the available room is smaller than their rounded targets", () => {
+    const allocations = computeScaledBaselineAllocations(
+      14999.99,
+      15000,
+      2500,
+      1000,
+      1500
+    );
+
+    expect(allocations.living).toBe(0.01);
+    expect(allocations.savings).toBe(0);
+    expect(allocations.transit).toBe(0);
   });
 });
 
@@ -228,6 +268,30 @@ describe("Expense & Wallet Tracking Logic", () => {
 
   it("Decimal precision: handles JS floating point safely during deductions", () => {
     expect(applyWalletTransaction(100.55, -50.10)).toBe(50.45);
+  });
+});
+
+describe("hasPaydayExecutionOnDate — prevents duplicate payday funding", () => {
+  it("recognizes legacy string execution records", () => {
+    expect(hasPaydayExecutionOnDate(["2026-09-15"], "2026-09-15")).toBe(true);
+  });
+
+  it("recognizes current execution objects", () => {
+    expect(
+      hasPaydayExecutionOnDate(
+        [{ date: "2026-09-15", timestamp: 1, allocations: {} }],
+        "2026-09-15"
+      )
+    ).toBe(true);
+  });
+
+  it("does not match a different payday", () => {
+    expect(
+      hasPaydayExecutionOnDate(
+        [{ date: "2026-09-15" }],
+        "2026-09-30"
+      )
+    ).toBe(false);
   });
 });
 
