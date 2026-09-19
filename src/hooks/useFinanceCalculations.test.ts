@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { renderHook } from "@testing-library/react";
+import { useFinanceCalculations } from "./useFinanceCalculations";
 import { UnifiedFinanceData } from "../types/finance";
 import {
   parseMonthKey,
@@ -147,6 +149,98 @@ describe("Finance Calculations", () => {
     const dueDate = new Date(2026, 8, 19);
 
     expect(countPaydaysUntil(today, dueDate, [5, 20])).toBe(1);
+  });
+
+
+  it("counts actual paid loan installments even when an earlier installment was skipped", () => {
+    const loanData: UnifiedFinanceData = {
+      ...baseData,
+      library: {
+        ...baseData.library,
+        bills: [
+          {
+            id: "loan-1",
+            name: "Test Loan",
+            amount: 1000,
+            dueDay: "15",
+            type: "Loan / Installment",
+            wallet: "maya",
+            startMonth: "August 2026",
+            endMonth: "October 2026",
+          },
+        ],
+      },
+      logs: {
+        "August 2026": {
+          billsPaid: ["loan-1"],
+        },
+        "September 2026": {
+          billsPaid: [],
+        },
+        "October 2026": {
+          billsPaid: ["loan-1"],
+          billOverrides: {
+            "loan-1": 750,
+          },
+        },
+      },
+    };
+
+    const { result } = renderHook(() =>
+      useFinanceCalculations(loanData, "October 2026")
+    );
+
+    const loan = result.current.activeBills.find(
+      bill => bill.id === "loan-1"
+    );
+
+    expect(loan).toBeDefined();
+    expect(loan?.paidLoanInstallments).toBe(2);
+    expect(loan?.totalLoanPaid).toBe(1750);
+  });
+
+  it("counts all recorded installments when a loan is fully paid", () => {
+    const loanData: UnifiedFinanceData = {
+      ...baseData,
+      library: {
+        ...baseData.library,
+        bills: [
+          {
+            id: "loan-2",
+            name: "Completed Loan",
+            amount: 1000,
+            dueDay: "15",
+            type: "Loan / Installment",
+            wallet: "maya",
+            startMonth: "August 2026",
+            endMonth: "October 2026",
+          },
+        ],
+      },
+      logs: {
+        "August 2026": {
+          billsPaid: ["loan-2"],
+        },
+        "September 2026": {
+          billsPaid: ["loan-2"],
+        },
+        "October 2026": {
+          billsPaid: ["loan-2"],
+        },
+      },
+    };
+
+    const { result } = renderHook(() =>
+      useFinanceCalculations(loanData, "October 2026")
+    );
+
+    const loan = result.current.activeBills.find(
+      bill => bill.id === "loan-2"
+    );
+
+    expect(loan).toBeDefined();
+    expect(loan?.paidLoanInstallments).toBe(3);
+    expect(loan?.totalLoanPaid).toBe(3000);
   });
 
 });

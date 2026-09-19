@@ -46,6 +46,7 @@ export interface BillViewModel extends Bill {
   daysLeft: number;
   isOverridden: boolean;
   totalLoanPaid?: number;
+  paidLoanInstallments?: number;
 }
 
 export interface Receivable {

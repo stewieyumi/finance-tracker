@@ -29,6 +29,7 @@ const activeBills = useMemo<BillViewModel[]>(() => {
     }).map(b => {
       let oldestUnpaid: string | null = null;
       let totalLoanPaid = 0;
+      let paidLoanInstallments = 0;
 
       const startMonth = b.startMonth || fallbackStartMonth;
       const monthsToCheck = getMonthRange(
@@ -55,6 +56,7 @@ const activeBills = useMemo<BillViewModel[]>(() => {
             override !== undefined && Number.isFinite(override)
               ? override
               : b.amount;
+          paidLoanInstallments += 1;
         }
       }
       const isPaidThisMonth = !oldestUnpaid;
@@ -77,7 +79,8 @@ const effectiveAmount = getEffectiveBillAmount(
         paid: isPaidThisMonth,
         targetMonthForDue,
         daysLeft,
-        totalLoanPaid
+        totalLoanPaid,
+        paidLoanInstallments
       };
     }).sort((a, b) => {
       if (a.paid !== b.paid) return a.paid ? 1 : -1;

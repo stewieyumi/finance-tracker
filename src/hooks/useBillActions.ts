@@ -8,6 +8,7 @@ import {
 
 import { generateId } from "../utils/idHelpers";
 import { getWalletForBill } from "../utils/financeHelpers";
+import { isValidMonthRange } from "../utils/dateHelpers";
 
 interface UseBillActionsParams {
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
@@ -28,8 +29,13 @@ export function useBillActions({
     startMonth: string;
     endMonth: string;
     wallet?: string;
-  }): Bill => {
+  }): Bill | null => {
     const isLoan = bill.type === "Loan / Installment";
+
+    if (isLoan && !isValidMonthRange(bill.startMonth, bill.endMonth)) {
+      showToast("Loan start month must be on or before the end month");
+      return null;
+    }
 
     const newBill: Bill = {
       id: generateId("b"),

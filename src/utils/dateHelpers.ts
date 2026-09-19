@@ -44,6 +44,11 @@ export function getAdjacentMonth(monthKey: string, offset: number): string {
   return getMonthKey(d);
 }
 
+export function isValidMonthRange(startMonth: string, endMonth: string): boolean {
+  if (!startMonth || !endMonth) return false;
+  return parseMonthKey(startMonth) <= parseMonthKey(endMonth);
+}
+
 export function getMonthRange(
   startMonth: string,
   endMonth: string,

@@ -13,9 +13,9 @@ interface BillsTableProps {
   activeBills: BillViewModel[];
   selectedMonth: string;
   onToggleStatus: (bill: BillViewModel, skipWalletMutation?: boolean) => void;
-  onAddBill: (bill: { name: string; amount: number; dueDay: string; type: BillType; startMonth: string; endMonth: string; wallet?: string }) => Bill;
+  onAddBill: (bill: { name: string; amount: number; dueDay: string; type: BillType; startMonth: string; endMonth: string; wallet?: string }) => Bill | null;
   onDeleteBill: (id: string) => void;
-  onSaveEdit: (category: "bills", scope?: "monthOnly" | "default") => void;
+  onSaveEdit: (category: "bills", scope?: "monthOnly" | "default") => boolean;
   onResetMonthOverride: (billId: string) => void;
   editingId: string | null;
   setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
@@ -119,6 +119,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
     if (!name || !Number.isFinite(amount) || amount <= 0) return;
 
     const createdBill = onAddBill({ name, amount, dueDay: newBill.dueDay, type: newBill.type, startMonth: newBill.startMonth, endMonth: newBill.endMonth, wallet: newBill.wallet });
+    if (!createdBill) return;
     setNewBill({ name: "", amount: "", dueDay: "1", type: "Bill", startMonth: selectedMonth, endMonth: selectedMonth, wallet: defaultWallet });
     setIsAdding(false);
 
@@ -166,7 +167,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
               <span className={`px-2 py-0.5 rounded font-semibold tracking-wide ${formatDaysRemaining(bill.daysLeft).tone === "urgent" ? "chip-rose animate-pulse" : formatDaysRemaining(bill.daysLeft).tone === "overdue" ? "chip-rose" : formatDaysRemaining(bill.daysLeft).tone === "warning" ? "chip-amber" : "chip-neutral"}`}>{formatDaysRemaining(bill.daysLeft).text}</span>
               )}
             </div>
-            {bill.type === "Loan / Installment" && <div className="mt-1"><LoanProgressBadge startMonth={bill.startMonth} endMonth={bill.endMonth} targetMonthForDue={bill.targetMonthForDue} isPaid={bill.paid} monthlyAmount={bill.baseAmount} totalPaid={bill.totalLoanPaid} /></div>}
+            {bill.type === "Loan / Installment" && <div className="mt-1"><LoanProgressBadge startMonth={bill.startMonth} endMonth={bill.endMonth} targetMonthForDue={bill.targetMonthForDue} isPaid={bill.paid} monthlyAmount={bill.baseAmount} totalPaid={bill.totalLoanPaid} paidInstallments={bill.paidLoanInstallments} /></div>}
           </div>
           <button onClick={() => handleStartEdit(bill)} className="px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 hover:bg-fill-strong border border-strong/40 rounded-md transition flex items-center gap-1 text-[10px] shrink-0 mt-1">
             <Edit2 size={9} /><span>Edit</span>
@@ -204,7 +205,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
               <span className={`px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide ${formatDaysRemaining(bill.daysLeft).tone === "urgent" ? "chip-rose animate-pulse" : formatDaysRemaining(bill.daysLeft).tone === "overdue" ? "chip-rose" : formatDaysRemaining(bill.daysLeft).tone === "warning" ? "chip-amber" : "chip-neutral"}`}>{formatDaysRemaining(bill.daysLeft).text}</span>
             )}
           </div>
-          {bill.type === "Loan / Installment" && <div className="mt-1"><LoanProgressBadge startMonth={bill.startMonth} endMonth={bill.endMonth} targetMonthForDue={bill.targetMonthForDue} isPaid={bill.paid} monthlyAmount={bill.baseAmount} totalPaid={bill.totalLoanPaid} /></div>}
+          {bill.type === "Loan / Installment" && <div className="mt-1"><LoanProgressBadge startMonth={bill.startMonth} endMonth={bill.endMonth} targetMonthForDue={bill.targetMonthForDue} isPaid={bill.paid} monthlyAmount={bill.baseAmount} totalPaid={bill.totalLoanPaid} paidInstallments={bill.paidLoanInstallments} /></div>}
         </div>
       </td>
       <td className="py-2.5 px-2 align-top text-center whitespace-nowrap pt-2">
@@ -386,7 +387,14 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
               <div className="flex items-center gap-2 pt-4 border-t border-inverse/[0.04]">
                 <button onClick={() => { onDeleteBill(editingId); handleCancelEdit(); }} className="p-3.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl transition flex items-center justify-center shadow-sm"><Trash2 size={16} /></button>
                 {activeBills.find(b => b.id === editingId)?.isOverridden && <button onClick={() => { onResetMonthOverride(editingId); handleCancelEdit(); }} className="px-4 py-3.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-semibold rounded-xl text-xs flex items-center justify-center transition shadow-sm"><RotateCcw size={14} className="mr-1.5" /> Reset</button>}
-                <button onClick={() => { onSaveEdit("bills", editScope); handleCancelEdit(); }} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 transition active:scale-[0.98]"><Save size={16} /> Save Changes</button>
+                <button
+                  onClick={() => {
+                    onSaveEdit("bills", editScope);
+                  }}
+                  className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 transition active:scale-[0.98]"
+                >
+                  <Save size={16} /> Save Changes
+                </button>
               </div>
             </div>
           </div>

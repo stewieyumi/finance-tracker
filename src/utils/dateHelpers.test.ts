@@ -5,7 +5,8 @@ import {
   getAdjacentMonth,
   getMonthRange,
   getDaysUntil,
-  getMonthKey
+  getMonthKey,
+  isValidMonthRange
 } from './dateHelpers';
 
 describe('Date Helpers & Month Math', () => {
@@ -60,5 +61,33 @@ describe('Date Helpers & Month Math', () => {
   it('safely clamps day overflow for short months like February', () => {
     const days = getDaysUntil('31', 'February 2027');
     expect(days).not.toBe(999);
+  });
+
+  it('accepts a loan range when start and end months are valid', () => {
+    expect(
+      isValidMonthRange('August 2026', 'October 2026')
+    ).toBe(true);
+  });
+
+  it('accepts a loan range when start and end are the same month', () => {
+    expect(
+      isValidMonthRange('September 2026', 'September 2026')
+    ).toBe(true);
+  });
+
+  it('rejects a loan range when the start month is after the end month', () => {
+    expect(
+      isValidMonthRange('October 2026', 'August 2026')
+    ).toBe(false);
+  });
+
+  it('rejects an incomplete loan month range', () => {
+    expect(
+      isValidMonthRange('', 'October 2026')
+    ).toBe(false);
+
+    expect(
+      isValidMonthRange('August 2026', '')
+    ).toBe(false);
   });
 });

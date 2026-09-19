@@ -7,6 +7,7 @@ interface LoanProgressBadgeProps {
   isPaid: boolean;
   monthlyAmount: number;
   totalPaid?: number;
+  paidInstallments?: number;
 }
 
 const MONTH_NAMES = [
@@ -30,7 +31,8 @@ export const LoanProgressBadge: React.FC<LoanProgressBadgeProps> = ({
   targetMonthForDue,
   isPaid,
   monthlyAmount,
-  totalPaid
+  totalPaid,
+  paidInstallments
 }) => {
   const startNum = monthToNumber(startMonth);
   const endNum = monthToNumber(endMonth);
@@ -41,17 +43,34 @@ export const LoanProgressBadge: React.FC<LoanProgressBadgeProps> = ({
   }
 
   const totalMonths = endNum - startNum + 1;
-  let calculatedElapsed = targetNum - startNum;
-  if (isPaid) {
-    calculatedElapsed += 1;
-  }
-  const elapsedMonths = Math.min(Math.max(calculatedElapsed, 0), totalMonths);
+
+  // Loan progress should reflect actual recorded payments rather than
+  // calendar position. This matters when an installment is skipped and
+  // a later installment is paid.
+  const fallbackElapsed =
+    Math.min(
+      Math.max(
+        targetNum - startNum + (isPaid ? 1 : 0),
+        0
+      ),
+      totalMonths
+    );
+
+  const elapsedMonths =
+    paidInstallments !== undefined
+      ? Math.min(Math.max(paidInstallments, 0), totalMonths)
+      : fallbackElapsed;
+
   const remainingMonths = Math.max(0, totalMonths - elapsedMonths);
   const totalPrincipal = totalMonths * (parseFloat(String(monthlyAmount)) || 0);
-  const remainingBalance = totalPaid !== undefined 
+  const remainingBalance = totalPaid !== undefined
     ? Math.max(0, totalPrincipal - totalPaid)
     : remainingMonths * (parseFloat(String(monthlyAmount)) || 0);
-  const progressPercent = Math.min(100, Math.round((elapsedMonths / totalMonths) * 100));
+
+  const progressPercent = Math.min(
+    100,
+    Math.round((elapsedMonths / totalMonths) * 100)
+  );
 
   const isCompleted = remainingMonths === 0;
 

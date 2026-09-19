@@ -3,6 +3,7 @@ import {
   EditFormData,
   UnifiedFinanceData
 } from "../types/finance";
+import { isValidMonthRange } from "../utils/dateHelpers";
 
 interface UseBillSaveActionsParams {
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
@@ -23,14 +24,26 @@ export function useBillSaveActions({
 }: UseBillSaveActionsParams) {
   const saveBillEdit = (
     scope: "monthOnly" | "default" = "monthOnly"
-  ) => {
-    if (!editingId) return;
+  ): boolean => {
+    if (!editingId) return false;
 
     const inputAmount = parseFloat(String(editForm.amount ?? ""));
 
     if (!Number.isFinite(inputAmount) || inputAmount <= 0) {
       showToast("Amount must be greater than 0");
-      return;
+      return false;
+    }
+
+    if (
+      scope === "default" &&
+      editForm.type === "Loan / Installment" &&
+      !isValidMonthRange(
+        String(editForm.startMonth || ""),
+        String(editForm.endMonth || "")
+      )
+    ) {
+      showToast("Loan start month must be on or before the end month");
+      return false;
     }
 
     if (scope === "monthOnly") {
@@ -88,7 +101,8 @@ export function useBillSaveActions({
       showToast("Default saved in Library");
     }
 
-    setEditingId(null);
+     setEditingId(null);
+    return true;
   };
 
   return {
