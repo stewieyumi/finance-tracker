@@ -103,6 +103,70 @@ export function computeBaselineScale(
   );
 }
 
+/**
+ * Rounds each baseline allocation independently, then clamps the later
+ * allocations to the actual room left after bills and earlier baselines.
+ *
+ * This keeps the three baseline buckets proportional to their configured
+ * targets without allowing cent-level rounding to push the payday total
+ * above the configured payout.
+ */
+export function computeScaledBaselineAllocations(
+  totalBillObligations: number,
+  perPayoutSalary: number,
+  baseLivingAllowance: number,
+  baseSavingsTarget: number,
+  defaultTransit: number
+): { living: number; savings: number; transit: number } {
+  const safeBills = Math.max(0, Number(totalBillObligations) || 0);
+  const safeSalary = Math.max(0, Number(perPayoutSalary) || 0);
+  const safeLiving = Math.max(0, Number(baseLivingAllowance) || 0);
+  const safeSavings = Math.max(0, Number(baseSavingsTarget) || 0);
+  const safeTransit = Math.max(0, Number(defaultTransit) || 0);
+  const totalBaselineTarget = safeLiving + safeSavings + safeTransit;
+  const scale = computeBaselineScale(
+    safeBills,
+    safeSalary,
+    totalBaselineTarget
+  );
+
+  const available = Math.round(
+    Math.max(0, safeSalary - safeBills) * 100
+  ) / 100;
+
+  const living = Math.min(
+    Math.round(safeLiving * scale * 100) / 100,
+    available
+  );
+
+  const savings = Math.min(
+    Math.round(safeSavings * scale * 100) / 100,
+    Math.max(0, Math.round((available - living) * 100) / 100)
+  );
+
+  const transit = Math.min(
+    Math.round(safeTransit * scale * 100) / 100,
+    Math.max(0, Math.round((available - living - savings) * 100) / 100)
+  );
+
+  return { living, savings, transit };
+}
+
+/**
+ * Treat both legacy string execution records and current execution objects
+ * as the same payday execution for idempotency checks.
+ */
+export function hasPaydayExecutionOnDate(
+  executions: Array<string | { date?: string }> | undefined,
+  date: string
+): boolean {
+  return !!executions?.some(execution =>
+    typeof execution === "string"
+      ? execution === date
+      : execution?.date === date
+  );
+}
+
 export function getReceivableStatus(
   amount: number,
   amountReceived: number,
