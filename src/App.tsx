@@ -897,7 +897,7 @@ const copySummaryToClipboard = async () => {
                       </div>
                       <div className="flex flex-col items-end shrink-0 ml-3">
                         <span className={`privacy-blur text-[13px] font-bold font-mono ${tx.amount > 0 ? "text-emerald-400" : "text-strong"}`}>
-                          {tx.amount > 0 ? "+" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          {tx.amount > 0 ? "+" : tx.amount < 0 ? "−" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                         </span>
                         <span className="text-[10px] text-faint font-medium mt-1 whitespace-nowrap">{formatDateTime(tx.date)}</span>
                       </div>
