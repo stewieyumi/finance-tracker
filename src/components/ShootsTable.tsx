@@ -154,13 +154,20 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
           <div key={shoot.id} className={`p-3 rounded-xl border transition-all ${shoot.completed ? "bg-fill-subtle/40 border-strong/60 opacity-45" : "bg-surface border-strong/80 shadow-sm"}`}>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <button onClick={() => onToggleCompletion(shoot.id)} className="shrink-0 focus:outline-none">
-                    {shoot.completed ? <span className="w-4 h-4 rounded-full chip-emerald flex items-center justify-center"><Check size={9} className="stroke-[3]" /></span> : <span className="w-4 h-4 rounded-full bg-fill/60 border border-strong/60 text-faint flex items-center justify-center"><Circle size={6} /></span>}
-                  </button>
-                  <span className={`privacy-blur text-xs font-semibold truncate ${shoot.completed ? "line-through text-faint" : "text-strong"}`}>{shoot.title}</span>
-                </div>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 ${shoot.status === "Confirmed" ? "chip-emerald" : shoot.status === "Pencil" ? "chip-amber" : "chip-neutral"}`}>{shoot.status}</span>
+                <button
+                  type="button"
+                  onClick={() => onToggleCompletion(shoot.id)}
+                  className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-1.5 py-1 -mx-1.5 text-left transition-colors hover:bg-inverse/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 group"
+                  aria-label={shoot.completed ? `Mark ${shoot.title} as active` : `Mark ${shoot.title} as settled`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="shrink-0">
+                      {shoot.completed ? <span className="w-4 h-4 rounded-full chip-emerald flex items-center justify-center"><Check size={9} className="stroke-[3]" /></span> : <span className="w-4 h-4 rounded-full bg-fill/60 border border-strong/60 text-faint flex items-center justify-center"><Circle size={6} /></span>}
+                    </div>
+                    <span className={`privacy-blur text-xs font-semibold truncate ${shoot.completed ? "line-through text-faint" : "text-strong"} group-hover:text-amber-400 transition-colors`}>{shoot.title}</span>
+                  </div>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 ${shoot.status === "Confirmed" ? "chip-emerald" : shoot.status === "Pencil" ? "chip-amber" : "chip-neutral"}`}>{shoot.status}</span>
+                </button>
               </div>
               <div className="flex items-center justify-between pl-6 text-[10px] text-muted">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -202,7 +209,15 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                     {shoot.completed ? <span className="flex items-center justify-center gap-1 w-[72px] text-[10px] font-bold chip-emerald px-2 py-0.5 rounded-lg"><Check size={10} className="stroke-[3]" /> Settled</span> : <span className="flex items-center justify-center gap-1 w-[72px] text-muted text-[10px] font-medium bg-fill/40 px-2 py-0.5 rounded-lg border border-strong/30"><Circle size={6} /> Active</span>}
                   </button>
                 </td>
-                <td className="py-3 px-4 text-primary font-medium"><span className={`privacy-blur ${shoot.completed ? "line-through text-faint" : ""}`}>{shoot.title}</span></td>
+                <td className="py-3 px-4 text-primary font-medium">
+                  <button
+                    type="button"
+                    onClick={() => onToggleCompletion(shoot.id)}
+                    className={`privacy-blur text-left ${shoot.completed ? "line-through text-faint" : "hover:text-amber-400 transition-colors"} focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 rounded`}
+                  >
+                    {shoot.title}
+                  </button>
+                </td>
                 <td className="py-3 px-4 text-center whitespace-nowrap">
                   {shoot.date ? (shoot.date === todayStr ? <span className="inline-flex items-center gap-1 text-rose-400 font-bold text-[10px] bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md shadow-[0_0_10px_rgba(244,63,94,0.1)]"><Calendar size={10} className="text-rose-400" />DUE TODAY</span> : <span className="inline-flex items-center gap-1 text-secondary font-mono text-[11px]"><Calendar size={10} className="text-faint" />{formatShortDate(shoot.date)}</span>) : <span className="text-disabled">—</span>}
                 </td>
