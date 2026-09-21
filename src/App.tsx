@@ -1,4 +1,3 @@
-import { roundMoney } from "./utils/currency";
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { HistoricalLedgerModal } from "./components/HistoricalLedgerModal";
 import { GoogleLogin, googleLogout, useGoogleOneTapLogin } from "@react-oauth/google";
@@ -12,10 +11,8 @@ import {
   getWalletForBill,
   computeBillPerPaydayAmount,
   computeScaledBaselineAllocations,
-  hasPaydayExecutionOnDate,
   getReceivableStatus
 } from "./utils/financeHelpers";
-import { generateId } from "./utils/idHelpers";
 
 import { useCloudSync, getLocalPasscode } from "./hooks/useCloudSync";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -29,6 +26,7 @@ import { useBillEditActions } from "./hooks/useBillEditActions";
 import { useBillSaveActions } from "./hooks/useBillSaveActions";
 import { useReceivableSaveActions } from "./hooks/useReceivableSaveActions";
 import { useShootSaveActions } from "./hooks/useShootSaveActions";
+import { usePaydayActions } from "./hooks/usePaydayActions";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MilestoneProgressBar } from "./components/MilestoneProgressBar";
@@ -459,136 +457,20 @@ const { saveShootEdit } = useShootSaveActions({
 
   const isViewingCurrentMonth = selectedMonth === getMonthKey(new Date());
 
-  const handleExecutePaydaySplit = () => {
-    if (paydaySplitInProgressRef.current) return;
-
-    if (!isViewingCurrentMonth) {
-      showToast(`⚠️ You're viewing ${selectedMonth}. Switch to the current month before distributing.`);
-      return;
-    }
-
-    if (remainingBuffer < 0) {
-      showToast("⚠️ Payday allocation exceeds the configured payout.");
-      return;
-    }
-
-    const now = new Date();
-    const executionKey =
-      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
-    const hasExecutedToday = globalData.paydaySplitExecutions?.some(ex => typeof ex === "string" ? ex === executionKey : ex.date === executionKey);
-    if (hasPaydayExecutionOnDate(globalData.paydaySplitExecutions, executionKey)) {
-      showToast("⚠️ Payday split already executed today.");
-      return;
-    }
-
-    paydaySplitInProgressRef.current = true;
-
-    try {
-      const totalDistribution = Object.values(paydayAllocations).reduce((a, b) => a + b, 0);
-
-      const allocList = Object.entries(paydayAllocations)
-        .filter(([_, amt]) => amt > 0)
-        .map(([key, amt]) => `${globalData?.settings?.walletLabels?.[key] || key}: ₱${amt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
-        .join("\n");
-
-      const confirmed = confirm(
-        `Distribute ₱${totalDistribution.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} into your wallets?
-
-${allocList}`
-      );
-
-      if (!confirmed) return;
-
-      syncedSetGlobalData(prev => {
-        const executions = prev.paydaySplitExecutions || [];
-
-        if (hasPaydayExecutionOnDate(executions, executionKey)) {
-          return prev;
-        }
-
-        const updatedLogs = { ...prev.logs };
-        billPaydayAllocations.forEach(alloc => {
-          const monthLog = updatedLogs[alloc.month] || {};
-          const existingContributions = monthLog.billPaydayContributions || {};
-          updatedLogs[alloc.month] = {
-            ...monthLog,
-            billPaydayContributions: {
-              ...existingContributions,
-              [alloc.id]: (existingContributions[alloc.id] || 0) + alloc.amount
-            }
-          };
-        });
-
-        return {
-          ...prev,
-          wallets: (() => {
-            const newWallets = { ...prev.wallets };
-            Object.entries(paydayAllocations).forEach(([walletKey, amount]) => {
-              newWallets[walletKey] = roundMoney((parseFloat(String(newWallets[walletKey])) || 0) + amount);
-            });
-            return newWallets;
-          })(),
-          logs: updatedLogs,
-          paydaySplitExecutions: [...executions, {
-            id: generateId("pd"),
-            date: executionKey,
-            timestamp: Date.now(),
-            allocations: paydayAllocations,
-            billContributions: billPaydayAllocations
-          }],
-          updatedAt: Date.now()
-        };
-      });
-
-      showToast("✨ Payday split automatically distributed to wallets!");
-    } finally {
-      paydaySplitInProgressRef.current = false;
-    }
-  };
-
-  const handleUndoPaydaySplit = (executionId: string) => {
-    if (!confirm("Reverse this payday distribution? Funds will be subtracted from wallets and bill contributions reset.")) return;
-
-    syncedSetGlobalData(prev => {
-      const executions = prev.paydaySplitExecutions || [];
-      const target = executions.find(ex => typeof ex !== "string" && ex.id === executionId) as PaydayExecution | undefined;
-
-      if (!target) {
-        showToast("Cannot undo a legacy execution.");
-        return prev;
-      }
-
-      const updatedLogs = { ...prev.logs };
-      target.billContributions.forEach(alloc => {
-         const monthLog = updatedLogs[alloc.month] || {};
-         const existingContributions = monthLog.billPaydayContributions || {};
-         updatedLogs[alloc.month] = {
-           ...monthLog,
-           billPaydayContributions: {
-             ...existingContributions,
-             [alloc.id]: Math.max(0, (existingContributions[alloc.id] || 0) - alloc.amount)
-           }
-         };
-      });
-
-      const nextWallets = { ...prev.wallets };
-      Object.entries(target.allocations).forEach(([walletKey, amount]) => {
-        if (nextWallets[walletKey] !== undefined) {
-           nextWallets[walletKey] = roundMoney(nextWallets[walletKey] - amount);
-        }
-      });
-
-      return {
-        ...prev,
-        wallets: nextWallets,
-        logs: updatedLogs,
-        paydaySplitExecutions: executions.filter(ex => typeof ex === "string" || ex.id !== executionId),
-        updatedAt: Date.now()
-      };
-    });
-    showToast("Payday distribution reversed.");
-  };
+  const {
+   handleExecutePaydaySplit,
+   handleUndoPaydaySplit,
+ } = usePaydayActions({
+   globalData,
+   setGlobalData: syncedSetGlobalData,
+   paydayAllocations,
+   billPaydayAllocations,
+   remainingBuffer,
+   isViewingCurrentMonth,
+   selectedMonth,
+   showToast,
+   paydaySplitInProgressRef,
+ });
 
 const copySummaryToClipboard = async () => {
   const text = buildFinancialSummary({
