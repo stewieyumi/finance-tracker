@@ -135,8 +135,8 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                     <span className={`font-mono text-xs font-bold shrink-0 ${rec.collected ? "text-emerald-400" : "text-strong"}`}>₱{rec.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                     {!rec.collected && isBiMonthly && <div className="text-[9px] text-faint font-mono">(₱{(rec.amount / 2).toLocaleString()}/payout)</div>}
                     {!rec.collected && received > 0 && <div className="text-[9px] text-cyan-400 font-mono">+₱{received.toLocaleString("en-US")} rec'd</div>}
-                  </div>
-                </button>
+                    </div>
+                  </button>
                 <div className="flex flex-col gap-2 pl-6 text-[10px] text-muted sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className={`px-1.5 py-0.5 rounded font-medium ${rec.category === "Salary" ? "chip-cyan" : rec.category === "Shoot" ? "chip-amber" : rec.category === "Edit" ? "chip-purple" : "chip-neutral"}`}>{rec.category || "Other"}</span>
