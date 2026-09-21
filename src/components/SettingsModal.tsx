@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Settings, Briefcase, Target, Save, Cloud, Database, ArrowRightLeft, Download, Upload } from "lucide-react";
 import { UnifiedFinanceData } from "../types/finance";
-import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
 import { migrateLegacyBills } from "../utils/financeMigrations";
+import {
+  createSettingsForm,
+  applySettingsForm,
+} from "../utils/settingsForm";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -46,46 +49,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
   useEffect(() => {
     if (isOpen) setActiveTab(initialTab);
   }, [isOpen, initialTab]);
-  const [form, setForm] = useState({
-    goalName: "", targetFund: 0, paydayDays: [15, 30] as number[], milestoneWallet: "bpi", theme: "dark" as "dark" | "light" | "system",
-    baseLivingAllowance: 2500, livingWallet: "gcash",
-    baseSavingsTarget: 1000, savingsWallet: "bpi",
-    defaultTransitAllocation: 1500, transitWallet: "gotyme",
-    defaultWallet: "main",
-    expenseWallets: {} as Record<string, string>,
-    inflowsLabel: "RECEIVABLES & INFLOWS", gigsLabel: "UPCOMING SHOOTS & GIGS",
-    inflowCategories: PRESETS.videographer.inflowCats, gigCategories: PRESETS.videographer.gigCats,
-    walletLabels: { maribank: "MariBank", gcash: "GCash", maya: "Maya", gotyme: "GoTyme", bpi: "BPI", cash: "Cash On-Hand" } as Record<string, string>
-  });
+  const [form, setForm] = useState(() =>
+    createSettingsForm(globalData.settings, globalData.wallets, {
+      inflowCategories: PRESETS.videographer.inflowCats,
+      gigCategories: PRESETS.videographer.gigCats,
+    })
+  );
 
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen && globalData.settings) {
-      setForm({
-        goalName: globalData.settings.goalName || "",
-        targetFund: globalData.settings.targetFund || 0, paydayDays: globalData.settings.paydayDays || [15, 30], theme: globalData.settings.theme || "dark",
-        milestoneWallet: globalData.settings.milestoneWallet || "bpi",
-        baseLivingAllowance: globalData.settings.baseLivingAllowance ?? 2500,
-        livingWallet: globalData.settings.livingWallet || "gcash",
-        baseSavingsTarget: globalData.settings.baseSavingsTarget ?? 1000,
-        savingsWallet: globalData.settings.savingsWallet || "bpi",
-        defaultTransitAllocation: globalData.settings.defaultTransitAllocation ?? 1500,
-        transitWallet: globalData.settings.transitWallet || "gotyme",
-        defaultWallet: globalData.settings.defaultWallet || "main",
-        expenseWallets: Object.fromEntries(
-          EXPENSE_CATEGORIES.map(category => [
-            category,
-            globalData.settings?.expenseWallets?.[category] ||
-              getDefaultExpenseWalletId(category, globalData.settings, globalData.wallets)
-          ])
-        ),
-        inflowsLabel: globalData.settings.inflowsLabel || "RECEIVABLES & INFLOWS",
-        gigsLabel: globalData.settings.gigsLabel || "UPCOMING SHOOTS & GIGS",
-        inflowCategories: globalData.settings.inflowCategories?.length ? globalData.settings.inflowCategories : PRESETS.videographer.inflowCats,
-        gigCategories: globalData.settings.gigCategories?.length ? globalData.settings.gigCategories : PRESETS.videographer.gigCats,
-        walletLabels: globalData.settings.walletLabels || { maribank: "MariBank", gcash: "GCash", maya: "Maya", gotyme: "GoTyme", bpi: "BPI", cash: "Cash On-Hand" }
-      });
+      setForm(
+        createSettingsForm(globalData.settings, globalData.wallets, {
+          inflowCategories: PRESETS.videographer.inflowCats,
+          gigCategories: PRESETS.videographer.gigCats,
+        })
+      );
     }
   }, [isOpen, globalData.settings]);
 
@@ -105,17 +85,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
   const handleSave = () => {
     setGlobalData(prev => ({
       ...prev,
-      settings: {
-        ...(prev.settings || {}),
-        targetFund: Number(form.targetFund),
-        paydayDays: form.paydayDays, goalName: form.goalName, milestoneWallet: form.milestoneWallet, theme: form.theme,
-        baseLivingAllowance: Number(form.baseLivingAllowance), livingWallet: form.livingWallet,
-        baseSavingsTarget: Number(form.baseSavingsTarget), savingsWallet: form.savingsWallet,
-        defaultTransitAllocation: Number(form.defaultTransitAllocation), transitWallet: form.transitWallet,
-        defaultWallet: form.defaultWallet,
-        expenseWallets: form.expenseWallets,
-        inflowsLabel: form.inflowsLabel, gigsLabel: form.gigsLabel, inflowCategories: form.inflowCategories, gigCategories: form.gigCategories, walletLabels: form.walletLabels
-      },
+      settings: applySettingsForm(prev.settings, form),
       updatedAt: Date.now()
     }));
     onClose();
