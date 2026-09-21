@@ -7,6 +7,7 @@ import { BillDesktopRow } from "./BillDesktopRow";
 import { BillEditModal } from "./BillEditModal";
 import { BillAddModal } from "./BillAddModal";
 import { BillPriorPaymentModal } from "./BillPriorPaymentModal";
+import { BillsList } from "./BillsList";
 import { Bill, BillViewModel, BillType, EditFormData, CustomWallet } from "../types/finance";
 import { formatDaysRemaining } from "../utils/dateHelpers";
 
@@ -147,26 +148,6 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
     else setEditForm(prev => ({ ...prev, amount: typeof prev.monthAmount === "number" ? prev.monthAmount : parseFloat(String(prev.monthAmount || 0)) }));
   };
 
- const renderMobileRow = (bill: BillViewModel) => (
-   <BillMobileRow
-     bill={bill}
-     customWallets={customWallets}
-     highlightOverdue={highlightOverdue}
-     onToggleStatus={onToggleStatus}
-     onEdit={handleStartEdit}
-   />
- );
-
-  const renderDesktopRow = (bill: BillViewModel) => (
-    <BillDesktopRow
-      bill={bill}
-      selectedMonth={selectedMonth}
-      customWallets={customWallets}
-      highlightOverdue={highlightOverdue}
-      onToggleStatus={onToggleStatus}
-      onEdit={handleStartEdit}
-    />
-  );
 
   return (
     <div className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-xl">
@@ -216,59 +197,18 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
         </div>
       </div>
 
-      {/* MOBILE LIST */}
-      <div className="block md:hidden space-y-3">
-        {filteredBills.length === 0 ? (
-          <div className="py-6 text-center text-faint text-xs italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} commitments found{searchQuery ? ` matching "${searchQuery}"` : ""}.</div>
-        ) : (
-          <>
-            {firstHalfBills.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-faint px-1">Days 1–15</div>
-                {firstHalfBills.map(bill => renderMobileRow(bill))}
-              </div>
-            )}
-            {secondHalfBills.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-faint px-1">Days 16–31</div>
-                {secondHalfBills.map(bill => renderMobileRow(bill))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* DESKTOP LIST */}
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-left text-xs table-fixed">
-          <colgroup><col style={{ width: "14%" }} /><col style={{ width: "24%" }} /><col style={{ width: "18%" }} /><col style={{ width: "32%" }} /><col style={{ width: "12%" }} /></colgroup>
-          <thead>
-            <tr className="text-faint border-b border-inverse/[0.05] text-[11px]">
-              <th className="py-2.5 px-2 font-semibold">Status</th><th className="py-2.5 px-2 font-semibold">Commitment</th><th className="py-2.5 px-2 font-semibold text-right">Amount</th><th className="py-2.5 px-2 font-semibold">Type & Due Date</th><th className="py-2.5 px-2 font-semibold text-center">Actions</th>
-            </tr>
-          </thead>
-          {filteredBills.length === 0 ? (
-            <tbody>
-              <tr><td colSpan={5} className="py-6 text-center text-faint italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} commitments found{searchQuery ? ` matching "${searchQuery}"` : ""}.</td></tr>
-            </tbody>
-          ) : (
-            <>
-              {firstHalfBills.length > 0 && (
-                <tbody className="divide-y divide-white/[0.03]">
-                  <tr><td colSpan={5} className="pt-3 pb-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-faint">Days 1–15</td></tr>
-                  {firstHalfBills.map(bill => renderDesktopRow(bill))}
-                </tbody>
-              )}
-              {secondHalfBills.length > 0 && (
-                <tbody className="divide-y divide-white/[0.03]">
-                  <tr><td colSpan={5} className="pt-3 pb-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-faint">Days 16–31</td></tr>
-                  {secondHalfBills.map(bill => renderDesktopRow(bill))}
-                </tbody>
-              )}
-            </>
-          )}
-        </table>
-      </div>
+     <BillsList
+       filteredBills={filteredBills}
+       firstHalfBills={firstHalfBills}
+       secondHalfBills={secondHalfBills}
+       selectedFilter={selectedFilter}
+       searchQuery={searchQuery}
+       selectedMonth={selectedMonth}
+       customWallets={customWallets}
+       highlightOverdue={highlightOverdue}
+       onToggleStatus={onToggleStatus}
+       onEdit={handleStartEdit}
+     />
 
       <button onClick={() => setIsAdding(true)} className="w-full mt-3.5 py-3.5 border border-dashed border-inverse/[0.15] hover:border-blue-500/50 hover:bg-blue-500/10 text-muted hover:text-blue-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">
         <Plus size={15} /> Add New Commitment
