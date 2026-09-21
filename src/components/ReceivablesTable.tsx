@@ -119,17 +119,24 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
             <div key={rec.id} className={`p-3 rounded-xl border transition-all ${rec.collected ? "bg-fill-subtle/40 border-strong/60 opacity-50" : "bg-surface-sunken border-strong/80 shadow-sm"}`}>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <button onClick={() => onToggleStatus(rec)} className="shrink-0 focus:outline-none">
-                      {rec.collected ? <span className="w-4 h-4 rounded-full chip-emerald flex items-center justify-center"><Check size={9} className="stroke-[3]" /></span> : <span className="w-4 h-4 rounded-full chip-amber flex items-center justify-center"><Hourglass size={8} /></span>}
-                    </button>
-                    <span className="privacy-blur text-xs font-semibold text-strong truncate">{rec.name}</span>
-                  </div>
-                  <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => onToggleStatus(rec)}
+                    className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-1.5 py-1 -mx-1.5 text-left transition-colors hover:bg-inverse/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 group"
+                    aria-label={rec.collected ? `Undo received payment for ${rec.name}` : `Mark ${rec.name} as received`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="shrink-0">
+                        {rec.collected ? <span className="w-4 h-4 rounded-full chip-emerald flex items-center justify-center"><Check size={9} className="stroke-[3]" /></span> : <span className="w-4 h-4 rounded-full chip-amber flex items-center justify-center"><Hourglass size={8} /></span>}
+                      </div>
+                      <span className="privacy-blur text-xs font-semibold text-strong truncate group-hover:text-emerald-400 transition-colors">{rec.name}</span>
+                    </div>
+                    <div className="text-right">
                     <span className={`font-mono text-xs font-bold shrink-0 ${rec.collected ? "text-emerald-400" : "text-strong"}`}>₱{rec.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                     {!rec.collected && isBiMonthly && <div className="text-[9px] text-faint font-mono">(₱{(rec.amount / 2).toLocaleString()}/payout)</div>}
                     {!rec.collected && received > 0 && <div className="text-[9px] text-cyan-400 font-mono">+₱{received.toLocaleString("en-US")} rec'd</div>}
-                  </div>
+                    </div>
+                  </button>
                 </div>
                 <div className="flex flex-col gap-2 pl-6 text-[10px] text-muted sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -189,7 +196,15 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                       {rec.collected ? <span className="flex items-center justify-center gap-1 w-[82px] text-[10px] font-semibold chip-emerald px-2 py-0.5 rounded-lg"><Check size={10} className="stroke-[3]" /> Received</span> : isPartial ? <span className="flex items-center justify-center gap-1 w-[82px] text-[10px] font-semibold chip-cyan px-2 py-0.5 rounded-lg"><CreditCard size={9} /> Partial</span> : <span className="flex items-center justify-center gap-1 w-[82px] text-[10px] font-medium chip-amber px-2 py-0.5 rounded-lg"><Hourglass size={8} /> Pending</span>}
                     </button>
                   </td>
-                  <td className="py-3 px-4 text-primary font-medium"><span className="privacy-blur">{rec.name}</span></td>
+                  <td className="py-3 px-4 text-primary font-medium">
+                    <button
+                      type="button"
+                      onClick={() => onToggleStatus(rec)}
+                      className="privacy-blur text-left hover:text-emerald-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 rounded"
+                    >
+                      {rec.name}
+                    </button>
+                  </td>
                   <td className={`py-2.5 px-3 text-right font-mono font-semibold whitespace-nowrap ${rec.collected ? "text-emerald-400" : "text-strong"}`}>
                     <div>
                       <div>₱{rec.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</div>
