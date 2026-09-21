@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Settings, Briefcase, Target, Save, Cloud, Database, ArrowRightLeft, Download, Upload } from "lucide-react";
 import { UnifiedFinanceData } from "../types/finance";
-import { getDefaultExpenseWalletId, getWalletForBill } from "../utils/financeHelpers";
+import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
+import { migrateLegacyBills } from "../utils/financeMigrations";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -123,11 +124,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
   const handleMigrateWallets = () => {
     if (confirm("Permanently lock all old bills to their automatically assigned wallets (using the old routing rules)?")) {
       setGlobalData(prev => ({
-        ...prev,
-        library: {
-          ...prev.library,
-          bills: prev.library.bills.map(b => ({ ...b, wallet: b.wallet || getWalletForBill(b.name) }))
-        },
+        ...migrateLegacyBills(prev),
         updatedAt: Date.now()
       }));
       alert("Migration complete! All old bills are securely linked.");

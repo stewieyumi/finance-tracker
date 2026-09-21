@@ -13,6 +13,7 @@ import {
   computeScaledBaselineAllocations,
   getReceivableStatus
 } from "./utils/financeHelpers";
+import { migrateBaseWallets, migrateLegacyBills } from "./utils/financeMigrations";
 
 import { useCloudSync, getLocalPasscode } from "./hooks/useCloudSync";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -267,22 +268,10 @@ const {
   // ⚡ SILENT AUTO-MIGRATION FOR BASE WALLETS
   React.useEffect(() => {
     if (!globalData.settings?.hasMigratedBaseWallets) {
-      syncedSetGlobalData(prev => {
-        const oldLabels = prev.settings?.walletLabels || {};
-        const existingCustom = prev.settings?.customWallets || [];
-        const baseIds = ['maribank', 'maya', 'gcash', 'gotyme', 'bpi', 'cash'];
-        const defaultColors: Record<string, string> = { maribank: 'text-amber-400', maya: 'text-emerald-400', gcash: 'text-blue-400', gotyme: 'text-cyan-400', bpi: 'text-rose-400', cash: 'text-secondary' };
-        const defaultLabels: Record<string, string> = { maribank: 'MariBank', maya: 'Maya', gcash: 'GCash', gotyme: 'GoTyme', bpi: 'BPI', cash: 'Cash On-Hand' };
-
-        const newCustomWallets = [...existingCustom];
-        baseIds.forEach(id => {
-          if (!newCustomWallets.find(w => w.id === id)) {
-            newCustomWallets.push({ id, label: oldLabels[id] || defaultLabels[id], color: defaultColors[id] });
-          }
-        });
-
-        return { ...prev, settings: { ...prev.settings, customWallets: newCustomWallets, hasMigratedBaseWallets: true }, updatedAt: Date.now() };
-      });
+      syncedSetGlobalData(prev => ({
+        ...migrateBaseWallets(prev),
+        updatedAt: Date.now()
+      }));
       setTimeout(() => showToast("✨ Migrated base wallets to fully customizable accounts"), 1000);
     }
   }, [globalData.settings?.hasMigratedBaseWallets]);
@@ -292,14 +281,7 @@ const {
     const needsMigration = globalData.library?.bills?.some(b => !b.wallet);
     if (needsMigration) {
       syncedSetGlobalData(prev => ({
-        ...prev,
-        library: {
-          ...prev.library,
-          bills: prev.library.bills.map(b => ({
-            ...b,
-            wallet: b.wallet || getWalletForBill(b.name)
-          }))
-        },
+        ...migrateLegacyBills(prev),
         updatedAt: Date.now()
       }));
       setTimeout(() => showToast("✨ Auto-migrated legacy bills to new wallet system"), 1000);
