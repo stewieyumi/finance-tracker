@@ -66,12 +66,16 @@ export function useBillActions({
     return newBill;
   };
 
-  const toggleBillStatus = (bill: BillViewModel, skipWalletMutation: boolean = false) => {
+  const toggleBillStatus = (
+    bill: BillViewModel,
+    skipWalletMutation: boolean = false,
+    forcedPaid?: boolean
+  ) => {
     const targetMonth = bill.targetMonthForDue || selectedMonth;
     const walletKey = bill.wallet || getWalletForBill(bill.name);
 
     const isCurrentlyPaid = bill.paid;
-    const willBePaid = !isCurrentlyPaid;
+    const willBePaid = forcedPaid ?? !isCurrentlyPaid;
 
     if (
       willBePaid &&
@@ -133,7 +137,7 @@ export function useBillActions({
           : `Paid ₱${bill.amount.toLocaleString()}`,
         {
           label: "Undo",
-          onClick: () => toggleBillStatus(bill, skipWalletMutation)
+          onClick: () => toggleBillStatus(bill, skipWalletMutation, false)
         }
       );
     } else {

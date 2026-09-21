@@ -13,6 +13,7 @@ interface VercelApiRequest {
   method?: string;
   headers: Record<string, string | string[] | undefined>;
   body?: any;
+  url?: string;
 }
 
 interface VercelApiResponse {
