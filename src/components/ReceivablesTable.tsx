@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Check, Hourglass, Edit2, Save, Trash2, Plus, ArrowDownLeft, Filter, ChevronDown, Calendar, X, CreditCard } from "lucide-react";
 import { Receivable, ReceivableViewModel, ReceivableCategory, ReceivableFrequency, EditFormData, CustomWallet } from "../types/finance";
 import { formatOrdinal, formatShortDate } from "../utils/displayHelpers";
+import { filterReceivables } from "../utils/receivablesHelpers";
 
 interface ReceivablesTableProps {
   inflowsLabel?: string;
@@ -45,10 +46,10 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredReceivables = useMemo(() => {
-    if (selectedFilter === "All") return activeReceivables;
-    return activeReceivables.filter(r => r.category === selectedFilter);
-  }, [activeReceivables, selectedFilter]);
+  const filteredReceivables = useMemo(
+    () => filterReceivables(activeReceivables, selectedFilter),
+    [activeReceivables, selectedFilter]
+  );
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
