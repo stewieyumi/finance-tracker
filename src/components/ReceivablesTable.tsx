@@ -3,6 +3,7 @@ import { Check, Hourglass, Edit2, Save, Trash2, Plus, ArrowDownLeft, Filter, Che
 import { Receivable, ReceivableViewModel, ReceivableCategory, ReceivableFrequency, EditFormData, CustomWallet } from "../types/finance";
 import { formatOrdinal, formatShortDate } from "../utils/displayHelpers";
 import { filterReceivables } from "../utils/receivablesHelpers";
+import { ReceivablePaymentActions } from "./ReceivablePaymentActions";
 
 interface ReceivablesTableProps {
   inflowsLabel?: string;
@@ -132,13 +133,14 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                     {rec.frequency === "By Date" && rec.date && <span>{formatShortDate(rec.date)}</span>}
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    {!rec.collected && (
-                      <>
-                        {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} className="whitespace-nowrap shrink-0 px-1.5 py-0.5 chip-cyan rounded text-[9px] font-medium">+1/2</button>}
-                        <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} className="whitespace-nowrap shrink-0 px-1.5 py-0.5 chip-emerald rounded text-[9px] font-medium">+₱</button>
-                      </>
-                    )}
-                    <button onClick={() => handleStartEdit(rec)} className="whitespace-nowrap shrink-0 px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 rounded text-[10px]">Edit</button>
+                    <ReceivablePaymentActions
+                      rec={rec}
+                      isBiMonthly={isBiMonthly}
+                      onQuickAddHalf={handleQuickAddHalf}
+                      onTogglePaymentPopover={(id) => setPayPopoverId(payPopoverId === id ? null : id)}
+                      onEdit={handleStartEdit}
+                      variant="mobile"
+                    />
                   </div>
                 </div>
                 {payPopoverId === rec.id && (
@@ -212,13 +214,14 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                   </td>
                   <td className="py-3 px-4 text-right relative min-w-[150px]">
                     <div className="flex flex-nowrap items-center gap-1 justify-end whitespace-nowrap">
-                      {!rec.collected && (
-                        <>
-                          {isBiMonthly && <button onClick={() => handleQuickAddHalf(rec)} title="Add 1st/2nd half payment" className="whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[9px] font-mono chip-cyan rounded transition">+1/2</button>}
-                          <button onClick={() => setPayPopoverId(payPopoverId === rec.id ? null : rec.id)} title="Add custom payment" className="whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[10px] font-mono chip-emerald rounded transition">+₱</button>
-                        </>
-                      )}
-                      <button onClick={() => handleStartEdit(rec)} className="whitespace-nowrap shrink-0 px-2 py-1 text-muted hover:text-amber-300 hover:bg-inverse/[0.05] rounded-md text-[11px] flex items-center transition"><Edit2 size={10} className="mr-1" /> Edit</button>
+                      <ReceivablePaymentActions
+                        rec={rec}
+                        isBiMonthly={isBiMonthly}
+                        onQuickAddHalf={handleQuickAddHalf}
+                        onTogglePaymentPopover={(id) => setPayPopoverId(payPopoverId === id ? null : id)}
+                        onEdit={handleStartEdit}
+                        variant="desktop"
+                      />
                     </div>
                     {payPopoverId === rec.id && (
                       <div className="absolute right-3 top-9 z-20 bg-surface-elevated border border-border-default rounded-xl p-2 shadow-2xl flex items-center gap-1.5">
