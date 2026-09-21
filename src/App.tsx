@@ -48,6 +48,7 @@ import { SettingsModal } from "./components/SettingsModal";
 import { useAppUpdate } from "./hooks/useAppUpdate";
 import { useTheme } from "./hooks/useTheme";
 import { LandingPage } from "./components/LandingPage";
+import { OperationsTab } from "./components/OperationsTab";
 
 function safeLoadAll(): UnifiedFinanceData {
   try {
@@ -829,18 +830,41 @@ const copySummaryToClipboard = async () => {
         )}
 
         {activeTab === "operations" && (
-          <div id="operations-section" className="space-y-4 sm:space-y-5 animate-in fade-in zoom-in-95 duration-400 ease-out">
-            <div className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.08] p-1.5 rounded-2xl flex items-center shadow-lg w-full mx-auto">
-              <button onClick={() => setOpsTab("bills")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "bills" ? "bg-blue-600/20 text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.3)]" : "text-faint hover:text-secondary"}`}>Commitments</button>
-              <button onClick={() => setOpsTab("inflows")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "inflows" ? "bg-emerald-600/20 text-emerald-400 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)]" : "text-faint hover:text-secondary"}`}>Inflows</button>
-              <button onClick={() => setOpsTab("gigs")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "gigs" ? "bg-amber-600/20 text-amber-400 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.3)]" : "text-faint hover:text-secondary"}`}>Gigs & Tasks</button>
-            </div>
-            {opsTab === "bills" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><BillsTable activeBills={activeBills} selectedMonth={selectedMonth} onToggleStatus={toggleBillStatus} onAddBill={handleAddBill} onDeleteBill={deleteBill} onSaveEdit={(_, scope) => saveBillEdit(scope)} onResetMonthOverride={resetMonthOverride} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} customWallets={globalData?.settings?.customWallets} defaultWallet={globalData?.settings?.defaultWallet} highlightOverdue={highlightOverdue} /></ErrorBoundary></div>}
-            {opsTab === "inflows" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><ReceivablesTable inflowsLabel={globalData?.settings?.inflowsLabel} inflowCategories={globalData?.settings?.inflowCategories} customWallets={globalData?.settings?.customWallets} activeReceivables={activeReceivables} selectedMonth={selectedMonth} onToggleStatus={toggleReceivableStatus} onAddPayment={addPayment} onAddReceivable={handleAddReceivable} onDeleteReceivable={deleteReceivable} onSaveEdit={() => saveReceivableEdit()} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} /></ErrorBoundary></div>}
-            {opsTab === "gigs" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><ShootsTable gigsLabel={globalData?.settings?.gigsLabel} gigCategories={globalData?.settings?.gigCategories} activeShoots={activeShoots} selectedMonth={selectedMonth} onToggleCompletion={toggleShootCompletion} onAddShoot={handleAddShoot} onDeleteShoot={deleteShoot} onSaveEdit={() => saveShootEdit()} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} /></ErrorBoundary></div>}
-          </div>
+          <OperationsTab
+            opsTab={opsTab}
+            setOpsTab={setOpsTab}
+            activeBills={activeBills}
+            activeReceivables={activeReceivables}
+            activeShoots={activeShoots}
+            selectedMonth={selectedMonth}
+            onToggleBillStatus={toggleBillStatus}
+            onAddBill={handleAddBill}
+            onDeleteBill={deleteBill}
+            onSaveBillEdit={(_, scope) => saveBillEdit(scope)}
+            onResetMonthOverride={resetMonthOverride}
+            onToggleReceivableStatus={toggleReceivableStatus}
+            onAddPayment={addPayment}
+            onAddReceivable={handleAddReceivable}
+            onDeleteReceivable={deleteReceivable}
+            onSaveReceivableEdit={saveReceivableEdit}
+            onToggleShootCompletion={toggleShootCompletion}
+            onAddShoot={handleAddShoot}
+            onDeleteShoot={deleteShoot}
+            onSaveShootEdit={saveShootEdit}
+            editingId={editingId}
+            setEditingId={setEditingId}
+            editForm={editForm}
+            setEditForm={setEditForm}
+            customWallets={globalData?.settings?.customWallets}
+            defaultWallet={globalData?.settings?.defaultWallet}
+            inflowsLabel={globalData?.settings?.inflowsLabel}
+            inflowCategories={globalData?.settings?.inflowCategories}
+            gigsLabel={globalData?.settings?.gigsLabel}
+            gigCategories={globalData?.settings?.gigCategories}
+            highlightOverdue={highlightOverdue}
+          />
         )}
-        
+
         {activeTab === "wallets" && <WalletsTab globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} />}
         {activeTab === "expenses" && <ExpensesTab globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />}
 
