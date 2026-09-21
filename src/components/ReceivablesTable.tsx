@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Check, Hourglass, Edit2, Save, Trash2, Plus, ArrowDownLeft, Filter, ChevronDown, Calendar, X, CreditCard } from "lucide-react";
 import { Receivable, ReceivableViewModel, ReceivableCategory, ReceivableFrequency, EditFormData, CustomWallet } from "../types/finance";
+import { formatOrdinal, formatShortDate } from "../utils/displayHelpers";
 
 interface ReceivablesTableProps {
   inflowsLabel?: string;
@@ -21,23 +22,6 @@ interface ReceivablesTableProps {
   setEditForm: React.Dispatch<React.SetStateAction<EditFormData>>;
 }
 
-
-const formatOrdinal = (n: number) => {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-};
-
-
-const formatShortDate = (dateStr?: string) => {
-  if (!dateStr) return "";
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return dateStr;
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const mIndex = parseInt(parts[1], 10) - 1;
-  const day = parseInt(parts[2], 10);
-  return `${monthNames[mIndex] || parts[1]} ${day}`;
-};
 
 export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
   inflowsLabel, inflowCategories, walletLabels, customWallets, activeReceivables, selectedMonth,
