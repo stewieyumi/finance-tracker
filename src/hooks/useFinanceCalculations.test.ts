@@ -152,6 +152,64 @@ describe("Finance Calculations", () => {
   });
 
 
+  const makePaydayTestData = (billId: string, contribution = 0) => {
+    const today = new Date();
+    const currentMonth = `${today.toLocaleString("en-US", { month: "long" })} ${today.getFullYear()}`;
+    const data: UnifiedFinanceData = {
+      ...baseData,
+      library: {
+        ...baseData.library,
+        bills: [{
+          id: billId,
+          name: "Test Bill",
+          amount: 1000,
+          dueDay: String(Math.min(today.getDate() + 7, 28)),
+          type: "Utility",
+          startMonth: currentMonth,
+          wallet: "maya",
+        } as any],
+      },
+      logs: contribution
+        ? { [currentMonth]: { billPaydayContributions: { [billId]: contribution } } }
+        : {},
+      settings: {
+        paydayDays: [15, 30],
+        defaultWallet: "maya",
+        perPayoutSalary: 5000,
+      } as any,
+    };
+
+    return { data, currentMonth };
+  };
+
+  it("creates a payday allocation for an unpaid bill and routes it to the bill wallet", () => {
+    const { data, currentMonth } = makePaydayTestData("bill-1");
+
+    const { result } = renderHook(() =>
+      useFinanceCalculations(data, currentMonth)
+    );
+
+    expect(result.current.billPaydayAllocations).toHaveLength(1);
+    expect(result.current.billPaydayAllocations[0]).toMatchObject({
+      id: "bill-1",
+      month: currentMonth,
+      wallet: "maya",
+    });
+    expect(result.current.billPaydayAllocations[0].amount).toBeGreaterThan(0);
+  });
+
+  it("reduces a bill payday allocation by an existing contribution", () => {
+    const { data, currentMonth } = makePaydayTestData("bill-2", 500);
+
+    const { result } = renderHook(() =>
+      useFinanceCalculations(data, currentMonth)
+    );
+
+    expect(result.current.billPaydayAllocations).toHaveLength(1);
+    expect(result.current.billPaydayAllocations[0].amount).toBeLessThan(1000);
+  });
+
+
   it("counts actual paid loan installments even when an earlier installment was skipped", () => {
     const loanData: UnifiedFinanceData = {
       ...baseData,

@@ -1,4 +1,3 @@
-import { roundMoney } from "./utils/currency";
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { HistoricalLedgerModal } from "./components/HistoricalLedgerModal";
 import { GoogleLogin, googleLogout, useGoogleOneTapLogin } from "@react-oauth/google";
@@ -12,10 +11,9 @@ import {
   getWalletForBill,
   computeBillPerPaydayAmount,
   computeScaledBaselineAllocations,
-  hasPaydayExecutionOnDate,
   getReceivableStatus
 } from "./utils/financeHelpers";
-import { generateId } from "./utils/idHelpers";
+import { migrateBaseWallets, migrateLegacyBills } from "./utils/financeMigrations";
 
 import { useCloudSync, getLocalPasscode } from "./hooks/useCloudSync";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -29,6 +27,7 @@ import { useBillEditActions } from "./hooks/useBillEditActions";
 import { useBillSaveActions } from "./hooks/useBillSaveActions";
 import { useReceivableSaveActions } from "./hooks/useReceivableSaveActions";
 import { useShootSaveActions } from "./hooks/useShootSaveActions";
+import { usePaydayActions } from "./hooks/usePaydayActions";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { MilestoneProgressBar } from "./components/MilestoneProgressBar";
@@ -48,6 +47,7 @@ import { SettingsModal } from "./components/SettingsModal";
 import { useAppUpdate } from "./hooks/useAppUpdate";
 import { useTheme } from "./hooks/useTheme";
 import { LandingPage } from "./components/LandingPage";
+import { OperationsTab } from "./components/OperationsTab";
 
 function safeLoadAll(): UnifiedFinanceData {
   try {
@@ -268,22 +268,10 @@ const {
   // ⚡ SILENT AUTO-MIGRATION FOR BASE WALLETS
   React.useEffect(() => {
     if (!globalData.settings?.hasMigratedBaseWallets) {
-      syncedSetGlobalData(prev => {
-        const oldLabels = prev.settings?.walletLabels || {};
-        const existingCustom = prev.settings?.customWallets || [];
-        const baseIds = ['maribank', 'maya', 'gcash', 'gotyme', 'bpi', 'cash'];
-        const defaultColors: Record<string, string> = { maribank: 'text-amber-400', maya: 'text-emerald-400', gcash: 'text-blue-400', gotyme: 'text-cyan-400', bpi: 'text-rose-400', cash: 'text-secondary' };
-        const defaultLabels: Record<string, string> = { maribank: 'MariBank', maya: 'Maya', gcash: 'GCash', gotyme: 'GoTyme', bpi: 'BPI', cash: 'Cash On-Hand' };
-
-        const newCustomWallets = [...existingCustom];
-        baseIds.forEach(id => {
-          if (!newCustomWallets.find(w => w.id === id)) {
-            newCustomWallets.push({ id, label: oldLabels[id] || defaultLabels[id], color: defaultColors[id] });
-          }
-        });
-
-        return { ...prev, settings: { ...prev.settings, customWallets: newCustomWallets, hasMigratedBaseWallets: true }, updatedAt: Date.now() };
-      });
+      syncedSetGlobalData(prev => ({
+        ...migrateBaseWallets(prev),
+        updatedAt: Date.now()
+      }));
       setTimeout(() => showToast("✨ Migrated base wallets to fully customizable accounts"), 1000);
     }
   }, [globalData.settings?.hasMigratedBaseWallets]);
@@ -293,14 +281,7 @@ const {
     const needsMigration = globalData.library?.bills?.some(b => !b.wallet);
     if (needsMigration) {
       syncedSetGlobalData(prev => ({
-        ...prev,
-        library: {
-          ...prev.library,
-          bills: prev.library.bills.map(b => ({
-            ...b,
-            wallet: b.wallet || getWalletForBill(b.name)
-          }))
-        },
+        ...migrateLegacyBills(prev),
         updatedAt: Date.now()
       }));
       setTimeout(() => showToast("✨ Auto-migrated legacy bills to new wallet system"), 1000);
@@ -458,136 +439,20 @@ const { saveShootEdit } = useShootSaveActions({
 
   const isViewingCurrentMonth = selectedMonth === getMonthKey(new Date());
 
-  const handleExecutePaydaySplit = () => {
-    if (paydaySplitInProgressRef.current) return;
-
-    if (!isViewingCurrentMonth) {
-      showToast(`⚠️ You're viewing ${selectedMonth}. Switch to the current month before distributing.`);
-      return;
-    }
-
-    if (remainingBuffer < 0) {
-      showToast("⚠️ Payday allocation exceeds the configured payout.");
-      return;
-    }
-
-    const now = new Date();
-    const executionKey =
-      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
-    const hasExecutedToday = globalData.paydaySplitExecutions?.some(ex => typeof ex === "string" ? ex === executionKey : ex.date === executionKey);
-    if (hasPaydayExecutionOnDate(globalData.paydaySplitExecutions, executionKey)) {
-      showToast("⚠️ Payday split already executed today.");
-      return;
-    }
-
-    paydaySplitInProgressRef.current = true;
-
-    try {
-      const totalDistribution = Object.values(paydayAllocations).reduce((a, b) => a + b, 0);
-
-      const allocList = Object.entries(paydayAllocations)
-        .filter(([_, amt]) => amt > 0)
-        .map(([key, amt]) => `${globalData?.settings?.walletLabels?.[key] || key}: ₱${amt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
-        .join("\n");
-
-      const confirmed = confirm(
-        `Distribute ₱${totalDistribution.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} into your wallets?
-
-${allocList}`
-      );
-
-      if (!confirmed) return;
-
-      syncedSetGlobalData(prev => {
-        const executions = prev.paydaySplitExecutions || [];
-
-        if (hasPaydayExecutionOnDate(executions, executionKey)) {
-          return prev;
-        }
-
-        const updatedLogs = { ...prev.logs };
-        billPaydayAllocations.forEach(alloc => {
-          const monthLog = updatedLogs[alloc.month] || {};
-          const existingContributions = monthLog.billPaydayContributions || {};
-          updatedLogs[alloc.month] = {
-            ...monthLog,
-            billPaydayContributions: {
-              ...existingContributions,
-              [alloc.id]: (existingContributions[alloc.id] || 0) + alloc.amount
-            }
-          };
-        });
-
-        return {
-          ...prev,
-          wallets: (() => {
-            const newWallets = { ...prev.wallets };
-            Object.entries(paydayAllocations).forEach(([walletKey, amount]) => {
-              newWallets[walletKey] = roundMoney((parseFloat(String(newWallets[walletKey])) || 0) + amount);
-            });
-            return newWallets;
-          })(),
-          logs: updatedLogs,
-          paydaySplitExecutions: [...executions, {
-            id: generateId("pd"),
-            date: executionKey,
-            timestamp: Date.now(),
-            allocations: paydayAllocations,
-            billContributions: billPaydayAllocations
-          }],
-          updatedAt: Date.now()
-        };
-      });
-
-      showToast("✨ Payday split automatically distributed to wallets!");
-    } finally {
-      paydaySplitInProgressRef.current = false;
-    }
-  };
-
-  const handleUndoPaydaySplit = (executionId: string) => {
-    if (!confirm("Reverse this payday distribution? Funds will be subtracted from wallets and bill contributions reset.")) return;
-
-    syncedSetGlobalData(prev => {
-      const executions = prev.paydaySplitExecutions || [];
-      const target = executions.find(ex => typeof ex !== "string" && ex.id === executionId) as PaydayExecution | undefined;
-
-      if (!target) {
-        showToast("Cannot undo a legacy execution.");
-        return prev;
-      }
-
-      const updatedLogs = { ...prev.logs };
-      target.billContributions.forEach(alloc => {
-         const monthLog = updatedLogs[alloc.month] || {};
-         const existingContributions = monthLog.billPaydayContributions || {};
-         updatedLogs[alloc.month] = {
-           ...monthLog,
-           billPaydayContributions: {
-             ...existingContributions,
-             [alloc.id]: Math.max(0, (existingContributions[alloc.id] || 0) - alloc.amount)
-           }
-         };
-      });
-
-      const nextWallets = { ...prev.wallets };
-      Object.entries(target.allocations).forEach(([walletKey, amount]) => {
-        if (nextWallets[walletKey] !== undefined) {
-           nextWallets[walletKey] = roundMoney(nextWallets[walletKey] - amount);
-        }
-      });
-
-      return {
-        ...prev,
-        wallets: nextWallets,
-        logs: updatedLogs,
-        paydaySplitExecutions: executions.filter(ex => typeof ex === "string" || ex.id !== executionId),
-        updatedAt: Date.now()
-      };
-    });
-    showToast("Payday distribution reversed.");
-  };
+  const {
+   handleExecutePaydaySplit,
+   handleUndoPaydaySplit,
+ } = usePaydayActions({
+   globalData,
+   setGlobalData: syncedSetGlobalData,
+   paydayAllocations,
+   billPaydayAllocations,
+   remainingBuffer,
+   isViewingCurrentMonth,
+   selectedMonth,
+   showToast,
+   paydaySplitInProgressRef,
+ });
 
 const copySummaryToClipboard = async () => {
   const text = buildFinancialSummary({
@@ -829,18 +694,41 @@ const copySummaryToClipboard = async () => {
         )}
 
         {activeTab === "operations" && (
-          <div id="operations-section" className="space-y-4 sm:space-y-5 animate-in fade-in zoom-in-95 duration-400 ease-out">
-            <div className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.08] p-1.5 rounded-2xl flex items-center shadow-lg w-full mx-auto">
-              <button onClick={() => setOpsTab("bills")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "bills" ? "bg-blue-600/20 text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.3)]" : "text-faint hover:text-secondary"}`}>Commitments</button>
-              <button onClick={() => setOpsTab("inflows")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "inflows" ? "bg-emerald-600/20 text-emerald-400 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)]" : "text-faint hover:text-secondary"}`}>Inflows</button>
-              <button onClick={() => setOpsTab("gigs")} className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${opsTab === "gigs" ? "bg-amber-600/20 text-amber-400 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.3)]" : "text-faint hover:text-secondary"}`}>Gigs & Tasks</button>
-            </div>
-            {opsTab === "bills" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><BillsTable activeBills={activeBills} selectedMonth={selectedMonth} onToggleStatus={toggleBillStatus} onAddBill={handleAddBill} onDeleteBill={deleteBill} onSaveEdit={(_, scope) => saveBillEdit(scope)} onResetMonthOverride={resetMonthOverride} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} customWallets={globalData?.settings?.customWallets} defaultWallet={globalData?.settings?.defaultWallet} highlightOverdue={highlightOverdue} /></ErrorBoundary></div>}
-            {opsTab === "inflows" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><ReceivablesTable inflowsLabel={globalData?.settings?.inflowsLabel} inflowCategories={globalData?.settings?.inflowCategories} customWallets={globalData?.settings?.customWallets} activeReceivables={activeReceivables} selectedMonth={selectedMonth} onToggleStatus={toggleReceivableStatus} onAddPayment={addPayment} onAddReceivable={handleAddReceivable} onDeleteReceivable={deleteReceivable} onSaveEdit={() => saveReceivableEdit()} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} /></ErrorBoundary></div>}
-            {opsTab === "gigs" && <div className="animate-in fade-in zoom-in-95 duration-300 ease-out"><ErrorBoundary><ShootsTable gigsLabel={globalData?.settings?.gigsLabel} gigCategories={globalData?.settings?.gigCategories} activeShoots={activeShoots} selectedMonth={selectedMonth} onToggleCompletion={toggleShootCompletion} onAddShoot={handleAddShoot} onDeleteShoot={deleteShoot} onSaveEdit={() => saveShootEdit()} editingId={editingId} setEditingId={setEditingId} editForm={editForm} setEditForm={setEditForm} /></ErrorBoundary></div>}
-          </div>
+          <OperationsTab
+            opsTab={opsTab}
+            setOpsTab={setOpsTab}
+            activeBills={activeBills}
+            activeReceivables={activeReceivables}
+            activeShoots={activeShoots}
+            selectedMonth={selectedMonth}
+            onToggleBillStatus={toggleBillStatus}
+            onAddBill={handleAddBill}
+            onDeleteBill={deleteBill}
+            onSaveBillEdit={(_, scope) => saveBillEdit(scope)}
+            onResetMonthOverride={resetMonthOverride}
+            onToggleReceivableStatus={toggleReceivableStatus}
+            onAddPayment={addPayment}
+            onAddReceivable={handleAddReceivable}
+            onDeleteReceivable={deleteReceivable}
+            onSaveReceivableEdit={saveReceivableEdit}
+            onToggleShootCompletion={toggleShootCompletion}
+            onAddShoot={handleAddShoot}
+            onDeleteShoot={deleteShoot}
+            onSaveShootEdit={saveShootEdit}
+            editingId={editingId}
+            setEditingId={setEditingId}
+            editForm={editForm}
+            setEditForm={setEditForm}
+            customWallets={globalData?.settings?.customWallets}
+            defaultWallet={globalData?.settings?.defaultWallet}
+            inflowsLabel={globalData?.settings?.inflowsLabel}
+            inflowCategories={globalData?.settings?.inflowCategories}
+            gigsLabel={globalData?.settings?.gigsLabel}
+            gigCategories={globalData?.settings?.gigCategories}
+            highlightOverdue={highlightOverdue}
+          />
         )}
-        
+
         {activeTab === "wallets" && <WalletsTab globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} />}
         {activeTab === "expenses" && <ExpensesTab globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />}
 

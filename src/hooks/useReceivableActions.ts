@@ -9,6 +9,22 @@ interface UseReceivableActionsParams {
   showToast: (message: string) => void;
 }
 
+interface ReceivablePaymentContext {
+  targetMonth: string;
+  receivableAmount: number;
+  targetWallet: string;
+}
+
+const resolveReceivablePaymentContext = (
+  receivable: ReceivableViewModel,
+  selectedMonth: string,
+  defaultWallet?: string
+): ReceivablePaymentContext => ({
+  targetMonth: receivable.targetMonthForDue || selectedMonth,
+  receivableAmount: Math.max(0, parseFloat(String(receivable.amount)) || 0),
+  targetWallet: receivable.wallet || defaultWallet || "main",
+});
+
 export function useReceivableActions({ globalData, setGlobalData, selectedMonth, showToast }: UseReceivableActionsParams) {
   
   const addReceivable = (receivable: { name: string; amount: number; category: ReceivableCategory; frequency: ReceivableFrequency; biMonthlyDays?: number[]; monthlyDay?: number; date?: string; wallet?: string; }) => {
@@ -31,10 +47,12 @@ export function useReceivableActions({ globalData, setGlobalData, selectedMonth,
   };
 
   const toggleReceivableStatus = (receivable: ReceivableViewModel) => {
-    const targetMonth = receivable.targetMonthForDue || selectedMonth;
-    const receivableAmount = Math.max(0, parseFloat(String(receivable.amount)) || 0);
-    
-    const targetWallet = receivable.wallet || globalData.settings?.defaultWallet || "main";
+    const { targetMonth, receivableAmount, targetWallet } =
+      resolveReceivablePaymentContext(
+        receivable,
+        selectedMonth,
+        globalData.settings?.defaultWallet
+      );
 
     setGlobalData(prev => {
       const monthLog = prev.logs?.[targetMonth] || { billsPaid: [], recsCollected: {} };
@@ -96,10 +114,13 @@ export function useReceivableActions({ globalData, setGlobalData, selectedMonth,
 
   const addPayment = (receivable: ReceivableViewModel, amount: number) => {
     if (!Number.isFinite(amount) || amount <= 0) return;
-    const targetMonth = receivable.targetMonthForDue || selectedMonth;
-    const receivableAmount = Math.max(0, parseFloat(String(receivable.amount)) || 0);
-    
-    const targetWallet = receivable.wallet || globalData.settings?.defaultWallet || "main";
+
+    const { targetMonth, receivableAmount, targetWallet } =
+      resolveReceivablePaymentContext(
+        receivable,
+        selectedMonth,
+        globalData.settings?.defaultWallet
+      );
 
     setGlobalData(prev => {
       const monthLog = prev.logs?.[targetMonth] || { billsPaid: [], recsCollected: {} };

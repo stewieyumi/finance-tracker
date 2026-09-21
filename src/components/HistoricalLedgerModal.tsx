@@ -11,6 +11,40 @@ interface Props {
   showToast: (msg: string) => void;
 }
 
+const applyManualTransactionWalletEffect = (
+  wallets: Record<string, number>,
+  transaction: ManualTransaction,
+  direction: 1 | -1,
+) => {
+  const nextWallets = { ...wallets };
+  const amount = Number(transaction.amount) || 0;
+
+  if (!transaction.wallet) return nextWallets;
+
+  if (transaction.type === "income") {
+    nextWallets[transaction.wallet] =
+      (nextWallets[transaction.wallet] || 0) + amount * direction;
+  } else if (transaction.type === "expense") {
+    nextWallets[transaction.wallet] =
+      (nextWallets[transaction.wallet] || 0) - amount * direction;
+  } else if (transaction.type === "transfer") {
+    nextWallets[transaction.wallet] =
+      (nextWallets[transaction.wallet] || 0) - amount * direction;
+
+    if (transaction.destinationWallet) {
+      nextWallets[transaction.destinationWallet] =
+        (nextWallets[transaction.destinationWallet] || 0) +
+        amount * direction;
+    }
+  }
+
+  Object.keys(nextWallets).forEach((wallet) => {
+    nextWallets[wallet] = Math.round(nextWallets[wallet] * 100) / 100;
+  });
+
+  return nextWallets;
+};
+
 export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, globalData, setGlobalData, showToast }) => {
   const [view, setView] = useState<'list' | 'form'>('list');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -41,31 +75,6 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
     }
 
     setGlobalData(prev => {
-      const nextWallets = { ...prev.wallets };
-
-      // REVERSE OLD TRANSACTION EFFECT
-      if (editingId) {
-         const oldTx = prev.library?.manualTransactions?.find(t => t.id === editingId);
-         if (oldTx) {
-             if (oldTx.type === 'income') nextWallets[oldTx.wallet!] = (nextWallets[oldTx.wallet!] || 0) - oldTx.amount;
-             if (oldTx.type === 'expense') nextWallets[oldTx.wallet!] = (nextWallets[oldTx.wallet!] || 0) + oldTx.amount;
-             if (oldTx.type === 'transfer') {
-                 nextWallets[oldTx.wallet!] = (nextWallets[oldTx.wallet!] || 0) + oldTx.amount;
-                 nextWallets[oldTx.destinationWallet!] = (nextWallets[oldTx.destinationWallet!] || 0) - oldTx.amount;
-             }
-         }
-      }
-
-      // APPLY NEW TRANSACTION EFFECT
-      if (form.type === 'income') nextWallets[form.wallet] = (nextWallets[form.wallet] || 0) + amt;
-      if (form.type === 'expense') nextWallets[form.wallet] = (nextWallets[form.wallet] || 0) - amt;
-      if (form.type === 'transfer') {
-          nextWallets[form.wallet] = (nextWallets[form.wallet] || 0) - amt;
-          nextWallets[form.destinationWallet] = (nextWallets[form.destinationWallet] || 0) + amt;
-      }
-
-      Object.keys(nextWallets).forEach(k => nextWallets[k] = Math.round(nextWallets[k] * 100) / 100);
-
       const newTx: ManualTransaction = {
         id: editingId || generateId('mtx'),
         title: form.title.trim(),
@@ -78,6 +87,23 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
         note: form.note,
         createdAt: editingId ? (prev.library?.manualTransactions?.find(t => t.id === editingId)?.createdAt || Date.now()) : Date.now()
       };
+
+      let nextWallets = { ...prev.wallets };
+
+      // REVERSE OLD TRANSACTION EFFECT
+      if (editingId) {
+        const oldTx = prev.library?.manualTransactions?.find(t => t.id === editingId);
+        if (oldTx) {
+          nextWallets = applyManualTransactionWalletEffect(nextWallets, oldTx, -1);
+        }
+      }
+
+      // APPLY NEW TRANSACTION EFFECT
+      nextWallets = applyManualTransactionWalletEffect(
+        nextWallets,
+        newTx,
+        1,
+      );
 
       const existingTxs = prev.library?.manualTransactions || [];
       const updatedTxs = editingId
@@ -99,14 +125,11 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
   const handleDelete = (tx: ManualTransaction) => {
     if (!confirm(`Delete "${tx.title}" and reverse its wallet impact?`)) return;
     setGlobalData(prev => {
-      const nextWallets = { ...prev.wallets };
-      if (tx.type === 'income') nextWallets[tx.wallet!] = (nextWallets[tx.wallet!] || 0) - tx.amount;
-      if (tx.type === 'expense') nextWallets[tx.wallet!] = (nextWallets[tx.wallet!] || 0) + tx.amount;
-      if (tx.type === 'transfer') {
-         nextWallets[tx.wallet!] = (nextWallets[tx.wallet!] || 0) + tx.amount;
-         nextWallets[tx.destinationWallet!] = (nextWallets[tx.destinationWallet!] || 0) - tx.amount;
-      }
-      Object.keys(nextWallets).forEach(k => nextWallets[k] = Math.round(nextWallets[k] * 100) / 100);
+      const nextWallets = applyManualTransactionWalletEffect(
+        prev.wallets,
+        tx,
+        -1,
+      );
 
       return {
          ...prev,
