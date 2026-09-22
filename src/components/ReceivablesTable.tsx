@@ -74,7 +74,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
   const handleCustomPaySubmit = (rec: ReceivableViewModel) => { const val = parseFloat(customPayAmount); if (val > 0) { onAddPayment(rec, val); setCustomPayAmount(""); setPayPopoverId(null); } };
 
   return (
-    <div className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-xl w-full">
+    <div className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-lg w-full">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><ArrowDownLeft size={13} className="text-emerald-400" />{selectedMonth} {inflowsLabel || 'Receivables & Inflows'}</h2>
         <div className="flex items-center gap-2">

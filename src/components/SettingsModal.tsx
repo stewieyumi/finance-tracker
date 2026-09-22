@@ -117,7 +117,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
             <Settings size={18} className="text-secondary" />
             <h3 className="text-sm font-bold uppercase tracking-wider text-strong">App Settings</h3>
           </div>
-          <button onClick={onClose} className="text-faint hover:text-strong transition"><X size={18} /></button>
+          <button
+            onClick={onClose}
+            aria-label="Close settings modal"
+            className="text-faint hover:text-strong p-1.5 rounded-lg transition"
+            title="Close (Esc)"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <div className="flex gap-4 border-b border-inverse/[0.06] mb-5 overflow-x-auto whitespace-nowrap hide-scrollbar">

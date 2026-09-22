@@ -83,7 +83,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
     <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
       
       {/* AI Scanner Hero Card */}
-      <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-5 shadow-xl relative overflow-hidden">
+      <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-5 shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500 opacity-50" />
         
         <div className="flex flex-col items-center justify-center text-center space-y-3 py-4">
@@ -170,7 +170,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
       )}
 
       {/* Recent Expenses Ledger */}
-      <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl">
+      <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-4 sm:p-5 shadow-lg">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xs font-bold uppercase tracking-wider text-primary">Recent Transactions</h2>
           <span className="text-[10px] font-mono text-faint">Total: ₱{totalSpent.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>

@@ -584,7 +584,7 @@ const copySummaryToClipboard = async () => {
 
       <div className="w-full max-w-[860px] space-y-4">
         {cashShortfall > 0 && (
-          <div className="bg-[#2a1712] border border-orange-900/50 text-orange-300 text-xs rounded-2xl px-4 py-3 flex items-center gap-2.5 shadow-lg leading-relaxed">
+          <div className="bg-orange-950/25 border border-orange-800/40 text-orange-300 text-xs rounded-2xl px-4 py-3 flex items-center gap-2.5 shadow-lg leading-relaxed">
             <AlertTriangle size={14} className="shrink-0 text-orange-400" />
             <span>Liquid cash is <strong className="font-mono font-semibold">₱{cashShortfall.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> short of covering unpaid commitments{overdueBills.length > 0 ? ` (including ${overdueBills.length} overdue)` : ""}.</span>
           </div>

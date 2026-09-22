@@ -91,7 +91,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
 
 
   return (
-    <div className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-xl">
+    <div className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-lg">
       <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
         <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 shrink-0">
           <Calendar size={13} className="text-blue-400" /> {selectedMonth} Commitments

@@ -103,7 +103,7 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
               onChange={(e) =>
                 setNewBill({ ...newBill, wallet: e.target.value })
               }
-              className="w-full bg-surface-inputborder border-strong rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-blue-500"
+              className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-blue-500"
             >
               {customWallets?.map((cw) => (
                 <option key={cw.id} value={cw.id}>
@@ -144,7 +144,7 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
               onChange={(e) =>
                 setNewBill({ ...newBill, dueDay: e.target.value })
               }
-              className="w-full bg-surface-inputborder border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500"
+              className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500"
             >
               {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                 <option key={d} value={String(d)}>
