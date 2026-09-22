@@ -584,9 +584,9 @@ const copySummaryToClipboard = async () => {
 
       <div className="w-full max-w-[860px] space-y-4">
         {cashShortfall > 0 && (
-          <div className="bg-[#2a1712] border border-orange-900/50 text-orange-300 text-[11px] rounded-2xl px-4 py-3 flex items-center gap-2.5 shadow-lg">
+          <div className="bg-[#2a1712] border border-orange-900/50 text-orange-300 text-xs rounded-2xl px-4 py-3 flex items-center gap-2.5 shadow-lg leading-relaxed">
             <AlertTriangle size={14} className="shrink-0 text-orange-400" />
-            <span>Liquid cash is <strong className="font-mono">₱{cashShortfall.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> short of covering unpaid commitments{overdueBills.length > 0 ? ` (including ${overdueBills.length} overdue)` : ""}.</span>
+            <span>Liquid cash is <strong className="font-mono font-semibold">₱{cashShortfall.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> short of covering unpaid commitments{overdueBills.length > 0 ? ` (including ${overdueBills.length} overdue)` : ""}.</span>
           </div>
         )}
 
@@ -594,7 +594,7 @@ const copySummaryToClipboard = async () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-bold tracking-tight text-strong">Dashboard</h1>
-              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium no-privacy-blur transition-all ${!isOnline ? "chip-amber" : isSyncing ? "chip-blue" : "chip-emerald"}`}>
+              <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium no-privacy-blur transition-all ${!isOnline ? "chip-amber" : isSyncing ? "chip-blue" : "chip-emerald"}`}>
                 {!isOnline ? <><WifiOff size={10} className="text-amber-400" /><span>Offline</span></> : isSyncing ? <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" /><span>Syncing...</span></> : <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span>Live</span></>}
               </div>
             </div>
@@ -602,7 +602,7 @@ const copySummaryToClipboard = async () => {
             <div className="flex items-center gap-2">
               <div className="hidden md:flex items-center gap-2 mr-2 pr-4 border-r border-inverse/[0.08]">
                 <div className="relative">
-                  <button onClick={() => setShowShortcutsHelp(prev => !prev)} className="text-[11px] font-medium text-muted hover:text-primary bg-fill/80 hover:bg-fill-strong border border-strong px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
+                  <button onClick={() => setShowShortcutsHelp(prev => !prev)} className="text-xs font-medium text-muted hover:text-primary bg-fill/80 hover:bg-fill-strong border border-strong px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
                     <span>⌨️</span> Shortcuts
                   </button>
                   {showShortcutsHelp && (
@@ -611,15 +611,15 @@ const copySummaryToClipboard = async () => {
                         <span className="text-secondary font-semibold flex items-center gap-1.5"><span>⌨️</span> Shortcuts</span>
                         <button onClick={() => setShowShortcutsHelp(false)} className="text-faint hover:text-secondary">✕</button>
                       </div>
-                      <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Tabs</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">1-5</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Ops Views</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">B,I,G</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Month</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">⌘K</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Yearly</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">Y</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Analytics</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">A</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Privacy</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">P</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Pull/Sync</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">R / S</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Close</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">Esc</kbd></div>
+                      <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Tabs</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">1-5</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Ops Views</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">B,I,G</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Month</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">⌘K</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Yearly</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">Y</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Analytics</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">A</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Privacy</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">P</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Pull/Sync</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">R / S</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Close</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">Esc</kbd></div>
                       </div>
                     </div>
                   )}
@@ -640,7 +640,7 @@ const copySummaryToClipboard = async () => {
               <select value={selectedMonth} onChange={(e) => { if (e.target.value === "CUSTOM_DATE_JUMP") setShowDatePickerModal(true); else setSelectedMonth(e.target.value); }} className="bg-transparent text-strong font-semibold outline-none cursor-pointer">
                 {dropdownMonths.map(m => <option key={m} value={m} className="bg-surface-modal">{m}</option>)}
                 <option disabled>──────────</option>
-                <option value="CUSTOM_DATE_JUMP" className="bg-surface-modal font-bold text-blue-400">Select Month...</option>
+                <option value="CUSTOM_DATE_JUMP" className="bg-surface-modal font-semibold text-blue-400">Select Month...</option>
               </select>
             </div>
             <button onClick={() => setShowAnalyticsModal(true)} className="flex items-center gap-1.5 bg-surface-elevated border border-amber-500/30 hover:border-amber-400/60 text-amber-300 px-3 py-1.5 rounded-xl text-xs shadow-md transition font-medium"><Sparkles size={13} className="text-amber-400" /><span>Runway</span></button>
