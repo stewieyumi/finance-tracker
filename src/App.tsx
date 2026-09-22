@@ -218,19 +218,35 @@ const {
     return () => clearInterval(refreshInterval);
   }, [googleUser]);
 
+  // Prevents concurrent auth recovery attempts when multiple 401 responses
+  // dispatch auth-expired in rapid succession. Only the first attempt proceeds;
+  // duplicates are silently dropped. The guard is cleared once recovery resolves.
+  const authRefreshInProgressRef = useRef(false);
+
   React.useEffect(() => {
     const handleAuthExpired = () => {
+      // If a recovery is already in progress, silently ignore this duplicate event.
+      if (authRefreshInProgressRef.current) return;
+      authRefreshInProgressRef.current = true;
+
       showToast("🔄 Session expired. Refreshing...");
+
+      // Remove both keys together so that a page refresh during recovery
+      // cannot land in the inconsistent state: ft_google_user present but
+      // ft_google_token absent (which forces the user to the login screen).
       localStorage.removeItem("ft_google_token");
+      localStorage.removeItem("ft_google_user");
 
       if ((window as any).google?.accounts?.id) {
         (window as any).google.accounts.id.prompt((notification: any) => {
-            if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
-              handleGoogleLogout();
-              showToast("⚠️ Session expired. Please sign in again.");
-            }
-          });
+          authRefreshInProgressRef.current = false;
+          if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
+            handleGoogleLogout();
+            showToast("⚠️ Session expired. Please sign in again.");
+          }
+        });
       } else {
+        authRefreshInProgressRef.current = false;
         handleGoogleLogout();
       }
     };
