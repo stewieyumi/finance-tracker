@@ -30,6 +30,7 @@ export const BillsList: React.FC<BillsListProps> = ({
 }) => {
   const renderMobileRow = (bill: BillViewModel) => (
     <BillMobileRow
+      key={bill.id}
       bill={bill}
       customWallets={customWallets}
       highlightOverdue={highlightOverdue}
@@ -40,6 +41,7 @@ export const BillsList: React.FC<BillsListProps> = ({
 
   const renderDesktopRow = (bill: BillViewModel) => (
     <BillDesktopRow
+      key={bill.id}
       bill={bill}
       selectedMonth={selectedMonth}
       customWallets={customWallets}
