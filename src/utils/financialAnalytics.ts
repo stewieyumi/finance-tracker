@@ -29,6 +29,13 @@ export interface CashflowMomentumItem {
   bills: number;
 }
 
+export function calculateSafeToSpend(
+  totalLiquid: number,
+  totalUnpaidCommitments: number
+): number {
+  return Math.max(0, (totalLiquid || 0) - (totalUnpaidCommitments || 0));
+}
+
 export function calculateDebtRunway(
   globalData: UnifiedFinanceData,
   selectedMonth: string

@@ -5,7 +5,8 @@ import { UnifiedFinanceData } from "../types/finance";
 import { DEFAULT_TARGET_FUND } from "../constants/config";
 import {
   calculateCashflowMomentum,
-  calculateDebtRunway
+  calculateDebtRunway,
+  calculateSafeToSpend
 } from "../utils/financialAnalytics";
 
 interface FinancialAnalyticsModalProps {
@@ -41,7 +42,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
     };
   }, [isOpen, onClose]);
 
-  const safeToSpend = Math.max(0, totalLiquid - totalUnpaidCommitments);
+  const safeToSpend = calculateSafeToSpend(totalLiquid, totalUnpaidCommitments);
   const now = new Date();
   const currentMonthDate = parseMonthKey(selectedMonth);
   const isCurrentActiveMonth = now.getFullYear() === currentMonthDate.getFullYear() && now.getMonth() === currentMonthDate.getMonth();

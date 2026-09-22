@@ -681,6 +681,13 @@ const copySummaryToClipboard = async () => {
             onIncrementWallet={incrementWallet}
             onCopySummary={copySummaryToClipboard}
             formatDateTime={formatDateTime}
+            onNavigateToWallets={() => setActiveTab("wallets")}
+            onNavigateToOps={(tab = "bills") => { setActiveTab("operations"); setOpsTab(tab); }}
+            onNavigateToExpenses={() => setActiveTab("expenses")}
+            onOpenAnalytics={() => setShowAnalyticsModal(true)}
+            onOpenYearlyModal={() => setShowYearlyModal(true)}
+            onOpenLedger={() => setShowLedgerModal(true)}
+            activeBills={activeBills}
           />
         )}
 
