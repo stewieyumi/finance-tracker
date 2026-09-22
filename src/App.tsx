@@ -29,14 +29,10 @@ import { useReceivableSaveActions } from "./hooks/useReceivableSaveActions";
 import { useShootSaveActions } from "./hooks/useShootSaveActions";
 import { usePaydayActions } from "./hooks/usePaydayActions";
 
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import { MilestoneProgressBar } from "./components/MilestoneProgressBar";
-import { MetricsSummaryGrid } from "./components/MetricsSummaryGrid";
-import { ExecutionFlowCard } from "./components/ExecutionFlowCard";
 import { BillsTable } from "./components/BillsTable";
 import { ReceivablesTable } from "./components/ReceivablesTable";
 import { ShootsTable } from "./components/ShootsTable";
-import { WalletGrid } from "./components/WalletGrid";
+import { DashboardTab } from "./components/DashboardTab";
 import { DateJumpModal } from "./components/DateJumpModal";
 import { YearlyOverviewModal } from "./components/YearlyOverviewModal";
 import { FinancialAnalyticsModal } from "./components/FinancialAnalyticsModal";
@@ -226,7 +222,7 @@ const {
     const handleAuthExpired = () => {
       showToast("🔄 Session expired. Refreshing...");
       localStorage.removeItem("ft_google_token");
-      
+
       if ((window as any).google?.accounts?.id) {
         (window as any).google.accounts.id.prompt((notification: any) => {
             if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
@@ -238,7 +234,7 @@ const {
         handleGoogleLogout();
       }
     };
-    
+
     window.addEventListener("auth-expired", handleAuthExpired);
     return () => window.removeEventListener("auth-expired", handleAuthExpired);
   }, []);
@@ -265,7 +261,7 @@ const {
     setTimeout(() => { setToastMessage(null); setToastAction(null); }, action ? 4500 : 2500);
   };
 
-  
+
   // ⚡ SILENT AUTO-MIGRATION FOR BASE WALLETS
   React.useEffect(() => {
     if (!globalData.settings?.hasMigratedBaseWallets) {
@@ -520,8 +516,8 @@ const copySummaryToClipboard = async () => {
         if (confirm("Import this backup? It will replace current data.")) {
           const importedData: UnifiedFinanceData = {
             ...parsed,
-            updatedAt: (typeof parsed.updatedAt === "number" && Number.isFinite(parsed.updatedAt) && parsed.updatedAt >= 0) 
-              ? parsed.updatedAt 
+            updatedAt: (typeof parsed.updatedAt === "number" && Number.isFinite(parsed.updatedAt) && parsed.updatedAt >= 0)
+              ? parsed.updatedAt
               : Date.now()
           };
 
@@ -547,7 +543,7 @@ const copySummaryToClipboard = async () => {
   return (
     <div className={`min-h-screen bg-shell text-text-secondary px-4 sm:px-6 pb-28 sm:pb-32 pt-[max(2rem,env(safe-area-inset-top))] flex justify-center selection:bg-blue-600 selection:text-white ${isPrivacyMode ? "privacy-mode" : ""}`}>
       <div className="fixed top-0 left-0 right-0 z-[200] bg-shell/80 backdrop-blur-xl pointer-events-none" style={{ height: "env(safe-area-inset-top)" }} />
-      
+
       {updateAvailable && (
         <div onClick={() => window.location.reload()} className="fixed top-[calc(env(safe-area-inset-top)+12px)] left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 py-2.5 rounded-full shadow-[0_0_30px_rgba(37,99,235,0.5)] transition-all cursor-pointer animate-in slide-in-from-top-8 duration-500">
           <RefreshCw size={14} className="animate-spin shrink-0" />
@@ -643,55 +639,33 @@ const copySummaryToClipboard = async () => {
         <FinancialAnalyticsModal isOpen={showAnalyticsModal} onClose={() => setShowAnalyticsModal(false)} globalData={globalData} selectedMonth={selectedMonth} totalLiquid={totalLiquid} totalUnpaidCommitments={totalUnpaidCommitments} />
 
         {activeTab === "home" && (
-          <div className="space-y-5 sm:space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
-            <ErrorBoundary><MilestoneProgressBar currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0} targetFund={targetMilestoneFund} goalName={globalData?.settings?.goalName} onConfigureGoal={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }} /></ErrorBoundary>
-            <ErrorBoundary><MetricsSummaryGrid totalLiquid={totalLiquid} fundProgressPercent={fundProgressPercent} totalPendingReceivables={totalPendingReceivables} monthIncomeCollected={monthIncomeCollected} selectedMonth={selectedMonth} /></ErrorBoundary>
-            <ErrorBoundary><ExecutionFlowCard
-            paydayDays={globalData.settings?.paydayDays}
-            priorityUnpaidSum={priorityUnpaidSum} totalUnpaidCommitments={totalUnpaidCommitments} overdueBills={overdueBills} overdueSum={overdueSum} paydayAllocations={paydayAllocations} onConfigureBaselines={() => { setSettingsInitialTab("baselines"); setShowSettingsModal(true); }} remainingBuffer={remainingBuffer} customWallets={globalData?.settings?.customWallets} onExecutePaydaySplit={handleExecutePaydaySplit} disabled={!isViewingCurrentMonth || hasExecutedToday} onClickOverdue={handleJumpToOverdue}
-              latestExecution={latestExecution}
-              onUndoSplit={handleUndoPaydaySplit} /></ErrorBoundary>
-            
-            <ErrorBoundary>
-              <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><History size={13} className="text-purple-400" /> Recent Transactions</h2>
-                </div>
-                <div className="space-y-2">
-                  {recentTransactions.length === 0 ? (
-                    <div className="py-4 text-center text-faint text-xs italic">No transactions yet.</div>
-                  ) : (
-                    recentTransactions.map((tx: TransactionHistoryItem) => (
-                      <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-inverse/[0.08] transition">
-                        <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
-                          <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'transaction-inflow-icon' : tx.type === 'bill' ? 'transaction-bill-icon' : 'bg-fill border-strong text-muted'}`}>
-                            {tx.type === 'inflow' ? <ArrowDownLeft size={14}/> : tx.type === 'bill' ? <Calendar size={14}/> : <Receipt size={14}/>}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="privacy-blur text-[13px] font-semibold text-primary truncate">{tx.title}</div>
-                            <div className="flex items-center gap-1.5 text-[9px] text-faint mt-0.5">
-                              <span className="bg-fill-strong/80 px-1.5 py-0.5 rounded text-secondary font-medium truncate max-w-[90px]">{tx.category || tx.type}</span>
-                              <span className="privacy-blur uppercase text-blue-400/80 font-bold truncate max-w-[80px]">{globalData?.settings?.walletLabels?.[tx.wallet || ''] || tx.wallet}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end shrink-0">
-                          <span className={`privacy-blur text-[13px] font-bold font-mono ${tx.amount > 0 ? "text-emerald-400" : "text-strong"}`}>
-                            {tx.amount > 0 ? "+" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                          </span>
-                          <span className="text-[10px] text-faint mt-0.5 whitespace-nowrap">{formatDateTime(tx.date)}</span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </ErrorBoundary>
-
-            <ErrorBoundary><WalletGrid wallets={globalData?.wallets || {}} milestoneWallet={globalData?.settings?.milestoneWallet}
-        savingsWallet={globalData?.settings?.savingsWallet} customWallets={globalData?.settings?.customWallets} onCommit={commitWallet} onIncrement={incrementWallet} /></ErrorBoundary>
-            <button onClick={copySummaryToClipboard} className="w-full bg-surface-elevated/90 hover:bg-inverse/[0.06] border border-inverse/[0.06] text-primary font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Copy size={14} /> Copy Summary</button>
-          </div>
+          <DashboardTab
+            globalData={globalData}
+            targetMilestoneFund={targetMilestoneFund}
+            totalLiquid={totalLiquid}
+            fundProgressPercent={fundProgressPercent}
+            totalPendingReceivables={totalPendingReceivables}
+            monthIncomeCollected={monthIncomeCollected}
+            selectedMonth={selectedMonth}
+            priorityUnpaidSum={priorityUnpaidSum}
+            totalUnpaidCommitments={totalUnpaidCommitments}
+            overdueBills={overdueBills}
+            overdueSum={overdueSum}
+            paydayAllocations={paydayAllocations}
+            remainingBuffer={remainingBuffer}
+            isViewingCurrentMonth={isViewingCurrentMonth}
+            hasExecutedToday={hasExecutedToday}
+            latestExecution={latestExecution}
+            recentTransactions={recentTransactions}
+            onOpenSettings={(tab) => { setSettingsInitialTab(tab); setShowSettingsModal(true); }}
+            onExecutePaydaySplit={handleExecutePaydaySplit}
+            onUndoPaydaySplit={handleUndoPaydaySplit}
+            onJumpToOverdue={handleJumpToOverdue}
+            onCommitWallet={commitWallet}
+            onIncrementWallet={incrementWallet}
+            onCopySummary={copySummaryToClipboard}
+            formatDateTime={formatDateTime}
+          />
         )}
 
         {activeTab === "operations" && (
