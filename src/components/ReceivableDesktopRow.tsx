@@ -37,13 +37,24 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
 
   return (
     <tr
-      className={`group transition-all duration-150 ${
+      data-testid={`receivable-desktop-row-${rec.id}`}
+      onClick={() => onEdit(rec)}
+      className={`group transition-all duration-150 cursor-pointer ${
         rec.collected ? "opacity-45" : "hover:bg-inverse/[0.02]"
       }`}
     >
       <td className="py-3 px-4 whitespace-nowrap">
         <button
-          onClick={() => onToggleStatus(rec)}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleStatus(rec);
+          }}
+          aria-label={
+            rec.collected
+              ? `Undo received payment for ${rec.name}`
+              : `Mark ${rec.name} as received`
+          }
           className="flex items-center gap-1.5 focus:outline-none"
         >
           {rec.collected ? (
@@ -63,13 +74,9 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
       </td>
 
       <td className="py-3 px-4 text-primary font-medium">
-        <button
-          type="button"
-          onClick={() => onToggleStatus(rec)}
-          className="privacy-blur text-left hover:text-emerald-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 rounded"
-        >
+        <span className="privacy-blur text-left font-semibold">
           {rec.name}
-        </button>
+        </span>
       </td>
 
       <td
@@ -84,15 +91,21 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
               minimumFractionDigits: 2,
             })}
           </div>
-          {isBiMonthly && (
-            <div className="text-[9px] text-faint font-mono font-normal">
-              ₱{(rec.amount / 2).toLocaleString()}/payout
+          {isPartial ? (
+            <div className="space-y-0.5 mt-0.5">
+              <div className="text-[10px] text-emerald-400 font-mono font-medium">
+                ₱{received.toLocaleString("en-US", { minimumFractionDigits: 2 })} received
+              </div>
+              <div className="text-[9px] text-muted font-mono">
+                ₱{(rec.amount - received).toLocaleString("en-US", { minimumFractionDigits: 2 })} remaining
+              </div>
             </div>
-          )}
-          {isPartial && (
-            <div className="text-[9px] text-cyan-400 font-mono">
-              +₱{received.toLocaleString()} rec'd
-            </div>
+          ) : (
+            isBiMonthly && !rec.collected && (
+              <div className="text-[9px] text-faint font-mono font-normal">
+                ₱{(rec.amount / 2).toLocaleString()}/payout
+              </div>
+            )
           )}
         </div>
       </td>
@@ -161,7 +174,10 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
         </div>
 
         {payPopoverId === rec.id && (
-          <div className="absolute right-3 top-9 z-20 bg-surface-elevated border border-border-default rounded-xl p-2 shadow-2xl flex items-center gap-1.5">
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute right-3 top-9 z-20 bg-surface-elevated border border-border-default rounded-xl p-2 shadow-2xl flex items-center gap-1.5"
+          >
             <input
               type="number"
               inputMode="decimal"
@@ -171,13 +187,21 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
               className="w-20 bg-surface-input border border-strong rounded px-1.5 py-0.5 text-xs text-strong font-mono outline-none text-right"
             />
             <button
-              onClick={() => onCustomPaySubmit(rec)}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCustomPaySubmit(rec);
+              }}
               className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-medium"
             >
               Add
             </button>
             <button
-              onClick={onClosePaymentPopover}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClosePaymentPopover();
+              }}
               className="p-1 text-muted hover:text-strong"
             >
               <X size={11} />

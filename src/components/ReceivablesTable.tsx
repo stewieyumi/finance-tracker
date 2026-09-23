@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Check, Hourglass, Plus, ArrowDownLeft, Filter, ChevronDown, X } from "lucide-react";
 import { Receivable, ReceivableViewModel, ReceivableCategory, ReceivableFrequency, EditFormData, CustomWallet } from "../types/finance";
 import { formatOrdinal, formatShortDate } from "../utils/displayHelpers";
-import { filterReceivables } from "../utils/receivablesHelpers";
+import { filterReceivables, groupReceivablesByHalf } from "../utils/receivablesHelpers";
 import { ReceivablePaymentActions } from "./ReceivablePaymentActions";
 import { ReceivableMobileRow } from "./ReceivableMobileRow";
 import { ReceivableDesktopRow } from "./ReceivableDesktopRow";
@@ -40,6 +40,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
   const [isAdding, setIsAdding] = useState(false);
   const [newReceivable, setNewReceivable] = useState<NewReceivableForm>({ name: "", amount: "", category: "Shoot", frequency: "By Date", biMonthlyDays: [15, 30], monthlyDay: 15, date: "", wallet: customWallets?.[0]?.id || "main" });
   const [selectedFilter, setSelectedFilter] = useState<"All" | ReceivableCategory>("All");
+  const [payPeriod, setPayPeriod] = useState<"all" | "firstHalf" | "secondHalf">("all");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [payPopoverId, setPayPopoverId] = useState<string | null>(null);
   const [customPayAmount, setCustomPayAmount] = useState<string>("");
@@ -51,10 +52,21 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredReceivables = useMemo(
+  const filteredByCategory = useMemo(
     () => filterReceivables(activeReceivables, selectedFilter),
     [activeReceivables, selectedFilter]
   );
+
+  const { firstHalf, secondHalf } = useMemo(
+    () => groupReceivablesByHalf(filteredByCategory),
+    [filteredByCategory]
+  );
+
+  const filteredReceivables = useMemo(() => {
+    if (payPeriod === "firstHalf") return firstHalf;
+    if (payPeriod === "secondHalf") return secondHalf;
+    return filteredByCategory;
+  }, [payPeriod, firstHalf, secondHalf, filteredByCategory]);
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,6 +108,43 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
             )}
           </div>
         </div>
+      </div>
+
+      {/* Pay-period selector: [ All ] [ 1–15 ] [ 16–31 ] */}
+      <div className="flex items-center gap-1 bg-surface-lowest border border-inverse/[0.05] p-1 rounded-xl mb-3.5 max-w-fit">
+        <button
+          type="button"
+          onClick={() => setPayPeriod("all")}
+          className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            payPeriod === "all"
+              ? "bg-emerald-600/20 text-emerald-400 shadow-sm"
+              : "text-faint hover:text-secondary"
+          }`}
+        >
+          All
+        </button>
+        <button
+          type="button"
+          onClick={() => setPayPeriod("firstHalf")}
+          className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            payPeriod === "firstHalf"
+              ? "bg-emerald-600/20 text-emerald-400 shadow-sm"
+              : "text-faint hover:text-secondary"
+          }`}
+        >
+          1–15
+        </button>
+        <button
+          type="button"
+          onClick={() => setPayPeriod("secondHalf")}
+          className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            payPeriod === "secondHalf"
+              ? "bg-emerald-600/20 text-emerald-400 shadow-sm"
+              : "text-faint hover:text-secondary"
+          }`}
+        >
+          16–31
+        </button>
       </div>
 
       {/* MOBILE LIST */}

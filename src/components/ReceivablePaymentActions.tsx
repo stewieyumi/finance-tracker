@@ -27,7 +27,11 @@ export const ReceivablePaymentActions: React.FC<ReceivablePaymentActionsProps> =
         <>
           {isBiMonthly && (
             <button
-              onClick={() => onQuickAddHalf(rec)}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuickAddHalf(rec);
+              }}
               title={isMobile ? undefined : "Add 1st/2nd half payment"}
               className={
                 isMobile
@@ -40,7 +44,11 @@ export const ReceivablePaymentActions: React.FC<ReceivablePaymentActionsProps> =
           )}
 
           <button
-            onClick={() => onTogglePaymentPopover(rec.id)}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onTogglePaymentPopover(rec.id);
+            }}
             title={isMobile ? undefined : "Add custom payment"}
             className={
               isMobile
@@ -54,7 +62,11 @@ export const ReceivablePaymentActions: React.FC<ReceivablePaymentActionsProps> =
       )}
 
       <button
-        onClick={() => onEdit(rec)}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit(rec);
+        }}
         className={
           isMobile
             ? "whitespace-nowrap shrink-0 px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 rounded text-[10px]"
