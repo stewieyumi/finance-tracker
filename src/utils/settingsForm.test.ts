@@ -87,7 +87,7 @@ describe("createSettingsForm", () => {
 
     expect(form.goalName).toBe("");
     expect(form.targetFund).toBe(0);
-    expect(form.paydayDays).toEqual([15, 30]);
+    expect(form.paydayDays).toEqual([]);
     expect(form.theme).toBe("dark");
     expect(form.milestoneWallet).toBe("bpi");
     expect(form.baseLivingAllowance).toBe(2500);
@@ -99,6 +99,16 @@ describe("createSettingsForm", () => {
     expect(form.defaultWallet).toBe("main");
     expect(form.inflowCategories).toEqual([]);
     expect(form.gigCategories).toEqual([]);
+  });
+
+  it("handles empty and custom paydayDays correctly without mutating", () => {
+    const emptyForm = createSettingsForm({ paydayDays: [] }, undefined);
+    expect(emptyForm.paydayDays).toEqual([]);
+
+    const customDays = [5, 20];
+    const customForm = createSettingsForm({ paydayDays: customDays }, undefined);
+    expect(customForm.paydayDays).toEqual([5, 20]);
+    expect(customForm.paydayDays).not.toBe(customDays);
   });
 });
 

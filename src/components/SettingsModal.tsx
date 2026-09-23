@@ -80,7 +80,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     setForm(prev => ({ ...prev, inflowsLabel: p.inflows, gigsLabel: p.gigs, inflowCategories: p.inflowCats, gigCategories: p.gigCats }));
   };
 
-  const [newPaydayDay, setNewPaydayDay] = useState(1);
+  const [newPaydayDay, setNewPaydayDay] = useState(() => {
+    const existing = globalData.settings?.paydayDays || [];
+    return Array.from({ length: 31 }, (_, i) => i + 1).find(d => !existing.includes(d)) || 1;
+  });
 
   const handleSave = () => {
     setGlobalData(prev => ({
@@ -277,41 +280,81 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                 </div>
 
                 <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
-                  <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Payday Schedule</label>
-                  <div className="text-[10px] text-faint mb-2">These dates control payday funding and commitment allocation. Not the same as an individual bill's due date.</div>
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    {(form.paydayDays.length ? form.paydayDays : [15, 30]).map(day => (
-                      <span key={day} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg chip-blue text-[11px] font-semibold">
-                        {formatOrdinal(day)}
-                        <button
-                          type="button"
-                          onClick={() => setForm({...form, paydayDays: form.paydayDays.filter(d => d !== day)})}
-                          disabled={form.paydayDays.length <= 1}
-                          className="text-blue-400 hover:text-strong disabled:opacity-30 disabled:cursor-not-allowed w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-500/10 transition"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
+                  <div className="mb-2">
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Payday Schedule</label>
+                    <div className="text-[10px] text-faint">These dates control payday funding and commitment allocation. Not the same as an individual bill's due date.</div>
                   </div>
+
+                  {form.paydayDays.length === 0 ? (
+                    <div className="p-3 rounded-xl bg-surface-lowest border border-inverse/[0.05] mb-3 flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-semibold text-strong flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                          System Default
+                        </div>
+                        <div className="text-[11px] text-muted">15th and 30th of each month</div>
+                      </div>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        Default
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {form.paydayDays.map(day => (
+                        <span
+                          key={day}
+                          data-testid={`payday-chip-${day}`}
+                          className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg chip-blue text-[11px] font-semibold"
+                        >
+                          {formatOrdinal(day)}
+                          <button
+                            type="button"
+                            onClick={() => setForm({
+                              ...form,
+                              paydayDays: form.paydayDays.filter(d => d !== day),
+                            })}
+                            aria-label={`Remove payday ${day}`}
+                            className="text-blue-400 hover:text-strong w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-500/10 transition"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex gap-2">
                     <select
+                      id="new-payday-day"
+                      aria-label="Select payday day"
                       value={newPaydayDay}
                       onChange={e => setNewPaydayDay(Number(e.target.value))}
                       className="flex-1 bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer"
                     >
                       {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                        <option key={d} value={d}>{formatOrdinal(d)}</option>
+                        <option
+                          key={d}
+                          value={d}
+                          disabled={form.paydayDays.includes(d)}
+                        >
+                          {formatOrdinal(d)}{form.paydayDays.includes(d) ? " (Added)" : ""}
+                        </option>
                       ))}
                     </select>
                     <button
                       type="button"
                       onClick={() => {
-                        if (form.paydayDays.length >= 10) return;
                         if (form.paydayDays.includes(newPaydayDay)) return;
-                        setForm({...form, paydayDays: [...form.paydayDays, newPaydayDay].sort((a, b) => a - b)});
+                        const nextDays = [...form.paydayDays, newPaydayDay].sort((a, b) => a - b);
+                        setForm({ ...form, paydayDays: nextDays });
+                        const nextAvailable = Array.from({ length: 31 }, (_, i) => i + 1).find(
+                          d => !nextDays.includes(d)
+                        );
+                        if (nextAvailable) {
+                          setNewPaydayDay(nextAvailable);
+                        }
                       }}
-                      disabled={form.paydayDays.length >= 10 || form.paydayDays.includes(newPaydayDay)}
+                      disabled={form.paydayDays.includes(newPaydayDay)}
                       className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-fill-strong disabled:cursor-not-allowed text-white text-xs font-semibold transition"
                     >
                       Add

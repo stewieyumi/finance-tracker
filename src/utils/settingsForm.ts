@@ -51,7 +51,7 @@ export function createSettingsForm(
   return {
     goalName: settings?.goalName || "",
     targetFund: settings?.targetFund || 0,
-    paydayDays: settings?.paydayDays || [15, 30],
+    paydayDays: settings?.paydayDays ? [...settings.paydayDays] : [],
     theme: settings?.theme || "dark",
     milestoneWallet: settings?.milestoneWallet || "bpi",
     baseLivingAllowance: settings?.baseLivingAllowance ?? 2500,
