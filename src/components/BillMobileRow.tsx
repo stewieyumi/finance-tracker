@@ -6,6 +6,7 @@ import { LoanProgressBadge } from "./LoanProgressBadge";
 
 interface BillMobileRowProps {
   bill: BillViewModel;
+  selectedMonth?: string;
   customWallets?: CustomWallet[];
   highlightOverdue: boolean;
   onToggleStatus: (bill: BillViewModel) => void;
@@ -14,6 +15,7 @@ interface BillMobileRowProps {
 
 export const BillMobileRow: React.FC<BillMobileRowProps> = ({
   bill,
+  selectedMonth,
   customWallets,
   highlightOverdue,
   onToggleStatus,
@@ -37,7 +39,7 @@ export const BillMobileRow: React.FC<BillMobileRowProps> = ({
   >
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0 flex-1 text-left">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1 text-left flex-wrap">
           <button
             type="button"
             onClick={(e) => {
@@ -60,6 +62,11 @@ export const BillMobileRow: React.FC<BillMobileRowProps> = ({
           <span className="privacy-blur text-xs font-semibold text-strong truncate">
             {bill.name}
           </span>
+          {!bill.paid && bill.targetMonthForDue && selectedMonth && bill.targetMonthForDue !== selectedMonth && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-400 border border-amber-500/30 shrink-0">
+              For {bill.targetMonthForDue}
+            </span>
+          )}
           {bill.isOverridden && (
             <span className="text-[8px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1 rounded shrink-0">
               adj

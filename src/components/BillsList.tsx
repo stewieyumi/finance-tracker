@@ -46,6 +46,7 @@ export const BillsList: React.FC<BillsListProps> = ({
     <BillMobileRow
       key={bill.id}
       bill={bill}
+      selectedMonth={selectedMonth}
       customWallets={customWallets}
       highlightOverdue={highlightOverdue}
       onToggleStatus={onToggleStatus}

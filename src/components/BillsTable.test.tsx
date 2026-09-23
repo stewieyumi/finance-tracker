@@ -248,4 +248,31 @@ describe("BillsTable - list and edit wiring", () => {
     );
     expect(setEditingId).not.toHaveBeenCalled();
   });
+
+  it("renders the historical target-month indicator when targetMonthForDue differs from selectedMonth", () => {
+    const historicalBill = createBill({
+      id: "bill-historical-1",
+      name: "Past Due Loan",
+      targetMonthForDue: "August 2026",
+      paid: false,
+    });
+
+    const currentBill = createBill({
+      id: "bill-current-1",
+      name: "Current Month Bill",
+      targetMonthForDue: "September 2026",
+      paid: false,
+    });
+
+    renderBillsTable([historicalBill, currentBill], {
+      selectedMonth: "September 2026",
+    });
+
+    // Should display the "For August 2026" indicator for the historical bill
+    const indicators = screen.getAllByText("For August 2026");
+    expect(indicators.length).toBeGreaterThan(0);
+
+    // Normal current-month bill should NOT display "For September 2026"
+    expect(screen.queryByText("For September 2026")).not.toBeInTheDocument();
+  });
 });

@@ -29,7 +29,14 @@ export const BillDesktopRow: React.FC<BillDesktopRowProps> = ({
       </td>
       <td className="py-2.5 px-2 align-top pt-3 text-primary truncate font-medium">
         <div className="flex flex-col">
-          <span className="privacy-blur font-semibold">{bill.name}</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="privacy-blur font-semibold">{bill.name}</span>
+            {!bill.paid && bill.targetMonthForDue && bill.targetMonthForDue !== selectedMonth && (
+              <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                For {bill.targetMonthForDue}
+              </span>
+            )}
+          </div>
           {bill.isOverridden && <span className="text-[9px] font-mono text-amber-400 flex items-center gap-1">• {selectedMonth.split(" ")[0]} bill adjusted</span>}
         </div>
       </td>
