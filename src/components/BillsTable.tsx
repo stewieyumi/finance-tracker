@@ -11,6 +11,7 @@ import { BillsList } from "./BillsList";
 import { Bill, BillViewModel, BillType, EditFormData, CustomWallet } from "../types/finance";
 import { formatDaysRemaining } from "../utils/dateHelpers";
 import { filterBills, sortBills, groupBillsByHalf, BillSortOption } from "../utils/bills/billListHelpers";
+import { PayPeriodFilter } from "./BillsList";
 
 const BILL_TYPES = ["All", "Bill", "Subscription", "Loan / Installment"];
 
@@ -40,6 +41,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
   const [isAdding, setIsAdding] = useState(false);
   const [newBill, setNewBill] = useState({ name: "", amount: "", dueDay: "1", type: "Bill" as BillType, startMonth: selectedMonth, endMonth: selectedMonth, wallet: defaultWallet });
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [payPeriod, setPayPeriod] = useState<PayPeriodFilter>("all");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<BillSortOption>("default");
@@ -138,10 +140,48 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
         </div>
       </div>
 
+      {/* Pay-period selector: [ All ] [ 1–15 ] [ 16–31 ] */}
+      <div className="flex items-center gap-1 bg-surface-lowest border border-inverse/[0.05] p-1 rounded-xl mb-3.5 max-w-fit">
+        <button
+          type="button"
+          onClick={() => setPayPeriod("all")}
+          className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            payPeriod === "all"
+              ? "bg-blue-600/20 text-blue-400 shadow-sm"
+              : "text-faint hover:text-secondary"
+          }`}
+        >
+          All
+        </button>
+        <button
+          type="button"
+          onClick={() => setPayPeriod("firstHalf")}
+          className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            payPeriod === "firstHalf"
+              ? "bg-blue-600/20 text-blue-400 shadow-sm"
+              : "text-faint hover:text-secondary"
+          }`}
+        >
+          1–15
+        </button>
+        <button
+          type="button"
+          onClick={() => setPayPeriod("secondHalf")}
+          className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            payPeriod === "secondHalf"
+              ? "bg-blue-600/20 text-blue-400 shadow-sm"
+              : "text-faint hover:text-secondary"
+          }`}
+        >
+          16–31
+        </button>
+      </div>
+
      <BillsList
        filteredBills={filteredBills}
        firstHalfBills={firstHalfBills}
        secondHalfBills={secondHalfBills}
+       payPeriod={payPeriod}
        selectedFilter={selectedFilter}
        searchQuery={searchQuery}
        selectedMonth={selectedMonth}

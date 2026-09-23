@@ -149,4 +149,103 @@ describe("BillsTable - list and edit wiring", () => {
       })
     );
   });
+
+  it("opens edit modal when clicking the commitment card or row, and keeps status toggle strictly independent", () => {
+    const bill = createBill({
+      id: "bill-card-test",
+      name: "Water Bill",
+      amount: 450,
+      paid: false,
+    });
+
+    const onToggleStatus = vi.fn();
+    const { setEditingId } = renderBillsTable([bill], { onToggleStatus });
+
+    // 1. Desktop row click -> onEdit, NOT onToggleStatus
+    const billNames = screen.getAllByText("Water Bill");
+    // Click desktop text / row area
+    fireEvent.click(billNames[0]);
+    expect(setEditingId).toHaveBeenCalledWith("bill-card-test");
+    expect(onToggleStatus).not.toHaveBeenCalled();
+
+    setEditingId.mockClear();
+    onToggleStatus.mockClear();
+
+    // 2. Click desktop status toggle -> onToggleStatus, NOT onEdit
+    const pendingButtons = screen.getAllByRole("button", { name: /mark water bill as paid/i });
+    // Pending buttons exist in both mobile and desktop views; click the desktop one (second or first)
+    fireEvent.click(pendingButtons[1] || pendingButtons[0]);
+    expect(onToggleStatus).toHaveBeenCalledTimes(1);
+    expect(onToggleStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "bill-card-test" })
+    );
+    expect(setEditingId).not.toHaveBeenCalled();
+  });
+
+  it("filters commitments correctly across pay-period selector states (All, 1–15, 16–31)", () => {
+    const bills = [
+      createBill({
+        id: "bill-half-1",
+        name: "First Half Bill",
+        dueDay: "5",
+      }),
+      createBill({
+        id: "bill-half-2",
+        name: "Second Half Bill",
+        dueDay: "20",
+      }),
+    ];
+
+    renderBillsTable(bills);
+
+    // Initial state: "All" -> both bills visible
+    expect(screen.getAllByText("First Half Bill").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Second Half Bill").length).toBeGreaterThan(0);
+
+    // Switch to "1–15" -> only first half visible
+    fireEvent.click(screen.getByRole("button", { name: "1–15" }));
+    expect(screen.getAllByText("First Half Bill").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Second Half Bill")).not.toBeInTheDocument();
+
+    // Switch to "16–31" -> only second half visible
+    fireEvent.click(screen.getByRole("button", { name: "16–31" }));
+    expect(screen.queryByText("First Half Bill")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Second Half Bill").length).toBeGreaterThan(0);
+
+    // Switch back to "All" -> both bills visible again
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.getAllByText("First Half Bill").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Second Half Bill").length).toBeGreaterThan(0);
+  });
+
+  it("handles mobile card and mobile status button independently", () => {
+    const bill = createBill({
+      id: "bill-mobile-test",
+      name: "Electric Bill",
+      amount: 2500,
+      paid: false,
+    });
+
+    const onToggleStatus = vi.fn();
+    const { setEditingId } = renderBillsTable([bill], { onToggleStatus });
+
+    const mobileCard = screen.getByTestId("bill-mobile-row-bill-mobile-test");
+
+    // 1. Click mobile card -> calls onEdit, NOT onToggleStatus
+    fireEvent.click(mobileCard);
+    expect(setEditingId).toHaveBeenCalledWith("bill-mobile-test");
+    expect(onToggleStatus).not.toHaveBeenCalled();
+
+    setEditingId.mockClear();
+    onToggleStatus.mockClear();
+
+    // 2. Click mobile status button -> calls onToggleStatus, NOT onEdit
+    const mobileStatusBtn = screen.getAllByRole("button", { name: /mark electric bill as paid/i })[0];
+    fireEvent.click(mobileStatusBtn);
+    expect(onToggleStatus).toHaveBeenCalledTimes(1);
+    expect(onToggleStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "bill-mobile-test" })
+    );
+    expect(setEditingId).not.toHaveBeenCalled();
+  });
 });

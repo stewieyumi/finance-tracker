@@ -21,10 +21,12 @@ export const BillMobileRow: React.FC<BillMobileRowProps> = ({
 }) => (
   <div
     key={bill.id}
-    className={`p-3 rounded-xl border transition-all ${
+    data-testid={`bill-mobile-row-${bill.id}`}
+    onClick={() => onEdit(bill)}
+    className={`p-3 rounded-xl border transition-all cursor-pointer ${
       bill.paid
-        ? "bg-fill-subtle/40 border-strong/60 opacity-40"
-        : "bg-surface-sunken border-strong/80 shadow-sm"
+        ? "bg-fill-subtle/40 border-strong/60 opacity-40 hover:opacity-60"
+        : "bg-surface-sunken border-strong/80 shadow-sm hover:border-inverse/[0.15]"
     } ${
       highlightOverdue &&
       (bill.daysLeft ?? 0) < 0 &&
@@ -35,11 +37,16 @@ export const BillMobileRow: React.FC<BillMobileRowProps> = ({
   >
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
-        <button
-          onClick={() => onToggleStatus(bill)}
-          className="flex items-center gap-2.5 min-w-0 flex-1 text-left focus:outline-none group"
-        >
-          <div className="shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1 text-left">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleStatus(bill);
+            }}
+            aria-label={bill.paid ? `Mark ${bill.name} as pending` : `Mark ${bill.name} as paid`}
+            className="shrink-0 min-w-[44px] min-h-[44px] -ml-2 -my-2 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-full"
+          >
             {bill.paid ? (
               <span className="w-5 h-5 rounded-full chip-blue flex items-center justify-center">
                 <Check size={11} className="stroke-[3]" />
@@ -49,8 +56,8 @@ export const BillMobileRow: React.FC<BillMobileRowProps> = ({
                 <Circle size={7} className="fill-current/40" />
               </span>
             )}
-          </div>
-          <span className="privacy-blur text-xs font-semibold text-strong truncate group-hover:text-blue-400 transition-colors">
+          </button>
+          <span className="privacy-blur text-xs font-semibold text-strong truncate">
             {bill.name}
           </span>
           {bill.isOverridden && (
@@ -58,7 +65,7 @@ export const BillMobileRow: React.FC<BillMobileRowProps> = ({
               adj
             </span>
           )}
-        </button>
+        </div>
 
         <span
           className={`font-mono text-xs font-bold shrink-0 ${
@@ -135,7 +142,11 @@ export const BillMobileRow: React.FC<BillMobileRowProps> = ({
         </div>
 
         <button
-          onClick={() => onEdit(bill)}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(bill);
+          }}
           className="px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 hover:bg-fill-strong border border-strong/40 rounded-md transition flex items-center gap-1 text-[10px] shrink-0 mt-1"
         >
           <Edit2 size={9} />
