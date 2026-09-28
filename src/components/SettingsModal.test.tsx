@@ -316,3 +316,153 @@ describe("SettingsModal - Custom Payday Configuration", () => {
     expect(saved.paydayDays).toEqual(all31Days);
   });
 });
+
+describe("SettingsModal - Salary Gross & Deductions", () => {
+  it("displays legacy perPayoutSalary as initial gross and net with no deductions", () => {
+    const data = createMockData({
+      settings: {
+        ...createMockData().settings!,
+        perPayoutSalary: 18000,
+      },
+    });
+
+    renderSettingsModal(data);
+
+    const grossInput = screen.getByRole("spinbutton", { name: /gross salary \/ pay period/i }) as HTMLInputElement;
+    expect(grossInput.value).toBe("18000");
+
+    expect(screen.getByTestId("salary-gross-display")).toHaveTextContent("₱18,000.00");
+    expect(screen.getByTestId("salary-deductions-display")).toHaveTextContent("-₱0.00");
+    expect(screen.getByTestId("salary-net-display")).toHaveTextContent("₱18,000.00");
+    expect(screen.getByText(/no deductions configured/i)).toBeInTheDocument();
+  });
+
+  it("updates gross and net in real time when gross salary input changes", () => {
+    const data = createMockData({
+      settings: {
+        ...createMockData().settings!,
+        perPayoutSalary: 15000,
+      },
+    });
+
+    renderSettingsModal(data);
+
+    const grossInput = screen.getByRole("spinbutton", { name: /gross salary \/ pay period/i });
+    fireEvent.change(grossInput, { target: { value: "30000" } });
+
+    expect(screen.getByTestId("salary-gross-display")).toHaveTextContent("₱30,000.00");
+    expect(screen.getByTestId("salary-net-display")).toHaveTextContent("₱30,000.00");
+  });
+
+  it("adds a fixed deduction and recalculates net salary in real time", () => {
+    const data = createMockData({
+      settings: {
+        ...createMockData().settings!,
+        perPayoutSalary: 25000,
+      },
+    });
+
+    renderSettingsModal(data);
+
+    const addDeductionBtn = screen.getByRole("button", { name: /add deduction/i });
+    fireEvent.click(addDeductionBtn);
+
+    const nameInput = screen.getByRole("textbox", { name: "Deduction name" });
+    const valueInput = screen.getByRole("spinbutton", { name: "Deduction value" });
+
+    fireEvent.change(nameInput, { target: { value: "Income Tax" } });
+    fireEvent.change(valueInput, { target: { value: "2500" } });
+
+    expect(screen.getByTestId("salary-deductions-display")).toHaveTextContent("-₱2,500.00");
+    expect(screen.getByTestId("salary-net-display")).toHaveTextContent("₱22,500.00");
+  });
+
+  it("adds a percentage deduction and calculates correct deduction amount from gross", () => {
+    const data = createMockData({
+      settings: {
+        ...createMockData().settings!,
+        perPayoutSalary: 20000,
+      },
+    });
+
+    renderSettingsModal(data);
+
+    const addDeductionBtn = screen.getByRole("button", { name: /add deduction/i });
+    fireEvent.click(addDeductionBtn);
+
+    const typeSelect = screen.getByRole("combobox", { name: "Deduction type" });
+    const valueInput = screen.getByRole("spinbutton", { name: "Deduction value" });
+
+    fireEvent.change(typeSelect, { target: { value: "percentage" } });
+    fireEvent.change(valueInput, { target: { value: "10" } });
+
+    // 10% of 20000 is 2000 -> net is 18000
+    expect(screen.getByTestId("salary-deductions-display")).toHaveTextContent("-₱2,000.00");
+    expect(screen.getByTestId("salary-net-display")).toHaveTextContent("₱18,000.00");
+  });
+
+  it("removes a deduction and restores net salary", () => {
+    const data = createMockData({
+      settings: {
+        ...createMockData().settings!,
+        grossPerPayoutSalary: 20000,
+        salaryDeductions: [
+          { id: "d-tax", name: "Tax", type: "fixed", value: 3000 },
+        ],
+        perPayoutSalary: 17000,
+      },
+    });
+
+    renderSettingsModal(data);
+
+    expect(screen.getByTestId("salary-deductions-display")).toHaveTextContent("-₱3,000.00");
+    expect(screen.getByTestId("salary-net-display")).toHaveTextContent("₱17,000.00");
+
+    const removeBtn = screen.getByRole("button", { name: "Remove Tax" });
+    fireEvent.click(removeBtn);
+
+    expect(screen.getByTestId("salary-deductions-display")).toHaveTextContent("-₱0.00");
+    expect(screen.getByTestId("salary-net-display")).toHaveTextContent("₱20,000.00");
+    expect(screen.getByText(/no deductions configured/i)).toBeInTheDocument();
+  });
+
+  it("persists gross, deductions, and calculated net on save", () => {
+    const data = createMockData({
+      settings: {
+        ...createMockData().settings!,
+        perPayoutSalary: 20000,
+      },
+    });
+
+    const { setGlobalData, onClose } = renderSettingsModal(data);
+
+    const grossInput = screen.getByRole("spinbutton", { name: /gross salary \/ pay period/i });
+    fireEvent.change(grossInput, { target: { value: "30000" } });
+
+    const addDeductionBtn = screen.getByRole("button", { name: /add deduction/i });
+    fireEvent.click(addDeductionBtn);
+
+    const nameInput = screen.getByRole("textbox", { name: "Deduction name" });
+    const typeSelect = screen.getByRole("combobox", { name: "Deduction type" });
+    const valueInput = screen.getByRole("spinbutton", { name: "Deduction value" });
+
+    fireEvent.change(nameInput, { target: { value: "Withholding" } });
+    fireEvent.change(typeSelect, { target: { value: "percentage" } });
+    fireEvent.change(valueInput, { target: { value: "10" } });
+
+    const saveButton = screen.getByRole("button", { name: /save settings/i });
+    fireEvent.click(saveButton);
+
+    expect(onClose).toHaveBeenCalled();
+    const saved = extractSavedSettings(setGlobalData, data);
+    expect(saved.grossPerPayoutSalary).toBe(30000);
+    expect(saved.salaryDeductions).toEqual([
+      expect.objectContaining({
+        name: "Withholding",
+        type: "percentage",
+        value: 10,
+      }),
+    ]);
+    expect(saved.perPayoutSalary).toBe(27000);
+  });
+});

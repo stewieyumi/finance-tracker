@@ -1,6 +1,16 @@
 export type BillType = "Bill" | "Subscription" | "Loan / Installment";
 export type ReceivableFrequency = "By Date" | "Monthly" | "Bi-monthly";
 export type ReceivableCategory = string;
+
+export type DeductionType = "fixed" | "percentage";
+
+export interface Deduction {
+  id: string;
+  name: string;
+  type: DeductionType;
+  value: number;
+}
+
 export type ShootCategory = string;
 export type ShootStatus = "Pencil" | "Confirmed" | "Moved" | "Cancelled";
 
@@ -54,6 +64,8 @@ export interface Receivable {
   id: string;
   name: string;
   amount: number;
+  grossAmount?: number;
+  deductions?: Deduction[];
   category?: ReceivableCategory;
   frequency: ReceivableFrequency;
   wallet?: string;
@@ -116,6 +128,8 @@ export interface AppSettings {
   inflowCategories?: string[];
   gigCategories?: string[];
   perPayoutSalary?: number;
+  grossPerPayoutSalary?: number;
+  salaryDeductions?: Deduction[];
   phpToJpyRate?: number;
   defaultTransitAllocation?: number;
   baseLivingAllowance?: number;
@@ -161,6 +175,8 @@ export interface EditFormData {
   name?: string;
   title?: string;
   amount?: number;
+  grossAmount?: number;
+  deductions?: Deduction[];
   dueDay?: string;
   type?: BillType;
   wallet?: string;

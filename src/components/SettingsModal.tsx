@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Settings, Briefcase, Target, Save, Cloud, Database, ArrowRightLeft, Download, Upload } from "lucide-react";
-import { UnifiedFinanceData } from "../types/finance";
+import { X, Settings, Briefcase, Target, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2 } from "lucide-react";
+import { Deduction, DeductionType, UnifiedFinanceData } from "../types/finance";
 import { migrateLegacyBills } from "../utils/financeMigrations";
 import {
   createSettingsForm,
   applySettingsForm,
 } from "../utils/settingsForm";
+import {
+  calculateDeductionAmount,
+  calculateNetSalary,
+} from "../utils/financeHelpers";
+import { generateId } from "../utils/idHelpers";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -79,6 +84,48 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     const p = PRESETS[key];
     setForm(prev => ({ ...prev, inflowsLabel: p.inflows, gigsLabel: p.gigs, inflowCategories: p.inflowCats, gigCategories: p.gigCats }));
   };
+
+  const handleAddDeduction = () => {
+    setForm(prev => ({
+      ...prev,
+      salaryDeductions: [
+        ...prev.salaryDeductions,
+        {
+          id: generateId("ded"),
+          name: "",
+          type: "fixed",
+          value: 0,
+        },
+      ],
+    }));
+  };
+
+  const handleUpdateDeduction = (id: string, patch: Partial<Deduction>) => {
+    setForm(prev => ({
+      ...prev,
+      salaryDeductions: prev.salaryDeductions.map(d =>
+        d.id === id ? { ...d, ...patch } : d
+      ),
+    }));
+  };
+
+  const handleRemoveDeduction = (id: string) => {
+    setForm(prev => ({
+      ...prev,
+      salaryDeductions: prev.salaryDeductions.filter(d => d.id !== id),
+    }));
+  };
+
+  const currentGross = Math.max(0, Number(form.grossPerPayoutSalary) || 0);
+  const currentDeductions = form.salaryDeductions || [];
+  const totalDeductions = Math.min(
+    currentGross,
+    currentDeductions.reduce(
+      (sum, d) => sum + calculateDeductionAmount(currentGross, d),
+      0
+    )
+  );
+  const calculatedNet = calculateNetSalary(currentGross, currentDeductions);
 
   const [newPaydayDay, setNewPaydayDay] = useState(() => {
     const existing = globalData.settings?.paydayDays || [];
@@ -173,6 +220,176 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
             <div className="space-y-5 animate-in fade-in duration-200">
               <div className="text-xs text-muted mb-2">Configure the default amounts injected into your wallets during the 15th/30th Payday Distribution. (Note: These scale down safely if your bills consume too much of your paycheck).</div>
               
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-purple-400 uppercase tracking-wider">
+                  <Banknote size={14} /> Payday Salary & Deductions
+                </div>
+
+                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 space-y-4">
+                  <div>
+                    <label
+                      htmlFor="gross-salary-input"
+                      className="text-[10px] text-faint uppercase font-semibold mb-1 block"
+                    >
+                      Gross Salary / Pay Period (₱)
+                    </label>
+                    <input
+                      id="gross-salary-input"
+                      aria-label="Gross Salary / Pay Period"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={form.grossPerPayoutSalary}
+                      onChange={e =>
+                        setForm({
+                          ...form,
+                          grossPerPayoutSalary: Math.max(0, Number(e.target.value) || 0),
+                        })
+                      }
+                      className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] text-faint uppercase font-semibold block">
+                        Deductions
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAddDeduction}
+                        className="flex items-center gap-1 text-[11px] font-semibold text-purple-400 hover:text-purple-300 transition"
+                      >
+                        <Plus size={12} /> Add Deduction
+                      </button>
+                    </div>
+
+                    {form.salaryDeductions.length === 0 ? (
+                      <div className="text-[11px] text-faint py-2.5 px-3 rounded-xl bg-surface-lowest border border-inverse/[0.05]">
+                        No deductions configured. Net equals gross.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {form.salaryDeductions.map(deduction => (
+                          <div
+                            key={deduction.id}
+                            data-testid={`deduction-row-${deduction.id}`}
+                            className="flex items-center gap-2 bg-surface-lowest p-2 rounded-xl border border-inverse/[0.05]"
+                          >
+                            <input
+                              type="text"
+                              placeholder="Name (e.g. Tax)"
+                              value={deduction.name}
+                              onChange={e =>
+                                handleUpdateDeduction(deduction.id, { name: e.target.value })
+                              }
+                              aria-label="Deduction name"
+                              className="flex-1 min-w-0 bg-surface-input border border-strong rounded-lg px-2.5 py-1.5 text-xs text-strong outline-none focus:border-purple-500"
+                            />
+                            <select
+                              value={deduction.type}
+                              onChange={e =>
+                                handleUpdateDeduction(deduction.id, {
+                                  type: e.target.value as DeductionType,
+                                })
+                              }
+                              aria-label="Deduction type"
+                              className="w-24 bg-surface-input border border-strong rounded-lg px-2 py-1.5 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer"
+                            >
+                              <option value="fixed">Fixed (₱)</option>
+                              <option value="percentage">Percent (%)</option>
+                            </select>
+                            <div className="w-24">
+                              <input
+                                type="number"
+                                min="0"
+                                step={deduction.type === "percentage" ? "0.1" : "1"}
+                                placeholder="0"
+                                value={deduction.value}
+                                onChange={e =>
+                                  handleUpdateDeduction(deduction.id, {
+                                    value: Math.max(0, Number(e.target.value) || 0),
+                                  })
+                                }
+                                aria-label="Deduction value"
+                                className="w-full bg-surface-input border border-strong rounded-lg px-2 py-1.5 text-xs text-strong font-mono outline-none focus:border-purple-500"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDeduction(deduction.id)}
+                              aria-label={`Remove ${deduction.name || "deduction"}`}
+                              className="text-faint hover:text-rose-400 p-1.5 rounded-lg transition"
+                              title="Remove deduction"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-inverse/[0.05]">
+                    <div className="bg-surface-lowest border border-inverse/[0.05] rounded-xl p-3 grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <div className="text-[10px] text-faint uppercase font-semibold">
+                          Gross
+                        </div>
+                        <div
+                          data-testid="salary-gross-display"
+                          className="text-xs font-mono font-bold text-strong mt-0.5"
+                        >
+                          ₱{currentGross.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-faint uppercase font-semibold">
+                          Total Deductions
+                        </div>
+                        <div
+                          data-testid="salary-deductions-display"
+                          className="text-xs font-mono font-bold text-rose-400 mt-0.5"
+                        >
+                          -₱{totalDeductions.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-emerald-500 uppercase font-bold">
+                          Net Usable Salary
+                        </div>
+                        <div
+                          data-testid="salary-net-display"
+                          className="text-xs font-mono font-bold text-emerald-400 mt-0.5"
+                        >
+                          ₱{calculatedNet.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-faint mt-2">
+                      💡 Payday distribution and wallet allocations consume this{" "}
+                      <span className="text-emerald-400 font-semibold font-mono">
+                        Net Usable Salary (₱{calculatedNet.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })})
+                      </span>
+                      .
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-purple-400 uppercase tracking-wider"><ArrowRightLeft size={14} /> Routing Rules</div>
                 

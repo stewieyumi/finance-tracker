@@ -1,5 +1,8 @@
-import { AppSettings, WalletState } from "../types/finance";
-import { getDefaultExpenseWalletId } from "./financeHelpers";
+import { AppSettings, Deduction, WalletState } from "../types/finance";
+import {
+  calculateNetSalary,
+  getDefaultExpenseWalletId,
+} from "./financeHelpers";
 
 export const EXPENSE_CATEGORIES = [
   "Food & Dining",
@@ -14,6 +17,8 @@ export interface SettingsForm {
   goalName: string;
   targetFund: number;
   paydayDays: number[];
+  grossPerPayoutSalary: number;
+  salaryDeductions: Deduction[];
   milestoneWallet: string;
   theme: "dark" | "light" | "system";
   baseLivingAllowance: number;
@@ -48,10 +53,24 @@ export function createSettingsForm(
     gigCategories: string[];
   }
 ): SettingsForm {
+  const grossPerPayoutSalary =
+    settings?.grossPerPayoutSalary !== undefined
+      ? Math.max(0, Number(settings.grossPerPayoutSalary) || 0)
+      : Math.max(0, Number(settings?.perPayoutSalary) || 0);
+
+  const salaryDeductions = (settings?.salaryDeductions || []).map(d => ({
+    id: d.id,
+    name: d.name,
+    type: d.type,
+    value: Number(d.value) || 0,
+  }));
+
   return {
     goalName: settings?.goalName || "",
     targetFund: settings?.targetFund || 0,
     paydayDays: settings?.paydayDays ? [...settings.paydayDays] : [],
+    grossPerPayoutSalary,
+    salaryDeductions,
     theme: settings?.theme || "dark",
     milestoneWallet: settings?.milestoneWallet || "bpi",
     baseLivingAllowance: settings?.baseLivingAllowance ?? 2500,
@@ -84,10 +103,23 @@ export function applySettingsForm(
   settings: AppSettings | undefined,
   form: SettingsForm
 ): AppSettings {
+  const gross = Math.max(0, Number(form.grossPerPayoutSalary) || 0);
+  const deductions: Deduction[] = (form.salaryDeductions || []).map(d => ({
+    id: d.id,
+    name: d.name,
+    type: d.type === "percentage" ? "percentage" : "fixed",
+    value: Math.max(0, Number(d.value) || 0),
+  }));
+
+  const netSalary = calculateNetSalary(gross, deductions);
+
   return {
     ...(settings || {}),
     targetFund: Number(form.targetFund),
     paydayDays: form.paydayDays,
+    grossPerPayoutSalary: gross,
+    salaryDeductions: deductions,
+    perPayoutSalary: netSalary,
     goalName: form.goalName,
     milestoneWallet: form.milestoneWallet,
     theme: form.theme,

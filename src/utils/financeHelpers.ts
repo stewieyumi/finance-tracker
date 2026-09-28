@@ -1,10 +1,41 @@
-import type { AppSettings } from "../types/finance";
+import type { AppSettings, Deduction } from "../types/finance";
 
 export function getEffectiveBillAmount(
   baseAmount: number,
   override?: number
 ): number {
   return override !== undefined ? override : baseAmount;
+}
+
+export function calculateDeductionAmount(
+  grossAmount: number,
+  deduction: Deduction
+): number {
+  const gross = Math.max(0, Number(grossAmount) || 0);
+  const value = Math.max(0, Number(deduction.value) || 0);
+
+  if (deduction.type === "percentage") {
+    return Math.min(gross, Math.round(gross * (value / 100) * 100) / 100);
+  }
+
+  return Math.min(gross, Math.round(value * 100) / 100);
+}
+
+export function calculateNetSalary(
+  grossAmount: number,
+  deductions: Deduction[] = []
+): number {
+  const gross = Math.max(0, Number(grossAmount) || 0);
+
+  const totalDeductions = Math.min(
+    gross,
+    deductions.reduce(
+      (total, deduction) => total + calculateDeductionAmount(gross, deduction),
+      0
+    )
+  );
+
+  return Math.max(0, Math.round((gross - totalDeductions) * 100) / 100);
 }
 
 export type Wallet = "maya" | "gcash" | "maribank" | "gotyme" | "bpi" | "cash" | string;
