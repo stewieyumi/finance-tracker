@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { HistoricalLedgerModal } from "./components/HistoricalLedgerModal";
+import { TransactionHistoryModal } from "./components/TransactionHistoryModal";
 import { GoogleLogin, googleLogout, useGoogleOneTapLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
@@ -148,6 +149,7 @@ const {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormData>({});
   const [showLedgerModal, setShowLedgerModal] = useState(false);
+  const [showTransactionHistoryModal, setShowTransactionHistoryModal] = useState(false);
   const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(false);
 
   const [googleUser, setGoogleUser] = useState<any>(() => {
@@ -683,6 +685,17 @@ const copySummaryToClipboard = async () => {
         <YearlyOverviewModal isOpen={showYearlyModal} onClose={() => setShowYearlyModal(false)} globalData={globalData} selectedYear={selectedMonth.split(" ")[1] || "2026"} />
         <SettingsModal onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} onClose={() => setShowSettingsModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
         <HistoricalLedgerModal isOpen={showLedgerModal} onClose={() => setShowLedgerModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />
+        <TransactionHistoryModal
+          isOpen={showTransactionHistoryModal}
+          onClose={() => setShowTransactionHistoryModal(false)}
+          transactions={allTransactions}
+          walletLabels={globalData?.settings?.walletLabels}
+          formatDateTime={formatDateTime}
+          onOpenManualLedger={() => {
+            setShowTransactionHistoryModal(false);
+            setShowLedgerModal(true);
+          }}
+        />
         <FinancialAnalyticsModal isOpen={showAnalyticsModal} onClose={() => setShowAnalyticsModal(false)} globalData={globalData} selectedMonth={selectedMonth} totalLiquid={totalLiquid} totalUnpaidCommitments={totalUnpaidCommitments} />
 
         {activeTab === "home" && (
@@ -717,7 +730,7 @@ const copySummaryToClipboard = async () => {
             onNavigateToExpenses={() => setActiveTab("expenses")}
             onOpenAnalytics={() => setShowAnalyticsModal(true)}
             onOpenYearlyModal={() => setShowYearlyModal(true)}
-            onOpenLedger={() => setShowLedgerModal(true)}
+            onOpenLedger={() => setShowTransactionHistoryModal(true)}
             activeBills={activeBills}
           />
         )}
@@ -772,6 +785,7 @@ const copySummaryToClipboard = async () => {
             onImportFile={handleImportFile}
             allTransactions={allTransactions}
             onOpenLedger={() => setShowLedgerModal(true)}
+            onOpenTransactionHistory={() => setShowTransactionHistoryModal(true)}
             walletLabels={globalData?.settings?.walletLabels}
             formatDateTime={formatDateTime}
           />

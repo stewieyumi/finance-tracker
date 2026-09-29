@@ -66,4 +66,12 @@ describe("AccountTab", () => {
     fireEvent.click(screen.getByText("Manage Ledger"));
     expect(defaultProps.onOpenLedger).toHaveBeenCalled();
   });
+
+  it("calls onOpenTransactionHistory when View All is clicked", () => {
+    const onOpenTransactionHistory = vi.fn();
+    render(<AccountTab {...defaultProps} onOpenTransactionHistory={onOpenTransactionHistory} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /View Full History/i }));
+    expect(onOpenTransactionHistory).toHaveBeenCalled();
+  });
 });

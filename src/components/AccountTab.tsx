@@ -1,6 +1,6 @@
 import React from "react";
 import { GoogleLogin } from "@react-oauth/google";
-import { Settings, History, ArrowDownLeft, Calendar, Receipt } from "lucide-react";
+import { Settings, History, ArrowDownLeft, Calendar, Receipt, ArrowRight } from "lucide-react";
 import { TransactionHistoryItem } from "../types/finance";
 
 interface AccountTabProps {
@@ -13,6 +13,7 @@ interface AccountTabProps {
   onImportFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   allTransactions: TransactionHistoryItem[];
   onOpenLedger: () => void;
+  onOpenTransactionHistory?: () => void;
   walletLabels?: Record<string, string>;
   formatDateTime: (dateStr: string) => string;
 }
@@ -27,6 +28,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
   onImportFile,
   allTransactions,
   onOpenLedger,
+  onOpenTransactionHistory,
   walletLabels,
   formatDateTime,
 }) => {
@@ -59,7 +61,19 @@ export const AccountTab: React.FC<AccountTabProps> = ({
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-3">
             <h3 className="text-sm font-bold text-strong uppercase tracking-wider flex items-center gap-2"><History size={16} className="text-purple-400"/> Transaction History</h3>
-            <button onClick={onOpenLedger} className="px-2.5 py-1 bg-inverse/[0.05] hover:bg-inverse/[0.12] rounded-lg text-[10px] uppercase font-bold tracking-wider transition border border-inverse/[0.05]">Manage Ledger</button>
+            <div className="flex items-center gap-1.5">
+              <button onClick={onOpenLedger} className="px-2.5 py-1 bg-inverse/[0.05] hover:bg-inverse/[0.12] rounded-lg text-[10px] uppercase font-bold tracking-wider transition border border-inverse/[0.05]">Manage Ledger</button>
+              {onOpenTransactionHistory && (
+                <button
+                  type="button"
+                  onClick={onOpenTransactionHistory}
+                  aria-label="View Full History"
+                  className="px-2.5 py-1 bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 rounded-lg text-[10px] uppercase font-bold tracking-wider transition border border-blue-500/25 flex items-center gap-1"
+                >
+                  View All <ArrowRight size={10} />
+                </button>
+              )}
+            </div>
           </div>
           <span className="text-xs text-faint font-mono">{allTransactions.length} records</span>
         </div>
@@ -90,6 +104,15 @@ export const AccountTab: React.FC<AccountTabProps> = ({
                 </div>
               </div>
             ))
+          )}
+          {onOpenTransactionHistory && allTransactions.length > 5 && (
+            <button
+              type="button"
+              onClick={onOpenTransactionHistory}
+              className="w-full mt-2 py-2.5 bg-surface hover:bg-inverse/[0.05] border border-inverse/[0.06] rounded-xl text-xs font-semibold text-primary transition flex items-center justify-center gap-1.5"
+            >
+              View Full Transaction History ({allTransactions.length}) <ArrowRight size={12} />
+            </button>
           )}
         </div>
       </div>
