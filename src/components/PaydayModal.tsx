@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
-import { X, Banknote, Settings, CheckCircle2, ArrowRight } from "lucide-react";
+import { X, Banknote, Settings, CheckCircle2, ArrowRight, CalendarPlus } from "lucide-react";
 import { PaydayExecution, CustomWallet } from "../types/finance";
+import { exportPaydaysToCalendar } from "../utils/calendarExport";
 
 interface PaydayModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface PaydayModalProps {
   disabled?: boolean;
   latestExecution?: PaydayExecution;
   onUndoSplit?: (id: string) => void;
+  onExportCalendar?: (paydayDays: number[]) => void;
 }
 
 export const PaydayModal: React.FC<PaydayModalProps> = ({
@@ -29,7 +31,8 @@ export const PaydayModal: React.FC<PaydayModalProps> = ({
   onExecutePaydaySplit,
   disabled = false,
   latestExecution,
-  onUndoSplit
+  onUndoSplit,
+  onExportCalendar
 }) => {
   const modalBoxRef = useRef<HTMLDivElement>(null);
 
@@ -83,6 +86,21 @@ export const PaydayModal: React.FC<PaydayModalProps> = ({
           </div>
           <div className="flex items-center gap-1.5">
             <button
+              type="button"
+              onClick={() => {
+                if (onExportCalendar) {
+                  onExportCalendar(pdDays);
+                } else {
+                  exportPaydaysToCalendar(pdDays);
+                }
+              }}
+              className="text-faint hover:text-emerald-400 p-1.5 rounded-lg transition"
+              title="Export Paydays to Calendar (.ics)"
+              aria-label="Export Paydays to Calendar"
+            >
+              <CalendarPlus size={15} />
+            </button>
+            <button
               onClick={() => {
                 onClose();
                 onConfigureBaselines();
@@ -125,6 +143,24 @@ export const PaydayModal: React.FC<PaydayModalProps> = ({
             <div className="flex items-center justify-between pt-2 mt-1 border-t border-inverse/[0.06] text-emerald-400 font-medium">
               <span className="no-privacy-blur">Remaining Buffer</span>
               <span className="font-mono font-bold">₱{fmt(remainingBuffer)}</span>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 mt-1 border-t border-inverse/[0.04] text-[11px] text-muted">
+              <span>Calendar Sync</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onExportCalendar) {
+                    onExportCalendar(pdDays);
+                  } else {
+                    exportPaydaysToCalendar(pdDays);
+                  }
+                }}
+                className="text-emerald-400 hover:underline flex items-center gap-1 font-medium transition"
+              >
+                <CalendarPlus size={12} />
+                <span>Export Paydays (.ics)</span>
+              </button>
             </div>
           </div>
         </div>

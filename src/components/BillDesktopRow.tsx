@@ -1,8 +1,9 @@
 import React from "react";
-import { Check, Circle, Edit2 } from "lucide-react";
+import { Check, Circle, Edit2, CalendarPlus } from "lucide-react";
 import { BillViewModel, CustomWallet } from "../types/finance";
 import { formatDaysRemaining } from "../utils/dateHelpers";
 import { LoanProgressBadge } from "./LoanProgressBadge";
+import { exportBillToCalendar } from "../utils/calendarExport";
 
 interface BillDesktopRowProps {
   bill: BillViewModel;
@@ -11,6 +12,7 @@ interface BillDesktopRowProps {
   highlightOverdue: boolean;
   onToggleStatus: (bill: BillViewModel) => void;
   onEdit: (bill: BillViewModel) => void;
+  onExportCalendar?: (bill: BillViewModel) => void;
 }
 
 export const BillDesktopRow: React.FC<BillDesktopRowProps> = ({
@@ -20,8 +22,9 @@ export const BillDesktopRow: React.FC<BillDesktopRowProps> = ({
   highlightOverdue,
   onToggleStatus,
   onEdit,
+  onExportCalendar,
 }) => (
-    <tr key={bill.id} onClick={() => onEdit(bill)} className={`group transition-all duration-150 cursor-pointer ${bill.paid ? "opacity-40 hover:opacity-70" : "hover:bg-inverse/[0.04]"} ${highlightOverdue && (bill.daysLeft ?? 0) < 0 && !bill.paid ? 'bg-orange-900/10' : ''}`}>
+    <tr key={bill.id} onClick={() => onEdit(bill)} className={`group transition-all duration-150 cursor-pointer ${bill.paid ? "opacity-40 hover:opacity-70" : "hover:bg-inverse/[0.02]"} ${highlightOverdue && (bill.daysLeft ?? 0) < 0 && !bill.paid ? 'bg-orange-900/10' : ''}`}>
       <td className="py-2.5 px-2 align-top pt-3">
         <button type="button" onClick={(e) => { e.stopPropagation(); onToggleStatus(bill); }} aria-label={bill.paid ? `Mark ${bill.name} as pending` : `Mark ${bill.name} as paid`} className="flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-lg">
           {bill.paid ? <span className="flex items-center justify-center gap-1 w-[85px] text-[11px] font-semibold chip-blue px-2 py-1 rounded-lg transition-all"><Check size={11} className="stroke-[3]" /> Paid</span> : <span className="flex items-center justify-center gap-1 w-[85px] text-[11px] font-medium chip-rose px-2 py-1 rounded-lg transition-all"><Circle size={9} className="fill-current/20" /> Pending</span>}
@@ -60,6 +63,22 @@ export const BillDesktopRow: React.FC<BillDesktopRowProps> = ({
       </td>
       <td className="py-2.5 px-2 align-top text-center whitespace-nowrap pt-2">
         <div className="inline-flex items-center gap-1 bg-surface-high p-1 rounded-lg border border-inverse/[0.05]">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onExportCalendar) {
+                onExportCalendar(bill);
+              } else {
+                exportBillToCalendar(bill, selectedMonth);
+              }
+            }}
+            className="px-2 py-1 text-muted hover:text-blue-400 hover:bg-inverse/[0.05] rounded-md text-[10px] flex items-center transition"
+            title="Add to Calendar"
+            aria-label={`Export ${bill.name} to calendar`}
+          >
+            <CalendarPlus size={10} className="mr-1"/> Sync
+          </button>
           <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(bill); }} className="px-2 py-1 text-muted hover:text-amber-300 hover:bg-inverse/[0.05] rounded-md text-[10px] flex items-center transition">
             <Edit2 size={10} className="mr-1"/> Edit
           </button>

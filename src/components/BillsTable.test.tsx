@@ -275,4 +275,32 @@ describe("BillsTable - list and edit wiring", () => {
     // Normal current-month bill should NOT display "For September 2026"
     expect(screen.queryByText("For September 2026")).not.toBeInTheDocument();
   });
+
+  it("handles month calendar export and individual bill sync", () => {
+    const bill = createBill({
+      id: "bill-export-test",
+      name: "Water Utility",
+    });
+
+    const onExportMonthCalendar = vi.fn();
+    const onExportCalendar = vi.fn();
+
+    renderBillsTable([bill], {
+      onExportMonthCalendar,
+      onExportCalendar,
+    });
+
+    // Month export button in header
+    const exportBtn = screen.getByLabelText("Export commitments to calendar");
+    fireEvent.click(exportBtn);
+    expect(onExportMonthCalendar).toHaveBeenCalledTimes(1);
+    expect(onExportMonthCalendar).toHaveBeenCalledWith([bill], "September 2026");
+
+    // Single bill sync buttons
+    const syncButtons = screen.getAllByLabelText("Export Water Utility to calendar");
+    expect(syncButtons.length).toBeGreaterThan(0);
+    fireEvent.click(syncButtons[0]);
+    expect(onExportCalendar).toHaveBeenCalledTimes(1);
+    expect(onExportCalendar).toHaveBeenCalledWith(bill);
+  });
 });

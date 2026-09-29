@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Check, Circle, Edit2, Save, Trash2, Plus, Calendar, Filter, ChevronDown, RotateCcw, X } from "lucide-react";
+import { Check, Circle, Edit2, Save, Trash2, Plus, Calendar, CalendarPlus, Filter, ChevronDown, RotateCcw, X } from "lucide-react";
 import { ALL_MONTH_YEAR_OPTIONS } from "../constants/config";
 import { LoanProgressBadge } from "./LoanProgressBadge";
 import { BillMobileRow } from "./BillMobileRow";
@@ -12,6 +12,7 @@ import { Bill, BillViewModel, BillType, EditFormData, CustomWallet } from "../ty
 import { formatDaysRemaining } from "../utils/dateHelpers";
 import { filterBills, sortBills, groupBillsByHalf, BillSortOption } from "../utils/bills/billListHelpers";
 import { PayPeriodFilter } from "./BillsList";
+import { exportMonthBillsToCalendar } from "../utils/calendarExport";
 
 const BILL_TYPES = ["All", "Bill", "Subscription", "Loan / Installment"];
 
@@ -32,11 +33,14 @@ interface BillsTableProps {
   walletLabels?: Record<string, string>;
   defaultWallet?: string;
   highlightOverdue?: boolean;
+  onExportCalendar?: (bill: BillViewModel) => void;
+  onExportMonthCalendar?: (bills: BillViewModel[], monthKey: string) => void;
 }
 
 export const BillsTable: React.FC<BillsTableProps> = React.memo(({
   activeBills, selectedMonth, onToggleStatus, onAddBill, onDeleteBill, onSaveEdit, onResetMonthOverride,
-  editingId, setEditingId, editForm, setEditForm, customWallets, defaultWallet = "main", highlightOverdue = false
+  editingId, setEditingId, editForm, setEditForm, customWallets, defaultWallet = "main", highlightOverdue = false,
+  onExportCalendar, onExportMonthCalendar
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newBill, setNewBill] = useState({ name: "", amount: "", dueDay: "1", type: "Bill" as BillType, startMonth: selectedMonth, endMonth: selectedMonth, wallet: defaultWallet });
@@ -137,6 +141,22 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
               </div>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onExportMonthCalendar) {
+                onExportMonthCalendar(activeBills, selectedMonth);
+              } else {
+                exportMonthBillsToCalendar(activeBills, selectedMonth);
+              }
+            }}
+            title="Export all commitments for this month to calendar (.ics)"
+            aria-label="Export commitments to calendar"
+            className="h-7 px-2.5 rounded-xl border border-border-default bg-inverse/[0.04] text-[11px] text-muted hover:text-blue-400 hover:border-blue-500/50 flex items-center gap-1.5 transition"
+          >
+            <CalendarPlus size={11} className="text-blue-400" />
+            <span className="text-[11px] hidden sm:inline">Export</span>
+          </button>
         </div>
       </div>
 
@@ -189,6 +209,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
        highlightOverdue={highlightOverdue}
        onToggleStatus={onToggleStatus}
        onEdit={handleStartEdit}
+       onExportCalendar={onExportCalendar}
      />
 
       <button onClick={() => setIsAdding(true)} className="w-full mt-3.5 py-3.5 border border-dashed border-inverse/[0.15] hover:border-blue-500/50 hover:bg-blue-500/10 text-muted hover:text-blue-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">

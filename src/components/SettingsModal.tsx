@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Settings, Briefcase, Target, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2 } from "lucide-react";
+import { X, Settings, Briefcase, Target, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2, CalendarPlus } from "lucide-react";
 import { Deduction, DeductionType, UnifiedFinanceData } from "../types/finance";
 import { migrateLegacyBills } from "../utils/financeMigrations";
 import {
@@ -11,6 +11,7 @@ import {
   calculateNetSalary,
 } from "../utils/financeHelpers";
 import { generateId } from "../utils/idHelpers";
+import { exportPaydaysToCalendar } from "../utils/calendarExport";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -497,9 +498,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                 </div>
 
                 <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
-                  <div className="mb-2">
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Payday Schedule</label>
-                    <div className="text-[10px] text-faint">These dates control payday funding and commitment allocation. Not the same as an individual bill's due date.</div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Payday Schedule</label>
+                      <div className="text-[10px] text-faint">These dates control payday funding and commitment allocation. Not the same as an individual bill's due date.</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => exportPaydaysToCalendar(form.paydayDays.length ? form.paydayDays : [15, 30])}
+                      className="px-2.5 py-1 text-muted hover:text-emerald-400 bg-inverse/[0.04] hover:bg-inverse/[0.08] border border-inverse/[0.08] rounded-lg text-[10px] uppercase font-bold tracking-wider transition flex items-center gap-1 shrink-0 ml-2"
+                      title="Export Paydays to Calendar (.ics)"
+                      aria-label="Export Paydays to Calendar"
+                    >
+                      <CalendarPlus size={11} className="text-emerald-400" />
+                      <span>Export (.ics)</span>
+                    </button>
                   </div>
 
                   {form.paydayDays.length === 0 ? (

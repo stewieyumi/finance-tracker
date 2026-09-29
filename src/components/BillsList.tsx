@@ -17,6 +17,7 @@ interface BillsListProps {
   highlightOverdue: boolean;
   onToggleStatus: (bill: BillViewModel, skipWalletMutation?: boolean) => void;
   onEdit: (bill: BillViewModel) => void;
+  onExportCalendar?: (bill: BillViewModel) => void;
 }
 
 export const BillsList: React.FC<BillsListProps> = ({
@@ -31,6 +32,7 @@ export const BillsList: React.FC<BillsListProps> = ({
   highlightOverdue,
   onToggleStatus,
   onEdit,
+  onExportCalendar,
 }) => {
   const showFirstHalf = payPeriod === "all" || payPeriod === "firstHalf";
   const showSecondHalf = payPeriod === "all" || payPeriod === "secondHalf";
@@ -51,6 +53,7 @@ export const BillsList: React.FC<BillsListProps> = ({
       highlightOverdue={highlightOverdue}
       onToggleStatus={onToggleStatus}
       onEdit={onEdit}
+      onExportCalendar={onExportCalendar}
     />
   );
 
@@ -63,6 +66,7 @@ export const BillsList: React.FC<BillsListProps> = ({
       highlightOverdue={highlightOverdue}
       onToggleStatus={onToggleStatus}
       onEdit={onEdit}
+      onExportCalendar={onExportCalendar}
     />
   );
 

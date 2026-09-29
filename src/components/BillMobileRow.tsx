@@ -1,8 +1,9 @@
 import React from "react";
-import { Check, Circle, Edit2 } from "lucide-react";
+import { Check, Circle, Edit2, CalendarPlus } from "lucide-react";
 import { BillViewModel, CustomWallet } from "../types/finance";
 import { formatDaysRemaining } from "../utils/dateHelpers";
 import { LoanProgressBadge } from "./LoanProgressBadge";
+import { exportBillToCalendar } from "../utils/calendarExport";
 
 interface BillMobileRowProps {
   bill: BillViewModel;
@@ -11,6 +12,7 @@ interface BillMobileRowProps {
   highlightOverdue: boolean;
   onToggleStatus: (bill: BillViewModel) => void;
   onEdit: (bill: BillViewModel) => void;
+  onExportCalendar?: (bill: BillViewModel) => void;
 }
 
 export const BillMobileRow: React.FC<BillMobileRowProps> = ({
@@ -20,6 +22,7 @@ export const BillMobileRow: React.FC<BillMobileRowProps> = ({
   highlightOverdue,
   onToggleStatus,
   onEdit,
+  onExportCalendar,
 }) => (
   <div
     key={bill.id}
@@ -148,17 +151,36 @@ export const BillMobileRow: React.FC<BillMobileRowProps> = ({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(bill);
-          }}
-          className="px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 hover:bg-fill-strong border border-strong/40 rounded-md transition flex items-center gap-1 text-[10px] shrink-0 mt-1"
-        >
-          <Edit2 size={9} />
-          <span>Edit</span>
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0 mt-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onExportCalendar) {
+                onExportCalendar(bill);
+              } else {
+                exportBillToCalendar(bill, selectedMonth || "");
+              }
+            }}
+            className="px-2 py-0.5 text-muted hover:text-blue-400 bg-fill-strong/70 hover:bg-fill-strong border border-strong/40 rounded-md transition flex items-center gap-1 text-[10px]"
+            title="Add to Calendar"
+            aria-label={`Export ${bill.name} to calendar`}
+          >
+            <CalendarPlus size={9} />
+            <span>Sync</span>
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(bill);
+            }}
+            className="px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 hover:bg-fill-strong border border-strong/40 rounded-md transition flex items-center gap-1 text-[10px]"
+          >
+            <Edit2 size={9} />
+            <span>Edit</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
