@@ -12,6 +12,44 @@ const baseGlobalData = {
 describe("useExpenseScanner", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+
+    // Mock Image so setting src synchronously fires onload
+    class MockImage {
+      width = 200;
+      height = 100;
+      onload: (() => void) | null = null;
+      private _src = "";
+      get src() { return this._src; }
+      set src(val: string) {
+        this._src = val;
+        if (this.onload) this.onload();
+      }
+    }
+    vi.stubGlobal("Image", MockImage);
+
+    // Mock URL.createObjectURL
+    vi.stubGlobal("URL", {
+      ...URL,
+      createObjectURL: vi.fn(() => "blob:fake"),
+    });
+
+    // Mock canvas
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "canvas") {
+        return {
+          width: 0,
+          height: 0,
+          getContext: () => ({ drawImage: vi.fn() }),
+          toDataURL: () => "data:image/jpeg;base64,fakejpegdata",
+        } as unknown as HTMLCanvasElement;
+      }
+      return originalCreateElement(tag);
+    });
+
+    // Stub localStorage
+    const localStorageMock = { setItem: vi.fn(), getItem: vi.fn(), removeItem: vi.fn(), clear: vi.fn() };
+    vi.stubGlobal("localStorage", localStorageMock);
   });
 
   afterEach(() => {
@@ -38,9 +76,10 @@ describe("useExpenseScanner", () => {
       result.current.handleCapture(event);
     });
 
-    expect(showToast).toHaveBeenCalledWith("⚠️ Please sign in to use the AI Scanner.");
+    expect(showToast).toHaveBeenCalledWith("⚠️ Sign-in required: Please sign in with Google to use the AI Scanner.");
     expect(onScanStart).not.toHaveBeenCalled();
     expect(onScanComplete).not.toHaveBeenCalled();
+    expect(result.current.isScanning).toBe(false);
   });
 
   it("calls onScanStart and onScanComplete with parsed fields on a successful scan", async () => {
@@ -50,47 +89,6 @@ describe("useExpenseScanner", () => {
     const onScanStart = vi.fn();
     const onScanComplete = vi.fn();
 
-    // Mock Image so setting src synchronously fires onload,
-    // making the async chain deterministic without relying on environment internals.
-    class MockImage {
-      width = 200;
-      height = 100;
-      onload: (() => void) | null = null;
-      private _src = "";
-      get src() { return this._src; }
-      set src(val: string) {
-        this._src = val;
-        // Fire synchronously — the hook assigns onload before setting src
-        if (this.onload) this.onload();
-      }
-    }
-    vi.stubGlobal("Image", MockImage);
-
-    // Mock URL.createObjectURL (used by the hook to create a blob URL for the image)
-    vi.stubGlobal("URL", {
-      ...URL,
-      createObjectURL: vi.fn(() => "blob:fake"),
-    });
-
-    // Mock canvas so drawImage/toDataURL work without a real rendering surface
-    const originalCreateElement = document.createElement.bind(document);
-    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
-      if (tag === "canvas") {
-        return {
-          width: 0,
-          height: 0,
-          getContext: () => ({ drawImage: vi.fn() }),
-          toDataURL: () => "data:image/jpeg;base64,fakejpegdata",
-        } as unknown as HTMLCanvasElement;
-      }
-      return originalCreateElement(tag);
-    });
-
-    // Stub localStorage — not available natively in this test environment
-    const localStorageMock = { setItem: vi.fn(), getItem: vi.fn(), removeItem: vi.fn(), clear: vi.fn() };
-    vi.stubGlobal("localStorage", localStorageMock);
-
-    // Mock fetch to return a clean parsed receipt response
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -114,17 +112,12 @@ describe("useExpenseScanner", () => {
       target: { files: [file] },
     } as unknown as React.ChangeEvent<HTMLInputElement>;
 
-    // handleCapture fires onScanStart synchronously, then synchronously fires
-    // img.onload (via MockImage), which kicks off the async fetch chain.
-    // We await inside act to let all promises settle.
     await act(async () => {
       result.current.handleCapture(event);
-      // Yield through the fetch promise chain: fetch → text() → JSON.parse → onScanComplete
       await new Promise(r => setTimeout(r, 0));
     });
 
     expect(onScanStart).toHaveBeenCalledTimes(1);
-
     expect(onScanComplete).toHaveBeenCalledTimes(1);
     expect(onScanComplete).toHaveBeenCalledWith({
       merchant: "Starbucks",
@@ -133,7 +126,212 @@ describe("useExpenseScanner", () => {
       wallet: expect.any(String),
       date: "2026-09-22",
     });
+    expect(showToast).toHaveBeenCalledWith("✨ Receipt scanned successfully! Review and tap Save & Deduct.");
+    expect(result.current.isScanning).toBe(false);
+  });
 
-    expect(showToast).toHaveBeenCalledWith("✨ Receipt scanned successfully!");
+  it("handles malformed JSON response safely and stops scanning", async () => {
+    vi.spyOn(useCloudSync, "getLocalPasscode").mockReturnValue("test-token");
+
+    const showToast = vi.fn();
+    const onScanStart = vi.fn();
+    const onScanComplete = vi.fn();
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => "Not valid json at all",
+    }));
+
+    const { result } = renderHook(() =>
+      useExpenseScanner({ showToast, globalData: baseGlobalData, onScanStart, onScanComplete })
+    );
+
+    const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
+    const event = {
+      target: { files: [file] },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+    await act(async () => {
+      result.current.handleCapture(event);
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    expect(onScanStart).toHaveBeenCalledTimes(1);
+    expect(onScanComplete).not.toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledWith("Unable to read scanner response. Please enter details manually.");
+    expect(result.current.isScanning).toBe(false);
+  });
+
+  it("handles missing Gemini API key on the server (500)", async () => {
+    vi.spyOn(useCloudSync, "getLocalPasscode").mockReturnValue("test-token");
+
+    const showToast = vi.fn();
+    const onScanStart = vi.fn();
+    const onScanComplete = vi.fn();
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: async () => JSON.stringify({
+        error: "Server Error: GEMINI_API_KEY is missing.",
+      }),
+    }));
+
+    const { result } = renderHook(() =>
+      useExpenseScanner({ showToast, globalData: baseGlobalData, onScanStart, onScanComplete })
+    );
+
+    const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
+    const event = {
+      target: { files: [file] },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+    await act(async () => {
+      result.current.handleCapture(event);
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    expect(onScanComplete).not.toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledWith(
+      "⚠️ AI Scanner is not configured on the server (missing Gemini API key). Please enter details manually."
+    );
+    expect(result.current.isScanning).toBe(false);
+  });
+
+  it("rejects invalid or non-positive amount and does not call onScanComplete", async () => {
+    vi.spyOn(useCloudSync, "getLocalPasscode").mockReturnValue("test-token");
+
+    const showToast = vi.fn();
+    const onScanStart = vi.fn();
+    const onScanComplete = vi.fn();
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({
+        success: true,
+        parsed: {
+          merchant: "Grocery",
+          amount: -50,
+          category: "Shopping",
+        },
+      }),
+    }));
+
+    const { result } = renderHook(() =>
+      useExpenseScanner({ showToast, globalData: baseGlobalData, onScanStart, onScanComplete })
+    );
+
+    const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
+    const event = {
+      target: { files: [file] },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+    await act(async () => {
+      result.current.handleCapture(event);
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    expect(onScanComplete).not.toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledWith(
+      "⚠️ Could not detect a valid expense amount. Please enter details manually."
+    );
+    expect(result.current.isScanning).toBe(false);
+  });
+
+  it("rejects completely incomplete scan results", async () => {
+    vi.spyOn(useCloudSync, "getLocalPasscode").mockReturnValue("test-token");
+
+    const showToast = vi.fn();
+    const onScanStart = vi.fn();
+    const onScanComplete = vi.fn();
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({
+        success: true,
+        parsed: {
+          merchant: "",
+          amount: null,
+        },
+      }),
+    }));
+
+    const { result } = renderHook(() =>
+      useExpenseScanner({ showToast, globalData: baseGlobalData, onScanStart, onScanComplete })
+    );
+
+    const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
+    const event = {
+      target: { files: [file] },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+    await act(async () => {
+      result.current.handleCapture(event);
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    expect(onScanComplete).not.toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledWith(
+      "⚠️ Could not detect receipt details. Please enter details manually."
+    );
+    expect(result.current.isScanning).toBe(false);
+  });
+
+  it("prevents duplicate concurrent scans when isScanning is already active", async () => {
+    vi.spyOn(useCloudSync, "getLocalPasscode").mockReturnValue("test-token");
+
+    const showToast = vi.fn();
+    const onScanStart = vi.fn();
+    const onScanComplete = vi.fn();
+
+    let resolveFetch: (val: any) => void;
+    const fetchPromise = new Promise(resolve => {
+      resolveFetch = resolve;
+    });
+
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(fetchPromise));
+
+    const { result } = renderHook(() =>
+      useExpenseScanner({ showToast, globalData: baseGlobalData, onScanStart, onScanComplete })
+    );
+
+    const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
+    const event = {
+      target: { files: [file] },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+    // First scan triggered
+    act(() => {
+      result.current.handleCapture(event);
+    });
+
+    expect(result.current.isScanning).toBe(true);
+    expect(onScanStart).toHaveBeenCalledTimes(1);
+
+    // Second scan attempted while first is in-flight
+    act(() => {
+      result.current.handleCapture(event);
+    });
+
+    // onScanStart should still be 1 (second scan was blocked)
+    expect(onScanStart).toHaveBeenCalledTimes(1);
+
+    // Finish first scan
+    await act(async () => {
+      resolveFetch!({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          success: true,
+          parsed: { merchant: "Cafe", amount: 100 },
+        }),
+      });
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    expect(result.current.isScanning).toBe(false);
   });
 });

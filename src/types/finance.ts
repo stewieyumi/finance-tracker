@@ -141,6 +141,7 @@ export interface AppSettings {
   expenseWallets?: Record<string, string>;
   walletLabels?: Record<string, string>;
   hasMigratedBaseWallets?: boolean;
+  hasCompletedOnboarding?: boolean;
   customWallets?: CustomWallet[];
 }
 

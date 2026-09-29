@@ -43,8 +43,10 @@ import { SettingsModal } from "./components/SettingsModal";
 import { useAppUpdate } from "./hooks/useAppUpdate";
 import { useTheme } from "./hooks/useTheme";
 import { LandingPage } from "./components/LandingPage";
+import { OnboardingWizard } from "./components/OnboardingWizard";
 import { OperationsTab } from "./components/OperationsTab";
 import { AccountTab } from "./components/AccountTab";
+import { isReturningUser, shouldShowOnboarding } from "./utils/onboardingHelpers";
 
 function safeLoadAll(): UnifiedFinanceData {
   try {
@@ -366,7 +368,8 @@ const { saveShootEdit } = useShootSaveActions({
     setDebugLog,
     forceManualSync,
     pullLatestData,
-    commitDataChange
+    commitDataChange,
+    hasInitialSyncCompleted
   } = useCloudSync(globalData, setGlobalData, showToast);
 
   commitDataChangeRef.current = commitDataChange;
@@ -554,6 +557,34 @@ const copySummaryToClipboard = async () => {
   const isAuth = !!googleUser || !!getLocalPasscode();
   if (!isAuth) {
     return <LandingPage onGoogleSuccess={handleGoogleSuccess} />;
+  }
+
+  // --- CLOUD HYDRATION & ONBOARDING GATE ---
+  // If the user has no existing local data, wait for the initial cloud sync to settle
+  // before determining whether they need onboarding.
+  const returning = isReturningUser(globalData);
+  if (!returning && !hasInitialSyncCompleted) {
+    return (
+      <div className="min-h-screen bg-shell flex flex-col items-center justify-center p-6 text-text-secondary font-sans">
+        <div className="flex flex-col items-center gap-3">
+          <RefreshCw size={24} className="animate-spin text-blue-400" />
+          <p className="text-xs text-muted font-medium">Checking for existing cloud data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (shouldShowOnboarding({ globalData, isAuth, hasInitialSyncCompleted })) {
+    return (
+      <OnboardingWizard
+        globalData={globalData}
+        userName={googleUser?.name}
+        onComplete={(completedData) => {
+          syncedSetGlobalData(completedData);
+          showToast("✨ Setup complete! Welcome to Finance Tracker.");
+        }}
+      />
+    );
   }
 
   return (

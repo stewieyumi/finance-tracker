@@ -36,6 +36,7 @@ vi.mock("./hooks/useCloudSync", () => ({
     pullLatestData: vi.fn(),
     pushToCloud: vi.fn(),
     promptPasscode: vi.fn(),
+    hasInitialSyncCompleted: true,
   }),
   getLocalPasscode: vi.fn(() => "eyJtest.token.here"),
 }));

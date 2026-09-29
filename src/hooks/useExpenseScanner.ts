@@ -41,12 +41,15 @@ export function useExpenseScanner({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Guard against duplicate / concurrent scans
+    if (isScanning) return;
+
     const file = e.target.files?.[0];
     if (!file) return;
 
     const token = getLocalPasscode();
     if (!token) {
-      showToast("⚠️ Please sign in to use the AI Scanner.");
+      showToast("⚠️ Sign-in required: Please sign in with Google to use the AI Scanner.");
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
@@ -92,7 +95,7 @@ export function useExpenseScanner({
             data = JSON.parse(textResponse);
           } catch (e) {
             localStorage.setItem('scanner_debug_log', JSON.stringify({ error: 'Failed to parse server response as JSON', raw: textResponse }));
-            showToast("Unable to scan this receipt. Please try again or enter the details manually.");
+            showToast("Unable to read scanner response. Please enter details manually.");
             return;
           }
 
@@ -103,6 +106,12 @@ export function useExpenseScanner({
             const isAuthExpired =
               res.status === 401 ||
               data.code === "AUTH_EXPIRED";
+
+            const isMissingApiKey =
+              res.status === 500 &&
+              (errorText.includes("gemini_api_key is missing") ||
+               errorText.includes("missing api key") ||
+               errorText.includes("api key is missing"));
 
             const isOverloaded =
               data.code === "AI_CAPACITY" ||
@@ -115,34 +124,65 @@ export function useExpenseScanner({
             if (isAuthExpired) {
               window.dispatchEvent(new Event("auth-expired"));
               showToast("🔄 Session expired. Refreshing sign-in...");
+            } else if (isMissingApiKey) {
+              showToast("⚠️ AI Scanner is not configured on the server (missing Gemini API key). Please enter details manually.");
+            } else if (isOverloaded) {
+              showToast("Gemini AI is currently at capacity. Please enter this receipt manually.");
             } else {
-              showToast(
-                isOverloaded
-                  ? "Gemini AI is currently at capacity. Please enter this receipt manually."
-                  : "Unable to scan this receipt. Please try again or enter the details manually."
-              );
+              showToast("Unable to scan this receipt. Please try again or enter the details manually.");
             }
 
             return;
           }
 
-          if (data.success === false) {
+          if (data.success === false || !data.parsed || typeof data.parsed !== "object") {
             showToast("Unable to scan this receipt. Please try again or enter the details manually.");
             return;
           }
 
-          const parsed = data.parsed || {};
-          const scannedCategory = parsed.category || "Other";
+          const parsed = data.parsed;
+          const rawAmount = parsed.amount;
+          const numAmount = typeof rawAmount === "number"
+            ? rawAmount
+            : parseFloat(String(rawAmount || "").replace(/[^0-9.-]+/g, ""));
+
+          const isValidAmount =
+            !isNaN(numAmount) &&
+            Number.isFinite(numAmount) &&
+            numAmount > 0 &&
+            numAmount <= 10_000_000;
+
+          const merchant = typeof parsed.merchant === "string" ? parsed.merchant.trim() : "";
+
+          // Reject incomplete or invalid scan data
+          if (!isValidAmount && !merchant) {
+            showToast("⚠️ Could not detect receipt details. Please enter details manually.");
+            return;
+          }
+
+          if (!isValidAmount) {
+            showToast("⚠️ Could not detect a valid expense amount. Please enter details manually.");
+            return;
+          }
+
+          const validCategories = ["Food & Dining", "Transport", "Utilities", "Laundry & Home", "Shopping", "Other"];
+          const scannedCategory = validCategories.includes(parsed.category) ? parsed.category : "Other";
+
+          const isValidDate =
+            typeof parsed.date === "string" &&
+            /^\d{4}-\d{2}-\d{2}$/.test(parsed.date) &&
+            !isNaN(Date.parse(parsed.date));
+          const scannedDate = isValidDate ? parsed.date : getLocalToday();
 
           onScanComplete({
-            merchant: parsed.merchant || "",
-            amount: parsed.amount ? String(parsed.amount) : "",
+            merchant,
+            amount: String(numAmount),
             category: scannedCategory,
             wallet: getDefaultExpenseWalletId(scannedCategory, globalData.settings, globalData.wallets),
-            date: parsed.date || getLocalToday()
+            date: scannedDate
           });
           
-          showToast("✨ Receipt scanned successfully!");
+          showToast("✨ Receipt scanned successfully! Review and tap Save & Deduct.");
         } catch (err: any) {
           localStorage.setItem('scanner_debug_log', JSON.stringify({ error: 'Network error', message: err.message }));
           showToast("Unable to scan this receipt. Please try again or enter the details manually.");
