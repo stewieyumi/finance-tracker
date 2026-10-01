@@ -174,4 +174,193 @@ describe("useReceivableActions - payment mutations", () => {
     expect(record?.amountReceived).toBe(0);
     expect(record?.collected).toBe(false);
   });
+
+  it("rejects uncollecting a receivable when the wallet has insufficient funds", () => {
+    const initialData: UnifiedFinanceData = {
+      ...createTestData(),
+      wallets: {
+        ...createTestData().wallets,
+        maya: 500
+      },
+      logs: {
+        "September 2026": {
+          billsPaid: [],
+          recsCollected: {
+            "rec-test-1": { amountReceived: 1000, collected: true }
+          }
+        }
+      }
+    };
+
+    const harness = createStateHarness(initialData);
+    const mockShowToast = vi.fn();
+    const receivable = createReceivable({
+      amountReceived: 1000,
+      collected: true
+    });
+
+    const { result } = renderHook(() =>
+      useReceivableActions({
+        globalData: harness.state,
+        setGlobalData: harness.setGlobalData,
+        selectedMonth: "September 2026",
+        showToast: mockShowToast
+      })
+    );
+
+    act(() => {
+      result.current.toggleReceivableStatus(receivable);
+    });
+
+    const record =
+      harness.state.logs["September 2026"].recsCollected?.["rec-test-1"];
+
+    expect(mockShowToast).toHaveBeenCalledWith(
+      "Insufficient balance in maya. Need ₱1,000 to reverse."
+    );
+    expect(harness.state.wallets.maya).toBe(500);
+    expect(record?.amountReceived).toBe(1000);
+    expect(record?.collected).toBe(true);
+  });
+
+  it("allows uncollecting a receivable when the wallet has sufficient funds", () => {
+    const initialData: UnifiedFinanceData = {
+      ...createTestData(),
+      wallets: {
+        ...createTestData().wallets,
+        maya: 1500
+      },
+      logs: {
+        "September 2026": {
+          billsPaid: [],
+          recsCollected: {
+            "rec-test-1": { amountReceived: 1000, collected: true }
+          }
+        }
+      }
+    };
+
+    const harness = createStateHarness(initialData);
+    const mockShowToast = vi.fn();
+    const receivable = createReceivable({
+      amountReceived: 1000,
+      collected: true
+    });
+
+    const { result } = renderHook(() =>
+      useReceivableActions({
+        globalData: harness.state,
+        setGlobalData: harness.setGlobalData,
+        selectedMonth: "September 2026",
+        showToast: mockShowToast
+      })
+    );
+
+    act(() => {
+      result.current.toggleReceivableStatus(receivable);
+    });
+
+    const record =
+      harness.state.logs["September 2026"].recsCollected?.["rec-test-1"];
+
+    expect(harness.state.wallets.maya).toBe(500);
+    expect(record?.amountReceived).toBe(0);
+    expect(record?.collected).toBe(false);
+  });
+
+  it("checks only the actual collected amount for partial payments", () => {
+    // Receivable total is ₱1,000, but only ₱400 was collected.
+    // Wallet has ₱500, which cannot cover ₱1,000 but CAN cover the ₱400 reversal.
+    const initialData: UnifiedFinanceData = {
+      ...createTestData(),
+      wallets: {
+        ...createTestData().wallets,
+        maya: 500
+      },
+      logs: {
+        "September 2026": {
+          billsPaid: [],
+          recsCollected: {
+            "rec-test-1": { amountReceived: 400, collected: false }
+          }
+        }
+      }
+    };
+
+    const harness = createStateHarness(initialData);
+    const mockShowToast = vi.fn();
+    const receivable = createReceivable({
+      amount: 1000,
+      amountReceived: 400,
+      collected: false
+    });
+
+    const { result } = renderHook(() =>
+      useReceivableActions({
+        globalData: harness.state,
+        setGlobalData: harness.setGlobalData,
+        selectedMonth: "September 2026",
+        showToast: mockShowToast
+      })
+    );
+
+    act(() => {
+      result.current.toggleReceivableStatus(receivable);
+    });
+
+    const record =
+      harness.state.logs["September 2026"].recsCollected?.["rec-test-1"];
+
+    expect(harness.state.wallets.maya).toBe(100);
+    expect(record?.amountReceived).toBe(0);
+    expect(record?.collected).toBe(false);
+  });
+
+  it("allows zero-amount receivables to toggle status regardless of wallet balance", () => {
+    const initialData: UnifiedFinanceData = {
+      ...createTestData(),
+      wallets: {
+        ...createTestData().wallets,
+        maya: 0
+      },
+      logs: {
+        "September 2026": {
+          billsPaid: [],
+          recsCollected: {
+            "rec-test-zero": { amountReceived: 0, collected: true }
+          }
+        }
+      }
+    };
+
+    const harness = createStateHarness(initialData);
+    const mockShowToast = vi.fn();
+    const receivable = createReceivable({
+      id: "rec-test-zero",
+      amount: 0,
+      amountReceived: 0,
+      collected: true
+    });
+
+    const { result } = renderHook(() =>
+      useReceivableActions({
+        globalData: harness.state,
+        setGlobalData: harness.setGlobalData,
+        selectedMonth: "September 2026",
+        showToast: mockShowToast
+      })
+    );
+
+    act(() => {
+      result.current.toggleReceivableStatus(receivable);
+    });
+
+    const record =
+      harness.state.logs["September 2026"].recsCollected?.["rec-test-zero"];
+
+    expect(mockShowToast).not.toHaveBeenCalled();
+    expect(harness.state.wallets.maya).toBe(0);
+    expect(record?.collected).toBe(false);
+    expect(record?.amountReceived).toBe(0);
+  });
 });
