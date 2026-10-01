@@ -121,9 +121,11 @@ export function useBillActions({
             paymentDates: willBePaid 
               ? { ...(monthLog.paymentDates || {}), [bill.id]: todayStr }
               : (()=>{ const pd = {...(monthLog.paymentDates || {})}; delete pd[bill.id]; return pd; })(),
-            billsPaid: isCurrentlyPaid
-              ? currentPaid.filter(id => id !== bill.id)
-              : [...currentPaid, bill.id]
+            billsPaid: willBePaid
+              ? currentPaid.includes(bill.id)
+                ? currentPaid
+                : [...currentPaid, bill.id]
+              : currentPaid.filter(id => id !== bill.id)
           }
         },
         updatedAt: Date.now()

@@ -77,6 +77,51 @@ describe("useBillActions - payment mutations", () => {
     ).not.toBe("Invalid Date");
   });
 
+  it("Undoing a newly paid bill reverses both wallet and ledger state", () => {
+    const mockSetGlobalData = vi.fn();
+    const mockShowToast = vi.fn();
+    const initialData = createTestData();
+    const bill = createBill();
+
+    const { result } = renderHook(() =>
+      useBillActions({
+        globalData: createTestData(),
+        setGlobalData: mockSetGlobalData,
+        selectedMonth: "September 2026",
+        showToast: mockShowToast
+      })
+    );
+
+    act(() => {
+      result.current.toggleBillStatus(bill);
+    });
+
+    const undoAction = mockShowToast.mock.calls[0][1] as {
+      label: string;
+      onClick: () => void;
+    };
+
+    expect(undoAction.label).toBe("Undo");
+
+    const paidData = getStateUpdaterResult(mockSetGlobalData, initialData);
+
+    expect(paidData.wallets.maya).toBe(4000);
+    expect(paidData.logs["September 2026"].billsPaid).toContain(
+      "bill-test-1"
+    );
+
+    act(() => {
+      undoAction.onClick();
+    });
+
+    const undoneData = getStateUpdaterResult(mockSetGlobalData, paidData);
+    const monthLog = undoneData.logs["September 2026"];
+
+    expect(undoneData.wallets.maya).toBe(5000);
+    expect(monthLog.billsPaid).not.toContain("bill-test-1");
+    expect(monthLog.paymentDates?.["bill-test-1"]).toBeUndefined();
+  });
+
   it("unmarks a paid bill and refunds its amount to the routed wallet", () => {
     const mockSetGlobalData = vi.fn();
     const mockShowToast = vi.fn();
