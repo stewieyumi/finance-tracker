@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { X, Calendar, AlertCircle, ArrowRight, CheckCircle2, Clock } from "lucide-react";
 import { BillViewModel } from "../types/finance";
+import { Modal } from "./ui/Modal";
 
 interface UpcomingModalProps {
   isOpen: boolean;
@@ -27,21 +28,6 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
   onViewAllCommitments,
   onJumpToOverdue
 }) => {
-  const modalBoxRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -57,21 +43,13 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
     : unpaidBills.slice(0, 3);
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Upcoming Commitments Modal"
-      onClick={(e) => {
-        if (modalBoxRef.current && !modalBoxRef.current.contains(e.target as Node)) {
-          onClose();
-        }
-      }}
-      className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      variant="floating"
+      ariaLabel="Upcoming Commitments Modal"
     >
-      <div
-        ref={modalBoxRef}
-        className="bg-surface-modal border border-inverse/[0.1] rounded-3xl p-5 sm:p-6 w-full max-w-md space-y-4 shadow-2xl animate-fade-in"
-      >
+      <div className="bg-surface-modal border border-inverse/[0.1] rounded-3xl p-5 sm:p-6 w-full max-w-md space-y-4 shadow-2xl animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-2">
@@ -192,6 +170,6 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
           <ArrowRight size={14} />
         </button>
       </div>
-    </div>
+    </Modal>
   );
 };

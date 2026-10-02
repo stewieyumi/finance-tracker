@@ -85,8 +85,31 @@ describe("UpcomingModal", () => {
   });
 
   it("closes on Escape key", () => {
-    render(<UpcomingModal {...defaultProps} />);
+    const onClose = vi.fn();
+    render(<UpcomingModal {...defaultProps} onClose={onClose} />);
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(defaultProps.onClose).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders with dialog accessibility", () => {
+    render(<UpcomingModal {...defaultProps} />);
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute("aria-label", "Upcoming Commitments Modal");
+  });
+
+  it("closes on backdrop click", () => {
+    const onClose = vi.fn();
+    render(<UpcomingModal {...defaultProps} onClose={onClose} />);
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(dialog);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not close on click inside content", () => {
+    const onClose = vi.fn();
+    render(<UpcomingModal {...defaultProps} onClose={onClose} />);
+    fireEvent.click(screen.getByText("Upcoming Commitments"));
+    expect(onClose).not.toHaveBeenCalled();
   });
 });
