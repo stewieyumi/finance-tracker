@@ -151,23 +151,31 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
         {filteredShoots.length === 0 ? (
           <div className="py-6 text-center text-faint text-xs italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} production gigs found.</div>
         ) : filteredShoots.map(shoot => (
-          <div key={shoot.id} className={`p-3 rounded-xl border transition-all ${shoot.completed ? "bg-fill-subtle/40 border-strong/60 opacity-45" : "bg-surface border-strong/80 shadow-sm"}`}>
+          <div
+            key={shoot.id}
+            data-testid={`shoot-mobile-card-${shoot.id}`}
+            onClick={() => handleStartEdit(shoot)}
+            className={`p-3 rounded-xl border transition-all cursor-pointer ${shoot.completed ? "bg-fill-subtle/40 border-strong/60 opacity-45 hover:opacity-75" : "bg-surface border-strong/80 shadow-sm hover:border-inverse/[0.15]"}`}
+          >
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => onToggleCompletion(shoot.id)}
-                  className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-1.5 py-1 -mx-1.5 text-left transition-colors hover:bg-inverse/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 group"
-                  aria-label={shoot.completed ? `Mark ${shoot.title} as active` : `Mark ${shoot.title} as settled`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleCompletion(shoot.id);
+                    }}
+                    className="shrink-0 min-w-[36px] min-h-[36px] -ml-1.5 -my-1.5 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 rounded-full"
+                    aria-label={shoot.completed ? `Mark ${shoot.title} as active` : `Mark ${shoot.title} as settled`}
+                  >
                     <div className="shrink-0">
                       {shoot.completed ? <span className="w-4 h-4 rounded-full chip-emerald flex items-center justify-center"><Check size={9} className="stroke-[3]" /></span> : <span className="w-4 h-4 rounded-full bg-fill/60 border border-strong/60 text-faint flex items-center justify-center"><Circle size={6} /></span>}
                     </div>
-                    <span className={`privacy-blur text-xs font-semibold truncate ${shoot.completed ? "line-through text-faint" : "text-strong"} group-hover:text-amber-400 transition-colors`}>{shoot.title}</span>
-                  </div>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 ${shoot.status === "Confirmed" ? "chip-emerald" : shoot.status === "Pencil" ? "chip-amber" : "chip-neutral"}`}>{shoot.status}</span>
-                </button>
+                  </button>
+                  <span className={`privacy-blur text-xs font-semibold truncate ${shoot.completed ? "line-through text-faint" : "text-strong"} hover:text-amber-400 transition-colors`}>{shoot.title}</span>
+                </div>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 ${shoot.status === "Confirmed" ? "chip-emerald" : shoot.status === "Pencil" ? "chip-amber" : "chip-neutral"}`}>{shoot.status}</span>
               </div>
               <div className="flex items-center justify-between pl-6 text-[10px] text-muted">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -175,10 +183,29 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                   {shoot.date && (shoot.date === todayStr ? <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-[1px] rounded font-bold uppercase tracking-wider text-[9px] ml-1">Due Today</span> : <span>• {formatShortDate(shoot.date)}</span>)}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <button onClick={() => handleAddToCalendar(shoot)} className="px-2 py-0.5 text-muted hover:text-blue-400 bg-fill-strong/70 rounded text-[10px] whitespace-nowrap flex items-center gap-1 transition shadow-sm" title="Add to Calendar">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToCalendar(shoot);
+                    }}
+                    className="px-2 py-0.5 text-muted hover:text-blue-400 bg-fill-strong/70 rounded text-[10px] whitespace-nowrap flex items-center gap-1 transition shadow-sm"
+                    title="Add to Calendar"
+                    aria-label={`Export ${shoot.title} to calendar`}
+                  >
                     <CalendarPlus size={9} /> Sync
                   </button>
-                  <button onClick={() => handleStartEdit(shoot)} className="px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 rounded text-[10px] whitespace-nowrap transition shadow-sm">Edit</button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStartEdit(shoot);
+                    }}
+                    className="px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 rounded text-[10px] whitespace-nowrap transition shadow-sm"
+                    aria-label={`Edit ${shoot.title}`}
+                  >
+                    Edit
+                  </button>
                 </div>
               </div>
             </div>

@@ -10,11 +10,51 @@ interface BottomNavProps {
 
 export function BottomNav({ activeTab, onChange }: BottomNavProps) {
   const tabs = [
-    { id: "operations", label: "Operations", icon: Briefcase, activeColor: "text-violet-500", activeBg: "bg-violet-500/10" },
-    { id: "wallets", label: "Wallets", icon: CreditCard, activeColor: "text-emerald-500", activeBg: "bg-emerald-500/10" },
-    { id: "home", label: "Dashboard", icon: Home, activeColor: "text-blue-500", activeBg: "bg-blue-500/10" },
-    { id: "expenses", label: "Expenses", icon: Receipt, activeColor: "text-amber-500", activeBg: "bg-amber-500/10" },
-    { id: "account", label: "Account", icon: User, activeColor: "text-rose-500", activeBg: "bg-rose-500/10" },
+    {
+      id: "operations",
+      label: "Operations",
+      icon: Briefcase,
+      activeColor: "text-violet-500",
+      activeBg: "bg-violet-500/10",
+      activeBorder: "border-violet-500/20",
+      activeGlow: "shadow-[0_0_12px_rgba(139,92,246,0.18)]",
+    },
+    {
+      id: "wallets",
+      label: "Wallets",
+      icon: CreditCard,
+      activeColor: "text-emerald-500",
+      activeBg: "bg-emerald-500/10",
+      activeBorder: "border-emerald-500/20",
+      activeGlow: "shadow-[0_0_12px_rgba(16,185,129,0.18)]",
+    },
+    {
+      id: "home",
+      label: "Dashboard",
+      icon: Home,
+      activeColor: "text-blue-500",
+      activeBg: "bg-blue-500/10",
+      activeBorder: "border-blue-500/20",
+      activeGlow: "shadow-[0_0_12px_rgba(59,130,246,0.18)]",
+    },
+    {
+      id: "expenses",
+      label: "Expenses",
+      icon: Receipt,
+      activeColor: "text-amber-500",
+      activeBg: "bg-amber-500/10",
+      activeBorder: "border-amber-500/20",
+      activeGlow: "shadow-[0_0_12px_rgba(245,158,11,0.18)]",
+    },
+    {
+      id: "account",
+      label: "Account",
+      icon: User,
+      activeColor: "text-rose-500",
+      activeBg: "bg-rose-500/10",
+      activeBorder: "border-rose-500/20",
+      activeGlow: "shadow-[0_0_12px_rgba(244,63,94,0.18)]",
+    },
   ];
 
   return (
@@ -28,15 +68,25 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
             <button
               key={tab.id}
               onClick={() => onChange(tab.id as TabType)}
-              className={`flex flex-col items-center justify-center w-[72px] h-[52px] rounded-xl transition-all duration-300 ${
-                isActive ? tab.activeBg : "hover:bg-inverse/[0.02]"
+              className={`flex flex-col items-center justify-center w-[72px] h-[52px] rounded-xl border transition-all duration-200 active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 ${
+                isActive
+                  ? `${tab.activeBg} ${tab.activeBorder} ${tab.activeGlow}`
+                  : "border-transparent hover:bg-inverse/[0.02]"
               }`}
+              aria-label={tab.label}
+              aria-current={isActive ? "page" : undefined}
             >
-              <div className={`transition-all duration-300 ${isActive ? tab.activeColor : "text-faint scale-100"}`}>
+              <div
+                className={`transition-all duration-200 motion-reduce:transition-none ${
+                  isActive ? `${tab.activeColor} scale-105` : "text-faint scale-100"
+                }`}
+              >
                 <Icon size={isActive ? 22 : 24} strokeWidth={isActive ? 2.5 : 2} />
               </div>
               {isActive && (
-                <span className={`text-[10px] mt-0.5 font-medium transition-colors duration-300 ${tab.activeColor}`}>
+                <span
+                  className={`text-[10px] mt-0.5 font-semibold transition-colors duration-200 ${tab.activeColor}`}
+                >
                   {tab.label}
                 </span>
               )}
