@@ -486,4 +486,34 @@ describe("ReceivableEditModal — Gross / Deductions Integration", () => {
       })
     );
   });
+
+  it("16. Renders with dialog role and handles Escape key and backdrop dismissal", () => {
+    const onCancel = vi.fn();
+    const editForm: EditFormData = {
+      id: "rec-1",
+      name: "Client Retainer",
+      amount: 20000,
+    };
+
+    render(
+      <ReceivableEditModal
+        {...defaultProps}
+        editForm={editForm}
+        onCancel={onCancel}
+        onChange={vi.fn()}
+      />
+    );
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute("aria-label", "Edit Inflow");
+
+    // Press Escape
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+
+    // Click backdrop
+    fireEvent.click(dialog);
+    expect(onCancel).toHaveBeenCalledTimes(2);
+  });
 });

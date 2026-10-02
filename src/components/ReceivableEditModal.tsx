@@ -13,6 +13,7 @@ import {
   calculateDeductionAmount,
   calculateNetSalary,
 } from "../utils/financeHelpers";
+import { Modal } from "./ui/Modal";
 
 interface ReceivableEditModalProps {
   editingId: string;
@@ -118,13 +119,13 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel();
-      }}
+    <Modal
+      isOpen={true}
+      onClose={onCancel}
+      variant="sheet"
+      ariaLabel="Edit Inflow"
     >
-      <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
+      <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md mx-auto shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
@@ -490,6 +491,6 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
