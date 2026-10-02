@@ -58,24 +58,31 @@ export const AccountTab: React.FC<AccountTabProps> = ({
       </div>
 
       <div className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.08] shadow-2xl rounded-3xl p-5 sm:p-8 animate-in fade-in duration-300">
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-inverse/[0.06]">
-          <div className="flex items-center gap-3">
-            <h3 className="text-sm font-bold text-strong uppercase tracking-wider flex items-center gap-2"><History size={16} className="text-purple-400"/> Transaction History</h3>
-            <div className="flex items-center gap-1.5">
-              <button onClick={onOpenLedger} className="px-2.5 py-1 bg-inverse/[0.05] hover:bg-inverse/[0.12] rounded-lg text-[10px] uppercase font-bold tracking-wider transition border border-inverse/[0.05]">Manage Ledger</button>
-              {onOpenTransactionHistory && (
-                <button
-                  type="button"
-                  onClick={onOpenTransactionHistory}
-                  aria-label="View Full History"
-                  className="px-2.5 py-1 bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 rounded-lg text-[10px] uppercase font-bold tracking-wider transition border border-blue-500/25 flex items-center gap-1"
-                >
-                  View All <ArrowRight size={10} />
-                </button>
-              )}
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-y-2.5 gap-x-3 mb-4 pb-4 border-b border-inverse/[0.06]">
+          <h3 className="text-sm font-bold text-strong uppercase tracking-wider flex items-center gap-2">
+            <History size={16} className="text-purple-400" /> Transaction History
+          </h3>
+          <span className="text-xs text-faint font-mono sm:order-3 sm:ml-auto">
+            {allTransactions.length} records
+          </span>
+          <div className="flex items-center gap-1.5 w-full sm:w-auto sm:order-2">
+            <button
+              onClick={onOpenLedger}
+              className="px-2.5 py-1 bg-inverse/[0.05] hover:bg-inverse/[0.12] rounded-lg text-[10px] uppercase font-bold tracking-wider transition border border-inverse/[0.05]"
+            >
+              Manage Ledger
+            </button>
+            {onOpenTransactionHistory && (
+              <button
+                type="button"
+                onClick={onOpenTransactionHistory}
+                aria-label="View Full History"
+                className="px-2.5 py-1 bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 rounded-lg text-[10px] uppercase font-bold tracking-wider transition border border-blue-500/25 flex items-center gap-1"
+              >
+                View All <ArrowRight size={10} />
+              </button>
+            )}
           </div>
-          <span className="text-xs text-faint font-mono">{allTransactions.length} records</span>
         </div>
 
         <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
