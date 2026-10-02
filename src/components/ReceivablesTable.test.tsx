@@ -225,4 +225,43 @@ describe("ReceivablesTable - list, filtering, and interaction wiring", () => {
     // Should display remaining amount
     expect(screen.getAllByText("₱6,000.00 remaining").length).toBeGreaterThan(0);
   });
+
+  it("toggles collected receivables visibility without triggering payment mutations", () => {
+    const collectedRec = createReceivable({
+      id: "rec-collected-test",
+      name: "Collected Shoot",
+      collected: true,
+    });
+    const uncollectedRec = createReceivable({
+      id: "rec-uncollected-test",
+      name: "Pending Retainer",
+      collected: false,
+    });
+
+    const onToggleStatus = vi.fn();
+    renderReceivablesTable([collectedRec, uncollectedRec], { onToggleStatus });
+
+    // Default state: both receivables are visible
+    expect(screen.getAllByText("Collected Shoot").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Pending Retainer").length).toBeGreaterThan(0);
+
+    // Toggle button is rendered
+    const toggleBtn = screen.getByLabelText("Hide collected receivables");
+    expect(toggleBtn).toBeInTheDocument();
+
+    // Click toggle to hide collected receivables
+    fireEvent.click(toggleBtn);
+    expect(screen.queryByText("Collected Shoot")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Pending Retainer").length).toBeGreaterThan(0);
+    expect(toggleBtn).toHaveAttribute("aria-label", "Show collected receivables");
+
+    // Click toggle again to restore collected receivables
+    fireEvent.click(toggleBtn);
+    expect(screen.getAllByText("Collected Shoot").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Pending Retainer").length).toBeGreaterThan(0);
+    expect(toggleBtn).toHaveAttribute("aria-label", "Hide collected receivables");
+
+    // Payment action was never called
+    expect(onToggleStatus).not.toHaveBeenCalled();
+  });
 });

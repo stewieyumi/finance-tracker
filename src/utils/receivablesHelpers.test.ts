@@ -53,6 +53,37 @@ describe("filterReceivables", () => {
     expect(filterReceivables([], "All")).toEqual([]);
     expect(filterReceivables([], "Shoot")).toEqual([]);
   });
+
+  it("preserves all receivables when hideSettled is omitted or false", () => {
+    const list: ReceivableViewModel[] = [
+      { ...receivables[0], collected: true },
+      { ...receivables[1], collected: false },
+    ];
+    expect(filterReceivables(list, "All")).toHaveLength(2);
+    expect(filterReceivables(list, "All", false)).toHaveLength(2);
+  });
+
+  it("excludes collected receivables when hideSettled is true", () => {
+    const list: ReceivableViewModel[] = [
+      { ...receivables[0], id: "rec-collected", collected: true },
+      { ...receivables[1], id: "rec-uncollected", collected: false },
+    ];
+    const result = filterReceivables(list, "All", true);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("rec-uncollected");
+  });
+
+  it("combines hideSettled with category filter", () => {
+    const list: ReceivableViewModel[] = [
+      { ...receivables[0], category: "Shoot", collected: true },
+      { ...receivables[1], category: "Shoot", collected: false },
+      { ...receivables[2], category: "Edit", collected: false },
+    ];
+    const result = filterReceivables(list, "Shoot", true);
+    expect(result).toHaveLength(1);
+    expect(result[0].collected).toBe(false);
+    expect(result[0].category).toBe("Shoot");
+  });
 });
 
 describe("groupReceivablesByHalf", () => {

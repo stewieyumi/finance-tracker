@@ -18,6 +18,7 @@ interface BillsListProps {
   onToggleStatus: (bill: BillViewModel, skipWalletMutation?: boolean) => void;
   onEdit: (bill: BillViewModel) => void;
   onExportCalendar?: (bill: BillViewModel) => void;
+  hideSettled?: boolean;
 }
 
 export const BillsList: React.FC<BillsListProps> = ({
@@ -33,6 +34,7 @@ export const BillsList: React.FC<BillsListProps> = ({
   onToggleStatus,
   onEdit,
   onExportCalendar,
+  hideSettled = false,
 }) => {
   const showFirstHalf = payPeriod === "all" || payPeriod === "firstHalf";
   const showSecondHalf = payPeriod === "all" || payPeriod === "secondHalf";
@@ -76,7 +78,7 @@ export const BillsList: React.FC<BillsListProps> = ({
       <div className="block md:hidden space-y-3">
         {displayedBillsCount === 0 ? (
           <div className="py-6 text-center text-faint text-xs italic">
-            No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} commitments found{payPeriod === "firstHalf" ? " for Days 1–15" : payPeriod === "secondHalf" ? " for Days 16–31" : ""}{searchQuery ? ` matching "${searchQuery}"` : ""}.
+            No {hideSettled ? "unpaid " : ""}{selectedFilter !== "All" ? selectedFilter.toLowerCase() + " " : ""}commitments found{payPeriod === "firstHalf" ? " for Days 1–15" : payPeriod === "secondHalf" ? " for Days 16–31" : ""}{searchQuery ? ` matching "${searchQuery}"` : ""}.
           </div>
         ) : (
           <>
@@ -107,7 +109,7 @@ export const BillsList: React.FC<BillsListProps> = ({
           </thead>
           {displayedBillsCount === 0 ? (
             <tbody>
-              <tr><td colSpan={5} className="py-6 text-center text-faint italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} commitments found{payPeriod === "firstHalf" ? " for Days 1–15" : payPeriod === "secondHalf" ? " for Days 16–31" : ""}{searchQuery ? ` matching "${searchQuery}"` : ""}.</td></tr>
+              <tr><td colSpan={5} className="py-6 text-center text-faint italic">No {hideSettled ? "unpaid " : ""}{selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} commitments found{payPeriod === "firstHalf" ? " for Days 1–15" : payPeriod === "secondHalf" ? " for Days 16–31" : ""}{searchQuery ? ` matching "${searchQuery}"` : ""}.</td></tr>
             </tbody>
           ) : (
             <>

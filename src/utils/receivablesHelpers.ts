@@ -2,10 +2,14 @@ import { ReceivableCategory, ReceivableViewModel } from "../types/finance";
 
 export const filterReceivables = (
   receivables: ReceivableViewModel[],
-  selectedFilter: "All" | ReceivableCategory
+  selectedFilter: "All" | ReceivableCategory,
+  hideSettled: boolean = false
 ) => {
-  if (selectedFilter === "All") return receivables;
-  return receivables.filter((receivable) => receivable.category === selectedFilter);
+  let result = selectedFilter === "All" ? receivables : receivables.filter((receivable) => receivable.category === selectedFilter);
+  if (hideSettled) {
+    result = result.filter((receivable) => !receivable.collected);
+  }
+  return result;
 };
 
 export const groupReceivablesByHalf = (

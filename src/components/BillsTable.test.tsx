@@ -303,4 +303,43 @@ describe("BillsTable - list and edit wiring", () => {
     expect(onExportCalendar).toHaveBeenCalledTimes(1);
     expect(onExportCalendar).toHaveBeenCalledWith(bill);
   });
+
+  it("toggles paid commitments visibility without triggering financial mutations", () => {
+    const paidBill = createBill({
+      id: "paid-bill",
+      name: "Paid Electricity",
+      paid: true,
+    });
+    const unpaidBill = createBill({
+      id: "unpaid-bill",
+      name: "Unpaid Rent",
+      paid: false,
+    });
+
+    const onToggleStatus = vi.fn();
+    renderBillsTable([paidBill, unpaidBill], { onToggleStatus });
+
+    // Default state: both bills are visible
+    expect(screen.getAllByText("Paid Electricity").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Unpaid Rent").length).toBeGreaterThan(0);
+
+    // Toggle button is rendered
+    const toggleBtn = screen.getByLabelText("Hide paid commitments");
+    expect(toggleBtn).toBeInTheDocument();
+
+    // Click toggle to hide paid commitments
+    fireEvent.click(toggleBtn);
+    expect(screen.queryByText("Paid Electricity")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Unpaid Rent").length).toBeGreaterThan(0);
+    expect(toggleBtn).toHaveAttribute("aria-label", "Show paid commitments");
+
+    // Click toggle again to restore paid commitments
+    fireEvent.click(toggleBtn);
+    expect(screen.getAllByText("Paid Electricity").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Unpaid Rent").length).toBeGreaterThan(0);
+    expect(toggleBtn).toHaveAttribute("aria-label", "Hide paid commitments");
+
+    // Financial action was never called
+    expect(onToggleStatus).not.toHaveBeenCalled();
+  });
 });

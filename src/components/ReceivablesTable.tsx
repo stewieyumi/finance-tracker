@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Check, Hourglass, Plus, ArrowDownLeft, Filter, ChevronDown, X } from "lucide-react";
+import { Check, Hourglass, Plus, ArrowDownLeft, Filter, ChevronDown, X, Eye, EyeOff } from "lucide-react";
 import { Receivable, ReceivableViewModel, ReceivableCategory, ReceivableFrequency, EditFormData, CustomWallet } from "../types/finance";
 import { formatOrdinal, formatShortDate } from "../utils/displayHelpers";
 import { filterReceivables, groupReceivablesByHalf } from "../utils/receivablesHelpers";
@@ -40,6 +40,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
   const [isAdding, setIsAdding] = useState(false);
   const [newReceivable, setNewReceivable] = useState<NewReceivableForm>({ name: "", amount: "", category: "Shoot", frequency: "By Date", biMonthlyDays: [15, 30], monthlyDay: 15, date: "", wallet: customWallets?.[0]?.id || "main" });
   const [selectedFilter, setSelectedFilter] = useState<"All" | ReceivableCategory>("All");
+  const [hideSettled, setHideSettled] = useState(false);
   const [payPeriod, setPayPeriod] = useState<"all" | "firstHalf" | "secondHalf">("all");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [payPopoverId, setPayPopoverId] = useState<string | null>(null);
@@ -53,8 +54,8 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
   }, []);
 
   const filteredByCategory = useMemo(
-    () => filterReceivables(activeReceivables, selectedFilter),
-    [activeReceivables, selectedFilter]
+    () => filterReceivables(activeReceivables, selectedFilter, hideSettled),
+    [activeReceivables, selectedFilter, hideSettled]
   );
 
   const { firstHalf, secondHalf } = useMemo(
@@ -107,6 +108,20 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
               </div>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => setHideSettled(prev => !prev)}
+            aria-label={hideSettled ? "Show collected receivables" : "Hide collected receivables"}
+            title={hideSettled ? "Show collected receivables" : "Hide collected receivables"}
+            className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${
+              hideSettled
+                ? "bg-emerald-600/20 border-emerald-500/50 text-emerald-400"
+                : "bg-inverse/[0.04] border-border-default text-muted hover:text-primary"
+            }`}
+          >
+            {hideSettled ? <EyeOff size={11} className="text-emerald-400" /> : <Eye size={11} className="text-muted" />}
+            <span className="text-[11px] hidden sm:inline">{hideSettled ? "Collected Hidden" : "Hide Collected"}</span>
+          </button>
         </div>
       </div>
 
@@ -150,7 +165,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
       {/* MOBILE LIST */}
       <div className="block lg:hidden space-y-2 mb-3">
         {filteredReceivables.length === 0 ? (
-          <div className="py-6 text-center text-faint text-xs italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} receivables found.</div>
+          <div className="py-6 text-center text-faint text-xs italic">No {hideSettled ? "uncollected " : ""}{selectedFilter !== "All" ? selectedFilter.toLowerCase() + " " : ""}receivables found.</div>
           ) : filteredReceivables.map(rec => (
             <ReceivableMobileRow
               key={rec.id}
@@ -186,7 +201,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
           </thead>
           <tbody className="divide-y divide-border-subtle">
             {filteredReceivables.length === 0 ? (
-              <tr><td colSpan={6} className="py-8 text-center text-faint italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} receivables found.</td></tr>
+              <tr><td colSpan={6} className="py-8 text-center text-faint italic">No {hideSettled ? "uncollected " : ""}{selectedFilter !== "All" ? selectedFilter.toLowerCase() + " " : ""}receivables found.</td></tr>
             ) : filteredReceivables.map(rec => (
               <ReceivableDesktopRow
                 key={rec.id}

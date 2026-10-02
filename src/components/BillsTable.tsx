@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Check, Circle, Edit2, Save, Trash2, Plus, Calendar, CalendarPlus, Filter, ChevronDown, RotateCcw, X } from "lucide-react";
+import { Check, Circle, Edit2, Save, Trash2, Plus, Calendar, CalendarPlus, Filter, ChevronDown, RotateCcw, X, Eye, EyeOff } from "lucide-react";
 import { ALL_MONTH_YEAR_OPTIONS } from "../constants/config";
 import { LoanProgressBadge } from "./LoanProgressBadge";
 import { BillMobileRow } from "./BillMobileRow";
@@ -45,6 +45,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
   const [isAdding, setIsAdding] = useState(false);
   const [newBill, setNewBill] = useState({ name: "", amount: "", dueDay: "1", type: "Bill" as BillType, startMonth: selectedMonth, endMonth: selectedMonth, wallet: defaultWallet });
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [hideSettled, setHideSettled] = useState(false);
   const [payPeriod, setPayPeriod] = useState<PayPeriodFilter>("all");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,7 +62,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredBills = useMemo(() => filterBills(activeBills, selectedFilter, searchQuery), [activeBills, selectedFilter, searchQuery]);
+  const filteredBills = useMemo(() => filterBills(activeBills, selectedFilter, searchQuery, hideSettled), [activeBills, selectedFilter, searchQuery, hideSettled]);
   const sortedBills = useMemo(() => sortBills(filteredBills, sortBy), [filteredBills, sortBy]);
   const { firstHalfBills, secondHalfBills } = useMemo(() => groupBillsByHalf(sortedBills), [sortedBills]);
 
@@ -143,6 +144,20 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
           </div>
           <button
             type="button"
+            onClick={() => setHideSettled(prev => !prev)}
+            aria-label={hideSettled ? "Show paid commitments" : "Hide paid commitments"}
+            title={hideSettled ? "Show paid commitments" : "Hide paid commitments"}
+            className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${
+              hideSettled
+                ? "bg-blue-600/20 border-blue-500/50 text-blue-400"
+                : "bg-inverse/[0.04] border-border-default text-muted hover:text-primary"
+            }`}
+          >
+            {hideSettled ? <EyeOff size={11} className="text-blue-400" /> : <Eye size={11} className="text-muted" />}
+            <span className="text-[11px] hidden sm:inline">{hideSettled ? "Paid Hidden" : "Hide Paid"}</span>
+          </button>
+          <button
+            type="button"
             onClick={() => {
               if (onExportMonthCalendar) {
                 onExportMonthCalendar(activeBills, selectedMonth);
@@ -210,6 +225,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
        onToggleStatus={onToggleStatus}
        onEdit={handleStartEdit}
        onExportCalendar={onExportCalendar}
+       hideSettled={hideSettled}
      />
 
       <button onClick={() => setIsAdding(true)} className="w-full mt-3.5 py-3.5 border border-dashed border-inverse/[0.15] hover:border-blue-500/50 hover:bg-blue-500/10 text-muted hover:text-blue-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">
