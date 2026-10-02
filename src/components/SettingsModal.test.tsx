@@ -649,4 +649,14 @@ describe("SettingsModal - Theme Live-Preview & Persistence", () => {
     const lightBtnReopened = screen.getAllByRole("button", { name: /^light$/i })[0];
     expect(lightBtnReopened).not.toHaveClass("bg-blue-600");
   });
+
+  it("no longer renders Main Milestone Goal controls on the General tab", () => {
+    const data = createMockData();
+    renderSettingsModal(data, { initialTab: "general" });
+
+    expect(screen.queryByText(/main milestone goal/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/goal name/i)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/e\.g\. japan trip/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/target amount \(₱\)/i)).not.toBeInTheDocument();
+  });
 });

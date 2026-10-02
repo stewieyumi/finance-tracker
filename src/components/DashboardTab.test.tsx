@@ -345,4 +345,13 @@ describe("DashboardTab", () => {
     expect(screen.queryByLabelText("Previous slide")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Next slide")).toBeInTheDocument();
   });
+
+  it("invokes onConfigureGoal when milestone goal card is clicked", () => {
+    const onConfigureGoal = vi.fn();
+    render(<DashboardTab {...defaultProps} onConfigureGoal={onConfigureGoal} />);
+    const goalCard = screen.getByText("Tap to set a goal...").closest("div[role='button']");
+    expect(goalCard).toBeInTheDocument();
+    fireEvent.click(goalCard!);
+    expect(onConfigureGoal).toHaveBeenCalledTimes(1);
+  });
 });

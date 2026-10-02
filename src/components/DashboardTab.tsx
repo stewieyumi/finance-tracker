@@ -54,6 +54,7 @@ interface DashboardTabProps {
 
   // Actions
   onOpenSettings: (tab: "general" | "baselines" | "sync") => void;
+  onConfigureGoal?: () => void;
   onExecutePaydaySplit: () => void;
   onUndoPaydaySplit: (executionId: string) => void;
   onJumpToOverdue: () => void;
@@ -94,6 +95,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   recentTransactions = [],
 
   onOpenSettings,
+  onConfigureGoal,
   onExecutePaydaySplit,
   onUndoPaydaySplit,
   onJumpToOverdue,
@@ -658,7 +660,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0}
           targetFund={targetMilestoneFund}
           goalName={globalData?.settings?.goalName}
-          onConfigureGoal={() => onOpenSettings("baselines")}
+          onConfigureGoal={onConfigureGoal}
         />
       </ErrorBoundary>
 

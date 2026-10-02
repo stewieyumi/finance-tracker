@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Settings, Briefcase, Target, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2, CalendarPlus } from "lucide-react";
+import { X, Settings, Briefcase, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2, CalendarPlus } from "lucide-react";
 import { Deduction, DeductionType, UnifiedFinanceData } from "../types/finance";
 import { migrateLegacyBills } from "../utils/financeMigrations";
 import {
@@ -229,20 +229,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
         <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-1">
           {activeTab === "general" && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-blue-400 uppercase tracking-wider"><Target size={14} /> Main Milestone Goal</div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Goal Name</label><input type="text" value={form.goalName} onChange={e => setForm({...form, goalName: e.target.value})} placeholder="e.g. Japan Trip, Emergency Fund, New Laptop" className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-blue-500" /></div>
-                  <div><label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Target Amount (₱)</label><input type="number" value={form.targetFund} onChange={e => setForm({...form, targetFund: Number(e.target.value)})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-blue-500" /></div>
-                  <div className="col-span-2">
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Linked Wallet (Tracks Progress)</label>
-                    <select value={form.milestoneWallet} onChange={e => setForm({...form, milestoneWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-blue-500 cursor-pointer">
-                      <WalletSelectOptions />
-                    </select>
-                  </div>
-                </div>
-              </div>
-
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-amber-400 uppercase tracking-wider"><Briefcase size={14} /> Dashboard Terminology</div>
                 <div className="flex gap-2">

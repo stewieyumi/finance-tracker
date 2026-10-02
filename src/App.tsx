@@ -41,6 +41,7 @@ import { WalletsTab } from "./components/WalletsTab";
 import { ExpensesTab } from "./components/ExpensesTab";
 import { BottomNav, TabType } from "./components/BottomNav";
 import { SettingsModal } from "./components/SettingsModal";
+import { GoalSetupModal } from "./components/GoalSetupModal";
 import { useAppUpdate } from "./hooks/useAppUpdate";
 import { useTheme } from "./hooks/useTheme";
 import { LandingPage } from "./components/LandingPage";
@@ -140,6 +141,7 @@ const {
   const [showYearlyModal, setShowYearlyModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showGoalSetupModal, setShowGoalSetupModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [opsTab, setOpsTab] = useState<"bills" | "inflows" | "gigs">("bills");
   const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "sync">("general");
@@ -684,6 +686,7 @@ const copySummaryToClipboard = async () => {
         <DateJumpModal isOpen={showDatePickerModal} onClose={() => setShowDatePickerModal(false)} onJump={(m) => { setSelectedMonth(m); setShowDatePickerModal(false); }} selectedMonth={selectedMonth} />
         <YearlyOverviewModal isOpen={showYearlyModal} onClose={() => setShowYearlyModal(false)} globalData={globalData} selectedYear={selectedMonth.split(" ")[1] || "2026"} />
         <SettingsModal onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} onClose={() => setShowSettingsModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
+        <GoalSetupModal isOpen={showGoalSetupModal} onClose={() => setShowGoalSetupModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} />
         <HistoricalLedgerModal isOpen={showLedgerModal} onClose={() => setShowLedgerModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />
         <TransactionHistoryModal
           isOpen={showTransactionHistoryModal}
@@ -718,6 +721,7 @@ const copySummaryToClipboard = async () => {
             latestExecution={latestExecution}
             recentTransactions={recentTransactions}
             onOpenSettings={(tab) => { setSettingsInitialTab(tab); setShowSettingsModal(true); }}
+            onConfigureGoal={() => setShowGoalSetupModal(true)}
             onExecutePaydaySplit={handleExecutePaydaySplit}
             onUndoPaydaySplit={handleUndoPaydaySplit}
             onJumpToOverdue={handleJumpToOverdue}
