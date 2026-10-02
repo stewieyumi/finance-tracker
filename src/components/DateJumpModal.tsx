@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Calendar } from "lucide-react";
 import { MONTH_LIST, YEAR_LIST } from "../constants/config";
+import { Modal } from "./ui/Modal";
 
 interface DateJumpModalProps {
   isOpen: boolean;
@@ -23,14 +24,6 @@ export const DateJumpModal: React.FC<DateJumpModalProps> = ({ isOpen, onClose, o
     }
   }, [isOpen, selectedMonth]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    if (isOpen) window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   const handleConfirm = () => {
@@ -38,7 +31,13 @@ export const DateJumpModal: React.FC<DateJumpModalProps> = ({ isOpen, onClose, o
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      variant="floating"
+      ariaLabel="Jump to Specific Date"
+      closeOnBackdropClick={false}
+    >
       <div className="bg-surface border border-inverse/[0.08] rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
         <div className="flex items-center justify-between pb-2 border-b border-inverse/[0.05]">
           <div className="flex items-center gap-2">
@@ -123,6 +122,6 @@ export const DateJumpModal: React.FC<DateJumpModalProps> = ({ isOpen, onClose, o
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

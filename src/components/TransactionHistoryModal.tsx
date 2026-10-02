@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { TransactionHistoryItem } from "../types/finance";
 import { formatMonthYear } from "../utils/dateHelpers";
+import { Modal } from "./ui/Modal";
 
 export interface TransactionHistoryModalProps {
   isOpen: boolean;
@@ -126,12 +127,11 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
   const hasMore = filteredTransactions.length > displayLimit;
 
   return (
-    <div
-      className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex flex-col justify-end sm:justify-center p-0 sm:p-4 animate-in fade-in duration-200"
-      onClick={e => e.target === e.currentTarget && onClose()}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Transaction History"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      variant="sheet"
+      ariaLabel="Transaction History"
     >
       <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-2xl mx-auto shadow-[0_0_60px_rgba(0,0,0,0.8)] flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
         {/* Header */}
@@ -401,6 +401,6 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

@@ -96,4 +96,20 @@ describe("DateJumpModal", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(3);
   });
+
+  it("does not trigger onClose when backdrop is clicked", () => {
+    const onClose = vi.fn();
+    render(
+      <DateJumpModal
+        isOpen={true}
+        onClose={onClose}
+        onJump={vi.fn()}
+        selectedMonth="August 2026"
+      />
+    );
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(dialog);
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

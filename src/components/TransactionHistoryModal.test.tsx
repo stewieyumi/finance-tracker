@@ -190,4 +190,16 @@ describe("TransactionHistoryModal", () => {
     render(<TransactionHistoryModal {...props} />);
     expect(screen.getByText("Vault Account")).toBeInTheDocument();
   });
+
+  it("calls onClose when Escape key or backdrop is clicked", () => {
+    const onClose = vi.fn();
+    render(<TransactionHistoryModal {...defaultProps} onClose={onClose} />);
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(dialog);
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
 });
