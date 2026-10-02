@@ -90,7 +90,17 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
           ...prev.library,
           bills: prev.library?.bills.map(b => ({ ...b, wallet: safeW(b.wallet) })) || [],
           receivables: prev.library?.receivables.map(r => ({ ...r, wallet: safeW(r.wallet) })) || [],
-          expenses: prev.library?.expenses?.map(e => ({ ...e, wallet: safeWReq(e.wallet) })) || []
+          expenses: prev.library?.expenses?.map(e => ({ ...e, wallet: safeWReq(e.wallet) })) || [],
+          manualTransactions: prev.library?.manualTransactions?.map(mt => {
+            const updated = { ...mt };
+            if (mt.wallet !== undefined) {
+              updated.wallet = safeW(mt.wallet);
+            }
+            if (mt.destinationWallet !== undefined) {
+              updated.destinationWallet = safeW(mt.destinationWallet);
+            }
+            return updated;
+          }) || []
         },
         wallets: nextWallets, 
         updatedAt: Date.now() 

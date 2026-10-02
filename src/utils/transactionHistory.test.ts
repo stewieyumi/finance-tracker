@@ -409,4 +409,123 @@ describe("buildTransactionHistory", () => {
       { id: "bill-1_September 2026", date: "2026-09-05" }
     ]);
   });
+
+  describe("wallet reference data-flow characterization", () => {
+    it("passes through manual transaction wallet and destinationWallet exactly as stored", () => {
+      const data = makeData({
+        library: {
+          bills: [],
+          expenses: [],
+          receivables: [],
+          shoots: [],
+          manualTransactions: [
+            {
+              id: "mt-transfer",
+              title: "Internal Transfer",
+              amount: 750,
+              date: "2026-09-18",
+              type: "transfer",
+              wallet: "source_wallet_key",
+              destinationWallet: "destination_wallet_key",
+              category: "Transfer",
+              createdAt: 100
+            }
+          ]
+        }
+      });
+
+      const txs = buildTransactionHistory(data);
+      const outgoing = txs.find(t => t.id === "mt-transfer");
+      const incoming = txs.find(t => t.id === "mt-transfer_dest");
+
+      expect(outgoing).toBeDefined();
+      expect(outgoing?.wallet).toBe("source_wallet_key");
+      expect(outgoing?.amount).toBe(-750);
+      expect(outgoing?.type).toBe("expense");
+      expect(outgoing?.date).toBe("2026-09-18");
+      expect(outgoing?.category).toBe("Transfer");
+
+      expect(incoming).toBeDefined();
+      expect(incoming?.wallet).toBe("destination_wallet_key");
+      expect(incoming?.amount).toBe(750);
+      expect(incoming?.type).toBe("inflow");
+      expect(incoming?.date).toBe("2026-09-18");
+      expect(incoming?.category).toBe("Transfer");
+    });
+
+    it("passes through payday allocation wallet keys unchanged", () => {
+      const data = makeData({
+        paydaySplitExecutions: [
+          {
+            id: "pd-split-1",
+            date: "2026-09-15",
+            timestamp: 100,
+            allocations: {
+              arbitrary_wallet_key: 1250,
+              another_key: 0
+            },
+            billContributions: []
+          }
+        ]
+      });
+
+      const txs = buildTransactionHistory(data);
+      expect(txs).toHaveLength(1);
+      expect(txs[0]).toEqual({
+        id: "pd-split-1_arbitrary_wallet_key",
+        title: "Payday Allocation",
+        amount: 1250,
+        date: "2026-09-15",
+        type: "inflow",
+        wallet: "arbitrary_wallet_key",
+        category: "Payday"
+      });
+    });
+
+    it("does not throw when encountering unknown, deleted, or missing wallet references", () => {
+      const data = makeData({
+        library: {
+          bills: [],
+          expenses: [
+            {
+              id: "exp-orphan",
+              merchant: "Coffee Shop",
+              amount: 80,
+              category: "Food & Dining",
+              wallet: "unregistered_or_deleted_id",
+              date: "2026-09-19"
+            }
+          ],
+          receivables: [],
+          shoots: [],
+          manualTransactions: [
+            {
+              id: "mt-no-wallet",
+              title: "Cash Found",
+              amount: 100,
+              date: "2026-09-20",
+              type: "income",
+              createdAt: 101
+            }
+          ]
+        }
+      });
+
+      let txs: any;
+      expect(() => {
+        txs = buildTransactionHistory(data);
+      }).not.toThrow();
+
+      expect(txs).toHaveLength(2);
+      const orphanExp = txs.find((t: any) => t.id === "exp-orphan");
+      expect(orphanExp?.wallet).toBe("unregistered_or_deleted_id");
+      expect(orphanExp?.amount).toBe(-80);
+      expect(orphanExp?.type).toBe("expense");
+
+      const noWalletMt = txs.find((t: any) => t.id === "mt-no-wallet");
+      expect(noWalletMt?.wallet).toBeUndefined();
+      expect(noWalletMt?.amount).toBe(100);
+      expect(noWalletMt?.type).toBe("inflow");
+    });
+  });
 });

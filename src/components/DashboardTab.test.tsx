@@ -354,4 +354,41 @@ describe("DashboardTab", () => {
     fireEvent.click(goalCard!);
     expect(onConfigureGoal).toHaveBeenCalledTimes(1);
   });
+
+  it("characterizes recent transaction wallet label resolution from globalData.settings.walletLabels", () => {
+    const propsWithLabels = {
+      ...defaultProps,
+      globalData: {
+        ...defaultProps.globalData,
+        settings: {
+          ...defaultProps.globalData.settings,
+          walletLabels: { main: "Primary Account" }
+        }
+      }
+    };
+    render(<DashboardTab {...propsWithLabels} />);
+    expect(screen.getByText("Primary Account")).toBeInTheDocument();
+  });
+
+  it("resolves active custom wallet IDs in recent transactions when walletLabels is merged into settings", () => {
+    const customTx: TransactionHistoryItem[] = [
+      { id: "tx-dash-cw", title: "Recent Deposit", amount: 500, type: "inflow", date: "2026-09-01", wallet: "cw_active_456" }
+    ];
+    const props = {
+      ...defaultProps,
+      recentTransactions: customTx,
+      globalData: {
+        ...defaultProps.globalData,
+        settings: {
+          ...defaultProps.globalData.settings,
+          walletLabels: {
+            main: "Main Account",
+            cw_active_456: "Production Vault"
+          }
+        }
+      }
+    };
+    render(<DashboardTab {...props} />);
+    expect(screen.getByText("Production Vault")).toBeInTheDocument();
+  });
 });

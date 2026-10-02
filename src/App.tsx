@@ -400,6 +400,25 @@ const { saveShootEdit } = useShootSaveActions({
     recentTransactions
   } = useFinanceCalculations(globalData, selectedMonth);
 
+  const walletDisplayLabels = useMemo(() => {
+    const map: Record<string, string> = { ...(globalData?.settings?.walletLabels || {}) };
+    (globalData?.settings?.customWallets || []).forEach(w => {
+      map[w.id] = w.label;
+    });
+    return map;
+  }, [globalData?.settings?.walletLabels, globalData?.settings?.customWallets]);
+
+  const dashboardGlobalData = useMemo(() => {
+    if (!globalData?.settings) return globalData;
+    return {
+      ...globalData,
+      settings: {
+        ...globalData.settings,
+        walletLabels: walletDisplayLabels,
+      },
+    };
+  }, [globalData, walletDisplayLabels]);
+
   const isModalOpen =
     showDatePickerModal ||
     showYearlyModal ||
@@ -692,7 +711,7 @@ const copySummaryToClipboard = async () => {
           isOpen={showTransactionHistoryModal}
           onClose={() => setShowTransactionHistoryModal(false)}
           transactions={allTransactions}
-          walletLabels={globalData?.settings?.walletLabels}
+          walletLabels={walletDisplayLabels}
           formatDateTime={formatDateTime}
           onOpenManualLedger={() => {
             setShowTransactionHistoryModal(false);
@@ -703,7 +722,7 @@ const copySummaryToClipboard = async () => {
 
         {activeTab === "home" && (
           <DashboardTab
-            globalData={globalData}
+            globalData={dashboardGlobalData}
             targetMilestoneFund={targetMilestoneFund}
             totalLiquid={totalLiquid}
             fundProgressPercent={fundProgressPercent}
@@ -790,7 +809,7 @@ const copySummaryToClipboard = async () => {
             allTransactions={allTransactions}
             onOpenLedger={() => setShowLedgerModal(true)}
             onOpenTransactionHistory={() => setShowTransactionHistoryModal(true)}
-            walletLabels={globalData?.settings?.walletLabels}
+            walletLabels={walletDisplayLabels}
             formatDateTime={formatDateTime}
           />
         )}

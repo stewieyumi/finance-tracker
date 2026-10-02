@@ -74,4 +74,34 @@ describe("AccountTab", () => {
     fireEvent.click(screen.getByRole("button", { name: /View Full History/i }));
     expect(onOpenTransactionHistory).toHaveBeenCalled();
   });
+
+  it("characterizes wallet label display from walletLabels prop when available", () => {
+    render(<AccountTab {...defaultProps} />);
+    expect(screen.getAllByText("Main Wallet").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("characterizes fallback to raw wallet string when not mapped in walletLabels prop", () => {
+    const unmappedTx: TransactionHistoryItem[] = [
+      { id: "tx-unmapped", title: "Unmapped Tx", amount: 100, type: "inflow", date: "2026-09-01", wallet: "arbitrary_wallet_id" }
+    ];
+    render(<AccountTab {...defaultProps} allTransactions={unmappedTx} />);
+    expect(screen.getByText("arbitrary_wallet_id")).toBeInTheDocument();
+  });
+
+  it("resolves active custom wallet IDs to their custom wallet labels through merged walletLabels", () => {
+    const customTx: TransactionHistoryItem[] = [
+      { id: "tx-cw", title: "Custom Wallet Inflow", amount: 1200, type: "inflow", date: "2026-09-01", wallet: "cw_active_vault" }
+    ];
+    render(
+      <AccountTab
+        {...defaultProps}
+        allTransactions={customTx}
+        walletLabels={{
+          main: "Main Wallet",
+          cw_active_vault: "Production Vault"
+        }}
+      />
+    );
+    expect(screen.getByText("Production Vault")).toBeInTheDocument();
+  });
 });

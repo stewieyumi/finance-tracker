@@ -166,4 +166,28 @@ describe("TransactionHistoryModal", () => {
     expect(screen.getByText("Bulk Item 64")).toBeInTheDocument();
     expect(screen.getByText("Showing all 65 transactions")).toBeInTheDocument();
   });
+
+  it("characterizes fallback to raw wallet ID when key is not in walletLabels prop", () => {
+    const unmappedTx: TransactionHistoryItem[] = [
+      { id: "tx-unmapped", title: "Unmapped Item", amount: 500, date: "2026-09-01", type: "inflow", wallet: "unmapped_wallet_id" }
+    ];
+    render(<TransactionHistoryModal {...defaultProps} transactions={unmappedTx} />);
+    expect(screen.getByText("unmapped_wallet_id")).toBeInTheDocument();
+  });
+
+  it("resolves active custom wallet IDs to custom labels through merged walletLabels map", () => {
+    const customTx: TransactionHistoryItem[] = [
+      { id: "tx-cw", title: "Payout Deposit", amount: 8000, date: "2026-09-01", type: "inflow", wallet: "cw_vault_999" }
+    ];
+    const props = {
+      ...defaultProps,
+      transactions: customTx,
+      walletLabels: {
+        main: "Main Account",
+        cw_vault_999: "Vault Account"
+      }
+    };
+    render(<TransactionHistoryModal {...props} />);
+    expect(screen.getByText("Vault Account")).toBeInTheDocument();
+  });
 });
