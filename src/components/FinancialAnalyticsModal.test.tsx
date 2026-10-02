@@ -197,5 +197,9 @@ describe("FinancialAnalyticsModal", () => {
 
     fireEvent.keyDown(window, { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(2);
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(dialog);
+    expect(onClose).toHaveBeenCalledTimes(3);
   });
 });

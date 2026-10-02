@@ -6,6 +6,7 @@ import {
   applySettingsForm,
   SettingsForm,
 } from "../utils/settingsForm";
+import { Modal } from "./ui/Modal";
 
 export interface GoalSetupModalProps {
   isOpen: boolean;
@@ -20,7 +21,6 @@ export const GoalSetupModal: React.FC<GoalSetupModalProps> = ({
   globalData,
   setGlobalData,
 }) => {
-  const modalBoxRef = useRef<HTMLDivElement>(null);
   const prevIsOpenRef = useRef(false);
   const [form, setForm] = useState<SettingsForm>(() =>
     createSettingsForm(globalData?.settings, globalData?.wallets)
@@ -39,20 +39,6 @@ export const GoalSetupModal: React.FC<GoalSetupModalProps> = ({
     }
     onClose();
   };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleCancel();
-    };
-    if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -75,19 +61,13 @@ export const GoalSetupModal: React.FC<GoalSetupModalProps> = ({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Goal Configuration Modal"
-      onClick={(e) => {
-        if (modalBoxRef.current && !modalBoxRef.current.contains(e.target as Node)) {
-          handleCancel();
-        }
-      }}
-      className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+    <Modal
+      isOpen={isOpen}
+      onClose={handleCancel}
+      variant="floating"
+      ariaLabel="Goal Configuration Modal"
     >
       <div
-        ref={modalBoxRef}
         className="bg-surface-elevated border border-inverse/[0.08] rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-5"
       >
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
@@ -186,6 +166,6 @@ export const GoalSetupModal: React.FC<GoalSetupModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo } from "react";
 import { X, Sparkles, ShieldCheck, CreditCard, TrendingUp, Target } from "lucide-react";
 import { parseMonthKey } from "../utils/dateHelpers";
 import { UnifiedFinanceData } from "../types/finance";
@@ -9,6 +9,7 @@ import {
   calculateSafeToSpend,
   calculateMonthlyDepositNeeded
 } from "../utils/financialAnalytics";
+import { Modal } from "./ui/Modal";
 
 type AnalyticsTab = "overview" | "cashflow" | "debt" | "goals";
 
@@ -29,22 +30,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
   totalLiquid,
   totalUnpaidCommitments
 }) => {
-  const modalBoxRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<AnalyticsTab>("overview");
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen, onClose]);
 
   const safeToSpend = calculateSafeToSpend(totalLiquid, totalUnpaidCommitments);
   const now = new Date();
@@ -72,19 +58,13 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
   if (!isOpen) return null;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Financial Intelligence Modal"
-      onClick={(e) => {
-        if (modalBoxRef.current && !modalBoxRef.current.contains(e.target as Node)) {
-          onClose();
-        }
-      }}
-      className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      variant="floating"
+      ariaLabel="Financial Intelligence Modal"
     >
       <div
-        ref={modalBoxRef}
         className="bg-surface-elevated border border-inverse/[0.09] rounded-3xl p-5 sm:p-6 w-full max-w-2xl space-y-5 shadow-[0_24px_64px_rgba(0,0,0,0.8)] max-h-[88vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
@@ -308,6 +288,6 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
           Done
         </button>
       </div>
-    </div>
+    </Modal>
   );
 };

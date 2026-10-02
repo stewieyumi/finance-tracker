@@ -86,4 +86,41 @@ describe("BillPriorPaymentModal", () => {
     );
     expect(setPendingPriorPayment).toHaveBeenCalledWith(null);
   });
+
+  it("renders with dialog accessibility and handles Escape key", () => {
+    const setPendingPriorPayment = vi.fn();
+    const onToggleStatus = vi.fn();
+
+    render(
+      <BillPriorPaymentModal
+        pendingPriorPayment={pendingPriorPayment}
+        setPendingPriorPayment={setPendingPriorPayment}
+        onToggleStatus={onToggleStatus}
+      />
+    );
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute("aria-label", "Confirm Prior Payment");
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(setPendingPriorPayment).toHaveBeenCalledWith(null);
+  });
+
+  it("does not dismiss on backdrop click when closeOnBackdropClick is false", () => {
+    const setPendingPriorPayment = vi.fn();
+    const onToggleStatus = vi.fn();
+
+    render(
+      <BillPriorPaymentModal
+        pendingPriorPayment={pendingPriorPayment}
+        setPendingPriorPayment={setPendingPriorPayment}
+        onToggleStatus={onToggleStatus}
+      />
+    );
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(dialog);
+    expect(setPendingPriorPayment).not.toHaveBeenCalled();
+  });
 });

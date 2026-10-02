@@ -224,3 +224,32 @@ describe("HistoricalLedgerModal wallet mutations", () => {
     expect(next.library.manualTransactions).toHaveLength(0);
   });
 });
+
+describe("HistoricalLedgerModal modal shell behavior", () => {
+  it("renders with dialog accessibility, and dismisses on Escape and backdrop click", () => {
+    const data = makeData();
+    const onClose = vi.fn();
+
+    render(
+      <HistoricalLedgerModal
+        isOpen
+        onClose={onClose}
+        globalData={data}
+        setGlobalData={vi.fn()}
+        showToast={vi.fn()}
+      />
+    );
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute("aria-label", "Historical Ledger");
+
+    // Escape dismissal
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    // Backdrop dismissal
+    fireEvent.click(dialog);
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+});

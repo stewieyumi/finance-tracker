@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Plus, Trash2, Edit2, ArrowRight } from 'lucide-react';
 import { UnifiedFinanceData, ManualTransaction } from '../types/finance';
 import { generateId } from '../utils/idHelpers';
+import { Modal } from './ui/Modal';
 
 interface Props {
   isOpen: boolean;
@@ -168,8 +169,13 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
   };
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex flex-col justify-end sm:justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-lg shadow-[0_0_60px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      variant="sheet"
+      ariaLabel="Historical Ledger"
+    >
+      <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-lg mx-auto shadow-[0_0_60px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
         <div className="flex items-center justify-between p-5 border-b border-inverse/[0.05]">
           <h2 className="text-sm font-bold text-strong uppercase tracking-wider">{view === 'form' ? (editingId ? 'Edit Transaction' : 'New Transaction') : 'Historical Ledger'}</h2>
           <button onClick={onClose} className="text-faint hover:text-strong p-2 rounded-full hover:bg-inverse/[0.05] transition"><X size={18} /></button>
@@ -261,6 +267,6 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
