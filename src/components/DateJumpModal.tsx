@@ -45,39 +45,57 @@ export const DateJumpModal: React.FC<DateJumpModalProps> = ({ isOpen, onClose, o
             <Calendar size={16} className="text-blue-400" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-strong">Jump to Specific Date</h3>
           </div>
-          <button onClick={onClose} className="text-faint hover:text-strong p-1 rounded-lg transition">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="text-faint hover:text-strong p-1 rounded-lg transition"
+          >
             <X size={16} />
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-[10px] uppercase font-semibold text-muted block mb-1.5">Month</label>
-            <select
-              value={jumpMonth}
-              onChange={(e) => setJumpMonth(e.target.value)}
-              className="bg-surface-input border border-inverse/[0.08] rounded-xl px-3 py-2 text-xs text-strong outline-none w-full cursor-pointer"
-            >
-              {MONTH_LIST.map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-          </div>
+        <div className="space-y-3">
           <div>
             <label className="text-[10px] uppercase font-semibold text-muted block mb-1.5">Year</label>
             <select
               value={jumpYear}
               onChange={(e) => setJumpYear(e.target.value)}
-              className="bg-surface-input border border-inverse/[0.08] rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none w-full cursor-pointer"
+              className="bg-surface-input border border-inverse/[0.08] rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none w-full cursor-pointer focus-visible:ring-2 focus-visible:ring-blue-500"
             >
               {YEAR_LIST.map(y => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
           </div>
+
+          <div>
+            <label className="text-[10px] uppercase font-semibold text-muted block mb-1.5">Month</label>
+            <div className="grid grid-cols-3 gap-1.5" role="group" aria-label="Month selection">
+              {MONTH_LIST.map((m) => {
+                const isSelected = jumpMonth === m;
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setJumpMonth(m)}
+                    aria-pressed={isSelected}
+                    className={`py-2 px-1 text-xs rounded-xl font-medium transition text-center truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                      isSelected
+                        ? "bg-blue-600 text-white font-semibold shadow-sm shadow-blue-600/30"
+                        : "bg-surface-input hover:bg-inverse/[0.06] text-secondary hover:text-strong border border-inverse/[0.06]"
+                    }`}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         <button
+          type="button"
           onClick={() => {
             const now = new Date();
             setJumpMonth(now.toLocaleString("default", { month: "long" }));
@@ -90,12 +108,14 @@ export const DateJumpModal: React.FC<DateJumpModalProps> = ({ isOpen, onClose, o
 
         <div className="flex gap-2 pt-2">
           <button
+            type="button"
             onClick={onClose}
             className="w-1/2 bg-inverse/[0.04] hover:bg-inverse/[0.08] text-secondary text-xs font-semibold py-2 rounded-xl transition"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleConfirm}
             className="w-1/2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-2 rounded-xl transition shadow-lg shadow-blue-600/20"
           >

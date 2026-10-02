@@ -36,6 +36,14 @@ export function calculateSafeToSpend(
   return Math.max(0, (totalLiquid || 0) - (totalUnpaidCommitments || 0));
 }
 
+export function calculateMonthlyDepositNeeded(
+  targetFund: number,
+  currentBalance: number
+): number {
+  return Math.max(0, (targetFund || 0) - (currentBalance || 0));
+}
+
+
 export function calculateDebtRunway(
   globalData: UnifiedFinanceData,
   selectedMonth: string
