@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { SettingsModal } from "./SettingsModal";
 import { UnifiedFinanceData } from "../types/finance";
 
@@ -464,5 +464,189 @@ describe("SettingsModal - Salary Gross & Deductions", () => {
       }),
     ]);
     expect(saved.perPayoutSalary).toBe(27000);
+  });
+});
+
+describe("SettingsModal - Theme Live-Preview & Persistence", () => {
+  beforeEach(() => {
+    document.documentElement.classList.remove("light", "dark");
+  });
+
+  afterEach(() => {
+    document.documentElement.classList.remove("light", "dark");
+  });
+
+  it("selecting Light immediately previews Light without saving", () => {
+    const data = createMockData({
+      settings: { ...createMockData().settings!, theme: "dark" },
+    });
+
+    const { setGlobalData } = renderSettingsModal(data);
+
+    // Initial state is dark
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+
+    // Click Light
+    const lightBtn = screen.getByRole("button", { name: /^light$/i });
+    fireEvent.click(lightBtn);
+
+    // Immediately previews Light
+    expect(document.documentElement.classList.contains("light")).toBe(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+
+    // Does not save prematurely
+    expect(setGlobalData).not.toHaveBeenCalled();
+  });
+
+  it("selecting Dark immediately previews Dark without saving", () => {
+    const data = createMockData({
+      settings: { ...createMockData().settings!, theme: "light" },
+    });
+
+    const { setGlobalData } = renderSettingsModal(data);
+
+    // Initial state is light
+    expect(document.documentElement.classList.contains("light")).toBe(true);
+
+    // Click Dark
+    const darkBtn = screen.getByRole("button", { name: /^dark$/i });
+    fireEvent.click(darkBtn);
+
+    // Immediately previews Dark
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.classList.contains("light")).toBe(false);
+
+    // Does not save prematurely
+    expect(setGlobalData).not.toHaveBeenCalled();
+  });
+
+  it("selecting System applies system theme behavior", () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false, // system is light
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    try {
+      const data = createMockData({
+        settings: { ...createMockData().settings!, theme: "dark" },
+      });
+
+      renderSettingsModal(data);
+
+      const systemBtn = screen.getByRole("button", { name: /^system$/i });
+      fireEvent.click(systemBtn);
+
+      // System preference was mocked as light (matches: false)
+      expect(document.documentElement.classList.contains("light")).toBe(true);
+      expect(document.documentElement.classList.contains("dark")).toBe(false);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it("cancelling restores the original saved theme", () => {
+    const data = createMockData({
+      settings: { ...createMockData().settings!, theme: "dark" },
+    });
+
+    const { onClose, setGlobalData } = renderSettingsModal(data);
+
+    // User previews Light
+    const lightBtn = screen.getByRole("button", { name: /^light$/i });
+    fireEvent.click(lightBtn);
+    expect(document.documentElement.classList.contains("light")).toBe(true);
+
+    // User clicks Cancel
+    const cancelBtn = screen.getByRole("button", { name: /^cancel$/i });
+    fireEvent.click(cancelBtn);
+
+    // Restores original saved theme (dark)
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.classList.contains("light")).toBe(false);
+    expect(onClose).toHaveBeenCalled();
+    expect(setGlobalData).not.toHaveBeenCalled();
+  });
+
+  it("closing via close button (X) restores the original saved theme", () => {
+    const data = createMockData({
+      settings: { ...createMockData().settings!, theme: "dark" },
+    });
+
+    const { onClose, setGlobalData } = renderSettingsModal(data);
+
+    // User previews Light
+    const lightBtn = screen.getByRole("button", { name: /^light$/i });
+    fireEvent.click(lightBtn);
+    expect(document.documentElement.classList.contains("light")).toBe(true);
+
+    // User clicks close button X
+    const closeBtn = screen.getByRole("button", { name: /close settings modal/i });
+    fireEvent.click(closeBtn);
+
+    // Restores original saved theme (dark)
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.classList.contains("light")).toBe(false);
+    expect(onClose).toHaveBeenCalled();
+    expect(setGlobalData).not.toHaveBeenCalled();
+  });
+
+  it("saving preserves the selected theme", () => {
+    const data = createMockData({
+      settings: { ...createMockData().settings!, theme: "dark" },
+    });
+
+    const { onClose, setGlobalData } = renderSettingsModal(data);
+
+    // User selects Light
+    const lightBtn = screen.getByRole("button", { name: /^light$/i });
+    fireEvent.click(lightBtn);
+
+    // User clicks Save Settings
+    const saveBtn = screen.getByRole("button", { name: /save settings/i });
+    fireEvent.click(saveBtn);
+
+    // Theme remains Light (not rolled back)
+    expect(document.documentElement.classList.contains("light")).toBe(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+
+    expect(onClose).toHaveBeenCalled();
+    const saved = extractSavedSettings(setGlobalData, data);
+    expect(saved.theme).toBe("light");
+  });
+
+  it("reopening the modal starts from the saved theme rather than the previous unsaved preview", () => {
+    const data = createMockData({
+      settings: { ...createMockData().settings!, theme: "dark" },
+    });
+
+    const firstRender = renderSettingsModal(data);
+
+    // Preview Light, then cancel
+    const lightBtn = screen.getByRole("button", { name: /^light$/i });
+    fireEvent.click(lightBtn);
+    expect(document.documentElement.classList.contains("light")).toBe(true);
+
+    const cancelBtn = screen.getByRole("button", { name: /^cancel$/i });
+    fireEvent.click(cancelBtn);
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    firstRender.onClose();
+
+    // Reopen modal: render a new instance with the still-saved data (theme: "dark")
+    renderSettingsModal(data);
+
+    // Observable behavior: document stays dark, Dark button is active
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    const darkBtn = screen.getAllByRole("button", { name: /^dark$/i })[0];
+    expect(darkBtn).toHaveClass("bg-blue-600");
+
+    const lightBtnReopened = screen.getAllByRole("button", { name: /^light$/i })[0];
+    expect(lightBtnReopened).not.toHaveClass("bg-blue-600");
   });
 });

@@ -12,6 +12,7 @@ import {
 } from "../utils/financeHelpers";
 import { generateId } from "../utils/idHelpers";
 import { exportPaydaysToCalendar } from "../utils/calendarExport";
+import { applyTheme, ThemeMode } from "../hooks/useTheme";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -75,11 +76,50 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     }
   }, [isOpen, globalData.settings]);
 
+  const baselineThemeRef = useRef<ThemeMode>(
+    (globalData.settings?.theme as ThemeMode) || "dark"
+  );
+  const isSavedRef = useRef(false);
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    if (!isOpen) return;
+
+    baselineThemeRef.current =
+      (globalData.settings?.theme as ThemeMode) || "dark";
+    isSavedRef.current = false;
+
+    return () => {
+      if (!isSavedRef.current) {
+        applyTheme(baselineThemeRef.current);
+      }
+    };
+  }, [isOpen, globalData.settings?.theme]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    return applyTheme(form.theme as ThemeMode);
+  }, [isOpen, form.theme]);
+
+  const handleCancel = () => {
+    if (!isSavedRef.current) {
+      applyTheme(baselineThemeRef.current);
+    }
+    if (globalData.settings) {
+      setForm(
+        createSettingsForm(globalData.settings, globalData.wallets, {
+          inflowCategories: PRESETS.videographer.inflowCats,
+          gigCategories: PRESETS.videographer.gigCats,
+        })
+      );
+    }
+    onClose();
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") handleCancel(); };
     if (isOpen) { window.addEventListener("keydown", handleKeyDown); document.body.style.overflow = "hidden"; }
     return () => { window.removeEventListener("keydown", handleKeyDown); document.body.style.overflow = "unset"; };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   const applyPreset = (key: keyof typeof PRESETS) => {
     const p = PRESETS[key];
@@ -134,6 +174,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
   });
 
   const handleSave = () => {
+    isSavedRef.current = true;
     setGlobalData(prev => ({
       ...prev,
       settings: applySettingsForm(prev.settings, form),
@@ -161,7 +202,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
   );
 
   return (
-    <div className="settings-modal-backdrop fixed inset-0 z-[110] backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (modalRef.current && !modalRef.current.contains(e.target as Node)) onClose(); }}>
+    <div className="settings-modal-backdrop fixed inset-0 z-[110] backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (modalRef.current && !modalRef.current.contains(e.target as Node)) handleCancel(); }}>
       <div ref={modalRef} className="bg-surface-elevated border border-inverse/[0.08] rounded-3xl p-6 w-full max-w-lg shadow-2xl">
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06] mb-4">
           <div className="flex items-center gap-2">
@@ -169,7 +210,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
             <h3 className="text-sm font-bold uppercase tracking-wider text-strong">App Settings</h3>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleCancel}
             aria-label="Close settings modal"
             className="text-faint hover:text-strong p-1.5 rounded-lg transition"
             title="Close (Esc)"
@@ -488,7 +529,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                       <button
                         key={opt}
                         type="button"
-                        onClick={() => setForm({...form, theme: opt})}
+                        onClick={() => {
+                          applyTheme(opt);
+                          setForm(prev => ({ ...prev, theme: opt }));
+                        }}
                         className={`py-2 rounded-xl text-[11px] font-semibold capitalize transition border ${form.theme === opt ? "bg-blue-600 border-blue-500 text-white" : "bg-surface-input border-strong text-muted hover:border-default"}`}
                       >
                         {opt}
@@ -652,9 +696,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
         </div>
 
         {activeTab !== "sync" && (
-          <button onClick={handleSave} className="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20">
-            <Save size={14} /> Save Settings
-          </button>
+          <div className="flex items-center gap-2 mt-6">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="w-1/3 bg-inverse/[0.04] hover:bg-inverse/[0.08] text-secondary text-xs font-semibold py-3 rounded-xl transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20"
+            >
+              <Save size={14} /> Save Settings
+            </button>
+          </div>
         )}
       </div>
     </div>
