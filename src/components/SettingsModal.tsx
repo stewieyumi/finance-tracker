@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { X, Settings, Briefcase, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2, CalendarPlus } from "lucide-react";
 import { Deduction, DeductionType, UnifiedFinanceData } from "../types/finance";
 import { migrateLegacyBills } from "../utils/financeMigrations";
+import { Modal } from "./ui/Modal";
 import {
   createSettingsForm,
   applySettingsForm,
@@ -63,7 +64,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     })
   );
 
-  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen && globalData.settings) {
@@ -114,12 +114,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     }
     onClose();
   };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") handleCancel(); };
-    if (isOpen) { window.addEventListener("keydown", handleKeyDown); document.body.style.overflow = "hidden"; }
-    return () => { window.removeEventListener("keydown", handleKeyDown); document.body.style.overflow = "unset"; };
-  }, [isOpen]);
 
   const applyPreset = (key: keyof typeof PRESETS) => {
     const p = PRESETS[key];
@@ -202,8 +196,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
   );
 
   return (
-    <div className="settings-modal-backdrop fixed inset-0 z-[110] backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (modalRef.current && !modalRef.current.contains(e.target as Node)) handleCancel(); }}>
-      <div ref={modalRef} className="bg-surface-elevated border border-inverse/[0.08] rounded-3xl p-6 w-full max-w-lg shadow-2xl">
+    <Modal
+      isOpen={isOpen}
+      onClose={handleCancel}
+      variant="floating"
+      ariaLabel="App Settings"
+    >
+      <div className="bg-surface-elevated border border-inverse/[0.08] rounded-3xl p-6 w-full max-w-lg shadow-2xl">
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06] mb-4">
           <div className="flex items-center gap-2">
             <Settings size={18} className="text-secondary" />
@@ -700,6 +699,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
           </div>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }

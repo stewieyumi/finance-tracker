@@ -3,6 +3,27 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { SettingsModal } from "./SettingsModal";
 import { UnifiedFinanceData } from "../types/finance";
 
+const mockLocalStorage = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: vi.fn((key: string) => store[key] || null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value.toString();
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key];
+    }),
+    clear: vi.fn(() => {
+      store = {};
+    }),
+  };
+})();
+
+Object.defineProperty(window, "localStorage", {
+  value: mockLocalStorage,
+  writable: true,
+});
+
 const createMockData = (overrides: Partial<UnifiedFinanceData> = {}): UnifiedFinanceData => ({
   wallets: {
     main: 1000,
@@ -597,6 +618,57 @@ describe("SettingsModal - Theme Live-Preview & Persistence", () => {
     expect(setGlobalData).not.toHaveBeenCalled();
   });
 
+  it("closing via Escape key restores the original saved theme without saving", () => {
+    const data = createMockData({
+      settings: { ...createMockData().settings!, theme: "dark" },
+    });
+
+    const { onClose, setGlobalData } = renderSettingsModal(data);
+
+    // Initial state is dark
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+
+    // User previews Light
+    const lightBtn = screen.getByRole("button", { name: /^light$/i });
+    fireEvent.click(lightBtn);
+    expect(document.documentElement.classList.contains("light")).toBe(true);
+
+    // User presses Escape
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    // Restores original saved theme (dark)
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.classList.contains("light")).toBe(false);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(setGlobalData).not.toHaveBeenCalled();
+  });
+
+  it("closing via backdrop click restores the original saved theme without saving", () => {
+    const data = createMockData({
+      settings: { ...createMockData().settings!, theme: "dark" },
+    });
+
+    const { onClose, setGlobalData } = renderSettingsModal(data);
+
+    // Initial state is dark
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+
+    // User previews Light
+    const lightBtn = screen.getByRole("button", { name: /^light$/i });
+    fireEvent.click(lightBtn);
+    expect(document.documentElement.classList.contains("light")).toBe(true);
+
+    // Click the backdrop itself
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(dialog);
+
+    // Restores original saved theme (dark)
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.classList.contains("light")).toBe(false);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(setGlobalData).not.toHaveBeenCalled();
+  });
+
   it("saving preserves the selected theme", () => {
     const data = createMockData({
       settings: { ...createMockData().settings!, theme: "dark" },
@@ -658,5 +730,93 @@ describe("SettingsModal - Theme Live-Preview & Persistence", () => {
     expect(screen.queryByText(/goal name/i)).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/e\.g\. japan trip/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/target amount \(₱\)/i)).not.toBeInTheDocument();
+  });
+
+  it("renders with dialog accessibility", () => {
+    const data = createMockData();
+    renderSettingsModal(data);
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute("aria-label", "App Settings");
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+  });
+
+  it("does not close on click inside modal content", () => {
+    const data = createMockData();
+    const { onClose } = renderSettingsModal(data);
+    fireEvent.click(screen.getByText("App Settings"));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("SettingsModal - Sync & Maintenance Actions", () => {
+  it("invokes sync and backup callbacks without closing the modal", () => {
+    const data = createMockData();
+    const onForcePush = vi.fn();
+    const onForcePull = vi.fn();
+    const onExport = vi.fn();
+    const onImportClick = vi.fn();
+
+    const { onClose } = renderSettingsModal(data, {
+      initialTab: "sync",
+      onForcePush,
+      onForcePull,
+      onExport,
+      onImportClick,
+    });
+
+    const pushBtn = screen.getByRole("button", { name: /push data/i });
+    const pullBtn = screen.getByRole("button", { name: /pull data/i });
+    const exportBtn = screen.getByRole("button", { name: /export json backup/i });
+    const importBtn = screen.getByRole("button", { name: /import json backup/i });
+
+    fireEvent.click(pushBtn);
+    expect(onForcePush).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(pullBtn);
+    expect(onForcePull).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(exportBtn);
+    expect(onExport).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(importBtn);
+    expect(onImportClick).toHaveBeenCalledTimes(1);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  describe("Legacy Bill Migration confirmation", () => {
+    it("does not migrate when confirmation is cancelled", () => {
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+      const data = createMockData();
+
+      const { setGlobalData } = renderSettingsModal(data, { initialTab: "sync" });
+
+      const migrateBtn = screen.getByRole("button", { name: /force legacy bill migration/i });
+      fireEvent.click(migrateBtn);
+
+      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(setGlobalData).not.toHaveBeenCalled();
+
+      confirmSpy.mockRestore();
+    });
+
+    it("triggers migration and alerts when confirmation is accepted", () => {
+      const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+      const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+      const data = createMockData();
+
+      const { setGlobalData } = renderSettingsModal(data, { initialTab: "sync" });
+
+      const migrateBtn = screen.getByRole("button", { name: /force legacy bill migration/i });
+      fireEvent.click(migrateBtn);
+
+      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(setGlobalData).toHaveBeenCalledTimes(1);
+      expect(alertSpy).toHaveBeenCalledTimes(1);
+
+      confirmSpy.mockRestore();
+      alertSpy.mockRestore();
+    });
   });
 });
