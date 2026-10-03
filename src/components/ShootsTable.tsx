@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Camera, Check, Circle, Edit2, Save, Trash2, Plus, Filter, ChevronDown, Calendar, X, CalendarPlus } from "lucide-react";
 import { Shoot, ShootCategory, ShootStatus, EditFormData } from "../types/finance";
+import { exportGigToCalendar } from "../utils/calendarExport";
 
 const SHOOT_CATEGORIES: (ShootCategory | "All")[] = ["All", "Solo Shoot", "Assistant", "Video Edit", "Event", "Commercial", "Other"];
 
@@ -78,47 +79,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
       alert("Please set a date for this gig first.");
       return;
     }
-    // Format to YYYYMMDD for the iCal standard
-    const formattedDate = shoot.date.replace(/-/g, "");
-    
-    // Calculate the next day for the end of an all-day event
-    const dateObj = new Date(shoot.date);
-    dateObj.setDate(dateObj.getDate() + 1);
-    const nextDay = `${dateObj.getFullYear()}${String(dateObj.getMonth()+1).padStart(2, '0')}${String(dateObj.getDate()).padStart(2, '0')}`;
-
-    // Build the raw iCalendar string
-    const ics = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "BEGIN:VEVENT",
-      `DTSTART;VALUE=DATE:${formattedDate}`,
-      `DTEND;VALUE=DATE:${nextDay}`,
-      `SUMMARY:${shoot.title}`,
-      `DESCRIPTION:Category: ${shoot.category} \nStatus: ${shoot.status} \n\nLogged via Finance Tracker`,
-      "END:VEVENT",
-      "END:VCALENDAR"
-    ].join("\n");
-
-        // Convert ICS string to a File object
-    const fileName = `${shoot.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`;
-    const file = new File([ics], fileName, { type: 'text/calendar' });
-
-    // Use native Web Share API (Flawless on iOS Safari)
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      navigator.share({
-        files: [file],
-        title: shoot.title,
-      }).catch((err) => console.log("Share cancelled:", err));
-    } else {
-      // Fallback for Desktop Chrome/Edge
-      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    exportGigToCalendar(shoot);
   };
 
   return (

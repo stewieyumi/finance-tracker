@@ -1,4 +1,4 @@
-import { Bill, BillViewModel } from "../types/finance";
+import { Bill, BillViewModel, Shoot } from "../types/finance";
 import { parseMonthKey, normalizePaydayDays } from "./dateHelpers";
 
 /**
@@ -251,6 +251,88 @@ export function generatePaydayIcs(
 }
 
 /**
+ * Parses a YYYY-MM-DD string into a valid local Date.
+ * Throws an Error if the date string is missing or malformed, avoiding timezone-dependent drift.
+ */
+export function parseGigDate(dateStr?: string): Date {
+  if (!dateStr || typeof dateStr !== "string") {
+    throw new Error("Gig date is required for calendar export");
+  }
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr.trim());
+  if (!match) {
+    throw new Error(`Invalid gig date format: "${dateStr}". Expected YYYY-MM-DD.`);
+  }
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+
+  if (month < 1 || month > 12) {
+    throw new Error(`Invalid month in gig date: "${dateStr}".`);
+  }
+
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    throw new Error(`Invalid calendar date in gig date: "${dateStr}".`);
+  }
+
+  return date;
+}
+
+/**
+ * Builds a single VEVENT string block for a production gig.
+ */
+export function buildGigIcsEvent(shoot: Shoot): string {
+  const startDate = parseGigDate(shoot.date);
+  const endDate = getNextDay(startDate);
+
+  const dtStart = formatIcsDate(startDate);
+  const dtEnd = formatIcsDate(endDate);
+
+  const summary = escapeIcsText(shoot.title);
+  const category = shoot.category || "Other";
+  const status = shoot.status || "Confirmed";
+
+  const descriptionLines = [
+    `Category: ${category}`,
+    `Status: ${status}`,
+    "",
+    "Logged via Finance Tracker",
+  ].join("\n");
+
+  const description = escapeIcsText(descriptionLines);
+  const uid = `gig-${shoot.id || "shoot"}-${dtStart}@finance-tracker`;
+
+  return [
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTART;VALUE=DATE:${dtStart}`,
+    `DTEND;VALUE=DATE:${dtEnd}`,
+    `SUMMARY:${summary}`,
+    `DESCRIPTION:${description}`,
+    "END:VEVENT",
+  ].join("\n");
+}
+
+/**
+ * Generates a full .ics VCALENDAR for a single gig.
+ */
+export function generateGigIcs(shoot: Shoot): string {
+  const event = buildGigIcsEvent(shoot);
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Finance Tracker//EN",
+    "CALSCALE:GREGORIAN",
+    event,
+    "END:VCALENDAR",
+  ].join("\n");
+}
+
+/**
  * Triggers browser download or mobile Web Share for an ICS string.
  */
 export function downloadOrShareIcs(
@@ -337,4 +419,13 @@ export function exportPaydaysToCalendar(
     ? `payday_${options.monthKey}.ics`
     : `payday_schedule_${year}.ics`;
   downloadOrShareIcs(fileName, ics, "Payday Schedule");
+}
+
+/**
+ * Convenience helper to export a single gig to calendar.
+ */
+export function exportGigToCalendar(shoot: Shoot): void {
+  const ics = generateGigIcs(shoot);
+  const fileName = `${shoot.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.ics`;
+  downloadOrShareIcs(fileName, ics, shoot.title);
 }

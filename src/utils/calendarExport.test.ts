@@ -9,12 +9,16 @@ import {
   generateMonthBillsIcs,
   buildPaydayIcsEvents,
   generatePaydayIcs,
+  parseGigDate,
+  buildGigIcsEvent,
+  generateGigIcs,
   downloadOrShareIcs,
   exportBillToCalendar,
   exportMonthBillsToCalendar,
   exportPaydaysToCalendar,
+  exportGigToCalendar,
 } from "./calendarExport";
-import { Bill, BillViewModel } from "../types/finance";
+import { Bill, BillViewModel, Shoot } from "../types/finance";
 
 describe("calendarExport utility", () => {
   describe("escapeIcsText", () => {
@@ -180,6 +184,148 @@ describe("calendarExport utility", () => {
     });
   });
 
+  describe("parseGigDate and gig date handling", () => {
+    it("parses a standard YYYY-MM-DD date into local Date without UTC drift", () => {
+      const date = parseGigDate("2026-10-15");
+      expect(date.getFullYear()).toBe(2026);
+      expect(date.getMonth()).toBe(9); // 0-indexed month (October)
+      expect(date.getDate()).toBe(15);
+      expect(formatIcsDate(date)).toBe("20261015");
+      expect(formatIcsDate(getNextDay(date))).toBe("20261016");
+    });
+
+    it("handles month boundary across 30-day month", () => {
+      const date = parseGigDate("2026-04-30");
+      expect(formatIcsDate(date)).toBe("20260430");
+      expect(formatIcsDate(getNextDay(date))).toBe("20260501");
+    });
+
+    it("handles month boundary across 31-day month", () => {
+      const date = parseGigDate("2026-08-31");
+      expect(formatIcsDate(date)).toBe("20260831");
+      expect(formatIcsDate(getNextDay(date))).toBe("20260901");
+    });
+
+    it("handles month boundary across February in non-leap year", () => {
+      const date = parseGigDate("2026-02-28");
+      expect(formatIcsDate(date)).toBe("20260228");
+      expect(formatIcsDate(getNextDay(date))).toBe("20260301");
+    });
+
+    it("handles month boundary across February in leap year", () => {
+      const date = parseGigDate("2024-02-29");
+      expect(formatIcsDate(date)).toBe("20240229");
+      expect(formatIcsDate(getNextDay(date))).toBe("20240301");
+    });
+
+    it("handles year boundary correctly", () => {
+      const date = parseGigDate("2026-12-31");
+      expect(formatIcsDate(date)).toBe("20261231");
+      expect(formatIcsDate(getNextDay(date))).toBe("20270101");
+    });
+
+    it("rejects missing, empty, or non-string date inputs", () => {
+      expect(() => parseGigDate(undefined)).toThrow("Gig date is required");
+      expect(() => parseGigDate("")).toThrow("Gig date is required");
+      expect(() => parseGigDate(null as any)).toThrow("Gig date is required");
+    });
+
+    it("rejects malformed date strings", () => {
+      expect(() => parseGigDate("not-a-date")).toThrow("Invalid gig date format");
+      expect(() => parseGigDate("2026/10/15")).toThrow("Invalid gig date format");
+      expect(() => parseGigDate("10-15-2026")).toThrow("Invalid gig date format");
+      expect(() => parseGigDate("2026-1-5")).toThrow("Invalid gig date format");
+    });
+
+    it("rejects non-existent calendar dates", () => {
+      expect(() => parseGigDate("2026-13-01")).toThrow("Invalid month");
+      expect(() => parseGigDate("2026-00-10")).toThrow("Invalid month");
+      expect(() => parseGigDate("2026-02-29")).toThrow("Invalid calendar date");
+      expect(() => parseGigDate("2026-04-31")).toThrow("Invalid calendar date");
+    });
+  });
+
+  describe("buildGigIcsEvent and generateGigIcs", () => {
+    const mockShoot: Shoot = {
+      id: "shoot-101",
+      title: "Wedding Video Coverage",
+      date: "2026-10-15",
+      category: "Solo Shoot",
+      status: "Confirmed",
+      completed: false,
+    };
+
+    it("builds a single VEVENT block with proper fields for standard gig", () => {
+      const event = buildGigIcsEvent(mockShoot);
+      expect(event).toContain("BEGIN:VEVENT");
+      expect(event).toContain("UID:gig-shoot-101-20261015@finance-tracker");
+      expect(event).toContain("DTSTART;VALUE=DATE:20261015");
+      expect(event).toContain("DTEND;VALUE=DATE:20261016");
+      expect(event).toContain("SUMMARY:Wedding Video Coverage");
+      expect(event).toContain(
+        "DESCRIPTION:Category: Solo Shoot\\nStatus: Confirmed\\n\\nLogged via Finance Tracker"
+      );
+      expect(event).toContain("END:VEVENT");
+    });
+
+    it("generates a full valid VCALENDAR string for a gig", () => {
+      const ics = generateGigIcs(mockShoot);
+      expect(ics.startsWith("BEGIN:VCALENDAR")).toBe(true);
+      expect(ics).toContain("VERSION:2.0");
+      expect(ics).toContain("PRODID:-//Finance Tracker//EN");
+      expect(ics).toContain("CALSCALE:GREGORIAN");
+      expect(ics).toContain("BEGIN:VEVENT");
+      expect(ics).toContain("UID:gig-shoot-101-20261015@finance-tracker");
+      expect(ics.endsWith("END:VCALENDAR")).toBe(true);
+    });
+
+    it("escapes special characters in title, category, and status", () => {
+      const specialShoot: Shoot = {
+        id: "shoot-special",
+        title: "Commercial Shoot; Studio, Backstage \\ Set\nDay 1",
+        date: "2026-11-20",
+        category: "Photo, Video; Edit" as any,
+        status: "Moved\\Delayed" as any,
+        completed: false,
+      };
+
+      const event = buildGigIcsEvent(specialShoot);
+      expect(event).toContain("SUMMARY:Commercial Shoot\\; Studio\\, Backstage \\\\ Set\\nDay 1");
+      expect(event).toContain(
+        "DESCRIPTION:Category: Photo\\, Video\\; Edit\\nStatus: Moved\\\\Delayed\\n\\nLogged via Finance Tracker"
+      );
+    });
+
+    it("falls back to default category and status if not provided", () => {
+      const minimalShoot: Shoot = {
+        id: "shoot-min",
+        title: "Quick Editing",
+        date: "2026-05-10",
+        category: undefined,
+        status: undefined as any,
+        completed: false,
+      };
+
+      const event = buildGigIcsEvent(minimalShoot);
+      expect(event).toContain("DESCRIPTION:Category: Other\\nStatus: Confirmed\\n\\nLogged via Finance Tracker");
+    });
+
+    it("throws an error when attempting to build an event for a gig with missing or malformed date", () => {
+      expect(() =>
+        buildGigIcsEvent({ ...mockShoot, date: undefined })
+      ).toThrow("Gig date is required");
+      expect(() =>
+        buildGigIcsEvent({ ...mockShoot, date: "" })
+      ).toThrow("Gig date is required");
+      expect(() =>
+        buildGigIcsEvent({ ...mockShoot, date: "invalid-date" })
+      ).toThrow("Invalid gig date format");
+      expect(() =>
+        buildGigIcsEvent({ ...mockShoot, date: "2026-02-31" })
+      ).toThrow("Invalid calendar date");
+    });
+  });
+
   describe("downloadOrShareIcs and export helpers", () => {
     let originalShare: any;
     let originalCanShare: any;
@@ -269,6 +415,29 @@ describe("calendarExport utility", () => {
 
       expect(mockShare).toHaveBeenCalledTimes(1);
       expect(mockShare.mock.calls[0][0].title).toBe("Payday Schedule");
+    });
+
+    it("exportGigToCalendar exports single gig with sanitized filename", () => {
+      const mockShare = vi.fn().mockResolvedValue(undefined);
+      (navigator as any).share = mockShare;
+      (navigator as any).canShare = vi.fn().mockReturnValue(true);
+
+      const gig: Shoot = {
+        id: "shoot-99",
+        title: "Corporate Event / Promo (Live!)",
+        date: "2026-11-12",
+        category: "Event",
+        status: "Confirmed",
+        completed: false,
+      };
+
+      exportGigToCalendar(gig);
+
+      expect(mockShare).toHaveBeenCalledTimes(1);
+      const callArg = mockShare.mock.calls[0][0];
+      expect(callArg.title).toBe("Corporate Event / Promo (Live!)");
+      expect(callArg.files).toHaveLength(1);
+      expect(callArg.files[0].name).toBe("corporate_event___promo__live__.ics");
     });
   });
 });
