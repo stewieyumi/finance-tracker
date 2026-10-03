@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Check, Circle, Edit2, Save, Trash2, Plus, Calendar, Filter, ChevronDown, RotateCcw, X } from "lucide-react";
+import { Check, Circle, Edit2, Save, Trash2, Plus, Calendar, CalendarPlus, Filter, ChevronDown, RotateCcw, X, Eye, EyeOff } from "lucide-react";
 import { ALL_MONTH_YEAR_OPTIONS } from "../constants/config";
 import { LoanProgressBadge } from "./LoanProgressBadge";
 import { BillMobileRow } from "./BillMobileRow";
@@ -11,6 +11,8 @@ import { BillsList } from "./BillsList";
 import { Bill, BillViewModel, BillType, EditFormData, CustomWallet } from "../types/finance";
 import { formatDaysRemaining } from "../utils/dateHelpers";
 import { filterBills, sortBills, groupBillsByHalf, BillSortOption } from "../utils/bills/billListHelpers";
+import { PayPeriodFilter } from "./BillsList";
+import { exportMonthBillsToCalendar } from "../utils/calendarExport";
 
 const BILL_TYPES = ["All", "Bill", "Subscription", "Loan / Installment"];
 
@@ -31,15 +33,20 @@ interface BillsTableProps {
   walletLabels?: Record<string, string>;
   defaultWallet?: string;
   highlightOverdue?: boolean;
+  onExportCalendar?: (bill: BillViewModel) => void;
+  onExportMonthCalendar?: (bills: BillViewModel[], monthKey: string) => void;
 }
 
 export const BillsTable: React.FC<BillsTableProps> = React.memo(({
   activeBills, selectedMonth, onToggleStatus, onAddBill, onDeleteBill, onSaveEdit, onResetMonthOverride,
-  editingId, setEditingId, editForm, setEditForm, customWallets, defaultWallet = "main", highlightOverdue = false
+  editingId, setEditingId, editForm, setEditForm, customWallets, defaultWallet = "main", highlightOverdue = false,
+  onExportCalendar, onExportMonthCalendar
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newBill, setNewBill] = useState({ name: "", amount: "", dueDay: "1", type: "Bill" as BillType, startMonth: selectedMonth, endMonth: selectedMonth, wallet: defaultWallet });
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [hideSettled, setHideSettled] = useState(false);
+  const [payPeriod, setPayPeriod] = useState<PayPeriodFilter>("all");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<BillSortOption>("default");
@@ -55,7 +62,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredBills = useMemo(() => filterBills(activeBills, selectedFilter, searchQuery), [activeBills, selectedFilter, searchQuery]);
+  const filteredBills = useMemo(() => filterBills(activeBills, selectedFilter, searchQuery, hideSettled), [activeBills, selectedFilter, searchQuery, hideSettled]);
   const sortedBills = useMemo(() => sortBills(filteredBills, sortBy), [filteredBills, sortBy]);
   const { firstHalfBills, secondHalfBills } = useMemo(() => groupBillsByHalf(sortedBills), [sortedBills]);
 
@@ -91,7 +98,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
 
 
   return (
-    <div className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-xl">
+    <div className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-lg">
       <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
         <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 shrink-0">
           <Calendar size={13} className="text-blue-400" /> {selectedMonth} Commitments
@@ -135,13 +142,81 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
               </div>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => setHideSettled(prev => !prev)}
+            aria-label={hideSettled ? "Show paid commitments" : "Hide paid commitments"}
+            title={hideSettled ? "Show paid commitments" : "Hide paid commitments"}
+            className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${
+              hideSettled
+                ? "bg-blue-600/20 border-blue-500/50 text-blue-400"
+                : "bg-inverse/[0.04] border-border-default text-muted hover:text-primary"
+            }`}
+          >
+            {hideSettled ? <EyeOff size={11} className="text-blue-400" /> : <Eye size={11} className="text-muted" />}
+            <span className="text-[11px] hidden sm:inline">{hideSettled ? "Paid Hidden" : "Hide Paid"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (onExportMonthCalendar) {
+                onExportMonthCalendar(activeBills, selectedMonth);
+              } else {
+                exportMonthBillsToCalendar(activeBills, selectedMonth);
+              }
+            }}
+            title="Export all commitments for this month to calendar (.ics)"
+            aria-label="Export commitments to calendar"
+            className="h-7 px-2.5 rounded-xl border border-border-default bg-inverse/[0.04] text-[11px] text-muted hover:text-blue-400 hover:border-blue-500/50 flex items-center gap-1.5 transition"
+          >
+            <CalendarPlus size={11} className="text-blue-400" />
+            <span className="text-[11px] hidden sm:inline">Export</span>
+          </button>
         </div>
+      </div>
+
+      {/* Pay-period selector: [ All ] [ 1–15 ] [ 16–31 ] */}
+      <div className="flex items-center gap-1 bg-surface-lowest border border-inverse/[0.05] p-1 rounded-xl mb-3.5 max-w-fit">
+        <button
+          type="button"
+          onClick={() => setPayPeriod("all")}
+          className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            payPeriod === "all"
+              ? "bg-blue-600/20 text-blue-400 shadow-sm"
+              : "text-faint hover:text-secondary"
+          }`}
+        >
+          All
+        </button>
+        <button
+          type="button"
+          onClick={() => setPayPeriod("firstHalf")}
+          className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            payPeriod === "firstHalf"
+              ? "bg-blue-600/20 text-blue-400 shadow-sm"
+              : "text-faint hover:text-secondary"
+          }`}
+        >
+          1–15
+        </button>
+        <button
+          type="button"
+          onClick={() => setPayPeriod("secondHalf")}
+          className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+            payPeriod === "secondHalf"
+              ? "bg-blue-600/20 text-blue-400 shadow-sm"
+              : "text-faint hover:text-secondary"
+          }`}
+        >
+          16–31
+        </button>
       </div>
 
      <BillsList
        filteredBills={filteredBills}
        firstHalfBills={firstHalfBills}
        secondHalfBills={secondHalfBills}
+       payPeriod={payPeriod}
        selectedFilter={selectedFilter}
        searchQuery={searchQuery}
        selectedMonth={selectedMonth}
@@ -149,6 +224,8 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
        highlightOverdue={highlightOverdue}
        onToggleStatus={onToggleStatus}
        onEdit={handleStartEdit}
+       onExportCalendar={onExportCalendar}
+       hideSettled={hideSettled}
      />
 
       <button onClick={() => setIsAdding(true)} className="w-full mt-3.5 py-3.5 border border-dashed border-inverse/[0.15] hover:border-blue-500/50 hover:bg-blue-500/10 text-muted hover:text-blue-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">

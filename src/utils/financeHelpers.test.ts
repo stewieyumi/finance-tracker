@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  calculateDeductionAmount,
+  calculateNetSalary,
   getEffectiveBillAmount,
   getWalletForBill,
   computeBillPerPaydayAmount,
@@ -381,5 +383,116 @@ describe("computeBillPerPaydayAmount — cent-safe payday allocation", () => {
     expect(
       computeBillPerPaydayAmount(900, 0, 2.9)
     ).toBe(450);
+  });
+});
+
+describe("P4-C salary compatibility", () => {
+  it("preserves existing NET payout semantics for payday baseline scaling", () => {
+    expect(computeBaselineScale(0, 15000, 5000)).toBe(1);
+    expect(computeBaselineScale(12000, 15000, 5000)).toBe(0.6);
+    expect(computeBaselineScale(15000, 15000, 5000)).toBe(0);
+  });
+});
+
+describe("P4-C deduction calculations", () => {
+  it("calculates a fixed deduction from gross salary", () => {
+    const deduction = {
+      id: "sss",
+      name: "SSS",
+      type: "fixed" as const,
+      value: 1500,
+    };
+
+    expect(calculateDeductionAmount(20000, deduction)).toBe(1500);
+    expect(calculateNetSalary(20000, [deduction])).toBe(18500);
+  });
+
+  it("calculates a percentage deduction from gross salary", () => {
+    const deduction = {
+      id: "tax",
+      name: "Tax",
+      type: "percentage" as const,
+      value: 10,
+    };
+
+    expect(calculateDeductionAmount(20000, deduction)).toBe(2000);
+    expect(calculateNetSalary(20000, [deduction])).toBe(18000);
+  });
+
+  it("rounds percentage deductions to cents", () => {
+    const deduction = {
+      id: "tax",
+      name: "Tax",
+      type: "percentage" as const,
+      value: 7.333,
+    };
+
+    expect(calculateDeductionAmount(1000, deduction)).toBe(73.33);
+    expect(calculateNetSalary(1000, [deduction])).toBe(926.67);
+  });
+
+  it("clamps negative deduction values to zero", () => {
+    const deduction = {
+      id: "invalid",
+      name: "Invalid",
+      type: "fixed" as const,
+      value: -500,
+    };
+
+    expect(calculateDeductionAmount(20000, deduction)).toBe(0);
+    expect(calculateNetSalary(20000, [deduction])).toBe(20000);
+  });
+
+  it("caps percentage deductions above 100% at gross salary", () => {
+    const deduction = {
+      id: "invalid-percentage",
+      name: "Invalid Percentage",
+      type: "percentage" as const,
+      value: 150,
+    };
+
+    expect(calculateDeductionAmount(20000, deduction)).toBe(20000);
+    expect(calculateNetSalary(20000, [deduction])).toBe(0);
+  });
+
+  it("caps a single deduction at gross salary", () => {
+    const deduction = {
+      id: "invalid",
+      name: "Too Large",
+      type: "fixed" as const,
+      value: 25000,
+    };
+
+    expect(calculateDeductionAmount(20000, deduction)).toBe(20000);
+    expect(calculateNetSalary(20000, [deduction])).toBe(0);
+  });
+
+  it("caps total deductions at gross salary when multiple deductions exceed gross", () => {
+    const deductions = [
+      {
+        id: "a",
+        name: "Deduction A",
+        type: "fixed" as const,
+        value: 15000,
+      },
+      {
+        id: "b",
+        name: "Deduction B",
+        type: "fixed" as const,
+        value: 10000,
+      },
+    ];
+
+    expect(calculateNetSalary(20000, deductions)).toBe(0);
+  });
+
+  it("returns gross salary unchanged when there are no deductions", () => {
+    expect(calculateNetSalary(20000)).toBe(20000);
+    expect(calculateNetSalary(20000, [])).toBe(20000);
+  });
+
+  it("normalizes invalid gross salary values safely", () => {
+    expect(calculateNetSalary(-5000)).toBe(0);
+    expect(calculateNetSalary(0)).toBe(0);
   });
 });

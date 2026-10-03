@@ -2,11 +2,19 @@ import { BillViewModel } from "../../types/finance";
 
 export type BillSortOption = "default" | "dueSoon" | "dueDate" | "amountDesc" | "amountAsc" | "nameAsc" | "unpaidFirst";
 
-export function filterBills(activeBills: BillViewModel[], selectedFilter: string, searchQuery: string): BillViewModel[] {
+export function filterBills(
+  activeBills: BillViewModel[],
+  selectedFilter: string,
+  searchQuery: string,
+  hideSettled: boolean = false
+): BillViewModel[] {
   let result = selectedFilter === "All" ? activeBills : activeBills.filter(b => b.type === selectedFilter);
   if (searchQuery.trim()) {
     const q = searchQuery.trim().toLowerCase();
     result = result.filter(b => b.name.toLowerCase().includes(q));
+  }
+  if (hideSettled) {
+    result = result.filter(b => !b.paid);
   }
   return result;
 }

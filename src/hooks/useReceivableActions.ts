@@ -1,6 +1,7 @@
 import { Receivable, ReceivableCategory, ReceivableFrequency, ReceivableViewModel, UnifiedFinanceData } from "../types/finance";
 import { generateId } from "../utils/idHelpers";
 import { roundMoney } from "../utils/currency";
+import { hasSufficientWalletBalance } from "../utils/financeHelpers";
 
 interface UseReceivableActionsParams {
   globalData: UnifiedFinanceData;
@@ -53,6 +54,21 @@ export function useReceivableActions({ globalData, setGlobalData, selectedMonth,
         selectedMonth,
         globalData.settings?.defaultWallet
       );
+
+    const monthLog = globalData.logs?.[targetMonth];
+    const currentRecord = monthLog?.recsCollected?.[receivable.id];
+    const currentAmount = Math.max(0, parseFloat(String(currentRecord?.amountReceived)) || 0);
+
+    if (currentAmount > 0) {
+      if (!hasSufficientWalletBalance(globalData.wallets?.[targetWallet] ?? 0, currentAmount)) {
+        showToast(
+          `Insufficient balance in ${
+            globalData.settings?.walletLabels?.[targetWallet] || targetWallet
+          }. Need ₱${currentAmount.toLocaleString()} to reverse.`
+        );
+        return;
+      }
+    }
 
     setGlobalData(prev => {
       const monthLog = prev.logs?.[targetMonth] || { billsPaid: [], recsCollected: {} };

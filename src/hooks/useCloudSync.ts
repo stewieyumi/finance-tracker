@@ -44,6 +44,7 @@ export function useCloudSync(
     typeof navigator !== "undefined" ? navigator.onLine : true
   );
   const [debugLog, setDebugLog] = useState<string>("");
+  const [hasInitialSyncCompleted, setHasInitialSyncCompleted] = useState<boolean>(() => !getLocalPasscode());
 
   const isFirstMount = useRef(true);
   const isRemoteUpdate = useRef(false);
@@ -301,6 +302,7 @@ export function useCloudSync(
         showToast("⚠️ Offline: Cannot pull from cloud");
       }
 
+      setHasInitialSyncCompleted(true);
       return;
     }
 
@@ -321,6 +323,7 @@ export function useCloudSync(
     // No authenticated session means there is nothing to pull.
     // Do not make a network request with an empty token.
     if (!token) {
+      setHasInitialSyncCompleted(true);
       return;
     }
 
@@ -407,6 +410,7 @@ export function useCloudSync(
       if (!silent) {
         setIsSyncing(false);
       }
+      setHasInitialSyncCompleted(true);
     }
   };
 
@@ -605,6 +609,7 @@ export function useCloudSync(
     forceManualSync,
     pullLatestData,
     pushToCloud,
-    promptPasscode
+    promptPasscode,
+    hasInitialSyncCompleted
   };
 }

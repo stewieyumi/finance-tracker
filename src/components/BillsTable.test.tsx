@@ -149,4 +149,197 @@ describe("BillsTable - list and edit wiring", () => {
       })
     );
   });
+
+  it("opens edit modal when clicking the commitment card or row, and keeps status toggle strictly independent", () => {
+    const bill = createBill({
+      id: "bill-card-test",
+      name: "Water Bill",
+      amount: 450,
+      paid: false,
+    });
+
+    const onToggleStatus = vi.fn();
+    const { setEditingId } = renderBillsTable([bill], { onToggleStatus });
+
+    // 1. Desktop row click -> onEdit, NOT onToggleStatus
+    const billNames = screen.getAllByText("Water Bill");
+    // Click desktop text / row area
+    fireEvent.click(billNames[0]);
+    expect(setEditingId).toHaveBeenCalledWith("bill-card-test");
+    expect(onToggleStatus).not.toHaveBeenCalled();
+
+    setEditingId.mockClear();
+    onToggleStatus.mockClear();
+
+    // 2. Click desktop status toggle -> onToggleStatus, NOT onEdit
+    const pendingButtons = screen.getAllByRole("button", { name: /mark water bill as paid/i });
+    // Pending buttons exist in both mobile and desktop views; click the desktop one (second or first)
+    fireEvent.click(pendingButtons[1] || pendingButtons[0]);
+    expect(onToggleStatus).toHaveBeenCalledTimes(1);
+    expect(onToggleStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "bill-card-test" })
+    );
+    expect(setEditingId).not.toHaveBeenCalled();
+  });
+
+  it("filters commitments correctly across pay-period selector states (All, 1–15, 16–31)", () => {
+    const bills = [
+      createBill({
+        id: "bill-half-1",
+        name: "First Half Bill",
+        dueDay: "5",
+      }),
+      createBill({
+        id: "bill-half-2",
+        name: "Second Half Bill",
+        dueDay: "20",
+      }),
+    ];
+
+    renderBillsTable(bills);
+
+    // Initial state: "All" -> both bills visible
+    expect(screen.getAllByText("First Half Bill").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Second Half Bill").length).toBeGreaterThan(0);
+
+    // Switch to "1–15" -> only first half visible
+    fireEvent.click(screen.getByRole("button", { name: "1–15" }));
+    expect(screen.getAllByText("First Half Bill").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Second Half Bill")).not.toBeInTheDocument();
+
+    // Switch to "16–31" -> only second half visible
+    fireEvent.click(screen.getByRole("button", { name: "16–31" }));
+    expect(screen.queryByText("First Half Bill")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Second Half Bill").length).toBeGreaterThan(0);
+
+    // Switch back to "All" -> both bills visible again
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.getAllByText("First Half Bill").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Second Half Bill").length).toBeGreaterThan(0);
+  });
+
+  it("handles mobile card and mobile status button independently", () => {
+    const bill = createBill({
+      id: "bill-mobile-test",
+      name: "Electric Bill",
+      amount: 2500,
+      paid: false,
+    });
+
+    const onToggleStatus = vi.fn();
+    const { setEditingId } = renderBillsTable([bill], { onToggleStatus });
+
+    const mobileCard = screen.getByTestId("bill-mobile-row-bill-mobile-test");
+
+    // 1. Click mobile card -> calls onEdit, NOT onToggleStatus
+    fireEvent.click(mobileCard);
+    expect(setEditingId).toHaveBeenCalledWith("bill-mobile-test");
+    expect(onToggleStatus).not.toHaveBeenCalled();
+
+    setEditingId.mockClear();
+    onToggleStatus.mockClear();
+
+    // 2. Click mobile status button -> calls onToggleStatus, NOT onEdit
+    const mobileStatusBtn = screen.getAllByRole("button", { name: /mark electric bill as paid/i })[0];
+    fireEvent.click(mobileStatusBtn);
+    expect(onToggleStatus).toHaveBeenCalledTimes(1);
+    expect(onToggleStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "bill-mobile-test" })
+    );
+    expect(setEditingId).not.toHaveBeenCalled();
+  });
+
+  it("renders the historical target-month indicator when targetMonthForDue differs from selectedMonth", () => {
+    const historicalBill = createBill({
+      id: "bill-historical-1",
+      name: "Past Due Loan",
+      targetMonthForDue: "August 2026",
+      paid: false,
+    });
+
+    const currentBill = createBill({
+      id: "bill-current-1",
+      name: "Current Month Bill",
+      targetMonthForDue: "September 2026",
+      paid: false,
+    });
+
+    renderBillsTable([historicalBill, currentBill], {
+      selectedMonth: "September 2026",
+    });
+
+    // Should display the "For August 2026" indicator for the historical bill
+    const indicators = screen.getAllByText("For August 2026");
+    expect(indicators.length).toBeGreaterThan(0);
+
+    // Normal current-month bill should NOT display "For September 2026"
+    expect(screen.queryByText("For September 2026")).not.toBeInTheDocument();
+  });
+
+  it("handles month calendar export and individual bill sync", () => {
+    const bill = createBill({
+      id: "bill-export-test",
+      name: "Water Utility",
+    });
+
+    const onExportMonthCalendar = vi.fn();
+    const onExportCalendar = vi.fn();
+
+    renderBillsTable([bill], {
+      onExportMonthCalendar,
+      onExportCalendar,
+    });
+
+    // Month export button in header
+    const exportBtn = screen.getByLabelText("Export commitments to calendar");
+    fireEvent.click(exportBtn);
+    expect(onExportMonthCalendar).toHaveBeenCalledTimes(1);
+    expect(onExportMonthCalendar).toHaveBeenCalledWith([bill], "September 2026");
+
+    // Single bill sync buttons
+    const syncButtons = screen.getAllByLabelText("Export Water Utility to calendar");
+    expect(syncButtons.length).toBeGreaterThan(0);
+    fireEvent.click(syncButtons[0]);
+    expect(onExportCalendar).toHaveBeenCalledTimes(1);
+    expect(onExportCalendar).toHaveBeenCalledWith(bill);
+  });
+
+  it("toggles paid commitments visibility without triggering financial mutations", () => {
+    const paidBill = createBill({
+      id: "paid-bill",
+      name: "Paid Electricity",
+      paid: true,
+    });
+    const unpaidBill = createBill({
+      id: "unpaid-bill",
+      name: "Unpaid Rent",
+      paid: false,
+    });
+
+    const onToggleStatus = vi.fn();
+    renderBillsTable([paidBill, unpaidBill], { onToggleStatus });
+
+    // Default state: both bills are visible
+    expect(screen.getAllByText("Paid Electricity").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Unpaid Rent").length).toBeGreaterThan(0);
+
+    // Toggle button is rendered
+    const toggleBtn = screen.getByLabelText("Hide paid commitments");
+    expect(toggleBtn).toBeInTheDocument();
+
+    // Click toggle to hide paid commitments
+    fireEvent.click(toggleBtn);
+    expect(screen.queryByText("Paid Electricity")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Unpaid Rent").length).toBeGreaterThan(0);
+    expect(toggleBtn).toHaveAttribute("aria-label", "Show paid commitments");
+
+    // Click toggle again to restore paid commitments
+    fireEvent.click(toggleBtn);
+    expect(screen.getAllByText("Paid Electricity").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Unpaid Rent").length).toBeGreaterThan(0);
+    expect(toggleBtn).toHaveAttribute("aria-label", "Hide paid commitments");
+
+    // Financial action was never called
+    expect(onToggleStatus).not.toHaveBeenCalled();
+  });
 });

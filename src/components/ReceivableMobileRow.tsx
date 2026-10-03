@@ -33,70 +33,80 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
 }) => {
   const isBiMonthly = rec.frequency === "Bi-monthly";
   const received = rec.amountReceived || 0;
+  const isPartial = !rec.collected && received > 0;
 
   return (
     <div
-      className={`p-3 rounded-xl border transition-all ${
+      key={rec.id}
+      data-testid={`receivable-mobile-row-${rec.id}`}
+      onClick={() => onEdit(rec)}
+      className={`p-3 rounded-xl border transition-all cursor-pointer ${
         rec.collected
-          ? "bg-fill-subtle/40 border-strong/60 opacity-50"
-          : "bg-surface-sunken border-strong/80 shadow-sm"
+          ? "bg-fill-subtle/40 border-strong/60 opacity-50 hover:opacity-75"
+          : "bg-surface-sunken border-strong/80 shadow-sm hover:border-inverse/[0.15]"
       }`}
     >
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => onToggleStatus(rec)}
-            className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-1.5 py-1 -mx-1.5 text-left transition-colors hover:bg-inverse/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 group"
-            aria-label={
-              rec.collected
-                ? `Undo received payment for ${rec.name}`
-                : `Mark ${rec.name} as received`
-            }
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="shrink-0">
-                {rec.collected ? (
-                  <span className="w-4 h-4 rounded-full chip-emerald flex items-center justify-center">
-                    <Check size={9} className="stroke-[3]" />
-                  </span>
-                ) : (
-                  <span className="w-4 h-4 rounded-full chip-amber flex items-center justify-center">
-                    <Hourglass size={8} />
-                  </span>
-                )}
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 text-left flex-wrap">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleStatus(rec);
+              }}
+              aria-label={
+                rec.collected
+                  ? `Undo received payment for ${rec.name}`
+                  : `Mark ${rec.name} as received`
+              }
+              className="shrink-0 min-w-[44px] min-h-[44px] -ml-2 -my-2 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 rounded-full"
+            >
+              {rec.collected ? (
+                <span className="w-5 h-5 rounded-full chip-emerald flex items-center justify-center">
+                  <Check size={11} className="stroke-[3]" />
+                </span>
+              ) : (
+                <span className="w-5 h-5 rounded-full chip-amber flex items-center justify-center">
+                  <Hourglass size={9} />
+                </span>
+              )}
+            </button>
+
+            <span className="privacy-blur text-xs font-semibold text-strong truncate">
+              {rec.name}
+            </span>
+          </div>
+
+          <div className="text-right shrink-0">
+            <span
+              className={`font-mono text-xs font-bold ${
+                rec.collected ? "text-emerald-400" : "text-strong"
+              }`}
+            >
+              ₱
+              {rec.amount.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+              })}
+            </span>
+
+            {isPartial ? (
+              <div className="space-y-0.5 mt-0.5">
+                <div className="text-[10px] text-emerald-400 font-mono font-medium">
+                  ₱{received.toLocaleString("en-US", { minimumFractionDigits: 2 })} received
+                </div>
+                <div className="text-[9px] text-muted font-mono">
+                  ₱{(rec.amount - received).toLocaleString("en-US", { minimumFractionDigits: 2 })} remaining
+                </div>
               </div>
-
-              <span className="privacy-blur text-xs font-semibold text-strong truncate group-hover:text-emerald-400 transition-colors">
-                {rec.name}
-              </span>
-            </div>
-
-            <div className="text-right">
-              <span
-                className={`font-mono text-xs font-bold shrink-0 ${
-                  rec.collected ? "text-emerald-400" : "text-strong"
-                }`}
-              >
-                ₱
-                {rec.amount.toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                })}
-              </span>
-
-              {!rec.collected && isBiMonthly && (
+            ) : (
+              !rec.collected && isBiMonthly && (
                 <div className="text-[9px] text-faint font-mono">
                   (₱{(rec.amount / 2).toLocaleString()}/payout)
                 </div>
-              )}
-
-              {!rec.collected && received > 0 && (
-                <div className="text-[9px] text-cyan-400 font-mono">
-                  +₱{received.toLocaleString("en-US")} rec'd
-                </div>
-              )}
-            </div>
-          </button>
+              )
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col gap-2 pl-6 text-[10px] text-muted sm:flex-row sm:items-center sm:justify-between">
@@ -153,7 +163,10 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
         </div>
 
         {payPopoverId === rec.id && (
-          <div className="mt-2 pt-2 border-t border-strong/60 flex items-center gap-1.5">
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="mt-2 pt-2 border-t border-strong/60 flex items-center gap-1.5"
+          >
             <input
               type="number"
               inputMode="decimal"
@@ -163,13 +176,21 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
               className="w-24 bg-surface-input border border-strong rounded px-2 py-1 text-xs text-strong font-mono outline-none"
             />
             <button
-              onClick={() => onCustomPaySubmit(rec)}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCustomPaySubmit(rec);
+              }}
               className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-semibold"
             >
               Add
             </button>
             <button
-              onClick={onClosePaymentPopover}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClosePaymentPopover();
+              }}
               className="p-1 text-muted hover:text-strong"
             >
               <X size={12} />

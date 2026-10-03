@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateCashflowMomentum,
-  calculateDebtRunway
+  calculateDebtRunway,
+  calculateSafeToSpend,
+  calculateMonthlyDepositNeeded
 } from "./financialAnalytics";
 import { UnifiedFinanceData } from "../types/finance";
 
@@ -214,5 +216,40 @@ describe("financial analytics", () => {
     const result = calculateCashflowMomentum(data, "January 2026");
 
     expect(result.find(item => item.isCurrent)?.bills).toBe(0);
+  });
+
+  describe("calculateSafeToSpend", () => {
+    it("returns totalLiquid minus totalUnpaidCommitments when liquid exceeds commitments", () => {
+      expect(calculateSafeToSpend(10000, 3000)).toBe(7000);
+    });
+
+    it("floors at 0 when commitments exceed liquid cash", () => {
+      expect(calculateSafeToSpend(2000, 5000)).toBe(0);
+    });
+
+    it("handles zeros and undefined gracefully", () => {
+      expect(calculateSafeToSpend(0, 0)).toBe(0);
+      expect(calculateSafeToSpend(5000, 0)).toBe(5000);
+    });
+  });
+
+  describe("calculateMonthlyDepositNeeded", () => {
+    it("returns positive gap when target exceeds current balance", () => {
+      expect(calculateMonthlyDepositNeeded(100000, 40000)).toBe(60000);
+    });
+
+    it("returns 0 when balance exactly equals target", () => {
+      expect(calculateMonthlyDepositNeeded(50000, 50000)).toBe(0);
+    });
+
+    it("returns 0 when balance exceeds target", () => {
+      expect(calculateMonthlyDepositNeeded(50000, 75000)).toBe(0);
+    });
+
+    it("handles zeros and undefined gracefully", () => {
+      expect(calculateMonthlyDepositNeeded(0, 0)).toBe(0);
+      expect(calculateMonthlyDepositNeeded(5000, 0)).toBe(5000);
+      expect(calculateMonthlyDepositNeeded(0, 5000)).toBe(0);
+    });
   });
 });

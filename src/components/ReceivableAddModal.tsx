@@ -2,6 +2,7 @@ import React from "react";
 import { Plus, X } from "lucide-react";
 import { ReceivableCategory, ReceivableFrequency } from "../types/finance";
 import { formatOrdinal } from "../utils/displayHelpers";
+import { Modal } from "./ui/Modal";
 
 export interface NewReceivableForm {
   name: string;
@@ -32,13 +33,13 @@ export default function ReceivableAddModal({
   onSubmit,
 }: ReceivableAddModalProps) {
   return (
-    <div
-      className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      variant="sheet"
+      ariaLabel="Add New Inflow"
     >
-      <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
+      <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md mx-auto shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
@@ -251,6 +252,6 @@ export default function ReceivableAddModal({
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 }

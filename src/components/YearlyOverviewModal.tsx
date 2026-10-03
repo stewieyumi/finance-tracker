@@ -3,6 +3,7 @@ import { X, Calendar, ChevronDown, Check } from "lucide-react";
 import { MONTH_LIST, YEAR_LIST } from "../constants/config";
 import { parseMonthKey, parseDateKey, getMonthKey } from "../utils/dateHelpers";
 import { UnifiedFinanceData } from "../types/finance";
+import { Modal } from "./ui/Modal";
 
 interface YearlyOverviewModalProps {
   isOpen: boolean;
@@ -19,7 +20,6 @@ export const YearlyOverviewModal: React.FC<YearlyOverviewModalProps> = ({
 }) => {
   const [activeYear, setActiveYear] = useState(selectedYear);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
-  const modalBoxRef = useRef<HTMLDivElement>(null);
   const yearDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,20 +35,6 @@ export const YearlyOverviewModal: React.FC<YearlyOverviewModalProps> = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen, onClose]);
 
   const yearlyStats = useMemo(() => {
 const bills = globalData?.library?.bills || [];
@@ -119,18 +105,13 @@ const fallbackStartMonth = getMonthKey(new Date());
   if (!isOpen) return null;
 
   return (
-    <div
-      onClick={(e) => {
-        if (modalBoxRef.current && !modalBoxRef.current.contains(e.target as Node)) {
-          onClose();
-        }
-      }}
-      className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      variant="floating"
+      ariaLabel="Yearly Overview Modal"
     >
-      <div
-        ref={modalBoxRef}
-        className="bg-surface-elevated border border-inverse/[0.09] rounded-3xl p-5 sm:p-6 w-full max-w-lg space-y-5 shadow-[0_24px_64px_rgba(0,0,0,0.8)] max-h-[88vh] overflow-y-auto"
-      >
+      <div className="bg-surface-elevated border border-inverse/[0.09] rounded-3xl p-5 sm:p-6 w-full max-w-lg space-y-5 shadow-[0_24px_64px_rgba(0,0,0,0.8)] max-h-[88vh] overflow-y-auto">
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-2.5">
             <Calendar size={16} className="text-blue-400" />
@@ -219,6 +200,6 @@ const fallbackStartMonth = getMonthKey(new Date());
           Done
         </button>
       </div>
-    </div>
+    </Modal>
   );
 };

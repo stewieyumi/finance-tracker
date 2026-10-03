@@ -20,8 +20,11 @@ export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = React.m
 
   return (
     <div
-      onClick={!hasGoal ? onConfigureGoal : undefined}
-      className={`bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.07] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.5)] rounded-2xl p-4 sm:p-5 transition-all ${!hasGoal && onConfigureGoal ? "cursor-pointer hover:border-blue-500/30" : ""}`}
+      role={onConfigureGoal ? "button" : undefined}
+      tabIndex={onConfigureGoal ? 0 : undefined}
+      onKeyDown={onConfigureGoal ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onConfigureGoal(); } } : undefined}
+      onClick={onConfigureGoal}
+      className={`bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.07] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.5)] rounded-2xl p-4 sm:p-5 transition-all ${onConfigureGoal ? "cursor-pointer hover:border-blue-500/30" : ""}`}
     >
       <div className="flex justify-between items-center mb-3">
         <div className="flex items-center gap-2">

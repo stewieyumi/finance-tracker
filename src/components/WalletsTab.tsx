@@ -90,7 +90,17 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
           ...prev.library,
           bills: prev.library?.bills.map(b => ({ ...b, wallet: safeW(b.wallet) })) || [],
           receivables: prev.library?.receivables.map(r => ({ ...r, wallet: safeW(r.wallet) })) || [],
-          expenses: prev.library?.expenses?.map(e => ({ ...e, wallet: safeWReq(e.wallet) })) || []
+          expenses: prev.library?.expenses?.map(e => ({ ...e, wallet: safeWReq(e.wallet) })) || [],
+          manualTransactions: prev.library?.manualTransactions?.map(mt => {
+            const updated = { ...mt };
+            if (mt.wallet !== undefined) {
+              updated.wallet = safeW(mt.wallet);
+            }
+            if (mt.destinationWallet !== undefined) {
+              updated.destinationWallet = safeW(mt.destinationWallet);
+            }
+            return updated;
+          }) || []
         },
         wallets: nextWallets, 
         updatedAt: Date.now() 
@@ -103,7 +113,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
   return (
     <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
       <WalletGrid wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} savingsWallet={globalData.settings?.savingsWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
-      <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl">
+      <div className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.07] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] rounded-2xl p-4 sm:p-5">
         <div className="flex items-center justify-between mb-4"><h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><CreditCard size={14} className="text-emerald-400" /> Account Management</h2></div>
         {customWallets.length > 0 && !showAdd && (
           <div className="space-y-2.5 mb-4">

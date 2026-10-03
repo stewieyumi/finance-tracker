@@ -1,5 +1,6 @@
 import React from "react";
 import { Bill, BillViewModel } from "../types/finance";
+import { Modal } from "./ui/Modal";
 
 type PendingPriorPayment = {
   bill: Bill;
@@ -18,7 +19,13 @@ export const BillPriorPaymentModal: React.FC<BillPriorPaymentModalProps> = ({
   onToggleStatus,
 }) => {
   return (
-    <div className="fixed inset-0 z-[250] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <Modal
+      isOpen={true}
+      onClose={() => setPendingPriorPayment(null)}
+      variant="floating"
+      closeOnBackdropClick={false}
+      ariaLabel="Confirm Prior Payment"
+    >
       <div className="bg-surface-elevated border border-border-default rounded-3xl p-6 w-full max-w-sm shadow-[0_0_60px_rgba(0,0,0,0.8)] space-y-4">
         <div className="space-y-1">
           <h3 className="text-sm font-bold text-strong leading-tight">Was this payment already made?</h3>
@@ -53,6 +60,6 @@ export const BillPriorPaymentModal: React.FC<BillPriorPaymentModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

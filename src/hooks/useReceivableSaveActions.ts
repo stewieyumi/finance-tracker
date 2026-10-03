@@ -3,6 +3,7 @@ import {
   Receivable,
   UnifiedFinanceData
 } from "../types/finance";
+import { calculateNetSalary } from "../utils/financeHelpers";
 
 interface UseReceivableSaveActionsParams {
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
@@ -22,9 +23,10 @@ export function useReceivableSaveActions({
   const saveReceivableEdit = () => {
     if (!editingId) return;
 
-    const inputAmount = parseFloat(
-      String(editForm.amount ?? "")
-    );
+    const inputAmount =
+      editForm.grossAmount !== undefined
+        ? calculateNetSalary(editForm.grossAmount, editForm.deductions)
+        : parseFloat(String(editForm.amount ?? ""));
 
     if (!Number.isFinite(inputAmount) || inputAmount <= 0) {
       showToast("Amount must be greater than 0");
@@ -46,6 +48,16 @@ export function useReceivableSaveActions({
               editForm.name ?? item.name
             ).trim(),
             amount: inputAmount,
+            grossAmount:
+              editForm.grossAmount !== undefined
+                ? Math.max(0, Number(editForm.grossAmount) || 0)
+                : item.grossAmount,
+            deductions:
+              editForm.deductions !== undefined
+                ? editForm.deductions.map(d => ({ ...d }))
+                : item.deductions
+                ? item.deductions.map(d => ({ ...d }))
+                : undefined,
             category:
               editForm.category ?? item.category,
             wallet:

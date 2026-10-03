@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Settings, Briefcase, Target, Save, Cloud, Database, ArrowRightLeft, Download, Upload } from "lucide-react";
-import { UnifiedFinanceData } from "../types/finance";
+import { X, Settings, Briefcase, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2, CalendarPlus } from "lucide-react";
+import { Deduction, DeductionType, UnifiedFinanceData } from "../types/finance";
 import { migrateLegacyBills } from "../utils/financeMigrations";
+import { Modal } from "./ui/Modal";
 import {
   createSettingsForm,
   applySettingsForm,
 } from "../utils/settingsForm";
+import {
+  calculateDeductionAmount,
+  calculateNetSalary,
+} from "../utils/financeHelpers";
+import { generateId } from "../utils/idHelpers";
+import { exportPaydaysToCalendar } from "../utils/calendarExport";
+import { applyTheme, ThemeMode } from "../hooks/useTheme";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -56,7 +64,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     })
   );
 
-  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen && globalData.settings) {
@@ -69,20 +76,99 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     }
   }, [isOpen, globalData.settings]);
 
+  const baselineThemeRef = useRef<ThemeMode>(
+    (globalData.settings?.theme as ThemeMode) || "dark"
+  );
+  const isSavedRef = useRef(false);
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    if (isOpen) { window.addEventListener("keydown", handleKeyDown); document.body.style.overflow = "hidden"; }
-    return () => { window.removeEventListener("keydown", handleKeyDown); document.body.style.overflow = "unset"; };
-  }, [isOpen, onClose]);
+    if (!isOpen) return;
+
+    baselineThemeRef.current =
+      (globalData.settings?.theme as ThemeMode) || "dark";
+    isSavedRef.current = false;
+
+    return () => {
+      if (!isSavedRef.current) {
+        applyTheme(baselineThemeRef.current);
+      }
+    };
+  }, [isOpen, globalData.settings?.theme]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    return applyTheme(form.theme as ThemeMode);
+  }, [isOpen, form.theme]);
+
+  const handleCancel = () => {
+    if (!isSavedRef.current) {
+      applyTheme(baselineThemeRef.current);
+    }
+    if (globalData.settings) {
+      setForm(
+        createSettingsForm(globalData.settings, globalData.wallets, {
+          inflowCategories: PRESETS.videographer.inflowCats,
+          gigCategories: PRESETS.videographer.gigCats,
+        })
+      );
+    }
+    onClose();
+  };
 
   const applyPreset = (key: keyof typeof PRESETS) => {
     const p = PRESETS[key];
     setForm(prev => ({ ...prev, inflowsLabel: p.inflows, gigsLabel: p.gigs, inflowCategories: p.inflowCats, gigCategories: p.gigCats }));
   };
 
-  const [newPaydayDay, setNewPaydayDay] = useState(1);
+  const handleAddDeduction = () => {
+    setForm(prev => ({
+      ...prev,
+      salaryDeductions: [
+        ...prev.salaryDeductions,
+        {
+          id: generateId("ded"),
+          name: "",
+          type: "fixed",
+          value: 0,
+        },
+      ],
+    }));
+  };
+
+  const handleUpdateDeduction = (id: string, patch: Partial<Deduction>) => {
+    setForm(prev => ({
+      ...prev,
+      salaryDeductions: prev.salaryDeductions.map(d =>
+        d.id === id ? { ...d, ...patch } : d
+      ),
+    }));
+  };
+
+  const handleRemoveDeduction = (id: string) => {
+    setForm(prev => ({
+      ...prev,
+      salaryDeductions: prev.salaryDeductions.filter(d => d.id !== id),
+    }));
+  };
+
+  const currentGross = Math.max(0, Number(form.grossPerPayoutSalary) || 0);
+  const currentDeductions = form.salaryDeductions || [];
+  const totalDeductions = Math.min(
+    currentGross,
+    currentDeductions.reduce(
+      (sum, d) => sum + calculateDeductionAmount(currentGross, d),
+      0
+    )
+  );
+  const calculatedNet = calculateNetSalary(currentGross, currentDeductions);
+
+  const [newPaydayDay, setNewPaydayDay] = useState(() => {
+    const existing = globalData.settings?.paydayDays || [];
+    return Array.from({ length: 31 }, (_, i) => i + 1).find(d => !existing.includes(d)) || 1;
+  });
 
   const handleSave = () => {
+    isSavedRef.current = true;
     setGlobalData(prev => ({
       ...prev,
       settings: applySettingsForm(prev.settings, form),
@@ -110,14 +196,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
   );
 
   return (
-    <div className="settings-modal-backdrop fixed inset-0 z-[110] backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => { if (modalRef.current && !modalRef.current.contains(e.target as Node)) onClose(); }}>
-      <div ref={modalRef} className="bg-surface-elevated border border-inverse/[0.08] rounded-3xl p-6 w-full max-w-lg shadow-2xl">
+    <Modal
+      isOpen={isOpen}
+      onClose={handleCancel}
+      variant="floating"
+      ariaLabel="App Settings"
+    >
+      <div className="bg-surface-elevated border border-inverse/[0.08] rounded-3xl p-6 w-full max-w-lg shadow-2xl">
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06] mb-4">
           <div className="flex items-center gap-2">
             <Settings size={18} className="text-secondary" />
             <h3 className="text-sm font-bold uppercase tracking-wider text-strong">App Settings</h3>
           </div>
-          <button onClick={onClose} className="text-faint hover:text-strong transition"><X size={18} /></button>
+          <button
+            onClick={handleCancel}
+            aria-label="Close settings modal"
+            className="text-faint hover:text-strong p-1.5 rounded-lg transition"
+            title="Close (Esc)"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <div className="flex gap-4 border-b border-inverse/[0.06] mb-5 overflow-x-auto whitespace-nowrap hide-scrollbar">
@@ -130,20 +228,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
         <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-1">
           {activeTab === "general" && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-blue-400 uppercase tracking-wider"><Target size={14} /> Main Milestone Goal</div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Goal Name</label><input type="text" value={form.goalName} onChange={e => setForm({...form, goalName: e.target.value})} placeholder="e.g. Japan Trip, Emergency Fund, New Laptop" className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-blue-500" /></div>
-                  <div><label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Target Amount (₱)</label><input type="number" value={form.targetFund} onChange={e => setForm({...form, targetFund: Number(e.target.value)})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-blue-500" /></div>
-                  <div className="col-span-2">
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Linked Wallet (Tracks Progress)</label>
-                    <select value={form.milestoneWallet} onChange={e => setForm({...form, milestoneWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-blue-500 cursor-pointer">
-                      <WalletSelectOptions />
-                    </select>
-                  </div>
-                </div>
-              </div>
-
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-amber-400 uppercase tracking-wider"><Briefcase size={14} /> Dashboard Terminology</div>
                 <div className="flex gap-2">
@@ -163,6 +247,176 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
             <div className="space-y-5 animate-in fade-in duration-200">
               <div className="text-xs text-muted mb-2">Configure the default amounts injected into your wallets during the 15th/30th Payday Distribution. (Note: These scale down safely if your bills consume too much of your paycheck).</div>
               
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-purple-400 uppercase tracking-wider">
+                  <Banknote size={14} /> Payday Salary & Deductions
+                </div>
+
+                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 space-y-4">
+                  <div>
+                    <label
+                      htmlFor="gross-salary-input"
+                      className="text-[10px] text-faint uppercase font-semibold mb-1 block"
+                    >
+                      Gross Salary / Pay Period (₱)
+                    </label>
+                    <input
+                      id="gross-salary-input"
+                      aria-label="Gross Salary / Pay Period"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={form.grossPerPayoutSalary}
+                      onChange={e =>
+                        setForm({
+                          ...form,
+                          grossPerPayoutSalary: Math.max(0, Number(e.target.value) || 0),
+                        })
+                      }
+                      className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] text-faint uppercase font-semibold block">
+                        Deductions
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAddDeduction}
+                        className="flex items-center gap-1 text-[11px] font-semibold text-purple-400 hover:text-purple-300 transition"
+                      >
+                        <Plus size={12} /> Add Deduction
+                      </button>
+                    </div>
+
+                    {form.salaryDeductions.length === 0 ? (
+                      <div className="text-[11px] text-faint py-2.5 px-3 rounded-xl bg-surface-lowest border border-inverse/[0.05]">
+                        No deductions configured. Net equals gross.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {form.salaryDeductions.map(deduction => (
+                          <div
+                            key={deduction.id}
+                            data-testid={`deduction-row-${deduction.id}`}
+                            className="flex items-center gap-2 bg-surface-lowest p-2 rounded-xl border border-inverse/[0.05]"
+                          >
+                            <input
+                              type="text"
+                              placeholder="Name (e.g. Tax)"
+                              value={deduction.name}
+                              onChange={e =>
+                                handleUpdateDeduction(deduction.id, { name: e.target.value })
+                              }
+                              aria-label="Deduction name"
+                              className="flex-1 min-w-0 bg-surface-input border border-strong rounded-lg px-2.5 py-1.5 text-xs text-strong outline-none focus:border-purple-500"
+                            />
+                            <select
+                              value={deduction.type}
+                              onChange={e =>
+                                handleUpdateDeduction(deduction.id, {
+                                  type: e.target.value as DeductionType,
+                                })
+                              }
+                              aria-label="Deduction type"
+                              className="w-24 bg-surface-input border border-strong rounded-lg px-2 py-1.5 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer"
+                            >
+                              <option value="fixed">Fixed (₱)</option>
+                              <option value="percentage">Percent (%)</option>
+                            </select>
+                            <div className="w-24">
+                              <input
+                                type="number"
+                                min="0"
+                                step={deduction.type === "percentage" ? "0.1" : "1"}
+                                placeholder="0"
+                                value={deduction.value}
+                                onChange={e =>
+                                  handleUpdateDeduction(deduction.id, {
+                                    value: Math.max(0, Number(e.target.value) || 0),
+                                  })
+                                }
+                                aria-label="Deduction value"
+                                className="w-full bg-surface-input border border-strong rounded-lg px-2 py-1.5 text-xs text-strong font-mono outline-none focus:border-purple-500"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDeduction(deduction.id)}
+                              aria-label={`Remove ${deduction.name || "deduction"}`}
+                              className="text-faint hover:text-rose-400 p-1.5 rounded-lg transition"
+                              title="Remove deduction"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-inverse/[0.05]">
+                    <div className="bg-surface-lowest border border-inverse/[0.05] rounded-xl p-3 grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <div className="text-[10px] text-faint uppercase font-semibold">
+                          Gross
+                        </div>
+                        <div
+                          data-testid="salary-gross-display"
+                          className="text-xs font-mono font-bold text-strong mt-0.5"
+                        >
+                          ₱{currentGross.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-faint uppercase font-semibold">
+                          Total Deductions
+                        </div>
+                        <div
+                          data-testid="salary-deductions-display"
+                          className="text-xs font-mono font-bold text-rose-400 mt-0.5"
+                        >
+                          -₱{totalDeductions.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-emerald-500 uppercase font-bold">
+                          Net Usable Salary
+                        </div>
+                        <div
+                          data-testid="salary-net-display"
+                          className="text-xs font-mono font-bold text-emerald-400 mt-0.5"
+                        >
+                          ₱{calculatedNet.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-faint mt-2">
+                      💡 Payday distribution and wallet allocations consume this{" "}
+                      <span className="text-emerald-400 font-semibold font-mono">
+                        Net Usable Salary (₱{calculatedNet.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })})
+                      </span>
+                      .
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-purple-400 uppercase tracking-wider"><ArrowRightLeft size={14} /> Routing Rules</div>
                 
@@ -260,7 +514,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                       <button
                         key={opt}
                         type="button"
-                        onClick={() => setForm({...form, theme: opt})}
+                        onClick={() => {
+                          applyTheme(opt);
+                          setForm(prev => ({ ...prev, theme: opt }));
+                        }}
                         className={`py-2 rounded-xl text-[11px] font-semibold capitalize transition border ${form.theme === opt ? "bg-blue-600 border-blue-500 text-white" : "bg-surface-input border-strong text-muted hover:border-default"}`}
                       >
                         {opt}
@@ -270,41 +527,93 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                 </div>
 
                 <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
-                  <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Payday Schedule</label>
-                  <div className="text-[10px] text-faint mb-2">These dates control payday funding and commitment allocation. Not the same as an individual bill's due date.</div>
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    {(form.paydayDays.length ? form.paydayDays : [15, 30]).map(day => (
-                      <span key={day} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg chip-blue text-[11px] font-semibold">
-                        {formatOrdinal(day)}
-                        <button
-                          type="button"
-                          onClick={() => setForm({...form, paydayDays: form.paydayDays.filter(d => d !== day)})}
-                          disabled={form.paydayDays.length <= 1}
-                          className="text-blue-400 hover:text-strong disabled:opacity-30 disabled:cursor-not-allowed w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-500/10 transition"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Payday Schedule</label>
+                      <div className="text-[10px] text-faint">These dates control payday funding and commitment allocation. Not the same as an individual bill's due date.</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => exportPaydaysToCalendar(form.paydayDays.length ? form.paydayDays : [15, 30])}
+                      className="px-2.5 py-1 text-muted hover:text-emerald-400 bg-inverse/[0.04] hover:bg-inverse/[0.08] border border-inverse/[0.08] rounded-lg text-[10px] uppercase font-bold tracking-wider transition flex items-center gap-1 shrink-0 ml-2"
+                      title="Export Paydays to Calendar (.ics)"
+                      aria-label="Export Paydays to Calendar"
+                    >
+                      <CalendarPlus size={11} className="text-emerald-400" />
+                      <span>Export (.ics)</span>
+                    </button>
                   </div>
+
+                  {form.paydayDays.length === 0 ? (
+                    <div className="p-3 rounded-xl bg-surface-lowest border border-inverse/[0.05] mb-3 flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-semibold text-strong flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                          System Default
+                        </div>
+                        <div className="text-[11px] text-muted">15th and 30th of each month</div>
+                      </div>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                        Default
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {form.paydayDays.map(day => (
+                        <span
+                          key={day}
+                          data-testid={`payday-chip-${day}`}
+                          className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg chip-blue text-[11px] font-semibold"
+                        >
+                          {formatOrdinal(day)}
+                          <button
+                            type="button"
+                            onClick={() => setForm({
+                              ...form,
+                              paydayDays: form.paydayDays.filter(d => d !== day),
+                            })}
+                            aria-label={`Remove payday ${day}`}
+                            className="text-blue-400 hover:text-strong w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-500/10 transition"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex gap-2">
                     <select
+                      id="new-payday-day"
+                      aria-label="Select payday day"
                       value={newPaydayDay}
                       onChange={e => setNewPaydayDay(Number(e.target.value))}
                       className="flex-1 bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer"
                     >
                       {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                        <option key={d} value={d}>{formatOrdinal(d)}</option>
+                        <option
+                          key={d}
+                          value={d}
+                          disabled={form.paydayDays.includes(d)}
+                        >
+                          {formatOrdinal(d)}{form.paydayDays.includes(d) ? " (Added)" : ""}
+                        </option>
                       ))}
                     </select>
                     <button
                       type="button"
                       onClick={() => {
-                        if (form.paydayDays.length >= 10) return;
                         if (form.paydayDays.includes(newPaydayDay)) return;
-                        setForm({...form, paydayDays: [...form.paydayDays, newPaydayDay].sort((a, b) => a - b)});
+                        const nextDays = [...form.paydayDays, newPaydayDay].sort((a, b) => a - b);
+                        setForm({ ...form, paydayDays: nextDays });
+                        const nextAvailable = Array.from({ length: 31 }, (_, i) => i + 1).find(
+                          d => !nextDays.includes(d)
+                        );
+                        if (nextAvailable) {
+                          setNewPaydayDay(nextAvailable);
+                        }
                       }}
-                      disabled={form.paydayDays.length >= 10 || form.paydayDays.includes(newPaydayDay)}
+                      disabled={form.paydayDays.includes(newPaydayDay)}
                       className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-fill-strong disabled:cursor-not-allowed text-white text-xs font-semibold transition"
                     >
                       Add
@@ -372,11 +681,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
         </div>
 
         {activeTab !== "sync" && (
-          <button onClick={handleSave} className="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20">
-            <Save size={14} /> Save Settings
-          </button>
+          <div className="flex items-center gap-2 mt-6">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="w-1/3 bg-inverse/[0.04] hover:bg-inverse/[0.08] text-secondary text-xs font-semibold py-3 rounded-xl transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20"
+            >
+              <Save size={14} /> Save Settings
+            </button>
+          </div>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }

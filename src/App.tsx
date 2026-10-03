@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useRef, useCallback } from "react";
 import { HistoricalLedgerModal } from "./components/HistoricalLedgerModal";
+import { TransactionHistoryModal } from "./components/TransactionHistoryModal";
 import { GoogleLogin, googleLogout, useGoogleOneTapLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
-import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
+import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff, Bell } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { getMonthKey, getAdjacentMonth } from "./utils/dateHelpers";
 import { UnifiedFinanceData, WalletState, EditFormData, TransactionHistoryItem, PaydayExecution } from "./types/finance";
@@ -19,6 +20,7 @@ import { useCloudSync, getLocalPasscode } from "./hooks/useCloudSync";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import { useFinanceCalculations } from "./hooks/useFinanceCalculations";
+import { useNotifications } from "./hooks/useNotifications";
 import { useWalletActions } from "./hooks/useWalletActions";
 import { useBillActions } from "./hooks/useBillActions";
 import { useReceivableActions } from "./hooks/useReceivableActions";
@@ -36,15 +38,19 @@ import { DashboardTab } from "./components/DashboardTab";
 import { DateJumpModal } from "./components/DateJumpModal";
 import { YearlyOverviewModal } from "./components/YearlyOverviewModal";
 import { FinancialAnalyticsModal } from "./components/FinancialAnalyticsModal";
+import { NotificationModal } from "./components/NotificationModal";
 import { WalletsTab } from "./components/WalletsTab";
 import { ExpensesTab } from "./components/ExpensesTab";
 import { BottomNav, TabType } from "./components/BottomNav";
 import { SettingsModal } from "./components/SettingsModal";
+import { GoalSetupModal } from "./components/GoalSetupModal";
 import { useAppUpdate } from "./hooks/useAppUpdate";
 import { useTheme } from "./hooks/useTheme";
 import { LandingPage } from "./components/LandingPage";
+import { OnboardingWizard } from "./components/OnboardingWizard";
 import { OperationsTab } from "./components/OperationsTab";
 import { AccountTab } from "./components/AccountTab";
+import { isReturningUser, shouldShowOnboarding } from "./utils/onboardingHelpers";
 
 function safeLoadAll(): UnifiedFinanceData {
   try {
@@ -137,6 +143,7 @@ const {
   const [showYearlyModal, setShowYearlyModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showGoalSetupModal, setShowGoalSetupModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [opsTab, setOpsTab] = useState<"bills" | "inflows" | "gigs">("bills");
   const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "sync">("general");
@@ -146,7 +153,76 @@ const {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormData>({});
   const [showLedgerModal, setShowLedgerModal] = useState(false);
+  const [showTransactionHistoryModal, setShowTransactionHistoryModal] = useState(false);
   const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const notifications = useNotifications(globalData);
+
+  const handleDismissNotification = useCallback(
+    (id: string) => {
+      const target = notifications.find(n => n.id === id);
+      const idsToDismiss =
+        target?.groupedIds && target.groupedIds.length > 0
+          ? [id, ...target.groupedIds]
+          : [id];
+
+      syncedSetGlobalData(prev => {
+        const nextDismissed = { ...(prev.settings?.dismissedNotifications || {}) };
+        const now = Date.now();
+        idsToDismiss.forEach(dId => {
+          nextDismissed[dId] = now;
+        });
+        return {
+          ...prev,
+          settings: {
+            ...prev.settings,
+            dismissedNotifications: nextDismissed,
+          },
+          updatedAt: now,
+        };
+      });
+    },
+    [notifications, syncedSetGlobalData]
+  );
+
+  const handleClearAllNotifications = useCallback(() => {
+    syncedSetGlobalData(prev => {
+      const newDismissed = { ...(prev.settings?.dismissedNotifications || {}) };
+      const now = Date.now();
+      notifications.forEach(n => {
+        newDismissed[n.id] = now;
+        if (n.groupedIds) {
+          n.groupedIds.forEach(gId => {
+            newDismissed[gId] = now;
+          });
+        }
+      });
+      return {
+        ...prev,
+        settings: {
+          ...prev.settings,
+          dismissedNotifications: newDismissed,
+        },
+        updatedAt: now,
+      };
+    });
+  }, [notifications, syncedSetGlobalData]);
+
+  const handleNotificationNavigate = useCallback(
+    (route: "operations/bills" | "operations/inflows" | "expenses") => {
+      setShowNotificationModal(false);
+      if (route === "operations/bills") {
+        setActiveTab("operations");
+        setOpsTab("bills");
+      } else if (route === "operations/inflows") {
+        setActiveTab("operations");
+        setOpsTab("inflows");
+      } else if (route === "expenses") {
+        setActiveTab("expenses");
+      }
+    },
+    []
+  );
 
   const [googleUser, setGoogleUser] = useState<any>(() => {
     const saved = localStorage.getItem("ft_google_user");
@@ -366,7 +442,8 @@ const { saveShootEdit } = useShootSaveActions({
     setDebugLog,
     forceManualSync,
     pullLatestData,
-    commitDataChange
+    commitDataChange,
+    hasInitialSyncCompleted
   } = useCloudSync(globalData, setGlobalData, showToast);
 
   commitDataChangeRef.current = commitDataChange;
@@ -392,6 +469,25 @@ const { saveShootEdit } = useShootSaveActions({
     allTransactions,
     recentTransactions
   } = useFinanceCalculations(globalData, selectedMonth);
+
+  const walletDisplayLabels = useMemo(() => {
+    const map: Record<string, string> = { ...(globalData?.settings?.walletLabels || {}) };
+    (globalData?.settings?.customWallets || []).forEach(w => {
+      map[w.id] = w.label;
+    });
+    return map;
+  }, [globalData?.settings?.walletLabels, globalData?.settings?.customWallets]);
+
+  const dashboardGlobalData = useMemo(() => {
+    if (!globalData?.settings) return globalData;
+    return {
+      ...globalData,
+      settings: {
+        ...globalData.settings,
+        walletLabels: walletDisplayLabels,
+      },
+    };
+  }, [globalData, walletDisplayLabels]);
 
   const isModalOpen =
     showDatePickerModal ||
@@ -556,6 +652,34 @@ const copySummaryToClipboard = async () => {
     return <LandingPage onGoogleSuccess={handleGoogleSuccess} />;
   }
 
+  // --- CLOUD HYDRATION & ONBOARDING GATE ---
+  // If the user has no existing local data, wait for the initial cloud sync to settle
+  // before determining whether they need onboarding.
+  const returning = isReturningUser(globalData);
+  if (!returning && !hasInitialSyncCompleted) {
+    return (
+      <div className="min-h-screen bg-shell flex flex-col items-center justify-center p-6 text-text-secondary font-sans">
+        <div className="flex flex-col items-center gap-3">
+          <RefreshCw size={24} className="animate-spin text-blue-400" />
+          <p className="text-xs text-muted font-medium">Checking for existing cloud data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (shouldShowOnboarding({ globalData, isAuth, hasInitialSyncCompleted })) {
+    return (
+      <OnboardingWizard
+        globalData={globalData}
+        userName={googleUser?.name}
+        onComplete={(completedData) => {
+          syncedSetGlobalData(completedData);
+          showToast("✨ Setup complete! Welcome to Finance Tracker.");
+        }}
+      />
+    );
+  }
+
   return (
     <div className={`min-h-screen bg-shell text-text-secondary px-4 sm:px-6 pb-28 sm:pb-32 pt-[max(2rem,env(safe-area-inset-top))] flex justify-center selection:bg-blue-600 selection:text-white ${isPrivacyMode ? "privacy-mode" : ""}`}>
       <div className="fixed top-0 left-0 right-0 z-[200] bg-shell/80 backdrop-blur-xl pointer-events-none" style={{ height: "env(safe-area-inset-top)" }} />
@@ -584,9 +708,9 @@ const copySummaryToClipboard = async () => {
 
       <div className="w-full max-w-[860px] space-y-4">
         {cashShortfall > 0 && (
-          <div className="bg-[#2a1712] border border-orange-900/50 text-orange-300 text-[11px] rounded-2xl px-4 py-3 flex items-center gap-2.5 shadow-lg">
+          <div className="bg-orange-950/25 border border-orange-800/40 text-orange-300 text-xs rounded-2xl px-4 py-3 flex items-center gap-2.5 shadow-lg leading-relaxed">
             <AlertTriangle size={14} className="shrink-0 text-orange-400" />
-            <span>Liquid cash is <strong className="font-mono">₱{cashShortfall.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> short of covering unpaid commitments{overdueBills.length > 0 ? ` (including ${overdueBills.length} overdue)` : ""}.</span>
+            <span>Liquid cash is <strong className="font-mono font-semibold">₱{cashShortfall.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> short of covering unpaid commitments{overdueBills.length > 0 ? ` (including ${overdueBills.length} overdue)` : ""}.</span>
           </div>
         )}
 
@@ -594,7 +718,7 @@ const copySummaryToClipboard = async () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-bold tracking-tight text-strong">Dashboard</h1>
-              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium no-privacy-blur transition-all ${!isOnline ? "chip-amber" : isSyncing ? "chip-blue" : "chip-emerald"}`}>
+              <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium no-privacy-blur transition-all ${!isOnline ? "chip-amber" : isSyncing ? "chip-blue" : "chip-emerald"}`}>
                 {!isOnline ? <><WifiOff size={10} className="text-amber-400" /><span>Offline</span></> : isSyncing ? <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" /><span>Syncing...</span></> : <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span>Live</span></>}
               </div>
             </div>
@@ -602,7 +726,7 @@ const copySummaryToClipboard = async () => {
             <div className="flex items-center gap-2">
               <div className="hidden md:flex items-center gap-2 mr-2 pr-4 border-r border-inverse/[0.08]">
                 <div className="relative">
-                  <button onClick={() => setShowShortcutsHelp(prev => !prev)} className="text-[11px] font-medium text-muted hover:text-primary bg-fill/80 hover:bg-fill-strong border border-strong px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
+                  <button onClick={() => setShowShortcutsHelp(prev => !prev)} className="text-xs font-medium text-muted hover:text-primary bg-fill/80 hover:bg-fill-strong border border-strong px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
                     <span>⌨️</span> Shortcuts
                   </button>
                   {showShortcutsHelp && (
@@ -611,15 +735,15 @@ const copySummaryToClipboard = async () => {
                         <span className="text-secondary font-semibold flex items-center gap-1.5"><span>⌨️</span> Shortcuts</span>
                         <button onClick={() => setShowShortcutsHelp(false)} className="text-faint hover:text-secondary">✕</button>
                       </div>
-                      <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Tabs</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">1-5</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Ops Views</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">B,I,G</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Month</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">⌘K</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Yearly</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">Y</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Analytics</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">A</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Privacy</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">P</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Pull/Sync</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">R / S</kbd></div>
-                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Close</span><kbd className="bg-fill-strong text-primary px-1 py-0.5 rounded font-mono">Esc</kbd></div>
+                      <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Tabs</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">1-5</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Ops Views</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">B,I,G</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Month</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">⌘K</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Yearly</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">Y</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Analytics</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">A</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Privacy</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">P</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Pull/Sync</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">R / S</kbd></div>
+                        <div className="flex items-center justify-between bg-fill/60 p-1.5 rounded border border-strong/50"><span className="text-muted">Close</span><kbd className="bg-fill-strong text-primary px-1.5 py-0.5 rounded font-mono text-[10px]">Esc</kbd></div>
                       </div>
                     </div>
                   )}
@@ -631,6 +755,19 @@ const copySummaryToClipboard = async () => {
               <button onClick={() => setIsPrivacyMode(prev => !prev)} aria-label={isPrivacyMode ? "Show Balances" : "Hide Balances"} className={`h-8 w-8 rounded-full border flex items-center justify-center transition shadow-sm ${isPrivacyMode ? "bg-amber-500/20 border-amber-500/60 text-amber-300" : "bg-fill/80 hover:bg-fill-strong border-strong text-muted hover:text-primary"}`}>
                 {isPrivacyMode ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
+              <button
+                onClick={() => setShowNotificationModal(true)}
+                aria-label="Notifications"
+                className="relative h-8 w-8 rounded-full border border-strong bg-fill/80 hover:bg-fill-strong flex items-center justify-center text-muted hover:text-primary transition shadow-sm"
+                title="Notifications"
+              >
+                <Bell size={14} />
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm">
+                    {notifications.length > 9 ? "9+" : notifications.length}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 
@@ -640,7 +777,7 @@ const copySummaryToClipboard = async () => {
               <select value={selectedMonth} onChange={(e) => { if (e.target.value === "CUSTOM_DATE_JUMP") setShowDatePickerModal(true); else setSelectedMonth(e.target.value); }} className="bg-transparent text-strong font-semibold outline-none cursor-pointer">
                 {dropdownMonths.map(m => <option key={m} value={m} className="bg-surface-modal">{m}</option>)}
                 <option disabled>──────────</option>
-                <option value="CUSTOM_DATE_JUMP" className="bg-surface-modal font-bold text-blue-400">Select Month...</option>
+                <option value="CUSTOM_DATE_JUMP" className="bg-surface-modal font-semibold text-blue-400">Select Month...</option>
               </select>
             </div>
             <button onClick={() => setShowAnalyticsModal(true)} className="flex items-center gap-1.5 bg-surface-elevated border border-amber-500/30 hover:border-amber-400/60 text-amber-300 px-3 py-1.5 rounded-xl text-xs shadow-md transition font-medium"><Sparkles size={13} className="text-amber-400" /><span>Runway</span></button>
@@ -651,12 +788,32 @@ const copySummaryToClipboard = async () => {
         <DateJumpModal isOpen={showDatePickerModal} onClose={() => setShowDatePickerModal(false)} onJump={(m) => { setSelectedMonth(m); setShowDatePickerModal(false); }} selectedMonth={selectedMonth} />
         <YearlyOverviewModal isOpen={showYearlyModal} onClose={() => setShowYearlyModal(false)} globalData={globalData} selectedYear={selectedMonth.split(" ")[1] || "2026"} />
         <SettingsModal onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} onClose={() => setShowSettingsModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
+        <GoalSetupModal isOpen={showGoalSetupModal} onClose={() => setShowGoalSetupModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} />
         <HistoricalLedgerModal isOpen={showLedgerModal} onClose={() => setShowLedgerModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />
+        <TransactionHistoryModal
+          isOpen={showTransactionHistoryModal}
+          onClose={() => setShowTransactionHistoryModal(false)}
+          transactions={allTransactions}
+          walletLabels={walletDisplayLabels}
+          formatDateTime={formatDateTime}
+          onOpenManualLedger={() => {
+            setShowTransactionHistoryModal(false);
+            setShowLedgerModal(true);
+          }}
+        />
         <FinancialAnalyticsModal isOpen={showAnalyticsModal} onClose={() => setShowAnalyticsModal(false)} globalData={globalData} selectedMonth={selectedMonth} totalLiquid={totalLiquid} totalUnpaidCommitments={totalUnpaidCommitments} />
+        <NotificationModal
+          isOpen={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
+          notifications={notifications}
+          onDismiss={handleDismissNotification}
+          onClearAll={handleClearAllNotifications}
+          onNavigate={handleNotificationNavigate}
+        />
 
         {activeTab === "home" && (
           <DashboardTab
-            globalData={globalData}
+            globalData={dashboardGlobalData}
             targetMilestoneFund={targetMilestoneFund}
             totalLiquid={totalLiquid}
             fundProgressPercent={fundProgressPercent}
@@ -674,6 +831,7 @@ const copySummaryToClipboard = async () => {
             latestExecution={latestExecution}
             recentTransactions={recentTransactions}
             onOpenSettings={(tab) => { setSettingsInitialTab(tab); setShowSettingsModal(true); }}
+            onConfigureGoal={() => setShowGoalSetupModal(true)}
             onExecutePaydaySplit={handleExecutePaydaySplit}
             onUndoPaydaySplit={handleUndoPaydaySplit}
             onJumpToOverdue={handleJumpToOverdue}
@@ -681,6 +839,13 @@ const copySummaryToClipboard = async () => {
             onIncrementWallet={incrementWallet}
             onCopySummary={copySummaryToClipboard}
             formatDateTime={formatDateTime}
+            onNavigateToWallets={() => setActiveTab("wallets")}
+            onNavigateToOps={(tab = "bills") => { setActiveTab("operations"); setOpsTab(tab); }}
+            onNavigateToExpenses={() => setActiveTab("expenses")}
+            onOpenAnalytics={() => setShowAnalyticsModal(true)}
+            onOpenYearlyModal={() => setShowYearlyModal(true)}
+            onOpenLedger={() => setShowTransactionHistoryModal(true)}
+            activeBills={activeBills}
           />
         )}
 
@@ -734,7 +899,8 @@ const copySummaryToClipboard = async () => {
             onImportFile={handleImportFile}
             allTransactions={allTransactions}
             onOpenLedger={() => setShowLedgerModal(true)}
-            walletLabels={globalData?.settings?.walletLabels}
+            onOpenTransactionHistory={() => setShowTransactionHistoryModal(true)}
+            walletLabels={walletDisplayLabels}
             formatDateTime={formatDateTime}
           />
         )}

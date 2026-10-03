@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Camera, Check, Circle, Edit2, Save, Trash2, Plus, Filter, ChevronDown, Calendar, X, CalendarPlus } from "lucide-react";
+import { Camera, Check, Circle, Edit2, Save, Trash2, Plus, Filter, ChevronDown, Calendar, X, CalendarPlus, Upload, RefreshCw } from "lucide-react";
 import { Shoot, ShootCategory, ShootStatus, EditFormData } from "../types/finance";
+import { exportGigToCalendar } from "../utils/calendarExport";
+import { syncShootsToNotion } from "../utils/notionSync";
 
 const SHOOT_CATEGORIES: (ShootCategory | "All")[] = ["All", "Solo Shoot", "Assistant", "Video Edit", "Event", "Commercial", "Other"];
 
@@ -49,6 +51,58 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const todayStr = getLocalToday();
 
+  const [isSyncingNotion, setIsSyncingNotion] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<{
+    type: "success" | "partial" | "error";
+    message: string;
+  } | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    };
+  }, []);
+
+  const handleSyncToNotion = async () => {
+    if (isSyncingNotion) return;
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    setIsSyncingNotion(true);
+    setSyncStatus(null);
+
+    try {
+      const result = await syncShootsToNotion(activeShoots);
+      if (result.success) {
+        setSyncStatus({
+          type: "success",
+          message: `Synced ${result.total} gigs · ${result.created} created · ${result.updated} updated`,
+        });
+      } else {
+        if (result.processed > 0 && result.failedBatch) {
+          setSyncStatus({
+            type: "partial",
+            message: `Synced ${result.processed}/${result.total} gigs · batch ${result.failedBatch} failed`,
+          });
+        } else {
+          setSyncStatus({
+            type: "error",
+            message: result.error || "Notion sync failed.",
+          });
+        }
+      }
+    } catch {
+      setSyncStatus({
+        type: "error",
+        message: "Notion sync failed.",
+      });
+    } finally {
+      setIsSyncingNotion(false);
+      syncTimeoutRef.current = setTimeout(() => {
+        setSyncStatus(null);
+      }, 4500);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setShowFilterDropdown(false); };
     document.addEventListener("mousedown", handleClickOutside);
@@ -78,55 +132,52 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
       alert("Please set a date for this gig first.");
       return;
     }
-    // Format to YYYYMMDD for the iCal standard
-    const formattedDate = shoot.date.replace(/-/g, "");
-    
-    // Calculate the next day for the end of an all-day event
-    const dateObj = new Date(shoot.date);
-    dateObj.setDate(dateObj.getDate() + 1);
-    const nextDay = `${dateObj.getFullYear()}${String(dateObj.getMonth()+1).padStart(2, '0')}${String(dateObj.getDate()).padStart(2, '0')}`;
-
-    // Build the raw iCalendar string
-    const ics = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "BEGIN:VEVENT",
-      `DTSTART;VALUE=DATE:${formattedDate}`,
-      `DTEND;VALUE=DATE:${nextDay}`,
-      `SUMMARY:${shoot.title}`,
-      `DESCRIPTION:Category: ${shoot.category} \nStatus: ${shoot.status} \n\nLogged via Finance Tracker`,
-      "END:VEVENT",
-      "END:VCALENDAR"
-    ].join("\n");
-
-        // Convert ICS string to a File object
-    const fileName = `${shoot.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.ics`;
-    const file = new File([ics], fileName, { type: 'text/calendar' });
-
-    // Use native Web Share API (Flawless on iOS Safari)
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      navigator.share({
-        files: [file],
-        title: shoot.title,
-      }).catch((err) => console.log("Share cancelled:", err));
-    } else {
-      // Fallback for Desktop Chrome/Edge
-      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    exportGigToCalendar(shoot);
   };
 
   return (
-    <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-4 sm:p-5 shadow-xl w-full">
-      <div className="flex items-center justify-between mb-3">
+    <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-4 sm:p-5 shadow-lg w-full">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><Camera size={13} className="text-amber-400" />{selectedMonth} Upcoming Shoots & Production Gigs</h2>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-faint font-mono hidden sm:inline">{activeShoots.filter(s => s.completed).length}/{activeShoots.length} Done</span>
+        <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
+          {syncStatus && (
+            <span
+              data-testid="notion-sync-status"
+              className={`text-[11px] font-medium px-2 py-0.5 rounded-lg transition-all animate-in fade-in ${
+                syncStatus.type === "success"
+                  ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                  : syncStatus.type === "partial"
+                  ? "text-amber-400 bg-amber-500/10 border border-amber-500/20"
+                  : "text-rose-400 bg-rose-500/10 border border-rose-500/20"
+              }`}
+            >
+              {syncStatus.message}
+            </span>
+          )}
+          <span className="text-[11px] text-faint font-mono hidden md:inline">{activeShoots.filter(s => s.completed).length}/{activeShoots.length} Done</span>
+          <button
+            type="button"
+            onClick={handleSyncToNotion}
+            disabled={isSyncingNotion}
+            aria-label="Sync to Notion"
+            className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${
+              isSyncingNotion
+                ? "bg-inverse/[0.04] border-inverse/[0.08] text-faint cursor-not-allowed opacity-75"
+                : "bg-inverse/[0.04] border-inverse/[0.08] text-muted hover:text-primary hover:border-inverse/[0.15]"
+            }`}
+          >
+            {isSyncingNotion ? (
+              <>
+                <RefreshCw size={11} className="animate-spin text-amber-400" />
+                <span className="text-[11px]">Syncing...</span>
+              </>
+            ) : (
+              <>
+                <Upload size={11} className="text-muted" />
+                <span className="text-[11px]">Notion</span>
+              </>
+            )}
+          </button>
           <div className="relative" ref={dropdownRef}>
             <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-amber-600/20 border-amber-500/50 text-amber-400" : "bg-inverse/[0.04] border-inverse/[0.08] text-muted hover:text-primary"}`}>
               <Filter size={11} className={selectedFilter !== "All" ? "text-amber-400" : "text-muted"} />
@@ -151,23 +202,31 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
         {filteredShoots.length === 0 ? (
           <div className="py-6 text-center text-faint text-xs italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} production gigs found.</div>
         ) : filteredShoots.map(shoot => (
-          <div key={shoot.id} className={`p-3 rounded-xl border transition-all ${shoot.completed ? "bg-fill-subtle/40 border-strong/60 opacity-45" : "bg-surface border-strong/80 shadow-sm"}`}>
+          <div
+            key={shoot.id}
+            data-testid={`shoot-mobile-card-${shoot.id}`}
+            onClick={() => handleStartEdit(shoot)}
+            className={`p-3 rounded-xl border transition-all cursor-pointer ${shoot.completed ? "bg-fill-subtle/40 border-strong/60 opacity-45 hover:opacity-75" : "bg-surface border-strong/80 shadow-sm hover:border-inverse/[0.15]"}`}
+          >
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => onToggleCompletion(shoot.id)}
-                  className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg px-1.5 py-1 -mx-1.5 text-left transition-colors hover:bg-inverse/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 group"
-                  aria-label={shoot.completed ? `Mark ${shoot.title} as active` : `Mark ${shoot.title} as settled`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleCompletion(shoot.id);
+                    }}
+                    className="shrink-0 min-w-[36px] min-h-[36px] -ml-1.5 -my-1.5 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 rounded-full"
+                    aria-label={shoot.completed ? `Mark ${shoot.title} as active` : `Mark ${shoot.title} as settled`}
+                  >
                     <div className="shrink-0">
                       {shoot.completed ? <span className="w-4 h-4 rounded-full chip-emerald flex items-center justify-center"><Check size={9} className="stroke-[3]" /></span> : <span className="w-4 h-4 rounded-full bg-fill/60 border border-strong/60 text-faint flex items-center justify-center"><Circle size={6} /></span>}
                     </div>
-                    <span className={`privacy-blur text-xs font-semibold truncate ${shoot.completed ? "line-through text-faint" : "text-strong"} group-hover:text-amber-400 transition-colors`}>{shoot.title}</span>
-                  </div>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 ${shoot.status === "Confirmed" ? "chip-emerald" : shoot.status === "Pencil" ? "chip-amber" : "chip-neutral"}`}>{shoot.status}</span>
-                </button>
+                  </button>
+                  <span className={`privacy-blur text-xs font-semibold truncate ${shoot.completed ? "line-through text-faint" : "text-strong"} hover:text-amber-400 transition-colors`}>{shoot.title}</span>
+                </div>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 ${shoot.status === "Confirmed" ? "chip-emerald" : shoot.status === "Pencil" ? "chip-amber" : "chip-neutral"}`}>{shoot.status}</span>
               </div>
               <div className="flex items-center justify-between pl-6 text-[10px] text-muted">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -175,10 +234,29 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                   {shoot.date && (shoot.date === todayStr ? <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-1.5 py-[1px] rounded font-bold uppercase tracking-wider text-[9px] ml-1">Due Today</span> : <span>• {formatShortDate(shoot.date)}</span>)}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <button onClick={() => handleAddToCalendar(shoot)} className="px-2 py-0.5 text-muted hover:text-blue-400 bg-fill-strong/70 rounded text-[10px] whitespace-nowrap flex items-center gap-1 transition shadow-sm" title="Add to Calendar">
-                    <CalendarPlus size={9} /> Sync
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddToCalendar(shoot);
+                    }}
+                    className="px-2 py-0.5 text-muted hover:text-blue-400 bg-fill-strong/70 rounded text-[10px] whitespace-nowrap flex items-center gap-1 transition shadow-sm"
+                    title="Add to Calendar"
+                    aria-label={`Export ${shoot.title} to calendar`}
+                  >
+                    <CalendarPlus size={9} /> Calendar
                   </button>
-                  <button onClick={() => handleStartEdit(shoot)} className="px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 rounded text-[10px] whitespace-nowrap transition shadow-sm">Edit</button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStartEdit(shoot);
+                    }}
+                    className="px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 rounded text-[10px] whitespace-nowrap transition shadow-sm"
+                    aria-label={`Edit ${shoot.title}`}
+                  >
+                    Edit
+                  </button>
                 </div>
               </div>
             </div>
@@ -229,7 +307,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                 </td>
                 <td className="py-3 px-4 text-right whitespace-nowrap">
                   <div className="inline-flex items-center gap-1 justify-end shrink-0">
-                    <button onClick={() => handleAddToCalendar(shoot)} className="whitespace-nowrap shrink-0 px-2 py-1 text-muted hover:text-blue-400 hover:bg-inverse/[0.05] rounded-md text-[11px] flex items-center transition" title="Add to Calendar"><CalendarPlus size={10} className="mr-1" /> Sync</button>
+                    <button onClick={() => handleAddToCalendar(shoot)} className="whitespace-nowrap shrink-0 px-2 py-1 text-muted hover:text-blue-400 hover:bg-inverse/[0.05] rounded-md text-[11px] flex items-center transition" title="Add to Calendar"><CalendarPlus size={10} className="mr-1" /> Calendar</button>
                     <button onClick={() => handleStartEdit(shoot)} className="whitespace-nowrap shrink-0 px-2 py-1 text-muted hover:text-amber-300 hover:bg-inverse/[0.05] rounded-md text-[11px] flex items-center transition"><Edit2 size={10} className="mr-1" /> Edit</button>
                   </div>
                 </td>

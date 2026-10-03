@@ -1,6 +1,16 @@
 export type BillType = "Bill" | "Subscription" | "Loan / Installment";
 export type ReceivableFrequency = "By Date" | "Monthly" | "Bi-monthly";
 export type ReceivableCategory = string;
+
+export type DeductionType = "fixed" | "percentage";
+
+export interface Deduction {
+  id: string;
+  name: string;
+  type: DeductionType;
+  value: number;
+}
+
 export type ShootCategory = string;
 export type ShootStatus = "Pencil" | "Confirmed" | "Moved" | "Cancelled";
 
@@ -54,6 +64,8 @@ export interface Receivable {
   id: string;
   name: string;
   amount: number;
+  grossAmount?: number;
+  deductions?: Deduction[];
   category?: ReceivableCategory;
   frequency: ReceivableFrequency;
   wallet?: string;
@@ -116,6 +128,8 @@ export interface AppSettings {
   inflowCategories?: string[];
   gigCategories?: string[];
   perPayoutSalary?: number;
+  grossPerPayoutSalary?: number;
+  salaryDeductions?: Deduction[];
   phpToJpyRate?: number;
   defaultTransitAllocation?: number;
   baseLivingAllowance?: number;
@@ -127,7 +141,9 @@ export interface AppSettings {
   expenseWallets?: Record<string, string>;
   walletLabels?: Record<string, string>;
   hasMigratedBaseWallets?: boolean;
+  hasCompletedOnboarding?: boolean;
   customWallets?: CustomWallet[];
+  dismissedNotifications?: Record<string, number>;
 }
 
 export interface PaydayExecution {
@@ -161,6 +177,8 @@ export interface EditFormData {
   name?: string;
   title?: string;
   amount?: number;
+  grossAmount?: number;
+  deductions?: Deduction[];
   dueDay?: string;
   type?: BillType;
   wallet?: string;
@@ -186,4 +204,24 @@ export interface TransactionHistoryItem {
   type: "expense" | "bill" | "inflow";
   wallet?: string;
   category?: string;
+}
+
+export type NotificationType =
+  | "overdue_commitment"
+  | "upcoming_commitment"
+  | "pending_receivable"
+  | "log_reminder";
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  amount?: number;
+  date?: string;
+  actionRoute?: "operations/bills" | "operations/inflows" | "expenses";
+  targetId?: string;
+  isGroup?: boolean;
+  count?: number;
+  groupedIds?: string[];
 }

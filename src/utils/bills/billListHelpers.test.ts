@@ -57,6 +57,36 @@ describe('billListHelpers', () => {
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Netflix');
     });
+
+    it('preserves all bills when hideSettled is omitted or false', () => {
+      const bills = [
+        createMockBill({ name: 'Paid Bill', paid: true }),
+        createMockBill({ name: 'Unpaid Bill', paid: false })
+      ];
+      expect(filterBills(bills, 'All', '')).toHaveLength(2);
+      expect(filterBills(bills, 'All', '', false)).toHaveLength(2);
+    });
+
+    it('excludes paid bills when hideSettled is true', () => {
+      const bills = [
+        createMockBill({ name: 'Paid Bill', paid: true }),
+        createMockBill({ name: 'Unpaid Bill', paid: false })
+      ];
+      const result = filterBills(bills, 'All', '', true);
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Unpaid Bill');
+    });
+
+    it('combines hideSettled with category and search query', () => {
+      const bills = [
+        createMockBill({ name: 'Paid Sub', type: 'Subscription', paid: true }),
+        createMockBill({ name: 'Unpaid Sub', type: 'Subscription', paid: false }),
+        createMockBill({ name: 'Unpaid Bill', type: 'Bill', paid: false })
+      ];
+      const result = filterBills(bills, 'Subscription', 'sub', true);
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Unpaid Sub');
+    });
   });
 
   describe('sortBills', () => {
