@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { Camera, Check, Circle, Edit2, Save, Trash2, Plus, Filter, ChevronDown, Calendar, X, CalendarPlus } from "lucide-react";
+import { Camera, Check, Circle, Edit2, Save, Trash2, Plus, Filter, ChevronDown, Calendar, X, CalendarPlus, Upload, RefreshCw } from "lucide-react";
 import { Shoot, ShootCategory, ShootStatus, EditFormData } from "../types/finance";
 import { exportGigToCalendar } from "../utils/calendarExport";
+import { syncShootsToNotion } from "../utils/notionSync";
 
 const SHOOT_CATEGORIES: (ShootCategory | "All")[] = ["All", "Solo Shoot", "Assistant", "Video Edit", "Event", "Commercial", "Other"];
 
@@ -50,6 +51,58 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const todayStr = getLocalToday();
 
+  const [isSyncingNotion, setIsSyncingNotion] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<{
+    type: "success" | "partial" | "error";
+    message: string;
+  } | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    };
+  }, []);
+
+  const handleSyncToNotion = async () => {
+    if (isSyncingNotion) return;
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    setIsSyncingNotion(true);
+    setSyncStatus(null);
+
+    try {
+      const result = await syncShootsToNotion(activeShoots);
+      if (result.success) {
+        setSyncStatus({
+          type: "success",
+          message: `Synced ${result.total} gigs · ${result.created} created · ${result.updated} updated`,
+        });
+      } else {
+        if (result.processed > 0 && result.failedBatch) {
+          setSyncStatus({
+            type: "partial",
+            message: `Synced ${result.processed}/${result.total} gigs · batch ${result.failedBatch} failed`,
+          });
+        } else {
+          setSyncStatus({
+            type: "error",
+            message: result.error || "Notion sync failed.",
+          });
+        }
+      }
+    } catch {
+      setSyncStatus({
+        type: "error",
+        message: "Notion sync failed.",
+      });
+    } finally {
+      setIsSyncingNotion(false);
+      syncTimeoutRef.current = setTimeout(() => {
+        setSyncStatus(null);
+      }, 4500);
+    }
+  };
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setShowFilterDropdown(false); };
     document.addEventListener("mousedown", handleClickOutside);
@@ -84,10 +137,47 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
 
   return (
     <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-4 sm:p-5 shadow-lg w-full">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><Camera size={13} className="text-amber-400" />{selectedMonth} Upcoming Shoots & Production Gigs</h2>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-faint font-mono hidden sm:inline">{activeShoots.filter(s => s.completed).length}/{activeShoots.length} Done</span>
+        <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
+          {syncStatus && (
+            <span
+              data-testid="notion-sync-status"
+              className={`text-[11px] font-medium px-2 py-0.5 rounded-lg transition-all animate-in fade-in ${
+                syncStatus.type === "success"
+                  ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                  : syncStatus.type === "partial"
+                  ? "text-amber-400 bg-amber-500/10 border border-amber-500/20"
+                  : "text-rose-400 bg-rose-500/10 border border-rose-500/20"
+              }`}
+            >
+              {syncStatus.message}
+            </span>
+          )}
+          <span className="text-[11px] text-faint font-mono hidden md:inline">{activeShoots.filter(s => s.completed).length}/{activeShoots.length} Done</span>
+          <button
+            type="button"
+            onClick={handleSyncToNotion}
+            disabled={isSyncingNotion}
+            aria-label="Sync to Notion"
+            className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${
+              isSyncingNotion
+                ? "bg-inverse/[0.04] border-inverse/[0.08] text-faint cursor-not-allowed opacity-75"
+                : "bg-inverse/[0.04] border-inverse/[0.08] text-muted hover:text-primary hover:border-inverse/[0.15]"
+            }`}
+          >
+            {isSyncingNotion ? (
+              <>
+                <RefreshCw size={11} className="animate-spin text-amber-400" />
+                <span className="text-[11px]">Syncing...</span>
+              </>
+            ) : (
+              <>
+                <Upload size={11} className="text-muted" />
+                <span className="text-[11px]">Notion</span>
+              </>
+            )}
+          </button>
           <div className="relative" ref={dropdownRef}>
             <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-amber-600/20 border-amber-500/50 text-amber-400" : "bg-inverse/[0.04] border-inverse/[0.08] text-muted hover:text-primary"}`}>
               <Filter size={11} className={selectedFilter !== "All" ? "text-amber-400" : "text-muted"} />
@@ -154,7 +244,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                     title="Add to Calendar"
                     aria-label={`Export ${shoot.title} to calendar`}
                   >
-                    <CalendarPlus size={9} /> Sync
+                    <CalendarPlus size={9} /> Calendar
                   </button>
                   <button
                     type="button"
@@ -217,7 +307,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                 </td>
                 <td className="py-3 px-4 text-right whitespace-nowrap">
                   <div className="inline-flex items-center gap-1 justify-end shrink-0">
-                    <button onClick={() => handleAddToCalendar(shoot)} className="whitespace-nowrap shrink-0 px-2 py-1 text-muted hover:text-blue-400 hover:bg-inverse/[0.05] rounded-md text-[11px] flex items-center transition" title="Add to Calendar"><CalendarPlus size={10} className="mr-1" /> Sync</button>
+                    <button onClick={() => handleAddToCalendar(shoot)} className="whitespace-nowrap shrink-0 px-2 py-1 text-muted hover:text-blue-400 hover:bg-inverse/[0.05] rounded-md text-[11px] flex items-center transition" title="Add to Calendar"><CalendarPlus size={10} className="mr-1" /> Calendar</button>
                     <button onClick={() => handleStartEdit(shoot)} className="whitespace-nowrap shrink-0 px-2 py-1 text-muted hover:text-amber-300 hover:bg-inverse/[0.05] rounded-md text-[11px] flex items-center transition"><Edit2 size={10} className="mr-1" /> Edit</button>
                   </div>
                 </td>
