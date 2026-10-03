@@ -321,4 +321,18 @@ describe("Salary & Deductions integration in settingsForm", () => {
     expect(result.grossPerPayoutSalary).toBe(50000);
     expect(result.perPayoutSalary).toBe(40000);
   });
+
+  it("preserves dismissedNotifications when applying settings form", () => {
+    const existing: AppSettings = {
+      theme: "dark",
+      dismissedNotifications: { "notif-1": 123456789 },
+    };
+
+    const form = createSettingsForm(existing);
+    form.theme = "light";
+
+    const result = applySettingsForm(existing, form);
+    expect(result.theme).toBe("light");
+    expect(result.dismissedNotifications).toEqual({ "notif-1": 123456789 });
+  });
 });

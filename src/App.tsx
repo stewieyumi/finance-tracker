@@ -3,7 +3,7 @@ import { HistoricalLedgerModal } from "./components/HistoricalLedgerModal";
 import { TransactionHistoryModal } from "./components/TransactionHistoryModal";
 import { GoogleLogin, googleLogout, useGoogleOneTapLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
-import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff } from "lucide-react";
+import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff, Bell } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { getMonthKey, getAdjacentMonth } from "./utils/dateHelpers";
 import { UnifiedFinanceData, WalletState, EditFormData, TransactionHistoryItem, PaydayExecution } from "./types/finance";
@@ -20,6 +20,7 @@ import { useCloudSync, getLocalPasscode } from "./hooks/useCloudSync";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import { useFinanceCalculations } from "./hooks/useFinanceCalculations";
+import { useNotifications } from "./hooks/useNotifications";
 import { useWalletActions } from "./hooks/useWalletActions";
 import { useBillActions } from "./hooks/useBillActions";
 import { useReceivableActions } from "./hooks/useReceivableActions";
@@ -37,6 +38,7 @@ import { DashboardTab } from "./components/DashboardTab";
 import { DateJumpModal } from "./components/DateJumpModal";
 import { YearlyOverviewModal } from "./components/YearlyOverviewModal";
 import { FinancialAnalyticsModal } from "./components/FinancialAnalyticsModal";
+import { NotificationModal } from "./components/NotificationModal";
 import { WalletsTab } from "./components/WalletsTab";
 import { ExpensesTab } from "./components/ExpensesTab";
 import { BottomNav, TabType } from "./components/BottomNav";
@@ -153,6 +155,74 @@ const {
   const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [showTransactionHistoryModal, setShowTransactionHistoryModal] = useState(false);
   const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const notifications = useNotifications(globalData);
+
+  const handleDismissNotification = useCallback(
+    (id: string) => {
+      const target = notifications.find(n => n.id === id);
+      const idsToDismiss =
+        target?.groupedIds && target.groupedIds.length > 0
+          ? [id, ...target.groupedIds]
+          : [id];
+
+      syncedSetGlobalData(prev => {
+        const nextDismissed = { ...(prev.settings?.dismissedNotifications || {}) };
+        const now = Date.now();
+        idsToDismiss.forEach(dId => {
+          nextDismissed[dId] = now;
+        });
+        return {
+          ...prev,
+          settings: {
+            ...prev.settings,
+            dismissedNotifications: nextDismissed,
+          },
+          updatedAt: now,
+        };
+      });
+    },
+    [notifications, syncedSetGlobalData]
+  );
+
+  const handleClearAllNotifications = useCallback(() => {
+    syncedSetGlobalData(prev => {
+      const newDismissed = { ...(prev.settings?.dismissedNotifications || {}) };
+      const now = Date.now();
+      notifications.forEach(n => {
+        newDismissed[n.id] = now;
+        if (n.groupedIds) {
+          n.groupedIds.forEach(gId => {
+            newDismissed[gId] = now;
+          });
+        }
+      });
+      return {
+        ...prev,
+        settings: {
+          ...prev.settings,
+          dismissedNotifications: newDismissed,
+        },
+        updatedAt: now,
+      };
+    });
+  }, [notifications, syncedSetGlobalData]);
+
+  const handleNotificationNavigate = useCallback(
+    (route: "operations/bills" | "operations/inflows" | "expenses") => {
+      setShowNotificationModal(false);
+      if (route === "operations/bills") {
+        setActiveTab("operations");
+        setOpsTab("bills");
+      } else if (route === "operations/inflows") {
+        setActiveTab("operations");
+        setOpsTab("inflows");
+      } else if (route === "expenses") {
+        setActiveTab("expenses");
+      }
+    },
+    []
+  );
 
   const [googleUser, setGoogleUser] = useState<any>(() => {
     const saved = localStorage.getItem("ft_google_user");
@@ -685,6 +755,19 @@ const copySummaryToClipboard = async () => {
               <button onClick={() => setIsPrivacyMode(prev => !prev)} aria-label={isPrivacyMode ? "Show Balances" : "Hide Balances"} className={`h-8 w-8 rounded-full border flex items-center justify-center transition shadow-sm ${isPrivacyMode ? "bg-amber-500/20 border-amber-500/60 text-amber-300" : "bg-fill/80 hover:bg-fill-strong border-strong text-muted hover:text-primary"}`}>
                 {isPrivacyMode ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
+              <button
+                onClick={() => setShowNotificationModal(true)}
+                aria-label="Notifications"
+                className="relative h-8 w-8 rounded-full border border-strong bg-fill/80 hover:bg-fill-strong flex items-center justify-center text-muted hover:text-primary transition shadow-sm"
+                title="Notifications"
+              >
+                <Bell size={14} />
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm">
+                    {notifications.length > 9 ? "9+" : notifications.length}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 
@@ -719,6 +802,14 @@ const copySummaryToClipboard = async () => {
           }}
         />
         <FinancialAnalyticsModal isOpen={showAnalyticsModal} onClose={() => setShowAnalyticsModal(false)} globalData={globalData} selectedMonth={selectedMonth} totalLiquid={totalLiquid} totalUnpaidCommitments={totalUnpaidCommitments} />
+        <NotificationModal
+          isOpen={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
+          notifications={notifications}
+          onDismiss={handleDismissNotification}
+          onClearAll={handleClearAllNotifications}
+          onNavigate={handleNotificationNavigate}
+        />
 
         {activeTab === "home" && (
           <DashboardTab

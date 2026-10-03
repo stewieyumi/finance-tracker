@@ -143,6 +143,7 @@ export interface AppSettings {
   hasMigratedBaseWallets?: boolean;
   hasCompletedOnboarding?: boolean;
   customWallets?: CustomWallet[];
+  dismissedNotifications?: Record<string, number>;
 }
 
 export interface PaydayExecution {
@@ -203,4 +204,24 @@ export interface TransactionHistoryItem {
   type: "expense" | "bill" | "inflow";
   wallet?: string;
   category?: string;
+}
+
+export type NotificationType =
+  | "overdue_commitment"
+  | "upcoming_commitment"
+  | "pending_receivable"
+  | "log_reminder";
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  amount?: number;
+  date?: string;
+  actionRoute?: "operations/bills" | "operations/inflows" | "expenses";
+  targetId?: string;
+  isGroup?: boolean;
+  count?: number;
+  groupedIds?: string[];
 }
