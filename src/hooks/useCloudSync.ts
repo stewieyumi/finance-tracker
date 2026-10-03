@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { UnifiedFinanceData } from "../types/finance";
+import { isValidFinanceData } from "../utils/validationHelpers";
 
 const PASSCODE_STORAGE_KEY = "ft_google_token";
 const DATA_STORAGE_KEY = "ft_master_data_v1";
@@ -51,8 +52,13 @@ export function useCloudSync(
   const isDirtyRef = useRef(false);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const latestDataRef = useRef(globalData);
+  const isPushingRef = useRef(false);
+  const pushRetryCountRef = useRef(0);
+  const pushRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  latestDataRef.current = globalData;
+  if (getUpdatedAt(globalData) >= getUpdatedAt(latestDataRef.current)) {
+    latestDataRef.current = globalData;
+  }
 
   // Authentication is handled by Google Sign-In in the UI.
   // This legacy helper remains available for compatibility, but never
@@ -66,7 +72,10 @@ export function useCloudSync(
       incomingData: UnifiedFinanceData,
       source: "cloud" | "broadcast" | "storage"
     ): boolean => {
-      if (!incomingData || typeof incomingData !== "object") {
+      if (!isValidFinanceData(incomingData)) {
+        setDebugLog(
+          `⚠️ ${source.toUpperCase()} DATA IGNORED: invalid structural schema.`
+        );
         return false;
       }
 
@@ -110,16 +119,54 @@ export function useCloudSync(
         );
       } catch (e) {
         console.warn("localStorage sync error", e);
+        showToast("⚠️ Device storage full: local changes may not be saved.");
       }
 
       return true;
     },
-    [setGlobalData]
+    [setGlobalData, showToast]
   );
+
+  const cancelPushRetry = useCallback(() => {
+    if (pushRetryTimeoutRef.current) {
+      clearTimeout(pushRetryTimeoutRef.current);
+      pushRetryTimeoutRef.current = null;
+    }
+    pushRetryCountRef.current = 0;
+  }, []);
+
+  const pushToCloudRef = useRef<(data: UnifiedFinanceData) => Promise<boolean>>(() => Promise.resolve(false));
+
+  const schedulePushRetry = useCallback(() => {
+    if (pushRetryTimeoutRef.current) {
+      clearTimeout(pushRetryTimeoutRef.current);
+      pushRetryTimeoutRef.current = null;
+    }
+
+    if (pushRetryCountRef.current >= 3) {
+      setDebugLog("⚠️ PUSH RETRY STOPPED: Maximum retries reached.");
+      return;
+    }
+
+    pushRetryCountRef.current += 1;
+    // Bounded exponential backoff: retry 1 = 2s, retry 2 = 4s, retry 3 = 8s
+    const delay = Math.pow(2, pushRetryCountRef.current) * 1000;
+
+    pushRetryTimeoutRef.current = setTimeout(() => {
+      pushRetryTimeoutRef.current = null;
+      if (isDirtyRef.current) {
+        void pushToCloudRef.current(latestDataRef.current);
+      }
+    }, delay);
+  }, []);
 
   const pushToCloud = async (
     dataToSave: UnifiedFinanceData
   ): Promise<boolean> => {
+    if (isPushingRef.current) {
+      return false;
+    }
+
     if (!navigator.onLine) {
       setIsOnline(false);
       return false;
@@ -132,9 +179,10 @@ export function useCloudSync(
       return false;
     }
 
-    try {
-      setIsSyncing(true);
+    isPushingRef.current = true;
+    setIsSyncing(true);
 
+    try {
       /*
        * IMPORTANT:
        * Do not create a new updatedAt timestamp here.
@@ -165,6 +213,7 @@ export function useCloudSync(
         const result = await res.json().catch(() => null);
 
         if (result?.accepted === false) {
+          cancelPushRetry();
           setDebugLog(
             `⚠️ PUSH IGNORED: Cloud has newer data (${new Date(
               result.cloudUpdatedAt
@@ -200,9 +249,11 @@ export function useCloudSync(
         if (
           getUpdatedAt(latestDataRef.current) <= payloadUpdatedAt
         ) {
+          cancelPushRetry();
           isDirtyRef.current = false;
         } else {
           isDirtyRef.current = true;
+          schedulePushRetry();
         }
 
         setDebugLog(
@@ -213,6 +264,7 @@ export function useCloudSync(
       }
 
       if (res.status === 401) {
+        cancelPushRetry();
         setDebugLog(
           "❌ AUTH ERROR (401): Google session is invalid or expired."
         );
@@ -222,6 +274,7 @@ export function useCloudSync(
       }
 
       if (res.status === 409) {
+        cancelPushRetry();
         const result = await res.json().catch(() => null);
 
         setDebugLog(
@@ -244,6 +297,14 @@ export function useCloudSync(
         return true;
       }
 
+      if (res.status >= 500 && res.status < 600) {
+        setDebugLog(`❌ SERVER ERROR (${res.status})`);
+        schedulePushRetry();
+        return false;
+      }
+
+      // Definitive 4xx errors should not automatically retry
+      cancelPushRetry();
       setDebugLog(`❌ PUSH FAILED (${res.status})`);
       return false;
     } catch (err: any) {
@@ -251,11 +312,15 @@ export function useCloudSync(
       setDebugLog(
         `❌ NETWORK FAILED: ${err?.message || "Unknown error"}`
       );
+      schedulePushRetry();
       return false;
     } finally {
+      isPushingRef.current = false;
       setIsSyncing(false);
     }
   };
+
+  pushToCloudRef.current = pushToCloud;
 
   /**
    * Commit a real data mutation:
@@ -276,6 +341,8 @@ export function useCloudSync(
         return;
       }
 
+      cancelPushRetry();
+
       const nextData: UnifiedFinanceData = {
         ...nextRaw,
         updatedAt: Date.now()
@@ -289,7 +356,7 @@ export function useCloudSync(
       setGlobalData(nextData);
       void pushToCloud(nextData);
     },
-    [pushToCloud, setGlobalData]
+    [cancelPushRetry, pushToCloud, setGlobalData]
   );
 
   const pullLatestData = async (
@@ -415,6 +482,7 @@ export function useCloudSync(
   };
 
   const forceManualSync = async () => {
+    cancelPushRetry();
     const snapshot = latestDataRef.current;
     const success = await pushToCloud(snapshot);
 
@@ -430,6 +498,7 @@ export function useCloudSync(
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
+      cancelPushRetry();
 
       // If an explicit committed mutation happened while offline,
       // retry that pending mutation when connectivity returns.
@@ -494,8 +563,6 @@ export function useCloudSync(
         } catch (e) {}
       }
     }, 3000);
-    
-
 
     return () => {
       window.removeEventListener("online", handleOnline);
@@ -506,8 +573,12 @@ export function useCloudSync(
         handleVisibilityChange
       );
       clearInterval(pollInterval);
+      if (pushRetryTimeoutRef.current) {
+        clearTimeout(pushRetryTimeoutRef.current);
+        pushRetryTimeoutRef.current = null;
+      }
     };
-  }, []);
+  }, [cancelPushRetry]);
 
   useEffect(() => {
     if (typeof BroadcastChannel !== "undefined") {
@@ -587,7 +658,15 @@ export function useCloudSync(
         DATA_STORAGE_KEY,
         JSON.stringify(globalData)
       );
+    } catch (e) {
+      console.warn(
+        "localStorage/broadcast persistence failed",
+        e
+      );
+      showToast("⚠️ Device storage full: local changes may not be saved.");
+    }
 
+    try {
       broadcastChannelRef.current?.postMessage({
         type: "SYNC_DATA",
         payload: globalData
@@ -598,7 +677,7 @@ export function useCloudSync(
         e
       );
     }
-  }, [globalData]);
+  }, [globalData, showToast]);
 
   return {
     commitDataChange,

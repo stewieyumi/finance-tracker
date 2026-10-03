@@ -51,6 +51,7 @@ import { OnboardingWizard } from "./components/OnboardingWizard";
 import { OperationsTab } from "./components/OperationsTab";
 import { AccountTab } from "./components/AccountTab";
 import { isReturningUser, shouldShowOnboarding } from "./utils/onboardingHelpers";
+import { isValidFinanceData } from "./utils/validationHelpers";
 
 function safeLoadAll(): UnifiedFinanceData {
   try {
@@ -62,21 +63,7 @@ function safeLoadAll(): UnifiedFinanceData {
 
     const parsed = JSON.parse(saved);
 
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      !parsed.wallets ||
-      typeof parsed.wallets !== "object" ||
-      !parsed.library ||
-      typeof parsed.library !== "object" ||
-      !Array.isArray(parsed.library.bills) ||
-      !Array.isArray(parsed.library.receivables) ||
-      !Array.isArray(parsed.library.shoots) ||
-      !parsed.logs ||
-      typeof parsed.logs !== "object" ||
-      !parsed.settings ||
-      typeof parsed.settings !== "object"
-    ) {
+    if (!isValidFinanceData(parsed)) {
       console.warn(
         "Invalid local finance data found. Using initial data instead."
       );
