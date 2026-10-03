@@ -1,6 +1,7 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { X, Wrench } from "lucide-react";
 import { UnifiedFinanceData } from "../types/finance";
+import { Modal } from "./ui/Modal";
 
 interface SyncDiagnosticsModalProps {
   isOpen: boolean;
@@ -21,31 +22,14 @@ export const SyncDiagnosticsModal: React.FC<SyncDiagnosticsModalProps> = ({
   onForcePush,
   onForcePull
 }) => {
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-
-    if (isOpen) {
-      window.addEventListener("keydown", handleKeyDown);
-    }
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Sync Diagnostics"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      variant="floating"
+      ariaLabel="Sync Diagnostics"
     >
       <div className="bg-surface-elevated border border-inverse/[0.08] rounded-3xl p-6 w-full max-w-lg space-y-4 shadow-2xl text-xs font-mono">
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
@@ -144,6 +128,6 @@ export const SyncDiagnosticsModal: React.FC<SyncDiagnosticsModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
