@@ -161,9 +161,8 @@ describe("DashboardTab", () => {
   it("renders compact Upcoming card and opens UpcomingModal on click, then CTA navigates to Commitments", () => {
     render(<DashboardTab {...defaultProps} />);
     expect(screen.getByText("₱4,000.00")).toBeInTheDocument();
-    const upcomingCard = screen.getByText(/payment(s)? remaining/i).closest("div[class*='cursor-pointer']");
-    expect(upcomingCard).toBeTruthy();
-    fireEvent.click(upcomingCard!);
+    const upcomingCard = screen.getByRole("button", { name: /^Upcoming\b/ });
+    fireEvent.click(upcomingCard);
 
     // Modal should now be visible
     expect(screen.getByRole("dialog", { name: "Upcoming Commitments Modal" })).toBeInTheDocument();
@@ -200,9 +199,8 @@ describe("DashboardTab", () => {
     );
 
     expect(screen.getByText("1 overdue")).toBeInTheDocument();
-    const upcomingCard = screen.getByText("1 overdue").closest("div[class*='cursor-pointer']");
-    expect(upcomingCard).toBeTruthy();
-    fireEvent.click(upcomingCard!);
+    const upcomingCard = screen.getByRole("button", { name: /^Upcoming\b.*1 overdue/ });
+    fireEvent.click(upcomingCard);
 
     // Modal should be open and display overdue warning banner
     expect(screen.getByRole("dialog", { name: "Upcoming Commitments Modal" })).toBeInTheDocument();
@@ -233,21 +231,24 @@ describe("DashboardTab", () => {
     expect(screen.getByText("Monthly take-home pay • 5th & 20th")).toBeInTheDocument();
 
     // Click to open modal
-    const paydayCard = screen.getByText("Payday Plan").closest("div[class*='cursor-pointer']");
-    expect(paydayCard).toBeTruthy();
-    fireEvent.click(paydayCard!);
+    const paydayCard = screen.getByRole("button", { name: /^Payday Plan/ });
+    paydayCard.focus();
+    fireEvent.click(paydayCard);
 
     // Payday modal should now be open
     const modal = screen.getByRole("dialog", { name: "Payday Distribution Modal" });
     expect(within(modal).getByText("₱2,500.00")).toBeInTheDocument();
     expect(within(modal).getByText("₱1,000.00")).toBeInTheDocument();
     expect(within(modal).getByText("Auto-Distribute to Wallets")).toBeInTheDocument();
+    expect(modal).toHaveFocus();
+    fireEvent.keyDown(modal, { key: "Escape" });
+    expect(paydayCard).toHaveFocus();
   });
 
   it("invokes onExecutePaydaySplit from inside PaydayModal", () => {
     render(<DashboardTab {...defaultProps} />);
-    const paydayCard = screen.getByText("Payday Plan").closest("div[class*='cursor-pointer']");
-    fireEvent.click(paydayCard!);
+    const paydayCard = screen.getByRole("button", { name: /^Payday Plan/ });
+    fireEvent.click(paydayCard);
 
     const distributeBtn = screen.getByText("Auto-Distribute to Wallets");
     fireEvent.click(distributeBtn);
@@ -270,8 +271,8 @@ describe("DashboardTab", () => {
       />
     );
 
-    const paydayCard = screen.getByText("Payday Plan").closest("div[class*='cursor-pointer']");
-    fireEvent.click(paydayCard!);
+    const paydayCard = screen.getByRole("button", { name: /^Payday Plan/ });
+    fireEvent.click(paydayCard);
 
     const undoBtn = screen.getByText("Undo");
     fireEvent.click(undoBtn);

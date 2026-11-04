@@ -47,6 +47,7 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       variant="floating"
+      manageFocus
       ariaLabel="Upcoming Commitments Modal"
     >
       <div className="bg-surface-modal border border-inverse/[0.1] rounded-3xl p-5 sm:p-6 w-full max-w-md space-y-4 shadow-2xl animate-fade-in">
