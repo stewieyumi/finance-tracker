@@ -32,6 +32,25 @@ function isValidRevision(value: unknown): value is number {
   );
 }
 
+// Positive revisions are authoritative when the local base is known.
+// Revision zero is also used for legacy snapshots, which still use timestamps.
+function shouldPullCloudSnapshot(
+  revision: unknown,
+  baseRevision: number | null,
+  cloudUpdatedAt: unknown,
+  localUpdatedAt: number
+): boolean {
+  if (revision !== undefined && !isValidRevision(revision)) return false;
+  if (isValidRevision(revision) && baseRevision !== null &&
+      (revision > 0 || baseRevision > 0)) {
+    if (revision !== baseRevision || localUpdatedAt !== 0) {
+      return revision > baseRevision;
+    }
+    // Recover a missing local snapshot even if its stored revision survived.
+  }
+  return isValidUpdatedAt(cloudUpdatedAt) && cloudUpdatedAt > localUpdatedAt;
+}
+
 const PENDING_SYNC_KEY = "ft_sync_pending";
 
 function pendingSyncPrefix(sub: string) {
@@ -432,9 +451,9 @@ export function useCloudSync(
     (
       incomingData: UnifiedFinanceData,
       source: "cloud" | "broadcast" | "storage",
-      options?: { allowOlderTimestamp?: boolean }
+      options?: { allowOlderTimestamp?: boolean; resolvingConflict?: boolean }
     ): boolean => {
-      if (pendingRef.current && !options?.allowOlderTimestamp) return false;
+      if (pendingRef.current && !options?.resolvingConflict) return false;
 
       if (!isValidFinanceData(incomingData)) {
         setDebugLog(
@@ -453,17 +472,7 @@ export function useCloudSync(
         return false;
       }
 
-      /*
-       * Never allow an older/equal external state to replace
-       * the current local state unless explicitly adopting a
-       * conflict resolution snapshot.
-       *
-       * This protects against:
-       * - stale browser tabs
-       * - stale localStorage events
-       * - delayed cloud responses
-       * - duplicate sync events
-       */
+      // Timestamp order still protects legacy responses and local tab events.
       if (!options?.allowOlderTimestamp && incomingUpdatedAt <= currentUpdatedAt) {
         setDebugLog(
           `↩️ ${source.toUpperCase()} DATA IGNORED: local copy is newer or equal.`
@@ -631,8 +640,8 @@ export function useCloudSync(
           "Content-Type": "application/json",
           ...headers
         },
-        body: JSON.stringify(payload),
-        keepalive: true
+        // Pending edits survive reload; keepalive limits the size of a full snapshot.
+        body: JSON.stringify(payload)
       });
 
       if (
@@ -925,7 +934,8 @@ export function useCloudSync(
     try {
       if (resolution === "cloud") {
         const adopted = applyRemoteData(conflict.cloudSnapshot, "cloud", {
-          allowOlderTimestamp: true
+          allowOlderTimestamp: true,
+          resolvingConflict: true
         });
         if (!adopted) {
           showToast("⚠️ Could not apply cloud data: snapshot is invalid. Conflict remains active.");
@@ -1079,7 +1089,7 @@ export function useCloudSync(
   const pullLatestData = async (
     silent = false
   ) => {
-    if (conflictStateRef.current || pendingRef.current) return;
+    if (conflictStateRef.current || pendingRef.current || isDirtyRef.current || isPushingRef.current) return;
 
     if (!navigator.onLine) {
       setIsOnline(false);
@@ -1100,7 +1110,7 @@ export function useCloudSync(
         activeEl.tagName === "TEXTAREA" ||
         activeEl.tagName === "SELECT");
 
-    if (silent && (isDirtyRef.current || isUserTyping)) {
+    if (silent && isUserTyping) {
       return;
     }
 
@@ -1116,6 +1126,7 @@ export function useCloudSync(
     if (token === rejectedTokenRef.current) return;
     const requestAccountGen = accountSessionGenerationRef.current;
     const requestId = ++pullRequestIdRef.current;
+    const requestMutationGen = localMutationGenerationRef.current;
 
     try {
       if (!silent) {
@@ -1154,7 +1165,9 @@ export function useCloudSync(
         getGoogleSub() !== requestSub ||
         accountSessionGenerationRef.current !== requestAccountGen ||
         pullRequestIdRef.current !== requestId ||
-        conflictStateRef.current || pendingRef.current
+        requestMutationGen !== localMutationGenerationRef.current ||
+        conflictStateRef.current || pendingRef.current || isDirtyRef.current ||
+        isPushingRef.current
       ) {
         return;
       }
@@ -1183,15 +1196,6 @@ export function useCloudSync(
           ("record" in cloudResponse && cloudResponse.record == null));
 
       if (isEmptyCloudRecord) {
-        if (hasSuppliedRevision && isValidRevision(revision)) {
-          baseRevisionRef.current = revision;
-          try {
-            const baseRevKey = getScopedKeyForSub("ft_sync_base_revision", requestSub);
-            if (baseRevKey) {
-              window.localStorage.setItem(baseRevKey, revision.toString());
-            }
-          } catch {}
-        }
         setIsOnline(true);
         setDebugLog("✓ PULL SUCCESS (200): No remote snapshot yet.");
         return;
@@ -1208,22 +1212,30 @@ export function useCloudSync(
           return;
         }
 
-        const applied = applyRemoteData(
-          record,
-          "cloud"
-        );
+        const baseRevision = baseRevisionRef.current;
+        if (loadPendingSync(requestSub)) return;
 
-        if (applied && hasSuppliedRevision && isValidRevision(revision)) {
-           baseRevisionRef.current = revision;
-           try {
-             const baseRevKey = getScopedKeyForSub("ft_sync_base_revision", requestSub);
-             if (baseRevKey) {
-               window.localStorage.setItem(
-                 baseRevKey,
-                 revision.toString()
-               );
-             }
-           } catch {}
+        // A peer may have accepted a newer revision while this GET was in flight.
+        const baseRevKey = getScopedKeyForSub("ft_sync_base_revision", requestSub);
+        if (isValidRevision(revision) && baseRevKey) {
+          try {
+            const stored = localStorage.getItem(baseRevKey);
+            if (stored !== null && Number(stored) > revision) return;
+          } catch {}
+        }
+
+        const applied = shouldPullCloudSnapshot(
+          revision, baseRevision, record.updatedAt, getUpdatedAt(latestDataRef.current)
+        ) && applyRemoteData(record, "cloud", {
+          allowOlderTimestamp: isValidRevision(revision) &&
+            baseRevision !== null && revision > baseRevision,
+        });
+
+        if (applied && isValidRevision(revision)) {
+          baseRevisionRef.current = revision;
+          try {
+            if (baseRevKey) localStorage.setItem(baseRevKey, revision.toString());
+          } catch {}
         }
 
         setIsOnline(true);
@@ -1231,7 +1243,7 @@ export function useCloudSync(
         if (!applied) {
           if (!silent) {
             showToast(
-              "↩️ Local data is already newer than cloud"
+              "↩️ No newer cloud data to pull"
             );
           }
           return;
@@ -1382,14 +1394,19 @@ export function useCloudSync(
           const { key: token, sub: requestSub, headers } = getFinanceAuth();
           if (!token || !requestSub || token === rejectedTokenRef.current) return;
 
+          const requestAccountGen = accountSessionGenerationRef.current;
+          const pollIsCurrent = () =>
+            getGoogleSub() === requestSub &&
+            activeSubRef.current === requestSub &&
+            accountSessionGenerationRef.current === requestAccountGen &&
+            !conflictStateRef.current && !isDirtyRef.current && !isPushingRef.current;
+
           const res = await fetch(`/api/sync?version_only=true&t=${Date.now()}`, {
             headers,
             cache: "no-store"
           });
 
-          if (getGoogleSub() !== requestSub || conflictStateRef.current || isDirtyRef.current) {
-            return;
-          }
+          if (!pollIsCurrent()) return;
 
           if (res.status === 401) {
             pauseSyncForRejectedToken(token);
@@ -1398,15 +1415,12 @@ export function useCloudSync(
 
           if (res.ok) {
             const data = await res.json();
-            if (getGoogleSub() !== requestSub || conflictStateRef.current || isDirtyRef.current) {
-              return;
-            }
-            const cloudUpdatedAt = data?.updatedAt || 0;
-            const localUpdatedAt = latestDataRef.current?.updatedAt || 0;
-
-            // If the cloud has a newer timestamp, trigger a full, silent UI update!
-            if (cloudUpdatedAt > localUpdatedAt) {
-               void pullLatestData(true);
+            if (!pollIsCurrent()) return;
+            if (shouldPullCloudSnapshot(
+              data?.revision, baseRevisionRef.current, data?.updatedAt,
+              getUpdatedAt(latestDataRef.current)
+            )) {
+              void pullLatestData(true);
             }
           }
         } catch (e) {}

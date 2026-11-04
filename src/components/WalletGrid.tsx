@@ -58,10 +58,10 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
                   {isMilestoneWallet && <span className="sr-only">Goal wallet</span>}
                   {isSavingsWallet && <span className="sr-only">Savings wallet</span>}
                 </span>
-                <div className="flex items-baseline gap-0.5 shrink-0">
+                <span className="privacy-blur flex shrink-0 items-baseline gap-0.5">
                   <span className="text-[10px] text-faint font-mono">₱</span>
                   <span className="text-sm font-semibold tabular-nums text-strong">{currentBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
+                </span>
               </button>
             );
           })}

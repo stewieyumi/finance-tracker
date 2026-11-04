@@ -118,6 +118,21 @@ describe('useCloudSync', () => {
     expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("11");
   });
 
+  it("uploads a large full snapshot without the browser's keepalive limit", async () => {
+    const initial = { ...INITIAL_UNIFIED_DATA, updatedAt: 1000 };
+    const { result } = renderHook(() => useCloudSync(initial, vi.fn(), vi.fn()));
+    const largeSnapshot = { ...initial, goalName: "x".repeat(70 * 1024) };
+
+    await act(async () => {
+      result.current.commitDataChange(largeSnapshot);
+    });
+
+    const request = mockFetch.mock.calls.find(([, init]) => init?.method === "PUT")?.[1];
+    expect(request.body.length).toBeGreaterThan(64 * 1024);
+    expect(JSON.parse(request.body).data.goalName).toBe(largeSnapshot.goalName);
+    expect(request.keepalive).not.toBe(true);
+  });
+
   it("retains separate pending edits from two mounted tabs", async () => {
     const initial = { ...INITIAL_UNIFIED_DATA, updatedAt: 1000 };
     const first = renderHook(() => useCloudSync(initial, vi.fn(), vi.fn()));
@@ -2035,38 +2050,135 @@ describe('useCloudSync', () => {
       );
     });
 
-    it("F-01 control: ordinary background pullLatestData still rejects older or equal updatedAt timestamps", async () => {
+    it("pulls a higher server revision even when its timestamp is older", async () => {
       const localData = { ...globalData, updatedAt: 3000, targetFund: 11000 };
       localStorage.setItem("ft_sync_base_revision_user_123", "10");
-
-      const { result } = renderHook(() => useCloudSync(localData, setGlobalData, showToast));
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(1);
-      });
-
+      renderHook(() => useCloudSync(localData, setGlobalData, showToast));
+      await act(() => vi.advanceTimersByTimeAsync(1));
       mockFetch.mockReset();
       setGlobalData.mockClear();
 
-      // Older timestamp (2000 < 3000) and equal timestamp (3000 === 3000)
-      for (const staleTimestamp of [2000, 3000]) {
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          status: 200,
+      mockFetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        json: async () => ({ updatedAt: 2000, revision: 11 }),
+      }).mockResolvedValueOnce({
+        ok: true, status: 200,
+        json: async () => ({
+          record: { ...globalData, updatedAt: 2000, targetFund: 99000 },
+          revision: 11,
+        }),
+      });
+
+      await act(() => vi.advanceTimersByTimeAsync(3000));
+      expect(mockFetch.mock.calls.map(([url]) => url.split("&")[0])).toEqual([
+        "/api/sync?version_only=true", expect.stringContaining("/api/sync?t="),
+      ]);
+      expect(setGlobalData).toHaveBeenLastCalledWith(
+        expect.objectContaining({ targetFund: 99000, updatedAt: 2000 }),
+      );
+      expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("11");
+    });
+
+    it.each([
+      [9, 4000], [10, 4000], [undefined, 2000], [undefined, 3000],
+    ])("ignores an out-of-order pull with revision %s and timestamp %s", async (revision, updatedAt) => {
+      const localData = { ...globalData, updatedAt: 3000, targetFund: 11000 };
+      localStorage.setItem("ft_sync_base_revision_user_123", "10");
+      const { result } = renderHook(() => useCloudSync(localData, setGlobalData, showToast));
+      await act(() => vi.advanceTimersByTimeAsync(1));
+      mockFetch.mockReset();
+      setGlobalData.mockClear();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        json: async () => ({
+          record: { ...globalData, updatedAt, targetFund: 99000 },
+          ...(revision === undefined ? {} : { revision }),
+        }),
+      });
+
+      await act(() => result.current.pullLatestData(true));
+      expect(setGlobalData).not.toHaveBeenCalled();
+      expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("10");
+    });
+
+    it("recovers a missing local snapshot even if its matching revision remains", async () => {
+      localStorage.setItem("ft_sync_base_revision_user_123", "10");
+      mockFetch.mockReset();
+      mockFetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        json: async () => ({
+          record: { ...globalData, updatedAt: 2000, targetFund: 99000 },
+          revision: 10,
+        }),
+      });
+      renderHook(() => useCloudSync(INITIAL_UNIFIED_DATA, setGlobalData, showToast));
+
+      await act(() => vi.advanceTimersByTimeAsync(1));
+      expect(setGlobalData).toHaveBeenLastCalledWith(expect.objectContaining({ targetFund: 99000 }));
+    });
+
+    it("leaves another tab's pending edit intact when a GET returns a higher revision", async () => {
+      const localData = { ...globalData, updatedAt: 3000, targetFund: 11000 };
+      localStorage.setItem("ft_sync_base_revision_user_123", "10");
+      const { result } = renderHook(() => useCloudSync(localData, setGlobalData, showToast));
+      await act(() => vi.advanceTimersByTimeAsync(1));
+      mockFetch.mockReset();
+      setGlobalData.mockClear();
+
+      const key = "ft_sync_pending_writer:user_123:other-tab";
+      const pending = JSON.stringify({
+        version: 1, sub: "user_123", baseRevision: 10,
+        snapshot: { ...localData, updatedAt: 4000, targetFund: 12000 },
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        json: async () => {
+          localStorage.setItem(key, pending);
+          return {
+            record: { ...globalData, updatedAt: 2000, targetFund: 99000 },
+            revision: 11,
+          };
+        },
+      });
+
+      await act(() => result.current.pullLatestData());
+      expect(setGlobalData).not.toHaveBeenCalled();
+      expect(localStorage.getItem(key)).toBe(pending);
+      expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("10");
+    });
+
+    it("ignores a pull started before a local edit even after that edit finishes uploading", async () => {
+      localStorage.setItem("ft_sync_base_revision_user_123", "10");
+      const { result } = renderHook(() => useCloudSync(globalData, setGlobalData, showToast));
+      await act(() => vi.advanceTimersByTimeAsync(1));
+      mockFetch.mockReset();
+
+      let finishPull!: (value: unknown) => void;
+      mockFetch.mockImplementationOnce(() => new Promise(resolve => { finishPull = resolve; }));
+      const pull = result.current.pullLatestData(true);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true, status: 200,
+        json: async () => ({ success: true, accepted: true, revision: 11 }),
+      });
+      await act(async () => {
+        result.current.commitDataChange({ ...globalData, targetFund: 12000 });
+      });
+      expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("11");
+
+      await act(async () => {
+        finishPull({
+          ok: true, status: 200,
           json: async () => ({
-            record: { ...globalData, updatedAt: staleTimestamp, targetFund: 99000 },
-            revision: 25,
+            record: { ...globalData, updatedAt: 2000, targetFund: 99000 },
+            revision: 12,
           }),
         });
-
-        await act(async () => {
-          await result.current.pullLatestData(true);
-          await vi.advanceTimersByTimeAsync(1);
-        });
-
-        expect(setGlobalData).not.toHaveBeenCalled();
-        expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("10");
-      }
+        await pull;
+      });
+      expect(setGlobalData).toHaveBeenLastCalledWith(expect.objectContaining({ targetFund: 12000 }));
+      expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("11");
     });
 
     it("F-03: deferred Account A GET response is ignored after switching to Account B", async () => {

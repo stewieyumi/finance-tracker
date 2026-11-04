@@ -606,70 +606,74 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
       {/* 2. UPCOMING COMMITMENTS */}
       <div>
-        <div
+        <button
+          type="button"
+          aria-haspopup="dialog"
           onClick={() => setShowUpcomingModal(true)}
-          className="dashboard-material hover:border-amber-500/30 rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group active:scale-[0.99] flex flex-col justify-between"
+          className="dashboard-material w-full text-left hover:border-amber-500/30 rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group active:scale-[0.99] flex flex-col justify-between"
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
+          <span className="flex items-center justify-between mb-2 w-full">
+            <span className="flex items-center gap-2">
               <Calendar size={14} className="text-amber-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted group-hover:text-primary transition">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted group-hover:text-primary transition">
                 Upcoming
-              </h3>
-            </div>
+              </span>
+            </span>
             <ArrowRight size={13} className="text-faint group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <div className="text-lg sm:text-xl font-bold font-mono text-strong tracking-tight">
+          </span>
+          <span className="block w-full">
+            <span className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="text-lg sm:text-xl font-bold font-mono text-strong tracking-tight">
                 ₱{totalUnpaidCommitments.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-              </div>
+              </span>
               {overdueBills.length > 0 && (
                 <span className="chip-amber text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
                   <AlertCircle size={12} className="shrink-0" />
                   {overdueBills.length} overdue
                 </span>
               )}
-            </div>
-            <div className="text-xs text-muted mt-1 font-medium">
+            </span>
+            <span className="block text-xs text-muted mt-1 font-medium">
               {unpaidCount} payment{unpaidCount === 1 ? "" : "s"} remaining
-            </div>
-          </div>
-        </div>
+            </span>
+          </span>
+        </button>
       </div>
 
       {/* 3. COMPACT PAYDAY PLAN CARD */}
-      <div
+      <button
+        type="button"
+        aria-haspopup="dialog"
         onClick={() => setShowPaydayModal(true)}
-        className="dashboard-material hover:border-emerald-500/30 rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group active:scale-[0.99] flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
+        className="dashboard-material w-full text-left hover:border-emerald-500/30 rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group active:scale-[0.99] flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
       >
-        <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-positive shrink-0">
+        <span className="flex items-center gap-3.5">
+          <span className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-positive shrink-0">
             <Banknote size={18} />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-positive">
+          </span>
+          <span className="block">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-positive">
                 Payday Plan
-              </h3>
+              </span>
               {hasExecutedToday && (
                 <span className="text-[10px] font-semibold chip-emerald px-2 py-0.5 rounded-full">
                   ✓ Distributed
                 </span>
               )}
-            </div>
-            <div className="text-xs text-muted mt-0.5 font-medium">
+            </span>
+            <span className="block text-xs text-muted mt-0.5 font-medium">
               Monthly take-home pay • {pdDays.map(formatOrdinal).join(" & ")}
-            </div>
-          </div>
-        </div>
-        <div className="flex w-full shrink-0 items-center justify-between gap-2 sm:w-auto">
+            </span>
+          </span>
+        </span>
+        <span className="flex w-full shrink-0 items-center justify-between gap-2 sm:w-auto">
           <span className="font-mono font-bold text-sm sm:text-base text-primary">
             ₱{monthlyNetSalary.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
           <ArrowRight size={14} className="text-faint group-hover:text-positive group-hover:translate-x-0.5 transition-all" />
-        </div>
-      </div>
+        </span>
+      </button>
 
       {/* 5. RECENT ACTIVITY */}
       <ErrorBoundary>

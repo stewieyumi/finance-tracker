@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ export interface ModalProps {
   role?: string;
   closeOnBackdropClick?: boolean;
   closeOnEscape?: boolean;
+  manageFocus?: boolean;
   className?: string;
 }
 
@@ -23,8 +24,49 @@ export const Modal: React.FC<ModalProps> = ({
   role = "dialog",
   closeOnBackdropClick = true,
   closeOnEscape = true,
+  manageFocus = false,
   className = "",
 }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!isOpen || !manageFocus || !dialog) return;
+
+    const previousFocus = document.activeElement;
+    dialog.focus();
+
+    return () => {
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+        previousFocus.focus();
+      }
+    };
+  }, [isOpen, manageFocus]);
+
+  const handleTab = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!manageFocus || event.key !== "Tab") return;
+
+    const dialog = event.currentTarget;
+    const controls = Array.from(dialog.querySelectorAll<HTMLElement>(
+      'button, a[href], input, select, textarea, [tabindex]'
+    )).filter(element =>
+      element.tabIndex >= 0 && !element.matches(":disabled") && element.getClientRects().length > 0
+    );
+    const first = controls[0];
+    const last = controls.at(-1);
+    if (!first || !last) {
+      event.preventDefault();
+      return;
+    }
+    if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   // Body scroll lock with exact previous overflow restoration
   useEffect(() => {
     if (!isOpen) return;
@@ -68,6 +110,9 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={manageFocus ? -1 : undefined}
+      onKeyDown={handleTab}
       role={role}
       aria-modal="true"
       aria-label={ariaLabel}
