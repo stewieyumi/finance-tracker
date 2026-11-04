@@ -164,6 +164,7 @@ export function usePaydayActions({
       )
         return;
 
+      let reversed = false;
       setGlobalData(prev => {
         const executions = prev.paydaySplitExecutions || [];
         const target = executions.find(
@@ -172,6 +173,11 @@ export function usePaydayActions({
 
         if (!target) {
           showToast("Cannot undo a legacy execution.");
+          return prev;
+        }
+
+        if (prev.settings?.archivedWallets?.some(wallet => wallet.id in target.allocations)) {
+          showToast("Restore the archived wallets before reversing this payday.");
           return prev;
         }
 
@@ -204,6 +210,7 @@ export function usePaydayActions({
           }
         });
 
+        reversed = true;
         return {
           ...prev,
           wallets: nextWallets,
@@ -215,7 +222,7 @@ export function usePaydayActions({
         };
       });
 
-      showToast("Payday distribution reversed.");
+      if (reversed) showToast("Payday distribution reversed.");
     },
     [setGlobalData, showToast]
   );

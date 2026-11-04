@@ -38,9 +38,12 @@ export function calculateSafeToSpend(
 
 export function calculateMonthlyDepositNeeded(
   targetFund: number,
-  currentBalance: number
+  currentBalance: number,
+  months = 1
 ): number {
-  return Math.max(0, (targetFund || 0) - (currentBalance || 0));
+  const remaining = Math.max(0, (targetFund || 0) - (currentBalance || 0));
+  const periods = Number.isSafeInteger(months) && months > 0 ? months : 1;
+  return Math.ceil(Math.round(remaining * 100) / periods) / 100;
 }
 
 

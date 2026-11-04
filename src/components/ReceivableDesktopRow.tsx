@@ -8,9 +8,9 @@ interface ReceivableDesktopRowProps {
   rec: ReceivableViewModel;
   walletLabel?: string;
   customPayAmount: string;
+  paydayChoice?: React.ReactNode;
   payPopoverId: string | null;
   onToggleStatus: (rec: ReceivableViewModel) => void;
-  onQuickAddHalf: (rec: ReceivableViewModel) => void;
   onTogglePaymentPopover: (id: string) => void;
   onEdit: (rec: ReceivableViewModel) => void;
   onCustomPayAmountChange: (value: string) => void;
@@ -22,9 +22,9 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
   rec,
   walletLabel,
   customPayAmount,
+  paydayChoice,
   payPopoverId,
   onToggleStatus,
-  onQuickAddHalf,
   onTogglePaymentPopover,
   onEdit,
   onCustomPayAmountChange,
@@ -38,8 +38,8 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
   return (
     <tr
       data-testid={`receivable-desktop-row-${rec.id}`}
-      onClick={() => onEdit(rec)}
-      className={`group transition-all duration-150 cursor-pointer ${
+      onClick={rec.collected ? undefined : () => onToggleStatus(rec)}
+      className={`group transition-all duration-150 ${rec.collected ? "" : "cursor-pointer"} ${
         rec.collected ? "opacity-45" : "hover:bg-inverse/[0.02]"
       }`}
     >
@@ -53,7 +53,9 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
           aria-label={
             rec.collected
               ? `Undo received payment for ${rec.name}`
-              : `Mark ${rec.name} as received`
+              : isBiMonthly
+                    ? rec.amountReceived > 0 ? `Settle remaining payment for ${rec.name}` : `Record first payday for ${rec.name}`
+                    : `Mark ${rec.name} as received`
           }
           className="flex items-center gap-1.5 focus:outline-none"
         >
@@ -165,8 +167,6 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
         <div className="flex flex-nowrap items-center gap-1 justify-end whitespace-nowrap">
           <ReceivablePaymentActions
             rec={rec}
-            isBiMonthly={isBiMonthly}
-            onQuickAddHalf={onQuickAddHalf}
             onTogglePaymentPopover={onTogglePaymentPopover}
             onEdit={onEdit}
             variant="desktop"
@@ -176,8 +176,9 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
         {payPopoverId === rec.id && (
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute right-3 top-9 z-20 bg-surface-elevated border border-border-default rounded-xl p-2 shadow-2xl flex items-center gap-1.5"
+            className="absolute right-3 top-9 z-20 bg-surface-elevated border border-border-default rounded-xl p-2 shadow-2xl flex flex-wrap items-center gap-1.5"
           >
+            {paydayChoice}
             <input
               type="number"
               inputMode="decimal"

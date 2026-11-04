@@ -1,4 +1,6 @@
 import React from "react";
+import { UpcomingBillsCard, type UpcomingBill } from "./UpcomingBillsCard";
+import { getMonthKey } from "../utils/dateHelpers";
 import { BillsTable } from "./BillsTable";
 import { ReceivablesTable } from "./ReceivablesTable";
 import { ShootsTable } from "./ShootsTable";
@@ -23,10 +25,13 @@ interface OperationsTabProps {
   opsTab: OpsTab;
   setOpsTab: React.Dispatch<React.SetStateAction<OpsTab>>;
   activeBills: BillViewModel[];
+  upcomingBills: UpcomingBill[];
   activeReceivables: ReceivableViewModel[];
   activeShoots: Shoot[];
   selectedMonth: string;
+  onSelectMonth: (month: string) => void;
 
+  onConfirmPriorBillPayments?: (billId: string, months: string[]) => void;
   onToggleBillStatus: (bill: BillViewModel, skipWalletMutation?: boolean) => void;
   onAddBill: (bill: {
     name: string;
@@ -45,7 +50,7 @@ interface OperationsTabProps {
   onResetMonthOverride: (billId: string) => void;
 
   onToggleReceivableStatus: (rec: ReceivableViewModel) => void;
-  onAddPayment: (rec: ReceivableViewModel, amount: number) => void;
+  onAddPayment: (rec: ReceivableViewModel, amount: number, paydayDay?: number) => void;
   onAddReceivable: (rec: {
     name: string;
     amount: number;
@@ -87,11 +92,14 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
   opsTab,
   setOpsTab,
   activeBills,
+  upcomingBills,
   activeReceivables,
   activeShoots,
   selectedMonth,
+  onSelectMonth,
 
   onToggleBillStatus,
+  onConfirmPriorBillPayments,
   onAddBill,
   onDeleteBill,
   onSaveBillEdit,
@@ -121,53 +129,55 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
   gigCategories,
   highlightOverdue,
 }) => {
+  const [billJump, setBillJump] = React.useState<{ id: string; sequence: number }>();
+
   return (
     <div
       id="operations-section"
       className="space-y-4 sm:space-y-5 animate-in fade-in zoom-in-95 duration-400 ease-out"
     >
-      <div className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.08] p-1.5 rounded-2xl flex items-center shadow-lg w-full mx-auto">
-        <button
-          onClick={() => setOpsTab("bills")}
-          className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${
-            opsTab === "bills"
-              ? "bg-blue-600/20 text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.3)]"
-              : "text-faint hover:text-secondary"
-          }`}
-        >
-          Commitments
-        </button>
+      <nav aria-label="Plan sections" className="grid grid-cols-3 gap-1 rounded-xl bg-fill p-1">
+        {([
+          ["bills", "Commitments"],
+          ["inflows", "Inflows"],
+          ["gigs", "Gigs & Tasks"],
+        ] as const).map(([tab, label]) => (
+          <button
+            key={tab}
+            type="button"
+            aria-pressed={opsTab === tab}
+            onClick={() => setOpsTab(tab)}
+            className={`min-h-11 rounded-lg px-1 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-blue-500 ${opsTab === tab
+              ? "bg-surface-elevated text-strong shadow-sm"
+              : "text-muted hover:bg-fill-strong hover:text-primary"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
 
-        <button
-          onClick={() => setOpsTab("inflows")}
-          className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${
-            opsTab === "inflows"
-              ? "bg-emerald-600/20 text-emerald-400 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.3)]"
-              : "text-faint hover:text-secondary"
-          }`}
-        >
-          Inflows
-        </button>
-
-        <button
-          onClick={() => setOpsTab("gigs")}
-          className={`flex-1 py-2.5 text-[11px] uppercase tracking-wider font-bold rounded-xl transition-all duration-300 ${
-            opsTab === "gigs"
-              ? "bg-amber-600/20 text-amber-400 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.3)]"
-              : "text-faint hover:text-secondary"
-          }`}
-        >
-          Gigs & Tasks
-        </button>
-      </div>
+      {opsTab === "bills" && selectedMonth === getMonthKey(new Date()) && (
+        <UpcomingBillsCard bills={upcomingBills} onSelect={bill => {
+          onSelectMonth(bill.month);
+          setBillJump(previous => ({ id: bill.id, sequence: (previous?.sequence ?? 0) + 1 }));
+        }} action={
+          <a href="#plan-commitments" className="rounded-lg bg-fill px-3 py-2 text-xs font-medium text-primary hover:bg-fill-strong">
+            View All
+          </a>
+        } />
+      )}
 
       {opsTab === "bills" && (
-        <div className="animate-in fade-in zoom-in-95 duration-300 ease-out">
+        <div id="plan-commitments" tabIndex={-1} className="scroll-mt-4 animate-in fade-in zoom-in-95 duration-300 ease-out">
           <ErrorBoundary>
             <BillsTable
+              key={billJump?.sequence ?? 0}
+              jumpToBillId={billJump?.id}
               activeBills={activeBills}
               selectedMonth={selectedMonth}
               onToggleStatus={onToggleBillStatus}
+              onConfirmPriorBillPayments={onConfirmPriorBillPayments}
               onAddBill={onAddBill}
               onDeleteBill={onDeleteBill}
               onSaveEdit={onSaveBillEdit}

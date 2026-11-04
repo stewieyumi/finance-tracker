@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useExpenseScanner } from "./useExpenseScanner";
 import { INITIAL_UNIFIED_DATA } from "../constants/initialData";
-import * as useCloudSync from "./useCloudSync";
+import * as financeAuth from "../utils/financeAuth";
 
 const baseGlobalData = {
   settings: INITIAL_UNIFIED_DATA.settings,
@@ -57,7 +57,7 @@ describe("useExpenseScanner", () => {
   });
 
   it("shows auth toast and does not proceed when no passcode exists", () => {
-    vi.spyOn(useCloudSync, "getLocalPasscode").mockReturnValue(null as unknown as string);
+    vi.spyOn(financeAuth, "getFinanceAuth").mockReturnValue({ sub: null, key: "", headers: {} });
 
     const showToast = vi.fn();
     const onScanStart = vi.fn();
@@ -83,7 +83,7 @@ describe("useExpenseScanner", () => {
   });
 
   it("calls onScanStart and onScanComplete with parsed fields on a successful scan", async () => {
-    vi.spyOn(useCloudSync, "getLocalPasscode").mockReturnValue("test-token");
+    vi.spyOn(financeAuth, "getFinanceAuth").mockReturnValue({ sub: "test-user", key: "test-token", headers: { Authorization: "Bearer test-token" } });
 
     const showToast = vi.fn();
     const onScanStart = vi.fn();
@@ -131,7 +131,7 @@ describe("useExpenseScanner", () => {
   });
 
   it("handles malformed JSON response safely and stops scanning", async () => {
-    vi.spyOn(useCloudSync, "getLocalPasscode").mockReturnValue("test-token");
+    vi.spyOn(financeAuth, "getFinanceAuth").mockReturnValue({ sub: "test-user", key: "test-token", headers: { Authorization: "Bearer test-token" } });
 
     const showToast = vi.fn();
     const onScanStart = vi.fn();
@@ -164,7 +164,7 @@ describe("useExpenseScanner", () => {
   });
 
   it("handles missing Gemini API key on the server (500)", async () => {
-    vi.spyOn(useCloudSync, "getLocalPasscode").mockReturnValue("test-token");
+    vi.spyOn(financeAuth, "getFinanceAuth").mockReturnValue({ sub: "test-user", key: "test-token", headers: { Authorization: "Bearer test-token" } });
 
     const showToast = vi.fn();
     const onScanStart = vi.fn();
@@ -200,7 +200,7 @@ describe("useExpenseScanner", () => {
   });
 
   it("rejects invalid or non-positive amount and does not call onScanComplete", async () => {
-    vi.spyOn(useCloudSync, "getLocalPasscode").mockReturnValue("test-token");
+    vi.spyOn(financeAuth, "getFinanceAuth").mockReturnValue({ sub: "test-user", key: "test-token", headers: { Authorization: "Bearer test-token" } });
 
     const showToast = vi.fn();
     const onScanStart = vi.fn();
@@ -241,7 +241,7 @@ describe("useExpenseScanner", () => {
   });
 
   it("rejects completely incomplete scan results", async () => {
-    vi.spyOn(useCloudSync, "getLocalPasscode").mockReturnValue("test-token");
+    vi.spyOn(financeAuth, "getFinanceAuth").mockReturnValue({ sub: "test-user", key: "test-token", headers: { Authorization: "Bearer test-token" } });
 
     const showToast = vi.fn();
     const onScanStart = vi.fn();
@@ -281,7 +281,7 @@ describe("useExpenseScanner", () => {
   });
 
   it("prevents duplicate concurrent scans when isScanning is already active", async () => {
-    vi.spyOn(useCloudSync, "getLocalPasscode").mockReturnValue("test-token");
+    vi.spyOn(financeAuth, "getFinanceAuth").mockReturnValue({ sub: "test-user", key: "test-token", headers: { Authorization: "Bearer test-token" } });
 
     const showToast = vi.fn();
     const onScanStart = vi.fn();

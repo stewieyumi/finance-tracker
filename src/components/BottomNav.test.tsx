@@ -18,7 +18,7 @@ describe("BottomNav", () => {
 
     const homeButton = screen.getByRole("button", { name: "Dashboard" });
     expect(homeButton).toHaveAttribute("aria-current", "page");
-    expect(homeButton).toHaveClass("bg-blue-500/10");
+    expect(homeButton).toHaveClass("chip-blue");
 
     const walletsButton = screen.getByRole("button", { name: "Wallets" });
     expect(walletsButton).not.toHaveAttribute("aria-current");

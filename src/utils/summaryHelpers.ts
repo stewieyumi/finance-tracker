@@ -133,7 +133,9 @@ ${recLines}
 TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}
 
 4. GOAL TRACKING & NET OUTLOOK
-• ${globalData?.settings?.goalName || 'Japan ADB Milestone'}: ₱${fmt(globalData?.wallets?.maribank)} / ₱${fmt(targetMilestoneFund)} (${fundProgressPercent}%)
+• ${targetMilestoneFund > 0
+    ? `${globalData.settings?.goalName?.trim() || "Savings goal"}: ₱${fmt(globalData.wallets[globalData.settings?.milestoneWallet || "main"])} / ₱${fmt(targetMilestoneFund)} (${fundProgressPercent}%)`
+    : "No savings goal set"}
 • Month Income Collected: ₱${fmt(monthIncomeCollected)}
 • Net Projected Position: ₱${fmt(netPosition)} ${netPosition >= 0 ? "(Surplus)" : "(Shortfall)"}
 ========================================`;

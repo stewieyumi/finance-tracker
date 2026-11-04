@@ -8,9 +8,9 @@ interface ReceivableMobileRowProps {
   rec: ReceivableViewModel;
   walletLabel?: string;
   customPayAmount: string;
+  paydayChoice?: React.ReactNode;
   payPopoverId: string | null;
   onToggleStatus: (rec: ReceivableViewModel) => void;
-  onQuickAddHalf: (rec: ReceivableViewModel) => void;
   onTogglePaymentPopover: (id: string) => void;
   onEdit: (rec: ReceivableViewModel) => void;
   onCustomPayAmountChange: (value: string) => void;
@@ -22,9 +22,9 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
   rec,
   walletLabel,
   customPayAmount,
+  paydayChoice,
   payPopoverId,
   onToggleStatus,
-  onQuickAddHalf,
   onTogglePaymentPopover,
   onEdit,
   onCustomPayAmountChange,
@@ -39,12 +39,8 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
     <div
       key={rec.id}
       data-testid={`receivable-mobile-row-${rec.id}`}
-      onClick={() => onEdit(rec)}
-      className={`p-3 rounded-xl border transition-all cursor-pointer ${
-        rec.collected
-          ? "bg-fill-subtle/40 border-strong/60 opacity-50 hover:opacity-75"
-          : "bg-surface-sunken border-strong/80 shadow-sm hover:border-inverse/[0.15]"
-      }`}
+      onClick={rec.collected ? undefined : () => onToggleStatus(rec)}
+      className={`${rec.collected ? "" : "cursor-pointer"} px-3 py-2.5 transition-colors hover:bg-surface-high ${rec.collected ? "bg-surface-low" : ""}`}
     >
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-2">
@@ -58,7 +54,9 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
               aria-label={
                 rec.collected
                   ? `Undo received payment for ${rec.name}`
-                  : `Mark ${rec.name} as received`
+                  : isBiMonthly
+                    ? rec.amountReceived > 0 ? `Settle remaining payment for ${rec.name}` : `Record first payday for ${rec.name}`
+                    : `Mark ${rec.name} as received`
               }
               className="shrink-0 min-w-[44px] min-h-[44px] -ml-2 -my-2 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 rounded-full"
             >
@@ -73,14 +71,14 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
               )}
             </button>
 
-            <span className="privacy-blur text-xs font-semibold text-strong truncate">
+            <span className="privacy-blur text-sm font-medium text-strong truncate">
               {rec.name}
             </span>
           </div>
 
           <div className="text-right shrink-0">
             <span
-              className={`font-mono text-xs font-bold ${
+              className={`text-sm font-semibold tabular-nums ${
                 rec.collected ? "text-emerald-400" : "text-strong"
               }`}
             >
@@ -109,26 +107,11 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 pl-6 text-[10px] text-muted sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2 pl-8 text-xs text-muted">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span
-              className={`px-1.5 py-0.5 rounded font-medium ${
-                rec.category === "Salary"
-                  ? "chip-cyan"
-                  : rec.category === "Shoot"
-                    ? "chip-amber"
-                    : rec.category === "Edit"
-                      ? "chip-purple"
-                      : "chip-neutral"
-              }`}
-            >
-              {rec.category || "Other"}
-            </span>
-
+            <span>{rec.category || "Other"}</span>
             {rec.wallet && (
-              <span className="chip-wallet px-1.5 py-0.5 rounded font-semibold tracking-wider text-[9px] uppercase">
-                {walletLabel || rec.wallet}
-              </span>
+              <span className="before:mr-1.5 before:content-['·']">{walletLabel || rec.wallet}</span>
             )}
 
             {isBiMonthly && (
@@ -153,8 +136,6 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
           <div className="flex items-center gap-1 shrink-0">
             <ReceivablePaymentActions
               rec={rec}
-              isBiMonthly={isBiMonthly}
-              onQuickAddHalf={onQuickAddHalf}
               onTogglePaymentPopover={onTogglePaymentPopover}
               onEdit={onEdit}
               variant="mobile"
@@ -165,8 +146,9 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
         {payPopoverId === rec.id && (
           <div
             onClick={(e) => e.stopPropagation()}
-            className="mt-2 pt-2 border-t border-strong/60 flex items-center gap-1.5"
+            className="mt-2 pt-2 border-t border-strong/60 flex flex-wrap items-center gap-1.5"
           >
+            {paydayChoice}
             <input
               type="number"
               inputMode="decimal"

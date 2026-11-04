@@ -21,6 +21,20 @@ const makeData = (
   }) as UnifiedFinanceData;
 
 describe("buildTransactionHistory", () => {
+  it("keeps paid bills and received inflows in history after removal from Plan", () => {
+    const data = makeData();
+    data.library.archivedBills = [{ id: "bill", name: "Rent", amount: 500, dueDay: "15", type: "Bill" }];
+    data.library.archivedReceivables = [{ id: "rec", name: "Client", amount: 800, frequency: "Monthly" }];
+    data.logs["September 2026"] = {
+      billsPaid: ["bill"],
+      recsCollected: { rec: { amountReceived: 800, collected: true } },
+    };
+    expect(buildTransactionHistory(data)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "bill", amount: -500 }),
+      expect.objectContaining({ type: "inflow", amount: 800 }),
+    ]));
+  });
+
   it("builds expense transactions with negative amounts", () => {
     const data = makeData({
       library: {
@@ -139,6 +153,49 @@ describe("buildTransactionHistory", () => {
         category: "Shoot"
       }
     ]);
+  });
+
+  it("uses recorded bill amount, date, and wallet after the bill is edited", () => {
+    const data = makeData();
+    data.library.bills.push({
+      id: "bill", name: "Rent", amount: 1400, dueDay: "15", type: "Bill", wallet: "gcash"
+    });
+    data.logs["September 2026"] = {
+      billsPaid: ["bill"],
+      billOverrides: { bill: 1200 },
+      billSettlements: {
+        bill: [{ id: "payment", amount: 1000, paidAt: "2026-09-14", wallet: "maya", walletDebit: 1000 }]
+      }
+    };
+
+    expect(buildTransactionHistory(data)).toEqual([
+      expect.objectContaining({ amount: -1000, date: "2026-09-14", wallet: "maya" })
+    ]);
+  });
+
+  it("lists active receipts by their original wallets and keeps the unrecorded legacy portion once", () => {
+    const data = makeData();
+    data.library.receivables.push({
+      id: "rec", name: "Client Payment", amount: 1500, frequency: "Monthly", wallet: "cash"
+    });
+    data.logs["September 2026"] = {
+      recsCollected: { rec: { amountReceived: 1000, collected: false } },
+      receivableSettlements: {
+        rec: [
+          { receivedAt: "2026-09-05", amount: 300, wallet: "maya", walletCredit: 300 },
+          { id: "reversed", receivedAt: "2026-09-10", amount: 100, wallet: "maya", walletCredit: 100, reversedAt: "2026-09-11" },
+          { id: "recent", receivedAt: "2026-09-20", amount: 500, wallet: "gcash", walletCredit: 500 },
+        ]
+      }
+    };
+
+    const history = buildTransactionHistory(data);
+    expect(history).toHaveLength(3);
+    expect(history).toEqual(expect.arrayContaining([
+      expect.objectContaining({ amount: 300, date: "2026-09-05", wallet: "maya" }),
+      expect.objectContaining({ amount: 500, date: "2026-09-20", wallet: "gcash" }),
+      expect.objectContaining({ id: "rec_September 2026", amount: 200, wallet: "cash" }),
+    ]));
   });
 
   it("builds positive payday allocations and ignores legacy string executions", () => {

@@ -27,6 +27,32 @@ describe("Finance Calculations", () => {
     logs: {},
   };
 
+  it("carries only unpaid installments beyond the loan end month", () => {
+    const loan = {
+      id: "loan", name: "Installment", amount: 500, dueDay: "15",
+      type: "Loan / Installment" as const, startMonth: "August 2026", endMonth: "September 2026",
+    };
+    const data = {
+      ...baseData,
+      library: { ...baseData.library, bills: [loan] },
+      logs: { "August 2026": { billsPaid: [loan.id] } },
+    };
+    const { result, rerender } = renderHook(
+      ({ snapshot }: { snapshot: UnifiedFinanceData }) => useFinanceCalculations(snapshot, "October 2026"),
+      { initialProps: { snapshot: data as UnifiedFinanceData } }
+    );
+    expect(result.current.activeBills).toEqual([
+      expect.objectContaining({ id: loan.id, paid: false, targetMonthForDue: "September 2026" }),
+    ]);
+    expect(result.current.totalUnpaidCommitments).toBe(500);
+    rerender({ snapshot: {
+      ...data,
+      logs: { ...data.logs, "September 2026": { billsPaid: [loan.id] } },
+    } });
+    expect(result.current.activeBills).toEqual([]);
+    expect(result.current.totalUnpaidCommitments).toBe(0);
+  });
+
   it("parses a selected month correctly", () => {
     const selectedMonth = "September 2026";
     const result = parseMonthKey(selectedMonth);

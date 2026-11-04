@@ -1,8 +1,9 @@
-import { roundMoney } from "../utils/currency";
+import { formatPHP, roundMoney } from "../utils/currency";
 import React, { useState } from "react";
 import { Camera, ScanLine, Plus, Receipt, Trash2, CheckCircle2 } from "lucide-react";
 import { UnifiedFinanceData, Expense, ExpenseCategory } from "../types/finance";
 import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
+import { getMonthKey, parseMonthKey } from "../utils/dateHelpers";
 import { useExpenseActions } from "../hooks/useExpenseActions";
 import { useExpenseScanner } from "../hooks/useExpenseScanner";
 
@@ -10,6 +11,7 @@ const EXPENSE_CATEGORIES: ExpenseCategory[] = ["Food & Dining", "Transport", "Ut
 
 interface ExpensesTabProps {
   globalData: UnifiedFinanceData;
+  selectedMonth?: string;
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
   showToast: (msg: string) => void;
   walletLabels?: Record<string, string>;
@@ -20,7 +22,7 @@ const getLocalToday = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalData, showToast }) => {
+export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalData, showToast, selectedMonth = getMonthKey(new Date()) }) => {
   const [showForm, setShowForm] = useState(false);
 
   const [form, setForm] = useState({
@@ -77,13 +79,28 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
   const allWallets = customWallets || [];
 
   const expenses = globalData.library?.expenses || [];
-  const totalSpent = expenses.reduce((a, b) => a + b.amount, 0);
+  const totalSpent = expenses.reduce((total, expense) => total + expense.amount, 0);
+  const month = parseMonthKey(selectedMonth);
+  const monthPrefix = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}-`;
+  const monthExpenses = expenses.filter(expense => expense.date.startsWith(monthPrefix));
+  const monthTotal = monthExpenses.reduce((total, expense) => total + expense.amount, 0);
 
   return (
     <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
       
+      <section aria-labelledby="expenses-month" className="rounded-2xl border border-subtle bg-surface-elevated p-4 shadow-sm sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 id="expenses-month" className="text-sm font-semibold text-muted">{selectedMonth} Spending</h2>
+            <p className="privacy-blur mt-1 break-words font-mono text-2xl font-bold text-strong">{formatPHP(monthTotal)}</p>
+            <p className="mt-1 text-xs text-muted">{monthExpenses.length} {monthExpenses.length === 1 ? "expense" : "expenses"}</p>
+          </div>
+          <a href="#expense-entry" className="shrink-0 rounded-lg bg-fill px-3 py-2 text-xs font-medium text-primary hover:bg-fill-strong">Log Expense</a>
+        </div>
+      </section>
+
       {/* AI Scanner Hero Card */}
-      <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-5 shadow-lg relative overflow-hidden">
+      <div id="expense-entry" tabIndex={-1} className="scroll-mt-4 relative overflow-hidden rounded-2xl bg-surface p-5">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500 opacity-50" />
         
         <div className="flex flex-col items-center justify-center text-center space-y-3 py-4">
@@ -98,7 +115,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
             <button onClick={() => fileInputRef.current?.click()} className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-purple-900/20">
               <Camera size={14} /> Scan
             </button>
-            <button onClick={() => { setShowForm(true); stopScanning(); }} className="flex-1 bg-surface-high hover:bg-inverse/[0.06] border border-inverse/[0.06] text-secondary font-semibold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-md">
+            <button onClick={() => { setShowForm(true); stopScanning(); }} className="flex-1 bg-surface-high hover:bg-inverse/[0.06] border border-subtle text-secondary font-semibold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-md">
               <Plus size={14} /> Manual
             </button>
           </div>
@@ -170,13 +187,13 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
       )}
 
       {/* Recent Expenses Ledger */}
-      <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-4 sm:p-5 shadow-lg">
+      <div className="rounded-2xl bg-surface p-3 sm:p-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-primary">Recent Transactions</h2>
-          <span className="text-[10px] font-mono text-faint">Total: ₱{totalSpent.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+          <h2 className="text-sm font-semibold text-primary">Recent Transactions</h2>
+          <span className="privacy-blur text-xs text-muted">All time: {formatPHP(totalSpent)}</span>
         </div>
 
-        <div className="space-y-2">
+        <div className="overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle">
           {expenses.length === 0 ? (
             <div className="py-8 text-center text-faint text-xs italic">No expenses logged yet. Tap scan or manual to start tracking.</div>
           ) : (
@@ -186,7 +203,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
               const formattedDate = isNaN(dateObj.getTime()) ? exp.date : dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
               return (
-                <div key={exp.id} className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-inverse/[0.08] transition">
+                <div key={exp.id} className="group flex items-center justify-between px-3 py-2.5 transition-colors hover:bg-surface-high">
                   <div className="flex items-center gap-3.5 overflow-hidden flex-1 pr-2">
                     <div className="w-9 h-9 rounded-full bg-fill border border-strong flex items-center justify-center shrink-0 text-muted">
                       <Receipt size={15} />
@@ -194,12 +211,12 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
                     <div className="min-w-0 flex-1">
                       <div className="privacy-blur text-[13px] font-semibold text-strong truncate">{exp.merchant}</div>
                       <div className="flex items-center gap-2 text-[10px] text-muted mt-1">
-                        <span className="bg-fill-strong/80 px-1.5 py-0.5 rounded text-secondary font-medium truncate max-w-[90px]">{exp.category}</span>
-                        <span className="privacy-blur uppercase text-blue-400/90 font-bold tracking-wider truncate max-w-[80px]">{allWallets.find(w => w.id === exp.wallet)?.label || exp.wallet}</span>
+                        <span className="truncate text-muted">{exp.category}</span>
+                        <span className="privacy-blur truncate text-muted before:mr-1 before:content-['·']">{allWallets.find(w => w.id === exp.wallet)?.label || exp.wallet}</span>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-col items-end shrink-0 ml-2">
                     <div className="flex items-center gap-2">
                       <span className="privacy-blur text-[13px] font-bold font-mono text-strong">-₱{exp.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>

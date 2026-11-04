@@ -120,11 +120,11 @@ describe("DashboardTab", () => {
     expect(cards.length).toBe(4);
     cards.forEach((card) => {
       expect(card.className).toContain("h-[156px]");
-      expect(card.className).toContain("sm:h-[160px]");
+      expect(card.className).toContain("sm:min-h-[160px]");
       expect(card.className).toContain("rounded-2xl");
       expect(card.className).toContain("p-4");
       expect(card.className).toContain("sm:p-5");
-      expect(card.className).toContain("bg-surface-elevated/90");
+      expect(card.className).toContain("dashboard-material");
     });
   });
 
@@ -150,12 +150,11 @@ describe("DashboardTab", () => {
     expect(screen.getByLabelText("Go to slide 4")).toBeInTheDocument();
   });
 
-  it("renders compact Wallets card and handles onNavigateToWallets on click", () => {
+  it("shows liquid cash in a wallet shortcut", () => {
     render(<DashboardTab {...defaultProps} />);
-    expect(screen.getByText("Across 2 wallets")).toBeInTheDocument();
-    const walletCard = screen.getByText("Across 2 wallets").closest("div[class*='cursor-pointer']");
-    expect(walletCard).toBeTruthy();
-    fireEvent.click(walletCard!);
+    const walletCard = screen.getByRole("button", { name: /Wallets.*liquid cash across 2 wallets/i });
+    expect(walletCard).toHaveTextContent("₱7,000.00");
+    fireEvent.click(walletCard);
     expect(defaultProps.onNavigateToWallets).toHaveBeenCalled();
   });
 
@@ -210,16 +209,28 @@ describe("DashboardTab", () => {
     expect(screen.getByText("1 Overdue Commitment")).toBeInTheDocument();
 
     // Clicking the overdue banner jumps to overdue
-    const overdueBanner = screen.getByText("1 Overdue Commitment").closest("div[class*='cursor-pointer']");
+    const overdueBanner = screen.getByRole("button", { name: /1 Overdue Commitment/ });
     expect(overdueBanner).toBeTruthy();
     fireEvent.click(overdueBanner!);
     expect(defaultProps.onJumpToOverdue).toHaveBeenCalled();
   });
 
-  it("renders Payday Plan card and opens PaydayModal when clicked", () => {
-    render(<DashboardTab {...defaultProps} />);
+  it("shows monthly net salary on the Payday Plan and per-payout allocations in the modal", () => {
+    render(<DashboardTab
+      {...defaultProps}
+      globalData={{
+        ...defaultProps.globalData,
+        settings: {
+          ...defaultProps.globalData.settings,
+          grossPerPayoutSalary: 17000,
+          perPayoutSalary: 15000,
+          paydayDays: [5, 20],
+        },
+      }}
+    />);
     expect(screen.getByText("Payday Plan")).toBeInTheDocument();
-    expect(screen.getByText("₱3,500.00")).toBeInTheDocument(); // 2500 + 1000
+    expect(screen.getByText("₱30,000.00")).toBeInTheDocument();
+    expect(screen.getByText("Monthly take-home pay • 5th & 20th")).toBeInTheDocument();
 
     // Click to open modal
     const paydayCard = screen.getByText("Payday Plan").closest("div[class*='cursor-pointer']");
@@ -227,8 +238,10 @@ describe("DashboardTab", () => {
     fireEvent.click(paydayCard!);
 
     // Payday modal should now be open
-    expect(screen.getByRole("dialog", { name: "Payday Distribution Modal" })).toBeInTheDocument();
-    expect(screen.getByText("Auto-Distribute to Wallets")).toBeInTheDocument();
+    const modal = screen.getByRole("dialog", { name: "Payday Distribution Modal" });
+    expect(within(modal).getByText("₱2,500.00")).toBeInTheDocument();
+    expect(within(modal).getByText("₱1,000.00")).toBeInTheDocument();
+    expect(within(modal).getByText("Auto-Distribute to Wallets")).toBeInTheDocument();
   });
 
   it("invokes onExecutePaydaySplit from inside PaydayModal", () => {
@@ -265,9 +278,9 @@ describe("DashboardTab", () => {
     expect(defaultProps.onUndoPaydaySplit).toHaveBeenCalledWith("exec-1");
   });
 
-  it("renders Quick Add floating button and opens QuickAddModal, correctly routing actions", () => {
+  it("opens Quick Add from the Dashboard actions section and routes its shortcuts", () => {
     render(<DashboardTab {...defaultProps} />);
-    const quickAddBtn = screen.getByLabelText("Quick Add");
+    const quickAddBtn = within(screen.getByRole("region", { name: "Quick Actions" })).getByRole("button", { name: "Quick Add" });
     expect(quickAddBtn).toBeInTheDocument();
 
     fireEvent.click(quickAddBtn);

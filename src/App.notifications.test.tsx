@@ -13,12 +13,17 @@ vi.mock("@react-oauth/google", () => ({
   useGoogleOneTapLogin: vi.fn(),
 }));
 
+vi.mock("./utils/financeAuth", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./utils/financeAuth")>(),
+  getFinanceSubject: () => "user_123",
+}));
+
 vi.mock("./hooks/useCloudSync", () => ({
   useCloudSync: (_data: any, setGlobalData: any) => ({
     commitDataChange: vi.fn((action: any) => {
       setGlobalData((prev: any) => {
         const next = typeof action === "function" ? action(prev) : action;
-        localStorage.setItem("ft_master_data_v1", JSON.stringify(next));
+        localStorage.setItem("ft_master_data_v1_user_123", JSON.stringify(next));
         return next;
       });
     }),
@@ -32,7 +37,7 @@ vi.mock("./hooks/useCloudSync", () => ({
     promptPasscode: vi.fn(),
     hasInitialSyncCompleted: true,
   }),
-  getLocalPasscode: vi.fn(() => "mock-token"),
+  getLocalPasscode: vi.fn(() => "header.eyJzdWIiOiJ1c2VyXzEyMyJ9.sig"),
 }));
 
 vi.mock("./hooks/useKeyboardShortcuts", () => ({
@@ -79,7 +84,7 @@ describe("App - Notifications Integration", () => {
         hasCompletedOnboarding: true,
       },
     };
-    localStorage.setItem("ft_master_data_v1", JSON.stringify(testData));
+    localStorage.setItem("ft_master_data_v1_user_123", JSON.stringify(testData));
   });
 
   it("renders notification bell in header and opens notification modal", () => {
@@ -139,7 +144,7 @@ describe("App - Notifications Integration", () => {
           hasCompletedOnboarding: true,
         },
       };
-      localStorage.setItem("ft_master_data_v1", JSON.stringify(groupData));
+      localStorage.setItem("ft_master_data_v1_user_123", JSON.stringify(groupData));
 
       render(<App />);
 
@@ -191,7 +196,7 @@ describe("App - Notifications Integration", () => {
           hasCompletedOnboarding: true,
         },
       };
-      localStorage.setItem("ft_master_data_v1", JSON.stringify(groupData));
+      localStorage.setItem("ft_master_data_v1_user_123", JSON.stringify(groupData));
 
       render(<App />);
 

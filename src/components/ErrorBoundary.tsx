@@ -27,14 +27,14 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="bg-rose-950/20 border border-rose-800/40 rounded-2xl p-4 text-xs text-rose-300 flex items-center justify-between my-2">
+        <div className="chip-rose rounded-2xl p-4 text-xs flex items-center justify-between my-2">
           <div className="flex items-center gap-2">
             <AlertTriangle size={15} className="text-rose-400 shrink-0" />
             <span>Something broke in this card. Other features remain operational.</span>
           </div>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
-            className="bg-rose-900/50 hover:bg-rose-800/50 px-2.5 py-1 rounded-lg text-rose-200 text-[10px] font-medium transition"
+            className="bg-inverse/[0.08] hover:bg-inverse/[0.14] px-2.5 py-1 rounded-lg text-[10px] font-medium transition"
           >
             Retry
           </button>

@@ -10,86 +10,32 @@ interface BottomNavProps {
 
 export function BottomNav({ activeTab, onChange }: BottomNavProps) {
   const tabs = [
-    {
-      id: "operations",
-      label: "Operations",
-      icon: Briefcase,
-      activeColor: "text-violet-500",
-      activeBg: "bg-violet-500/10",
-      activeBorder: "border-violet-500/20",
-      activeGlow: "shadow-[0_0_12px_rgba(139,92,246,0.18)]",
-    },
-    {
-      id: "wallets",
-      label: "Wallets",
-      icon: CreditCard,
-      activeColor: "text-emerald-500",
-      activeBg: "bg-emerald-500/10",
-      activeBorder: "border-emerald-500/20",
-      activeGlow: "shadow-[0_0_12px_rgba(16,185,129,0.18)]",
-    },
-    {
-      id: "home",
-      label: "Dashboard",
-      icon: Home,
-      activeColor: "text-blue-500",
-      activeBg: "bg-blue-500/10",
-      activeBorder: "border-blue-500/20",
-      activeGlow: "shadow-[0_0_12px_rgba(59,130,246,0.18)]",
-    },
-    {
-      id: "expenses",
-      label: "Expenses",
-      icon: Receipt,
-      activeColor: "text-amber-500",
-      activeBg: "bg-amber-500/10",
-      activeBorder: "border-amber-500/20",
-      activeGlow: "shadow-[0_0_12px_rgba(245,158,11,0.18)]",
-    },
-    {
-      id: "account",
-      label: "Account",
-      icon: User,
-      activeColor: "text-rose-500",
-      activeBg: "bg-rose-500/10",
-      activeBorder: "border-rose-500/20",
-      activeGlow: "shadow-[0_0_12px_rgba(244,63,94,0.18)]",
-    },
-  ];
+    { id: "operations", label: "Operations", icon: Briefcase, accent: "chip-purple" },
+    { id: "wallets", label: "Wallets", icon: CreditCard, accent: "chip-emerald" },
+    { id: "home", label: "Dashboard", icon: Home, accent: "chip-blue" },
+    { id: "expenses", label: "Expenses", icon: Receipt, accent: "chip-amber" },
+    { id: "account", label: "Account", icon: User, accent: "chip-rose" },
+  ] as const;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface-lowest/75 backdrop-blur-2xl border-t border-inverse/[0.05] pb-[env(safe-area-inset-bottom)]">
-      <div className="flex items-center justify-around sm:justify-center sm:gap-12 px-4 py-2 mx-auto w-full max-w-md">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          
+    <nav aria-label="Main navigation" className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <div className="navigation-glass pointer-events-auto mx-auto grid w-full max-w-lg grid-cols-5 gap-1 rounded-3xl p-1.5 sm:gap-2">
+        {tabs.map(({ id, label, icon: Icon, accent }) => {
+          const isActive = activeTab === id;
           return (
             <button
-              key={tab.id}
-              onClick={() => onChange(tab.id as TabType)}
-              className={`flex flex-col items-center justify-center w-[72px] h-[52px] rounded-xl border transition-all duration-200 active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100 ${
-                isActive
-                  ? `${tab.activeBg} ${tab.activeBorder} ${tab.activeGlow}`
-                  : "border-transparent hover:bg-inverse/[0.02]"
+              key={id}
+              type="button"
+              onClick={() => onChange(id)}
+              className={`flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 py-1 transition-colors motion-reduce:transition-none ${isActive
+                ? `${accent} nav-current`
+                : "border-transparent text-muted hover:bg-fill hover:text-primary"
               }`}
-              aria-label={tab.label}
+              aria-label={label}
               aria-current={isActive ? "page" : undefined}
             >
-              <div
-                className={`transition-all duration-200 motion-reduce:transition-none ${
-                  isActive ? `${tab.activeColor} scale-105` : "text-faint scale-100"
-                }`}
-              >
-                <Icon size={isActive ? 22 : 24} strokeWidth={isActive ? 2.5 : 2} />
-              </div>
-              {isActive && (
-                <span
-                  className={`text-[10px] mt-0.5 font-semibold transition-colors duration-200 ${tab.activeColor}`}
-                >
-                  {tab.label}
-                </span>
-              )}
+              <Icon aria-hidden="true" size={21} strokeWidth={isActive ? 2.25 : 1.75} />
+              <span className={`max-w-full truncate text-[10px] ${isActive ? "font-semibold" : "font-medium"}`}>{label}</span>
             </button>
           );
         })}

@@ -55,6 +55,63 @@ const createStateHarness = (initialData: UnifiedFinanceData) => {
 };
 
 describe("useReceivableActions - payment mutations", () => {
+  it("undoes and redoes only the latest payday receipt in its original wallet", () => {
+    const initial = createTestData();
+    const rec = createReceivable({ frequency: "Bi-monthly", biMonthlyDays: [5, 20] });
+    initial.library = { ...initial.library, receivables: [rec] };
+    const harness = createStateHarness(initial);
+    const showToast = vi.fn<(message: string, action?: { label: string; onClick: () => void }) => void>();
+    const { result } = renderHook(() => useReceivableActions({
+      globalData: harness.state, setGlobalData: harness.setGlobalData,
+      selectedMonth: "September 2026", showToast,
+    }));
+
+    act(() => result.current.addPayment(rec, 1000, 5));
+    const firstUndo = showToast.mock.lastCall?.[1];
+    const partial = { ...rec, amountReceived: 500 };
+    act(() => result.current.addPayment(partial, 1000, 5));
+    expect(harness.state.wallets.maya).toBe(5500);
+    act(() => result.current.addPayment(partial, 1000, 20));
+    const latestUndo = showToast.mock.lastCall?.[1];
+    const month = () => harness.state.logs["September 2026"];
+    const receipts = () => month().receivableSettlements?.[rec.id] ?? [];
+    expect(month().recsCollected?.[rec.id]).toEqual({ amountReceived: 1000, collected: true });
+    expect(receipts().map(entry => [entry.paydayDay, entry.amount])).toEqual([[5, 500], [20, 500]]);
+    expect(receipts()[0].id).not.toBe(receipts()[1].id);
+
+    act(() => firstUndo?.onClick());
+    expect(harness.state.wallets.maya).toBe(6000);
+
+    act(() => harness.setGlobalData(prev => ({
+      ...prev,
+      library: { ...prev.library, receivables: [{ ...rec, wallet: "gcash" }] },
+      wallets: { ...prev.wallets, maya: 100 },
+    })));
+    expect(latestUndo?.label).toBe("Undo");
+    act(() => latestUndo?.onClick());
+    expect(harness.state.wallets.maya).toBe(100);
+    expect(receipts()[1].reversedAt).toBeUndefined();
+
+    act(() => harness.setGlobalData(prev => ({
+      ...prev, wallets: { ...prev.wallets, maya: 6000 },
+    })));
+    act(() => latestUndo?.onClick());
+    expect(month().recsCollected?.[rec.id]).toEqual({ amountReceived: 500, collected: false });
+    expect(receipts()[0].reversedAt).toBeUndefined();
+    expect(receipts()[1].reversedAt).toBeDefined();
+    expect(harness.state.wallets.maya).toBe(5500);
+    expect(harness.state.wallets.gcash).toBe(5000);
+
+    const redo = showToast.mock.lastCall?.[1];
+    expect(redo?.label).toBe("Redo");
+    act(() => redo?.onClick());
+    act(() => redo?.onClick());
+    expect(month().recsCollected?.[rec.id]).toEqual({ amountReceived: 1000, collected: true });
+    expect(receipts().filter(entry => !entry.reversedAt)).toHaveLength(2);
+    expect(harness.state.wallets.maya).toBe(6000);
+    expect(harness.state.wallets.gcash).toBe(5000);
+  });
+
   it("adds a partial payment to the routed wallet", () => {
     const harness = createStateHarness(createTestData());
     const mockShowToast = vi.fn();
@@ -100,7 +157,7 @@ describe("useReceivableActions - payment mutations", () => {
     });
 
     act(() => {
-      result.current.addPayment(receivable, 500);
+      result.current.addPayment({ ...receivable, amountReceived: 800 }, 500);
     });
 
     const record =
@@ -109,6 +166,31 @@ describe("useReceivableActions - payment mutations", () => {
     expect(harness.state.wallets.maya).toBe(6000);
     expect(record?.amountReceived).toBe(1000);
     expect(record?.collected).toBe(true);
+  });
+
+  it("ignores repeated partial payments and status toggles from the same rendered occurrence", () => {
+    const harness = createStateHarness(createTestData());
+    const receivable = createReceivable();
+    const { result } = renderHook(() => useReceivableActions({
+      globalData: harness.state, setGlobalData: harness.setGlobalData,
+      selectedMonth: "September 2026", showToast: vi.fn(),
+    }));
+
+    act(() => {
+      result.current.addPayment(receivable, 400);
+      result.current.addPayment(receivable, 400);
+      result.current.toggleReceivableStatus(receivable);
+    });
+    expect(harness.state.wallets.maya).toBe(5400);
+    expect(harness.state.logs["September 2026"].receivableSettlements?.[receivable.id]).toHaveLength(1);
+
+    const partial = { ...receivable, amountReceived: 400 };
+    act(() => {
+      result.current.toggleReceivableStatus(partial);
+      result.current.toggleReceivableStatus(partial);
+    });
+    expect(harness.state.wallets.maya).toBe(5000);
+    expect(harness.state.logs["September 2026"].recsCollected?.[receivable.id]?.amountReceived).toBe(0);
   });
 
   it("undoes a full receivable payment by refunding the wallet", () => {
@@ -132,7 +214,7 @@ describe("useReceivableActions - payment mutations", () => {
     expect(harness.state.wallets.maya).toBe(6000);
 
     act(() => {
-      result.current.toggleReceivableStatus(receivable);
+      result.current.toggleReceivableStatus({ ...receivable, amountReceived: 1000, collected: true });
     });
 
     const record =
@@ -159,18 +241,23 @@ describe("useReceivableActions - payment mutations", () => {
 
     act(() => {
       result.current.addPayment(receivable, 400);
+      result.current.addPayment({ ...receivable, wallet: "gcash", amountReceived: 400 }, 100);
     });
 
     expect(harness.state.wallets.maya).toBe(5400);
 
     act(() => {
-      result.current.toggleReceivableStatus(receivable);
+      result.current.toggleReceivableStatus({ ...receivable, wallet: "gcash", amount: 2000, amountReceived: 500 });
     });
 
     const record =
       harness.state.logs["September 2026"].recsCollected?.["rec-test-1"];
 
-    expect(harness.state.wallets.maya).toBe(5000);
+    expect(harness.state.wallets).toEqual(createTestData().wallets);
+    expect(harness.state.logs["September 2026"].receivableSettlements?.["rec-test-1"]).toEqual([
+      expect.objectContaining({ wallet: "maya", walletCredit: 400, reversedAt: expect.any(String) }),
+      expect.objectContaining({ wallet: "gcash", walletCredit: 100, reversedAt: expect.any(String) }),
+    ]);
     expect(record?.amountReceived).toBe(0);
     expect(record?.collected).toBe(false);
   });
@@ -187,6 +274,11 @@ describe("useReceivableActions - payment mutations", () => {
           billsPaid: [],
           recsCollected: {
             "rec-test-1": { amountReceived: 1000, collected: true }
+          },
+          receivableSettlements: {
+            "rec-test-1": [{
+              receivedAt: "2026-09-15T00:00:00.000Z", wallet: "maya", amount: 1000, walletCredit: 1000
+            }]
           }
         }
       }
@@ -215,9 +307,7 @@ describe("useReceivableActions - payment mutations", () => {
     const record =
       harness.state.logs["September 2026"].recsCollected?.["rec-test-1"];
 
-    expect(mockShowToast).toHaveBeenCalledWith(
-      "Insufficient balance in maya. Need ₱1,000 to reverse."
-    );
+    expect(mockShowToast).toHaveBeenCalledWith("Reversal blocked: an original wallet is unavailable or has insufficient funds.");
     expect(harness.state.wallets.maya).toBe(500);
     expect(record?.amountReceived).toBe(1000);
     expect(record?.collected).toBe(true);
@@ -235,6 +325,11 @@ describe("useReceivableActions - payment mutations", () => {
           billsPaid: [],
           recsCollected: {
             "rec-test-1": { amountReceived: 1000, collected: true }
+          },
+          receivableSettlements: {
+            "rec-test-1": [{
+              receivedAt: "2026-09-15T00:00:00.000Z", wallet: "maya", amount: 1000, walletCredit: 1000
+            }]
           }
         }
       }
@@ -282,6 +377,11 @@ describe("useReceivableActions - payment mutations", () => {
           billsPaid: [],
           recsCollected: {
             "rec-test-1": { amountReceived: 400, collected: false }
+          },
+          receivableSettlements: {
+            "rec-test-1": [{
+              receivedAt: "2026-09-15T00:00:00.000Z", wallet: "maya", amount: 400, walletCredit: 400
+            }]
           }
         }
       }
@@ -358,7 +458,7 @@ describe("useReceivableActions - payment mutations", () => {
     const record =
       harness.state.logs["September 2026"].recsCollected?.["rec-test-zero"];
 
-    expect(mockShowToast).not.toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith("Receipt reversed.");
     expect(harness.state.wallets.maya).toBe(0);
     expect(record?.collected).toBe(false);
     expect(record?.amountReceived).toBe(0);

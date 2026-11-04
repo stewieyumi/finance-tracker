@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { BillsTable } from "./BillsTable";
 import { BillViewModel, EditFormData } from "../types/finance";
 
@@ -150,7 +150,7 @@ describe("BillsTable - list and edit wiring", () => {
     );
   });
 
-  it("opens edit modal when clicking the commitment card or row, and keeps status toggle strictly independent", () => {
+  it("pays from the desktop row and opens the editor from Edit", () => {
     const bill = createBill({
       id: "bill-card-test",
       name: "Water Bill",
@@ -161,25 +161,15 @@ describe("BillsTable - list and edit wiring", () => {
     const onToggleStatus = vi.fn();
     const { setEditingId } = renderBillsTable([bill], { onToggleStatus });
 
-    // 1. Desktop row click -> onEdit, NOT onToggleStatus
-    const billNames = screen.getAllByText("Water Bill");
-    // Click desktop text / row area
-    fireEvent.click(billNames[0]);
+    const desktopRow = screen.getAllByText("Water Bill")[1].closest("tr")!;
+    fireEvent.click(desktopRow);
+    expect(onToggleStatus).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: "bill-card-test" }));
+    expect(setEditingId).not.toHaveBeenCalled();
+
+    onToggleStatus.mockClear();
+    fireEvent.click(within(desktopRow).getByRole("button", { name: "Edit" }));
     expect(setEditingId).toHaveBeenCalledWith("bill-card-test");
     expect(onToggleStatus).not.toHaveBeenCalled();
-
-    setEditingId.mockClear();
-    onToggleStatus.mockClear();
-
-    // 2. Click desktop status toggle -> onToggleStatus, NOT onEdit
-    const pendingButtons = screen.getAllByRole("button", { name: /mark water bill as paid/i });
-    // Pending buttons exist in both mobile and desktop views; click the desktop one (second or first)
-    fireEvent.click(pendingButtons[1] || pendingButtons[0]);
-    expect(onToggleStatus).toHaveBeenCalledTimes(1);
-    expect(onToggleStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "bill-card-test" })
-    );
-    expect(setEditingId).not.toHaveBeenCalled();
   });
 
   it("filters commitments correctly across pay-period selector states (All, 1–15, 16–31)", () => {
@@ -218,7 +208,7 @@ describe("BillsTable - list and edit wiring", () => {
     expect(screen.getAllByText("Second Half Bill").length).toBeGreaterThan(0);
   });
 
-  it("handles mobile card and mobile status button independently", () => {
+  it("pays from the mobile card and opens the editor from Edit", () => {
     const bill = createBill({
       id: "bill-mobile-test",
       name: "Electric Bill",
@@ -231,22 +221,14 @@ describe("BillsTable - list and edit wiring", () => {
 
     const mobileCard = screen.getByTestId("bill-mobile-row-bill-mobile-test");
 
-    // 1. Click mobile card -> calls onEdit, NOT onToggleStatus
     fireEvent.click(mobileCard);
+    expect(onToggleStatus).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: "bill-mobile-test" }));
+    expect(setEditingId).not.toHaveBeenCalled();
+
+    onToggleStatus.mockClear();
+    fireEvent.click(within(mobileCard).getByRole("button", { name: "Edit" }));
     expect(setEditingId).toHaveBeenCalledWith("bill-mobile-test");
     expect(onToggleStatus).not.toHaveBeenCalled();
-
-    setEditingId.mockClear();
-    onToggleStatus.mockClear();
-
-    // 2. Click mobile status button -> calls onToggleStatus, NOT onEdit
-    const mobileStatusBtn = screen.getAllByRole("button", { name: /mark electric bill as paid/i })[0];
-    fireEvent.click(mobileStatusBtn);
-    expect(onToggleStatus).toHaveBeenCalledTimes(1);
-    expect(onToggleStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "bill-mobile-test" })
-    );
-    expect(setEditingId).not.toHaveBeenCalled();
   });
 
   it("renders the historical target-month indicator when targetMonthForDue differs from selectedMonth", () => {
@@ -276,19 +258,14 @@ describe("BillsTable - list and edit wiring", () => {
     expect(screen.queryByText("For September 2026")).not.toBeInTheDocument();
   });
 
-  it("handles month calendar export and individual bill sync", () => {
+  it("exports the month without adding calendar actions to bill rows", () => {
     const bill = createBill({
       id: "bill-export-test",
       name: "Water Utility",
     });
 
     const onExportMonthCalendar = vi.fn();
-    const onExportCalendar = vi.fn();
-
-    renderBillsTable([bill], {
-      onExportMonthCalendar,
-      onExportCalendar,
-    });
+    renderBillsTable([bill], { onExportMonthCalendar });
 
     // Month export button in header
     const exportBtn = screen.getByLabelText("Export commitments to calendar");
@@ -296,12 +273,7 @@ describe("BillsTable - list and edit wiring", () => {
     expect(onExportMonthCalendar).toHaveBeenCalledTimes(1);
     expect(onExportMonthCalendar).toHaveBeenCalledWith([bill], "September 2026");
 
-    // Single bill sync buttons
-    const syncButtons = screen.getAllByLabelText("Export Water Utility to calendar");
-    expect(syncButtons.length).toBeGreaterThan(0);
-    fireEvent.click(syncButtons[0]);
-    expect(onExportCalendar).toHaveBeenCalledTimes(1);
-    expect(onExportCalendar).toHaveBeenCalledWith(bill);
+    expect(screen.queryByLabelText("Export Water Utility to calendar")).not.toBeInTheDocument();
   });
 
   it("toggles paid commitments visibility without triggering financial mutations", () => {
@@ -340,6 +312,7 @@ describe("BillsTable - list and edit wiring", () => {
     expect(toggleBtn).toHaveAttribute("aria-label", "Hide paid commitments");
 
     // Financial action was never called
+    fireEvent.click(screen.getByTestId("bill-mobile-row-paid-bill"));
     expect(onToggleStatus).not.toHaveBeenCalled();
   });
 });

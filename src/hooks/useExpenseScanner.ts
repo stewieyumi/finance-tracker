@@ -1,7 +1,17 @@
 import { useState, useRef } from "react";
 import { UnifiedFinanceData } from "../types/finance";
-import { getLocalPasscode } from "./useCloudSync";
+import { notifyAuthTokenRejected } from "./useCloudSync";
+import { getFinanceAuth } from "../utils/financeAuth";
 import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
+
+function recordScannerStatus(status: number | "invalid-response" | "network-error", atCapacity = false) {
+  try {
+    localStorage.removeItem("scanner_debug_log");
+    localStorage.setItem("scanner_status", JSON.stringify({ status, atCapacity }));
+  } catch {
+    // Diagnostics are optional when browser storage is unavailable.
+  }
+}
 
 interface ScanResult {
   merchant: string;
@@ -47,7 +57,7 @@ export function useExpenseScanner({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const token = getLocalPasscode();
+    const { key: token, headers } = getFinanceAuth();
     if (!token) {
       showToast("⚠️ Sign-in required: Please sign in with Google to use the AI Scanner.");
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -80,26 +90,28 @@ export function useExpenseScanner({
         const base64 = canvas.toDataURL("image/jpeg", 0.7);
 
         try {
+          if (getFinanceAuth().key !== token) return;
           const res = await fetch("/api/scan", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`
+              ...headers
             },
             body: JSON.stringify({ image: base64 })
           });
           
           const textResponse = await res.text();
+          if (getFinanceAuth().key !== token) return;
           let data;
           try {
             data = JSON.parse(textResponse);
           } catch (e) {
-            localStorage.setItem('scanner_debug_log', JSON.stringify({ error: 'Failed to parse server response as JSON', raw: textResponse }));
+            recordScannerStatus("invalid-response");
             showToast("Unable to read scanner response. Please enter details manually.");
             return;
           }
 
-          localStorage.setItem('scanner_debug_log', JSON.stringify(data));
+          recordScannerStatus(res.status, data.code === "AI_CAPACITY" || res.status === 429 || res.status === 503);
           
           if (!res.ok || data.error) {
             const errorText = String(data.error || "").toLowerCase();
@@ -122,8 +134,8 @@ export function useExpenseScanner({
               res.status === 503;
 
             if (isAuthExpired) {
-              window.dispatchEvent(new Event("auth-expired"));
-              showToast("🔄 Session expired. Refreshing sign-in...");
+              notifyAuthTokenRejected(token);
+              showToast("Reconnect your Google account, then try the scan again.");
             } else if (isMissingApiKey) {
               showToast("⚠️ AI Scanner is not configured on the server (missing Gemini API key). Please enter details manually.");
             } else if (isOverloaded) {
@@ -183,8 +195,8 @@ export function useExpenseScanner({
           });
           
           showToast("✨ Receipt scanned successfully! Review and tap Save & Deduct.");
-        } catch (err: any) {
-          localStorage.setItem('scanner_debug_log', JSON.stringify({ error: 'Network error', message: err.message }));
+        } catch {
+          recordScannerStatus("network-error");
           showToast("Unable to scan this receipt. Please try again or enter the details manually.");
         } finally {
           setIsScanning(false);

@@ -93,6 +93,11 @@ export function getDaysUntil(dueDay: string | number, targetMonthKey: string): n
   return Object.is(days, -0) ? 0 : days;
 }
 
+export function isValidTwiceMonthlySchedule(days: number[]): boolean {
+  return days.length === 2 && days[0] !== days[1] &&
+    days.every(day => Number.isInteger(day) && day >= 1 && day <= 31);
+}
+
 export function normalizePaydayDays(days?: number[]): number[] {
   if (!days || !Array.isArray(days) || days.length === 0) return [15, 30];
   const valid = Array.from(new Set(days.filter(d => Number.isInteger(d) && d >= 1 && d <= 31)));

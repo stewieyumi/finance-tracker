@@ -12,6 +12,7 @@ interface BillEditModalProps {
   setEditForm: React.Dispatch<React.SetStateAction<EditFormData>>;
   editScope: "monthOnly" | "default";
   onScopeChange: (scope: "monthOnly" | "default") => void;
+  onReviewPriorPayments?: () => void;
   onCancel: () => void;
   onDeleteBill: (id: string) => void;
   onResetMonthOverride: (billId: string) => void;
@@ -29,6 +30,7 @@ export const BillEditModal: React.FC<BillEditModalProps> = ({
   editScope,
   onScopeChange,
   onCancel,
+  onReviewPriorPayments,
   onDeleteBill,
   onResetMonthOverride,
   onSaveEdit,
@@ -41,7 +43,7 @@ export const BillEditModal: React.FC<BillEditModalProps> = ({
     variant="sheet"
     ariaLabel="Edit Commitment"
   >
-    <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md mx-auto shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
+    <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md mx-auto shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400"><Edit2 size={18} /></div>
@@ -51,7 +53,7 @@ export const BillEditModal: React.FC<BillEditModalProps> = ({
             </div>
             <div className="space-y-4">
               <div className="flex bg-surface-lowest border border-strong rounded-xl p-1 shadow-inner">
-                <button type="button" onClick={() => onScopeChange("monthOnly")} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${editScope === "monthOnly" ? "bg-amber-500/20 text-amber-300 shadow-sm border border-amber-500/30" : "text-faint hover:text-secondary"}`}>{selectedMonth.split(" ")[0]} Only</button>
+                <button type="button" onClick={() => onScopeChange("monthOnly")} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${editScope === "monthOnly" ? "chip-amber shadow-sm" : "text-faint hover:text-secondary"}`}>{selectedMonth.split(" ")[0]} Only</button>
                 <button type="button" onClick={() => onScopeChange("default")} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${editScope === "default" ? "bg-blue-500/20 text-blue-300 shadow-sm border border-blue-500/30" : "text-faint hover:text-secondary"}`}>Default Base</button>
               </div>
               <div>
@@ -99,6 +101,9 @@ export const BillEditModal: React.FC<BillEditModalProps> = ({
                 </div>
               )}
               <div className="flex items-center gap-2 pt-4 border-t border-inverse/[0.04]">
+                {onReviewPriorPayments && (
+                  <button type="button" onClick={onReviewPriorPayments} className="rounded-xl bg-inverse/[0.05] px-3 py-2 text-xs">Review prior payments</button>
+                )}
                 <button onClick={() => { onDeleteBill(editingId); onCancel(); }} className="p-3.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl transition flex items-center justify-center shadow-sm"><Trash2 size={16} /></button>
                 {activeBills.find(b => b.id === editingId)?.isOverridden && <button onClick={() => { onResetMonthOverride(editingId); onCancel(); }} className="px-4 py-3.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-semibold rounded-xl text-xs flex items-center justify-center transition shadow-sm"><RotateCcw size={14} className="mr-1.5" /> Reset</button>}
                 <button

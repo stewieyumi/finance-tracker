@@ -122,10 +122,12 @@ describe("FinancialAnalyticsModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Goals" }));
     expect(screen.getByText("Monthly Deposit Needed")).toBeInTheDocument();
     expect(
-      screen.getByText("Remaining amount needed to reach your target.")
+      screen.getByText("Estimated monthly deposit to reach your target.")
     ).toBeInTheDocument();
     expect(screen.getByText("₱55,000.00")).toBeInTheDocument();
     expect(screen.getByText(/MariBank Savings Balance/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("combobox", { name: "Save over" }), { target: { value: "6" } });
+    expect(screen.getByText("₱9,166.67")).toBeInTheDocument();
   });
 
   it("does not render any Japan or Yen display in any tab", () => {

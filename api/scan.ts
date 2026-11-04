@@ -1,3 +1,4 @@
+import { readFinanceSession, usesFinanceSession } from "../server/financeSession.js";
 interface VercelApiRequest { method?: string; headers: Record<string, string | string[] | undefined>; body?: any; }
 interface VercelApiResponse { status: (code: number) => VercelApiResponse; json: (data: any) => void; }
 
@@ -14,31 +15,42 @@ function getClientToken(req: VercelApiRequest): string | undefined {
 export default async function handler(req: VercelApiRequest, res: VercelApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const clientToken = getClientToken(req);
-  if (!clientToken) {
-    return res.status(401).json({ error: 'Unauthorized: Missing token.' });
-  }
-
-  let isAuthenticated = false;
-  if (clientToken.startsWith("eyJ") && clientToken.split(".").length === 3) {
+  if (usesFinanceSession(req)) {
     try {
-      const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${clientToken}`);
-      if (googleRes.ok) {
-        const tokenInfo = await googleRes.json();
-        if (tokenInfo.sub && tokenInfo.aud === process.env.VITE_GOOGLE_CLIENT_ID) {
-          isAuthenticated = true;
-        }
+      if (!await readFinanceSession(req)) {
+        return res.status(401).json({ error: "Unauthorized: Session expired or changed.", code: "AUTH_EXPIRED" });
       }
-    } catch (err) {
-      console.error("Google verification error:", err);
+    } catch {
+      return res.status(500).json({ error: "Unable to verify session." });
     }
-  }
+  } else {
+    const clientToken = getClientToken(req);
+    if (!clientToken) {
+      return res.status(401).json({ error: 'Unauthorized: Missing token.' });
+    }
 
-  if (!isAuthenticated) {
-    return res.status(401).json({
-      error: 'Unauthorized: Invalid Google token.',
-      code: 'AUTH_EXPIRED'
-    });
+    let isAuthenticated = false;
+    if (clientToken.startsWith("eyJ") && clientToken.split(".").length === 3) {
+      try {
+        const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${clientToken}`);
+        if (googleRes.ok) {
+          const tokenInfo = await googleRes.json();
+          if (tokenInfo.sub && tokenInfo.aud === process.env.VITE_GOOGLE_CLIENT_ID) {
+            isAuthenticated = true;
+          }
+        }
+      } catch (err) {
+        console.error("Google verification error:", err);
+      }
+    }
+
+    if (!isAuthenticated) {
+      return res.status(401).json({
+        error: 'Unauthorized: Invalid Google token.',
+        code: 'AUTH_EXPIRED'
+      });
+    }
+
   }
 
   try {

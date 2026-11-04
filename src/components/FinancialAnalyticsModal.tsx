@@ -31,6 +31,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
   totalUnpaidCommitments
 }) => {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>("overview");
+  const [goalMonths, setGoalMonths] = useState(1);
 
   const safeToSpend = calculateSafeToSpend(totalLiquid, totalUnpaidCommitments);
   const now = new Date();
@@ -39,11 +40,12 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
   const totalDaysInMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0).getDate();
   const remainingDays = isCurrentActiveMonth ? Math.max(1, totalDaysInMonth - now.getDate() + 1) : totalDaysInMonth;
 
-  const milestoneWalletKey = globalData?.settings?.milestoneWallet || 'maribank';
-  const maribankBal = globalData?.wallets?.[milestoneWalletKey] || 0;
+  const milestoneWalletKey = globalData.settings?.milestoneWallet || (globalData.wallets.main === undefined ? 'maribank' : 'main');
+  const goalBalance = globalData?.wallets?.[milestoneWalletKey] || 0;
   const targetFund = globalData?.settings?.targetFund ?? globalData?.targetFund ?? DEFAULT_TARGET_FUND;
-  const walletLabel = globalData?.settings?.walletLabels?.[milestoneWalletKey] || "MariBank";
-  const monthlyDepositNeeded = calculateMonthlyDepositNeeded(targetFund, maribankBal);
+  const walletLabel = globalData.settings?.customWallets?.find(wallet => wallet.id === milestoneWalletKey)?.label
+    || globalData.settings?.walletLabels?.[milestoneWalletKey] || milestoneWalletKey;
+  const monthlyDepositNeeded = calculateMonthlyDepositNeeded(targetFund, goalBalance, goalMonths);
 
   const debtLoans = useMemo(
     () => calculateDebtRunway(globalData, selectedMonth),
@@ -65,9 +67,9 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
       ariaLabel="Financial Intelligence Modal"
     >
       <div
-        className="bg-surface-elevated border border-inverse/[0.09] rounded-3xl p-5 sm:p-6 w-full max-w-2xl space-y-5 shadow-[0_24px_64px_rgba(0,0,0,0.8)] max-h-[88vh] overflow-y-auto"
+        className="bg-surface-elevated border border-subtle rounded-3xl p-5 sm:p-6 w-full max-w-2xl space-y-5 shadow-2xl max-h-[88vh] overflow-y-auto"
       >
-        <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
+        <div className="flex items-center justify-between pb-3 border-b border-subtle">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-amber-400" />
             <h3 className="text-sm font-bold uppercase tracking-wider text-strong">
@@ -84,7 +86,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
           </button>
         </div>
 
-        <div className="flex gap-4 border-b border-inverse/[0.06] overflow-x-auto whitespace-nowrap hide-scrollbar">
+        <div className="flex gap-4 border-b border-subtle overflow-x-auto whitespace-nowrap hide-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab("overview")}
@@ -133,7 +135,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
 
         {activeTab === "overview" && (
           <div className="space-y-4">
-            <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 flex flex-col justify-between">
+            <div className="bg-surface-sunken border border-subtle rounded-2xl p-4 flex flex-col justify-between">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] uppercase font-semibold text-faint tracking-wider flex items-center gap-1">
                   <ShieldCheck size={12} className="text-emerald-400" /> Safe to Spend
@@ -151,7 +153,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
         )}
 
         {activeTab === "cashflow" && (
-          <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 space-y-3">
+          <div className="bg-surface-sunken border border-subtle rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-secondary flex items-center gap-1.5">
                 <TrendingUp size={13} className="text-emerald-400" />
@@ -202,13 +204,13 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
             </div>
 
             {debtLoans.length === 0 ? (
-              <div className="bg-surface-sunken border border-inverse/[0.05] rounded-xl p-4 text-center text-xs text-faint">
+              <div className="bg-surface-sunken border border-subtle rounded-xl p-4 text-center text-xs text-faint">
                 No active loans or installments for this period.
               </div>
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                 {debtLoans.map(loan => (
-                  <div key={loan.id} className="bg-surface-sunken border border-inverse/[0.05] rounded-xl p-3 space-y-2">
+                  <div key={loan.id} className="bg-surface-sunken border border-subtle rounded-xl p-3 space-y-2">
                     <div className="flex justify-between items-center text-xs">
                       <div>
                         <span className="privacy-blur font-semibold text-strong">{loan.name}</span>
@@ -239,33 +241,49 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
           </div>
         )}
 
-        {activeTab === "goals" && (
+        {activeTab === "goals" && targetFund <= 0 && (
+          <p className="rounded-xl bg-surface-sunken p-4 text-sm text-muted">
+            Set a savings goal to see your monthly deposit pace.
+          </p>
+        )}
+
+        {activeTab === "goals" && targetFund > 0 && (
           <div className="space-y-4">
-            <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 space-y-3">
+            <div className="bg-surface-sunken border border-subtle rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-400">
                   <Target size={13} />
                   <span>{globalData?.settings?.goalName || "Milestone Goal"}</span>
                 </div>
-                <span className="text-[10px] font-mono text-muted bg-inverse/[0.05] px-2 py-0.5 rounded-full border border-inverse/[0.08]">
+                <span className="text-[10px] font-mono text-muted bg-inverse/[0.05] px-2 py-0.5 rounded-full border border-subtle">
                   {walletLabel}
                 </span>
               </div>
 
+              <label className="flex flex-wrap items-center gap-2 text-xs text-secondary">
+                Save over
+                <select value={goalMonths} onChange={event => setGoalMonths(Number(event.target.value))}
+                  className="rounded-lg border border-strong bg-surface-input px-2 py-1 text-xs text-strong">
+                  {[1, 3, 6, 12, 24].map(months => (
+                    <option key={months} value={months}>{months} {months === 1 ? "month" : "months"}</option>
+                  ))}
+                </select>
+              </label>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                <div className="bg-surface border border-inverse/[0.05] rounded-xl p-3">
+                <div className="bg-surface border border-subtle rounded-xl p-3">
                   <div className="text-[10px] text-faint uppercase font-semibold">
                     {walletLabel} Balance
                   </div>
                   <div className="text-base font-bold font-mono text-strong mt-0.5">
-                    ₱{maribankBal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    ₱{goalBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     <span className="text-[11px] text-faint font-normal block sm:inline sm:ml-1">
                       / ₱{targetFund.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>
 
-                <div className="bg-surface border border-inverse/[0.05] rounded-xl p-3">
+                <div className="bg-surface border border-subtle rounded-xl p-3">
                   <div className="text-[10px] text-faint uppercase font-semibold">
                     Monthly Deposit Needed
                   </div>
@@ -273,7 +291,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
                     ₱{monthlyDepositNeeded.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </div>
                   <div className="text-[10px] text-faint mt-1 font-mono">
-                    Remaining amount needed to reach your target.
+                    Estimated monthly deposit to reach your target.
                   </div>
                 </div>
               </div>

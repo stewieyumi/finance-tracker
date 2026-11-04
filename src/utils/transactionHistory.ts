@@ -1,4 +1,5 @@
 import { TransactionHistoryItem, UnifiedFinanceData } from "../types/finance";
+import { roundMoney } from "./currency";
 import { parseMonthKey } from "./dateHelpers";
 
 export function buildTransactionHistory(
@@ -20,25 +21,28 @@ export function buildTransactionHistory(
   });
 
   // 2. Paid Bills
-  globalData.library?.bills?.forEach(b => {
+  [...(globalData.library?.bills ?? []), ...(globalData.library?.archivedBills ?? [])].forEach(b => {
     Object.entries(globalData.logs || {}).forEach(([monthKey, log]) => {
       if (log.billsPaid?.includes(b.id)) {
+        const settlement = [...(log.billSettlements?.[b.id] ?? [])].reverse()
+          .find(entry => !entry.reversedAt);
+        if (settlement?.priorConfirmation) return;
         const d = parseMonthKey(monthKey);
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, "0");
         const day = String(b.dueDay || "1").padStart(2, "0");
         const override = log.billOverrides?.[b.id];
-        const amt = override !== undefined ? override : b.amount;
+        const amount = settlement?.amount ?? override ?? b.amount;
 
         txs.push({
           id: `${b.id}_${monthKey}`,
           title: `${b.name} (${monthKey.split(" ")[0]})`,
-          amount: -amt,
+          amount: -amount,
           date:
-            log.paymentDates?.[b.id] ||
+            settlement?.paidAt || log.paymentDates?.[b.id] ||
             `${year}-${month}-${day}`,
           type: "bill",
-          wallet: b.wallet || globalData?.settings?.defaultWallet || "main",
+          wallet: settlement ? settlement.wallet ?? undefined : b.wallet || globalData.settings?.defaultWallet || "main",
           category: b.type
         });
       }
@@ -46,11 +50,33 @@ export function buildTransactionHistory(
   });
 
   // 3. Collected Inflows
-  globalData.library?.receivables?.forEach(r => {
+  [...(globalData.library?.receivables ?? []), ...(globalData.library?.archivedReceivables ?? [])].forEach(r => {
     Object.entries(globalData.logs || {}).forEach(([monthKey, log]) => {
       const recLog = log.recsCollected?.[r.id];
 
       if (recLog && recLog.amountReceived > 0) {
+        let recordedAmount = 0;
+        const settlements = log.receivableSettlements?.[r.id] ?? [];
+        settlements.forEach((receipt, index) => {
+          if (receipt.reversedAt || !Number.isFinite(receipt.amount) || receipt.amount <= 0) return;
+          recordedAmount += receipt.amount;
+          txs.push({
+            id: `${r.id}_${monthKey}_receipt_${receipt.id ?? index}`,
+            title: r.name,
+            amount: receipt.amount,
+            date: receipt.receivedAt,
+            type: "inflow",
+            wallet: receipt.wallet ?? undefined,
+            category: r.category
+          });
+        });
+
+        // Older receipts can coexist with newly recorded payouts for the same month.
+        const legacyAmount = recordedAmount > 0
+          ? roundMoney(recLog.amountReceived - recordedAmount)
+          : recLog.amountReceived;
+        if (legacyAmount <= 0) return;
+
         let txDate = r.date;
 
         if (!txDate) {
@@ -68,7 +94,7 @@ export function buildTransactionHistory(
         txs.push({
           id: `${r.id}_${monthKey}`,
           title: `${r.name}`,
-          amount: recLog.amountReceived,
+          amount: legacyAmount,
           date: log.paymentDates?.[r.id] || txDate,
           type: "inflow",
           wallet: r.wallet || globalData?.settings?.defaultWallet || "main",

@@ -31,9 +31,9 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
 
   return (
     <>
-      <div className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.07] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] rounded-2xl p-4 sm:p-5">
-        <div className="text-[11px] font-semibold tracking-wider text-muted uppercase mb-3">Liquid Cash Wallets</div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+      <div className="rounded-2xl bg-surface p-3 sm:p-4">
+        <div className="mb-2 px-1 text-sm font-semibold text-primary">Liquid Cash Wallets</div>
+        <div className="overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle">
           {(customWallets || []).map(w => {
             const currentBalance = wallets[w.id] ?? 0;
             const isMilestoneWallet = w.id === milestoneWallet;
@@ -41,21 +41,26 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
 
             const roleClasses =
               isMilestoneWallet && isSavingsWallet
-                ? "ring-1 ring-violet-400/40 shadow-[0_0_18px_rgba(167,139,250,0.12)] border-violet-400/30"
+                ? "wallet-role wallet-role-shared"
                 : isMilestoneWallet
-                  ? "ring-1 ring-blue-500/40 shadow-[0_0_18px_rgba(59,130,246,0.10)] border-blue-500/30"
+                  ? "wallet-role wallet-role-goal"
                   : isSavingsWallet
-                    ? "ring-1 ring-emerald-500/40 shadow-[0_0_18px_rgba(16,185,129,0.10)] border-emerald-500/30"
-                    : "border-inverse/[0.05]";
+                    ? "wallet-role wallet-role-savings"
+                    : "";
 
             const displayColor = `${w.color || "text-strong"} font-bold`;
 
             return (
-              <button key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`flex items-center justify-between w-full bg-surface-input border rounded-xl px-3.5 py-3 hover:border-inverse/[0.12] hover:bg-inverse/[0.02] active:scale-[0.98] transition-all text-left group ${roleClasses}`}>
-                <span className="privacy-blur text-xs text-secondary font-medium truncate pr-2 group-hover:text-strong transition-colors">{w.label}</span>
+              <button key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`wallet-balance-row group relative flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-high ${roleClasses}`}>
+                <span className="flex min-w-0 items-center gap-2">
+                  <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full bg-current ${w.color || "text-muted"}`} />
+                  <span className="privacy-blur truncate text-sm font-medium text-primary">{w.label}</span>
+                  {isMilestoneWallet && <span className="sr-only">Goal wallet</span>}
+                  {isSavingsWallet && <span className="sr-only">Savings wallet</span>}
+                </span>
                 <div className="flex items-baseline gap-0.5 shrink-0">
                   <span className="text-[10px] text-faint font-mono">₱</span>
-                  <span className={`font-bold font-mono tracking-tight ${displayColor} text-xs`}>{currentBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-sm font-semibold tabular-nums text-strong">{currentBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </button>
             );
@@ -65,11 +70,11 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
       </div>
 
       {editingWallet && (
-        <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => { if (e.target === e.currentTarget) setEditingWallet(null); }}>
-          <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-sm shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300">
+        <div className="fixed inset-0 z-[200] bg-[var(--bg-modal-scrim)] backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => { if (e.target === e.currentTarget) setEditingWallet(null); }}>
+          <div className="bg-surface-elevated border border-subtle rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full bg-inverse/[0.05] border border-inverse/[0.05] flex items-center justify-center ${editingWallet.color}`}><CreditCard size={18} /></div>
+                <div className={`w-10 h-10 rounded-full bg-inverse/[0.05] border border-subtle flex items-center justify-center ${editingWallet.color}`}><CreditCard size={18} /></div>
                 <div><h3 className="text-sm font-bold text-strong leading-tight">Edit Balance</h3><p className="text-[11px] text-muted font-medium">{editingWallet.label}</p></div>
               </div>
               <button onClick={() => setEditingWallet(null)} className="text-faint hover:text-strong p-2 bg-inverse/[0.03] hover:bg-inverse/[0.08] rounded-full transition"><X size={16}/></button>

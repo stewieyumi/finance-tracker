@@ -45,7 +45,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const [grossSalary, setGrossSalary] = useState<number>(
     globalData.settings?.grossPerPayoutSalary ??
       globalData.settings?.perPayoutSalary ??
-      15000
+      0
   );
   const [deductions, setDeductions] = useState<Deduction[]>(
     globalData.settings?.salaryDeductions ?? []

@@ -1,22 +1,24 @@
-import React, { useState, useMemo, useRef, useCallback } from "react";
-import { HistoricalLedgerModal } from "./components/HistoricalLedgerModal";
-import { TransactionHistoryModal } from "./components/TransactionHistoryModal";
-import { GoogleLogin, googleLogout, useGoogleOneTapLogin } from "@react-oauth/google";
-import { jwtDecode } from "jwt-decode";
+import { PaymentHistoryMenu } from "./components/PaymentHistoryMenu";
+import { recordPaymentAction, type PaymentHistory, type PaymentHistoryAction } from "./utils/paymentHistory";
+import React, { useState, useMemo, useRef, useCallback, lazy, Suspense } from "react";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { GoogleLogin, googleLogout } from "@react-oauth/google";
 import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff, Bell } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
-import { getMonthKey, getAdjacentMonth } from "./utils/dateHelpers";
+import { getMonthKey, getAdjacentMonth, getDaysUntil, parseMonthKey } from "./utils/dateHelpers";
 import { UnifiedFinanceData, WalletState, EditFormData, TransactionHistoryItem, PaydayExecution } from "./types/finance";
 import { buildFinancialSummary } from "./utils/summaryHelpers";
 import {
   getWalletForBill,
+  getEffectiveBillAmount,
   computeBillPerPaydayAmount,
   computeScaledBaselineAllocations,
   getReceivableStatus
 } from "./utils/financeHelpers";
 import { migrateBaseWallets, migrateLegacyBills } from "./utils/financeMigrations";
 
-import { useCloudSync, getLocalPasscode } from "./hooks/useCloudSync";
+import { useCloudSync, notifyAuthTokenChanged } from "./hooks/useCloudSync";
+import { endAppSession, getFinanceSubject, getLegacyToken, readAppSession, startAppSession, LEGACY_TOKEN_KEY, SESSION_STORAGE_KEY } from "./utils/financeAuth";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import { useFinanceCalculations } from "./hooks/useFinanceCalculations";
@@ -35,15 +37,10 @@ import { BillsTable } from "./components/BillsTable";
 import { ReceivablesTable } from "./components/ReceivablesTable";
 import { ShootsTable } from "./components/ShootsTable";
 import { DashboardTab } from "./components/DashboardTab";
-import { DateJumpModal } from "./components/DateJumpModal";
-import { YearlyOverviewModal } from "./components/YearlyOverviewModal";
-import { FinancialAnalyticsModal } from "./components/FinancialAnalyticsModal";
 import { NotificationModal } from "./components/NotificationModal";
 import { WalletsTab } from "./components/WalletsTab";
-import { ExpensesTab } from "./components/ExpensesTab";
 import { BottomNav, TabType } from "./components/BottomNav";
-import { SettingsModal } from "./components/SettingsModal";
-import { GoalSetupModal } from "./components/GoalSetupModal";
+import { SyncConflictModal } from "./components/SyncConflictModal";
 import { useAppUpdate } from "./hooks/useAppUpdate";
 import { useTheme } from "./hooks/useTheme";
 import { LandingPage } from "./components/LandingPage";
@@ -51,43 +48,113 @@ import { OnboardingWizard } from "./components/OnboardingWizard";
 import { OperationsTab } from "./components/OperationsTab";
 import { AccountTab } from "./components/AccountTab";
 import { isReturningUser, shouldShowOnboarding } from "./utils/onboardingHelpers";
-import { isValidFinanceData } from "./utils/validationHelpers";
+import { isValidFinanceBackup, isValidFinanceData } from "./utils/validationHelpers";
 
-function safeLoadAll(): UnifiedFinanceData {
-  try {
-    const saved = localStorage.getItem("ft_master_data_v1");
+const ExpensesTab = lazy(() => import("./components/ExpensesTab")
+  .then(module => ({ default: module.ExpensesTab })));
 
-    if (!saved) {
-      return INITIAL_UNIFIED_DATA;
-    }
+const HistoricalLedgerModal = lazy(() => import("./components/HistoricalLedgerModal")
+  .then(module => ({ default: module.HistoricalLedgerModal })));
+const YearlyOverviewModal = lazy(() => import("./components/YearlyOverviewModal")
+  .then(module => ({ default: module.YearlyOverviewModal })));
+const FinancialAnalyticsModal = lazy(() => import("./components/FinancialAnalyticsModal")
+  .then(module => ({ default: module.FinancialAnalyticsModal })));
 
-    const parsed = JSON.parse(saved);
+const SettingsModal = lazy(() => import("./components/SettingsModal")
+  .then(module => ({ default: module.SettingsModal })));
 
-    if (!isValidFinanceData(parsed)) {
-      console.warn(
-        "Invalid local finance data found. Using initial data instead."
-      );
-      return INITIAL_UNIFIED_DATA;
-    }
+const TransactionHistoryModal = lazy(() => import("./components/TransactionHistoryModal")
+  .then(module => ({ default: module.TransactionHistoryModal })));
 
-    const updatedAt =
-      typeof parsed.updatedAt === "number" &&
-      Number.isFinite(parsed.updatedAt) &&
-      parsed.updatedAt >= 0
-        ? parsed.updatedAt
-        : 0;
+const GoalSetupModal = lazy(() => import("./components/GoalSetupModal")
+  .then(module => ({ default: module.GoalSetupModal })));
+const DateJumpModal = lazy(() => import("./components/DateJumpModal")
+  .then(module => ({ default: module.DateJumpModal })));
 
-    return {
-      ...parsed,
-      updatedAt
-    } as UnifiedFinanceData;
-  } catch (err) {
-    console.warn(
-      "Could not load local finance data. Using initial data instead.",
-      err
-    );
+const deferredModalFallback = (
+  <div role="status" className="fixed left-1/2 top-12 z-[100] -translate-x-1/2 rounded-xl border border-strong bg-surface-high px-4 py-2 text-sm text-primary shadow-lg">
+    Loading…
+  </div>
+);
+
+function isValidAppRevision(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0
+  );
+}
+
+function isValidAppConflictState(data: any): boolean {
+  if (!data || typeof data !== "object") return false;
+  if (!isValidFinanceData(data.localSnapshot)) return false;
+  if (!isValidFinanceData(data.cloudSnapshot)) return false;
+  if (data.baseRevision !== null && !isValidAppRevision(data.baseRevision)) return false;
+  if (!isValidAppRevision(data.cloudRevision)) return false;
+  if (!Number.isInteger(data.detectedAt) || data.detectedAt < 0) return false;
+  return true;
+}
+
+function safeLoadAll(sub: string | null = getFinanceSubject()): UnifiedFinanceData {
+  if (!sub || typeof sub !== "string" || sub.trim() === "") {
     return INITIAL_UNIFIED_DATA;
   }
+
+  const trimmedSub = sub.trim();
+
+  try {
+    const saved = localStorage.getItem(`ft_master_data_v1_${trimmedSub}`);
+
+    if (saved) {
+      const parsed = JSON.parse(saved);
+
+      if (isValidFinanceData(parsed)) {
+        const updatedAt =
+          typeof parsed.updatedAt === "number" &&
+          Number.isFinite(parsed.updatedAt) &&
+          parsed.updatedAt >= 0
+            ? parsed.updatedAt
+            : 0;
+
+        return {
+          ...parsed,
+          updatedAt
+        } as UnifiedFinanceData;
+      }
+
+      console.warn(
+        "Invalid local finance data found. Using fallback data instead."
+      );
+    }
+  } catch (err) {
+    console.warn(
+      "Could not load local finance data. Using fallback data instead.",
+      err
+    );
+  }
+
+  try {
+    const savedConflict = localStorage.getItem(`ft_sync_conflict_${trimmedSub}`);
+    if (savedConflict) {
+      const parsedConflict = JSON.parse(savedConflict);
+      if (isValidAppConflictState(parsedConflict)) {
+        const fallbackSnapshot = parsedConflict.localSnapshot;
+        const updatedAt =
+          typeof fallbackSnapshot.updatedAt === "number" &&
+          Number.isFinite(fallbackSnapshot.updatedAt) &&
+          fallbackSnapshot.updatedAt >= 0
+            ? fallbackSnapshot.updatedAt
+            : 0;
+
+        return {
+          ...fallbackSnapshot,
+          updatedAt
+        } as UnifiedFinanceData;
+      }
+    }
+  } catch {}
+
+  return INITIAL_UNIFIED_DATA;
 }
 
 const formatDateTime = (dateStr: string) => {
@@ -107,11 +174,23 @@ const formatDateTime = (dateStr: string) => {
 export default function App() {
   const { updateAvailable } = useAppUpdate();
   const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
-  const [globalData, setGlobalData] = useState<UnifiedFinanceData>(safeLoadAll);
+  const [dataOwnerSub, setDataOwnerSub] = useState<string | null>(() =>
+    getFinanceSubject()
+  );
+  const [globalData, setGlobalData] = useState<UnifiedFinanceData>(() =>
+    safeLoadAll(getFinanceSubject())
+  );
+  const handleSetGlobalData = useCallback(
+    (action: React.SetStateAction<UnifiedFinanceData>) => {
+      setDataOwnerSub(getFinanceSubject());
+      setGlobalData(action);
+    },
+    []
+  );
   useTheme(globalData?.settings);
   const commitDataChangeRef = useRef<
     React.Dispatch<React.SetStateAction<UnifiedFinanceData>>
-  >(setGlobalData);
+  >(handleSetGlobalData);
 
   const syncedSetGlobalData = useCallback(
     (action: React.SetStateAction<UnifiedFinanceData>) => {
@@ -134,8 +213,10 @@ const {
   const [activeTab, setActiveTab] = useState<TabType>("home");
   const [opsTab, setOpsTab] = useState<"bills" | "inflows" | "gigs">("bills");
   const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "sync">("general");
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [toastAction, setToastAction] = useState<{ label: string; onClick: () => void } | null>(null);
+  const [paymentHistory, setPaymentHistory] = useState<PaymentHistory>({ owner: null, undo: [], redo: [] });
+  const [toastAction, setToastAction] = useState<PaymentHistoryAction | null>(null);
   const [highlightOverdue, setHighlightOverdue] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormData>({});
@@ -212,111 +293,108 @@ const {
   );
 
   const [googleUser, setGoogleUser] = useState<any>(() => {
-    const saved = localStorage.getItem("ft_google_user");
-    const passcode = localStorage.getItem("ft_google_token");
-    if (saved && !passcode) {
-      localStorage.removeItem("ft_google_user");
+    const session = readAppSession();
+    if (session) return session.profile;
+    try {
+      const saved = localStorage.getItem("ft_google_user");
+      return saved && getLegacyToken() ? JSON.parse(saved) : null;
+    } catch {
       return null;
     }
-    return saved ? JSON.parse(saved) : null;
   });
+  const authRequestPending = useRef(false);
+  const [signInError, setSignInError] = useState("");
 
-  const handleGoogleSuccess = (credentialResponse: any) => {
+  const handleGoogleSuccess = async (response: { credential?: string }, reconnecting = false) => {
+    if (authRequestPending.current) return;
+    const currentSub = getFinanceSubject();
+    if (!response.credential) {
+      const message = "Google did not return a sign-in credential. Please try again.";
+      if (currentSub) showToast(message);
+      else setSignInError(message);
+      return;
+    }
+    if (reconnecting && !currentSub) return;
+    authRequestPending.current = true;
+    setSignInError("");
     try {
-      const credential = String(credentialResponse?.credential || "");
-
-      if (!credential) {
-        showToast("Google sign-in returned no credential");
-        return;
+      const session = await startAppSession(response.credential, currentSub ?? undefined);
+      const { profile } = session;
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+      localStorage.removeItem(LEGACY_TOKEN_KEY);
+      localStorage.removeItem("ft_google_user");
+      localStorage.setItem("ft_last_profile", JSON.stringify(profile));
+      if (dataOwnerSub !== profile.sub) {
+        setDataOwnerSub(profile.sub);
+        setGlobalData(safeLoadAll(profile.sub));
       }
-
-      const decoded: any = jwtDecode(credential);
-
-      setGoogleUser(decoded);
-      localStorage.setItem(
-        "ft_google_user",
-        JSON.stringify(decoded)
-      );
-
-      // Store the Google ID token for secure server-side sync
-      localStorage.setItem(
-        "ft_google_token",
-        credential
-      );
-      // Save profile for Meta-style Welcome Back screen
-      localStorage.setItem("ft_last_profile", JSON.stringify({ name: decoded.name, email: decoded.email, picture: decoded.picture }));
-
-      showToast(`Welcome, ${decoded.name || "User"}!`);
-    } catch {
-      showToast("Failed to decode Google token");
+      setGoogleUser(profile);
+      notifyAuthTokenChanged?.();
+      if (!currentSub) showToast(`Welcome, ${profile.name || "User"}!`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Sign-in failed. Please try again.";
+      if (getFinanceSubject()) showToast(message);
+      else setSignInError(message);
+    } finally {
+      authRequestPending.current = false;
     }
   };
 
-  const handleGoogleLogout = () => {
-    googleLogout();
-    setGoogleUser(null);
-    localStorage.removeItem("ft_google_user");
-    localStorage.removeItem("ft_google_token");
-    showToast("Signed out of Google");
+  const handleGoogleLogout = async () => {
+    if (authRequestPending.current) return;
+    authRequestPending.current = true;
+    try {
+      const session = readAppSession();
+      if (session) {
+        await endAppSession(session);
+        if (readAppSession()?.binding !== session.binding) return;
+      }
+      googleLogout();
+      localStorage.removeItem(LEGACY_TOKEN_KEY);
+      localStorage.removeItem("ft_google_user");
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      setGoogleUser(null);
+      setDataOwnerSub(null);
+      setGlobalData(INITIAL_UNIFIED_DATA);
+      notifyAuthTokenChanged?.();
+      showToast("Signed out");
+    } catch {
+      showToast("Could not sign out. Check your connection and try again.");
+    } finally {
+      authRequestPending.current = false;
+    }
   };
 
-  // Runs on every mount, even if already "logged in" (googleUser restored
-  // from localStorage) — with auto_select:true this silently refreshes the
-  // ID token in the background instead of only recovering reactively after
-  // a 401. Proactive refresh: re-arm this by remounting the prompt every
-  // 45 minutes so the ~1hr-lived token never gets a chance to fully expire.
-  useGoogleOneTapLogin({
-    onSuccess: handleGoogleSuccess,
-    onError: () => console.log("One Tap silent refresh failed"),
-    auto_select: true,
-  });
-
   React.useEffect(() => {
-    if (!googleUser) return;
-    const refreshInterval = setInterval(() => {
-      if ((window as any).google?.accounts?.id) {
-        (window as any).google.accounts.id.prompt();
-      }
-    }, 45 * 60 * 1000);
-    return () => clearInterval(refreshInterval);
-  }, [googleUser]);
-
-  // Prevents concurrent auth recovery attempts when multiple 401 responses
-  // dispatch auth-expired in rapid succession. Only the first attempt proceeds;
-  // duplicates are silently dropped. The guard is cleared once recovery resolves.
-  const authRefreshInProgressRef = useRef(false);
-
-  React.useEffect(() => {
-    const handleAuthExpired = () => {
-      // If a recovery is already in progress, silently ignore this duplicate event.
-      if (authRefreshInProgressRef.current) return;
-      authRefreshInProgressRef.current = true;
-
-      showToast("🔄 Session expired. Refreshing...");
-
-      // Remove both keys together so that a page refresh during recovery
-      // cannot land in the inconsistent state: ft_google_user present but
-      // ft_google_token absent (which forces the user to the login screen).
-      localStorage.removeItem("ft_google_token");
-      localStorage.removeItem("ft_google_user");
-
-      if ((window as any).google?.accounts?.id) {
-        (window as any).google.accounts.id.prompt((notification: any) => {
-          authRefreshInProgressRef.current = false;
-          if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
-            handleGoogleLogout();
-            showToast("⚠️ Session expired. Please sign in again.");
+    const handleStorageAuthChange = (e: StorageEvent) => {
+      if (e.key === LEGACY_TOKEN_KEY || e.key === SESSION_STORAGE_KEY || e.key === "ft_google_user" || e.key === null) {
+        const nextSub = getFinanceSubject();
+        if (!nextSub) {
+          setGoogleUser(null);
+          setDataOwnerSub(null);
+          setGlobalData(INITIAL_UNIFIED_DATA);
+        } else {
+          if (dataOwnerSub !== nextSub) {
+            setDataOwnerSub(nextSub);
+            setGlobalData(safeLoadAll(nextSub));
           }
-        });
-      } else {
-        authRefreshInProgressRef.current = false;
-        handleGoogleLogout();
+          const session = readAppSession();
+          const savedUser = localStorage.getItem("ft_google_user");
+          if (session) {
+            setGoogleUser(session.profile);
+          } else if (savedUser) {
+            try {
+              setGoogleUser(JSON.parse(savedUser));
+            } catch {
+              setGoogleUser({ sub: nextSub });
+            }
+          }
+        }
       }
     };
-
-    window.addEventListener("auth-expired", handleAuthExpired);
-    return () => window.removeEventListener("auth-expired", handleAuthExpired);
-  }, []);
+    window.addEventListener("storage", handleStorageAuthChange);
+    return () => window.removeEventListener("storage", handleStorageAuthChange);
+  }, [dataOwnerSub]);
 
 
 
@@ -334,45 +412,39 @@ const {
     setTimeout(() => setHighlightOverdue(false), 2500);
   };
 
-  const showToast = (msg: string, action?: { label: string; onClick: () => void }) => {
+  const showToast = (msg: string, action?: PaymentHistoryAction) => {
+    if (action && dataOwnerSub && dataOwnerSub === getFinanceSubject()) {
+      setPaymentHistory(previous => recordPaymentAction(previous, dataOwnerSub, action));
+    }
+    if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
     setToastMessage(msg);
     setToastAction(action || null);
-    setTimeout(() => { setToastMessage(null); setToastAction(null); }, action ? 4500 : 2500);
+    toastTimerRef.current = setTimeout(() => {
+      toastTimerRef.current = null;
+      setToastMessage(null);
+      setToastAction(null);
+    }, action ? 4500 : 2500);
   };
 
-
-  // ⚡ SILENT AUTO-MIGRATION FOR BASE WALLETS
-  React.useEffect(() => {
-    if (!globalData.settings?.hasMigratedBaseWallets) {
-      syncedSetGlobalData(prev => ({
-        ...migrateBaseWallets(prev),
-        updatedAt: Date.now()
-      }));
-      setTimeout(() => showToast("✨ Migrated base wallets to fully customizable accounts"), 1000);
-    }
-  }, [globalData.settings?.hasMigratedBaseWallets]);
-
-  // ⚡ SILENT AUTO-MIGRATION FOR OLD BILLS
-  React.useEffect(() => {
-    const needsMigration = globalData.library?.bills?.some(b => !b.wallet);
-    if (needsMigration) {
-      syncedSetGlobalData(prev => ({
-        ...migrateLegacyBills(prev),
-        updatedAt: Date.now()
-      }));
-      setTimeout(() => showToast("✨ Auto-migrated legacy bills to new wallet system"), 1000);
-    }
-  }, [globalData.library?.bills]);
+const removeReversedPayments = (ids: string[]) => {
+  setPaymentHistory(history => history.owner === dataOwnerSub ? {
+    ...history,
+    undo: history.undo.filter(action => !ids.includes(action.paymentId)),
+    redo: history.redo.filter(action => !ids.includes(action.paymentId)),
+  } : history);
+};
 
 const {
   addBill: handleAddBill,
   toggleBillStatus,
+  confirmPriorBillPayments,
   deleteBill
 } = useBillActions({
   globalData,
   setGlobalData: syncedSetGlobalData,
   selectedMonth,
-  showToast
+  showToast,
+  onPaymentsReversed: removeReversedPayments,
 });
 
 const {
@@ -380,7 +452,10 @@ const {
   toggleReceivableStatus,
   addPayment,
   deleteReceivable
-} = useReceivableActions({ globalData, setGlobalData: syncedSetGlobalData, selectedMonth, showToast });
+} = useReceivableActions({
+  globalData, setGlobalData: syncedSetGlobalData, selectedMonth, showToast,
+  onPaymentsReversed: removeReversedPayments,
+});
 
 const {
   addShoot: handleAddShoot,
@@ -425,15 +500,76 @@ const { saveShootEdit } = useShootSaveActions({
   const {
     isSyncing,
     isOnline,
+    syncNeedsSignIn,
     debugLog,
     setDebugLog,
     forceManualSync,
     pullLatestData,
     commitDataChange,
-    hasInitialSyncCompleted
-  } = useCloudSync(globalData, setGlobalData, showToast);
+    hasInitialSyncCompleted,
+    hasActiveConflict,
+    conflictState,
+    resolveConflict,
+    activeSub: syncActiveSub
+  } = useCloudSync(globalData, handleSetGlobalData, showToast);
 
   commitDataChangeRef.current = commitDataChange;
+
+  const activeTokenSub = getFinanceSubject();
+  const isAuth = Boolean(activeTokenSub);
+  const isDataOwnedByActiveSub = Boolean(
+    activeTokenSub &&
+    dataOwnerSub === activeTokenSub &&
+    (syncActiveSub === undefined || syncActiveSub === activeTokenSub)
+  );
+  const hasValidatedActiveConflict = Boolean(
+    isAuth &&
+    isDataOwnedByActiveSub &&
+    conflictState &&
+    (hasActiveConflict === undefined || hasActiveConflict === true) &&
+    isValidAppConflictState(conflictState)
+  );
+  const isAccountHydrated =
+    isAuth &&
+    isDataOwnedByActiveSub &&
+    hasInitialSyncCompleted &&
+    !hasValidatedActiveConflict;
+
+  React.useEffect(() => {
+    setPaymentHistory(history => history.owner === activeTokenSub || history.owner === null
+      ? history
+      : { owner: null, undo: [], redo: [] });
+  }, [activeTokenSub]);
+
+  const canUsePaymentHistory = isDataOwnedByActiveSub && !hasValidatedActiveConflict &&
+    paymentHistory.owner === activeTokenSub;
+  const undoPayment = canUsePaymentHistory ? paymentHistory.undo.at(-1) : undefined;
+  const redoPayment = canUsePaymentHistory ? paymentHistory.redo.at(-1) : undefined;
+  const runPaymentAction = (action: PaymentHistoryAction) => {
+    const current = action.label === "Undo" ? undoPayment : redoPayment;
+    if (current !== action || getFinanceSubject() !== activeTokenSub) return false;
+    action.onClick();
+    return true;
+  };
+
+  // ⚡ SILENT AUTO-MIGRATION FOR BASE WALLETS
+  React.useEffect(() => {
+    if (!isAccountHydrated) return;
+    if (!globalData.settings?.hasMigratedBaseWallets) {
+      syncedSetGlobalData(migrateBaseWallets);
+      setTimeout(() => showToast("✨ Migrated base wallets to fully customizable accounts"), 1000);
+    }
+  }, [isAccountHydrated, globalData.settings?.hasMigratedBaseWallets]);
+
+  // ⚡ SILENT AUTO-MIGRATION FOR OLD BILLS
+  React.useEffect(() => {
+    if (!isAccountHydrated) return;
+    const needsMigration = globalData.library?.bills?.some(b => b && !b.wallet && typeof b.name === "string");
+    if (needsMigration) {
+      syncedSetGlobalData(migrateLegacyBills);
+      setTimeout(() => showToast("✨ Auto-migrated legacy bills to new wallet system"), 1000);
+    }
+  }, [isAccountHydrated, globalData.library?.bills]);
 
   const {
     activeBills,
@@ -459,11 +595,11 @@ const { saveShootEdit } = useShootSaveActions({
 
   const walletDisplayLabels = useMemo(() => {
     const map: Record<string, string> = { ...(globalData?.settings?.walletLabels || {}) };
-    (globalData?.settings?.customWallets || []).forEach(w => {
+    [...(globalData?.settings?.archivedWallets ?? []), ...(globalData?.settings?.customWallets ?? [])].forEach(w => {
       map[w.id] = w.label;
     });
     return map;
-  }, [globalData?.settings?.walletLabels, globalData?.settings?.customWallets]);
+  }, [globalData?.settings?.walletLabels, globalData?.settings?.customWallets, globalData?.settings?.archivedWallets]);
 
   const dashboardGlobalData = useMemo(() => {
     if (!globalData?.settings) return globalData;
@@ -515,6 +651,11 @@ const { saveShootEdit } = useShootSaveActions({
       pullLatestData(false);
     },
     onTogglePrivacy: () => setIsPrivacyMode(prev => !prev),
+    onPaymentHistory: redo => {
+      const action = redo ? redoPayment : undoPayment;
+      return Boolean(action && !isEditing && !isModalOpen &&
+        !document.querySelector('[aria-modal="true"]') && runPaymentAction(action));
+    },
     onSelectTab: (tab) => setActiveTab(tab),
     onSelectOpsTab: (sub) => setOpsTab(sub),
     activeTab,
@@ -533,7 +674,27 @@ const { saveShootEdit } = useShootSaveActions({
     getAdjacentMonth(selectedMonth, 2)
   ], [selectedMonth]);
 
-  const isViewingCurrentMonth = selectedMonth === getMonthKey(new Date());
+  const currentMonth = getMonthKey(new Date());
+  const isViewingCurrentMonth = selectedMonth === currentMonth;
+  const upcomingBills = useMemo(() => {
+    return [currentMonth, getAdjacentMonth(currentMonth, 1)].flatMap(month => {
+      const date = parseMonthKey(month);
+      const log = globalData.logs[month];
+      return globalData.library.bills.flatMap(bill => {
+        const daysLeft = getDaysUntil(bill.dueDay, month);
+        if (daysLeft < 0 || daysLeft >= 7 || log?.billsPaid?.includes(bill.id)) return [];
+        if (bill.startMonth && date < parseMonthKey(bill.startMonth)) return [];
+        if (bill.type === "Loan / Installment" && bill.endMonth && date > parseMonthKey(bill.endMonth)) return [];
+        return [{
+          id: bill.id,
+          month,
+          name: bill.name,
+          daysLeft,
+          amount: getEffectiveBillAmount(bill.amount, log?.billOverrides?.[bill.id]),
+        }];
+      });
+    }).sort((a, b) => a.daysLeft - b.daysLeft);
+  }, [currentMonth, globalData.logs, globalData.library.bills]);
 
   const {
    handleExecutePaydaySplit,
@@ -588,40 +749,67 @@ const copySummaryToClipboard = async () => {
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const importSub = getFinanceSubject();
+    if (!importSub || importSub !== dataOwnerSub) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const parsed = JSON.parse(evt.target?.result as string);
-
-        if (
-          !parsed ||
-          typeof parsed !== "object" ||
-          !parsed.wallets ||
-          typeof parsed.wallets !== "object" ||
-          !parsed.library ||
-          typeof parsed.library !== "object" ||
-          !Array.isArray(parsed.library.bills) ||
-          !Array.isArray(parsed.library.receivables) ||
-          !Array.isArray(parsed.library.shoots) ||
-          !parsed.logs ||
-          typeof parsed.logs !== "object" ||
-          !parsed.settings ||
-          typeof parsed.settings !== "object"
-        ) {
+        if (getFinanceSubject() !== importSub) {
+          alert("The signed-in account changed. Select the backup again.");
+          return;
+        }
+        const parsed: unknown = JSON.parse(evt.target?.result as string);
+        if (!isValidFinanceBackup(parsed)) {
           alert("This file doesn't look like a valid backup.");
           return;
         }
 
-        if (confirm("Import this backup? It will replace current data.")) {
-          const importedData: UnifiedFinanceData = {
+        const preview = [
+          `Wallets: ${Object.keys(parsed.wallets).length}`,
+          `Commitments: ${parsed.library.bills.length}`,
+          `Inflows: ${parsed.library.receivables.length}`,
+          `Gigs: ${parsed.library.shoots.length}`,
+          `Months with records: ${Object.keys(parsed.logs).length}`,
+        ].join("\n");
+        if (confirm(`Import this backup? It will replace current data.\n\n${preview}`)) {
+          const importedData = migrateLegacyBills(migrateBaseWallets({
             ...parsed,
             updatedAt: (typeof parsed.updatedAt === "number" && Number.isFinite(parsed.updatedAt) && parsed.updatedAt >= 0)
               ? parsed.updatedAt
               : Date.now()
-          };
+          }));
 
-          syncedSetGlobalData(importedData);
-          showToast("Imported backup successfully");
+          let importError: string | undefined;
+          let applied = false;
+          // The sync commit evaluates this against its latest snapshot.
+          syncedSetGlobalData(current => {
+            if (getFinanceSubject() !== importSub) {
+              importError = "The signed-in account changed. Select the backup again.";
+              return current;
+            }
+
+            try {
+              const key = `ft_import_preimage_${importSub}`;
+              const recovery = JSON.stringify({
+                version: 2, sub: importSub, savedAt: Date.now(), snapshot: current, imported: importedData
+              });
+              localStorage.setItem(key, recovery);
+              if (localStorage.getItem(key) !== recovery) {
+                throw new Error("Import recovery snapshot could not be verified.");
+              }
+            } catch {
+              importError = "Import cancelled because the current data could not be backed up.";
+              return current;
+            }
+
+            applied = true;
+            return importedData;
+          });
+          if (importError) alert(importError);
+          if (applied) {
+            setPaymentHistory({ owner: null, undo: [], redo: [] });
+            showToast("Imported backup successfully");
+          }
         }
       } catch (err) {
         alert("Could not read that file.");
@@ -631,30 +819,95 @@ const copySummaryToClipboard = async () => {
     e.target.value = "";
   };
 
+  const restorePreImportBackup = () => {
+    const sub = getFinanceSubject();
+    if (!sub || sub !== dataOwnerSub) return;
+    if (hasActiveConflict) {
+      alert("Resolve the active sync conflict before restoring an import backup.");
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(`ft_import_preimage_${sub}`);
+      const recovery = raw ? JSON.parse(raw) : null;
+      if (recovery?.version !== 2 || recovery.sub !== sub ||
+        !isValidFinanceBackup(recovery.snapshot) || !isValidFinanceBackup(recovery.imported)) {
+        alert("No verified pre-import backup is available for this account.");
+        return;
+      }
+      if (!confirm("Restore the data saved before the last import? Restore will stop if the current data has changed.")) return;
+
+      const snapshot = recovery.snapshot;
+      const imported = recovery.imported;
+      const comparable = (data: UnifiedFinanceData) => JSON.stringify({ ...data, updatedAt: undefined });
+      let restored = false;
+      syncedSetGlobalData(current => {
+        if (getFinanceSubject() !== sub ||
+          localStorage.getItem(`ft_import_preimage_${sub}`) !== raw ||
+          comparable(current) !== comparable(imported)) return current;
+        restored = true;
+        return snapshot;
+      });
+      if (restored) {
+        setPaymentHistory({ owner: null, undo: [], redo: [] });
+        showToast("Pre-import data restored locally.");
+      } else {
+        alert("Restore cancelled because the account, backup, or current data changed.");
+      }
+    } catch {
+      alert("Could not read the pre-import backup.");
+    }
+  };
+
   // --- WHITE-LABEL AUTH GATE ---
-  // If they don't have a Google session AND they haven't used the Dev Mode passcode backdoor,
-  // trap them on the Landing Page.
-  const isAuth = !!googleUser || !!getLocalPasscode();
+  // If they don't have a valid Google JWT subject session, trap them on the Landing Page.
   if (!isAuth) {
-    return <LandingPage onGoogleSuccess={handleGoogleSuccess} />;
+    return <LandingPage onGoogleSuccess={handleGoogleSuccess} signInError={signInError} />;
   }
 
   // --- CLOUD HYDRATION & ONBOARDING GATE ---
-  // If the user has no existing local data, wait for the initial cloud sync to settle
-  // before determining whether they need onboarding.
-  const returning = isReturningUser(globalData);
-  if (!returning && !hasInitialSyncCompleted) {
+  // Never render finance UI unless displayed data belongs to the active subject.
+  // If the user has no existing local data for this subject, wait for the initial cloud sync
+  // to settle before determining whether they need onboarding, unless a validated conflict
+  // belonging to the active subject requires immediate recovery UI access.
+  const reconnectNotice = syncNeedsSignIn ? (
+    <section aria-label="Cloud sync paused" className="dashboard-material flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+      <div role="status" className="text-sm text-primary">
+        <p className="font-semibold">Cloud sync paused</p>
+        <p className="text-xs text-muted">Reconnect your Google account to sync your local changes.</p>
+      </div>
+      <div className="google-sign-in-frame">
+        <GoogleLogin
+          onSuccess={(response) => handleGoogleSuccess(response, true)}
+          onError={() => showToast("Google sign-in failed. Cloud sync is still paused.")}
+          theme="filled_black"
+          shape="pill"
+          size="medium"
+        />
+      </div>
+    </section>
+  ) : null;
+  const returning = isDataOwnedByActiveSub && isReturningUser(globalData);
+  if (
+    !isDataOwnedByActiveSub ||
+    (!returning && (syncNeedsSignIn || !hasInitialSyncCompleted) && !hasValidatedActiveConflict)
+  ) {
     return (
       <div className="min-h-screen bg-shell flex flex-col items-center justify-center p-6 text-text-secondary font-sans">
-        <div className="flex flex-col items-center gap-3">
-          <RefreshCw size={24} className="animate-spin text-blue-400" />
-          <p className="text-xs text-muted font-medium">Checking for existing cloud data...</p>
-        </div>
+        {reconnectNotice ?? (
+          <div className="flex flex-col items-center gap-3">
+            <RefreshCw size={24} className="animate-spin text-blue-400" />
+            <p className="text-xs text-muted font-medium">Checking for existing cloud data...</p>
+          </div>
+        )}
       </div>
     );
   }
 
-  if (shouldShowOnboarding({ globalData, isAuth, hasInitialSyncCompleted })) {
+  if (
+    !hasValidatedActiveConflict &&
+    shouldShowOnboarding({ globalData, isAuth, hasInitialSyncCompleted })
+  ) {
     return (
       <OnboardingWizard
         globalData={globalData}
@@ -679,13 +932,13 @@ const copySummaryToClipboard = async () => {
       )}
 
       {toastMessage && (
-        <div className="fixed top-12 right-6 z-50 flex items-center gap-2 bg-surface-high text-strong text-xs px-4 py-2.5 rounded-xl border border-inverse/10 shadow-2xl animate-fade-in">
+        <div className="fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 flex items-center gap-2 bg-surface-high sm:inset-x-auto sm:bottom-auto sm:right-6 sm:top-12 text-strong text-xs px-4 py-2.5 rounded-xl border border-inverse/10 shadow-2xl animate-fade-in">
           <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
-          {toastAction && (
+          {toastAction && (toastAction === undoPayment || toastAction === redoPayment) && (
             <button
-              onClick={() => { toastAction.onClick(); setToastMessage(null); setToastAction(null); }}
-              className="ml-1 px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-blue-300 font-semibold transition"
+              onClick={() => runPaymentAction(toastAction)}
+              className="ml-1 px-2 py-0.5 rounded-lg chip-blue hover:brightness-95 font-semibold transition"
             >
               {toastAction.label}
             </button>
@@ -694,9 +947,10 @@ const copySummaryToClipboard = async () => {
       )}
 
       <div className="w-full max-w-[860px] space-y-4">
+        {reconnectNotice}
         {cashShortfall > 0 && (
-          <div className="bg-orange-950/25 border border-orange-800/40 text-orange-300 text-xs rounded-2xl px-4 py-3 flex items-center gap-2.5 shadow-lg leading-relaxed">
-            <AlertTriangle size={14} className="shrink-0 text-orange-400" />
+          <div className="warning-material text-xs rounded-2xl px-4 py-3 flex items-center gap-2.5 leading-relaxed">
+            <AlertTriangle size={14} className="shrink-0" />
             <span>Liquid cash is <strong className="font-mono font-semibold">₱{cashShortfall.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> short of covering unpaid commitments{overdueBills.length > 0 ? ` (including ${overdueBills.length} overdue)` : ""}.</span>
           </div>
         )}
@@ -704,9 +958,11 @@ const copySummaryToClipboard = async () => {
         <div className="flex flex-col gap-3.5 pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl font-bold tracking-tight text-strong">Dashboard</h1>
-              <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium no-privacy-blur transition-all ${!isOnline ? "chip-amber" : isSyncing ? "chip-blue" : "chip-emerald"}`}>
-                {!isOnline ? <><WifiOff size={10} className="text-amber-400" /><span>Offline</span></> : isSyncing ? <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" /><span>Syncing...</span></> : <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span>Live</span></>}
+              <h1 className="text-2xl font-bold tracking-tight text-strong">
+                {{ home: "Dashboard", operations: "Plan", wallets: "Wallets", expenses: "Expenses", account: "Account" }[activeTab]}
+              </h1>
+              <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium no-privacy-blur transition-all ${!isOnline || syncNeedsSignIn ? "chip-amber" : isSyncing ? "chip-blue" : "chip-emerald"}`}>
+                {!isOnline ? <><WifiOff size={10} className="text-amber-400" /><span>Offline</span></> : syncNeedsSignIn ? <span>Sync paused</span> : isSyncing ? <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" /><span>Syncing...</span></> : <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span>Live</span></>}
               </div>
             </div>
 
@@ -739,7 +995,7 @@ const copySummaryToClipboard = async () => {
                 <button onClick={() => pullLatestData(false)} className="h-7 w-7 rounded-lg bg-fill/80 hover:bg-fill-strong border border-strong hover:border-emerald-500/50 flex items-center justify-center text-muted hover:text-emerald-400 transition shadow-sm" title="Pull Data (R)"><RefreshCw size={12} className={isSyncing ? "animate-spin text-emerald-400" : ""} /></button>
               </div>
               <button onClick={() => pullLatestData(false)} aria-label="Refresh Data" className="md:hidden h-8 w-8 rounded-full border border-strong bg-fill/80 hover:bg-fill-strong flex items-center justify-center text-muted hover:text-emerald-400 transition shadow-sm" title="Refresh Data"><RefreshCw size={13} className={isSyncing ? "animate-spin text-emerald-400" : ""} /></button>
-              <button onClick={() => setIsPrivacyMode(prev => !prev)} aria-label={isPrivacyMode ? "Show Balances" : "Hide Balances"} className={`h-8 w-8 rounded-full border flex items-center justify-center transition shadow-sm ${isPrivacyMode ? "bg-amber-500/20 border-amber-500/60 text-amber-300" : "bg-fill/80 hover:bg-fill-strong border-strong text-muted hover:text-primary"}`}>
+              <button onClick={() => setIsPrivacyMode(prev => !prev)} aria-label={isPrivacyMode ? "Show Balances" : "Hide Balances"} className={`h-8 w-8 rounded-full border flex items-center justify-center transition shadow-sm ${isPrivacyMode ? "chip-amber" : "bg-fill/80 hover:bg-fill-strong border-strong text-muted hover:text-primary"}`}>
                 {isPrivacyMode ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
               <button
@@ -755,6 +1011,7 @@ const copySummaryToClipboard = async () => {
                   </span>
                 )}
               </button>
+              <PaymentHistoryMenu undo={undoPayment} redo={redoPayment} isPrivate={isPrivacyMode} onSelect={runPaymentAction} />
             </div>
           </div>
 
@@ -767,28 +1024,78 @@ const copySummaryToClipboard = async () => {
                 <option value="CUSTOM_DATE_JUMP" className="bg-surface-modal font-semibold text-blue-400">Select Month...</option>
               </select>
             </div>
-            <button onClick={() => setShowAnalyticsModal(true)} className="flex items-center gap-1.5 bg-surface-elevated border border-amber-500/30 hover:border-amber-400/60 text-amber-300 px-3 py-1.5 rounded-xl text-xs shadow-md transition font-medium"><Sparkles size={13} className="text-amber-400" /><span>Runway</span></button>
-            <button onClick={() => setShowYearlyModal(true)} className="flex items-center gap-1.5 bg-surface-elevated border border-emerald-500/30 hover:border-emerald-400/60 text-emerald-300 px-3 py-1.5 rounded-xl text-xs shadow-md transition font-medium"><BarChart2 size={13} className="text-emerald-400" /><span>Yearly</span></button>
+            <button onClick={() => setShowAnalyticsModal(true)} className="flex items-center gap-1.5 warning-material hover:brightness-95 px-3 py-1.5 rounded-xl text-xs transition font-medium"><Sparkles size={13} /><span>Runway</span></button>
+            <button onClick={() => setShowYearlyModal(true)} className="flex items-center gap-1.5 dashboard-material text-positive hover:border-default px-3 py-1.5 rounded-xl text-xs transition font-medium"><BarChart2 size={13} /><span>Yearly</span></button>
           </div>
         </div>
 
-        <DateJumpModal isOpen={showDatePickerModal} onClose={() => setShowDatePickerModal(false)} onJump={(m) => { setSelectedMonth(m); setShowDatePickerModal(false); }} selectedMonth={selectedMonth} />
-        <YearlyOverviewModal isOpen={showYearlyModal} onClose={() => setShowYearlyModal(false)} globalData={globalData} selectedYear={selectedMonth.split(" ")[1] || "2026"} />
-        <SettingsModal onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} onClose={() => setShowSettingsModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
-        <GoalSetupModal isOpen={showGoalSetupModal} onClose={() => setShowGoalSetupModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} />
-        <HistoricalLedgerModal isOpen={showLedgerModal} onClose={() => setShowLedgerModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />
-        <TransactionHistoryModal
-          isOpen={showTransactionHistoryModal}
-          onClose={() => setShowTransactionHistoryModal(false)}
-          transactions={allTransactions}
-          walletLabels={walletDisplayLabels}
-          formatDateTime={formatDateTime}
-          onOpenManualLedger={() => {
-            setShowTransactionHistoryModal(false);
-            setShowLedgerModal(true);
-          }}
+        {showDatePickerModal && (
+          <ErrorBoundary>
+            <Suspense fallback={deferredModalFallback}>
+              <DateJumpModal isOpen={showDatePickerModal} onClose={() => setShowDatePickerModal(false)} onJump={(m) => { setSelectedMonth(m); setShowDatePickerModal(false); }} selectedMonth={selectedMonth} />
+            </Suspense>
+          </ErrorBoundary>
+        )}
+        {showYearlyModal && (
+          <ErrorBoundary>
+            <Suspense fallback={deferredModalFallback}>
+              <YearlyOverviewModal isOpen={showYearlyModal} onClose={() => setShowYearlyModal(false)} globalData={globalData} selectedYear={selectedMonth.split(" ")[1] || "2026"} />
+            </Suspense>
+          </ErrorBoundary>
+        )}
+        <SyncConflictModal
+          isOpen={hasValidatedActiveConflict}
+          localSnapshot={conflictState?.localSnapshot}
+          cloudSnapshot={conflictState?.cloudSnapshot}
+          cloudRevision={conflictState?.cloudRevision}
+          onKeepLocal={() => resolveConflict("local")}
+          onKeepCloud={() => resolveConflict("cloud")}
         />
-        <FinancialAnalyticsModal isOpen={showAnalyticsModal} onClose={() => setShowAnalyticsModal(false)} globalData={globalData} selectedMonth={selectedMonth} totalLiquid={totalLiquid} totalUnpaidCommitments={totalUnpaidCommitments} />
+        {showSettingsModal && (
+          <ErrorBoundary>
+            <Suspense fallback={deferredModalFallback}>
+              <SettingsModal onRestoreImportBackup={restorePreImportBackup} onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} onClose={() => setShowSettingsModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
+            </Suspense>
+          </ErrorBoundary>
+        )}
+        {showGoalSetupModal && (
+          <ErrorBoundary>
+            <Suspense fallback={deferredModalFallback}>
+              <GoalSetupModal isOpen={showGoalSetupModal} onClose={() => setShowGoalSetupModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} />
+            </Suspense>
+          </ErrorBoundary>
+        )}
+        {showLedgerModal && (
+          <ErrorBoundary>
+            <Suspense fallback={deferredModalFallback}>
+              <HistoricalLedgerModal isOpen={showLedgerModal} onClose={() => setShowLedgerModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />
+            </Suspense>
+          </ErrorBoundary>
+        )}
+        {showTransactionHistoryModal && (
+          <ErrorBoundary>
+            <Suspense fallback={deferredModalFallback}>
+              <TransactionHistoryModal
+                isOpen={showTransactionHistoryModal}
+                onClose={() => setShowTransactionHistoryModal(false)}
+                transactions={allTransactions}
+                walletLabels={walletDisplayLabels}
+                formatDateTime={formatDateTime}
+                onOpenManualLedger={() => {
+                  setShowTransactionHistoryModal(false);
+                  setShowLedgerModal(true);
+                }}
+              />
+            </Suspense>
+          </ErrorBoundary>
+        )}
+        {showAnalyticsModal && (
+          <ErrorBoundary>
+            <Suspense fallback={deferredModalFallback}>
+              <FinancialAnalyticsModal isOpen={showAnalyticsModal} onClose={() => setShowAnalyticsModal(false)} globalData={globalData} selectedMonth={selectedMonth} totalLiquid={totalLiquid} totalUnpaidCommitments={totalUnpaidCommitments} />
+            </Suspense>
+          </ErrorBoundary>
+        )}
         <NotificationModal
           isOpen={showNotificationModal}
           onClose={() => setShowNotificationModal(false)}
@@ -840,11 +1147,14 @@ const copySummaryToClipboard = async () => {
           <OperationsTab
             opsTab={opsTab}
             setOpsTab={setOpsTab}
+            upcomingBills={upcomingBills}
+            onSelectMonth={setSelectedMonth}
             activeBills={activeBills}
             activeReceivables={activeReceivables}
             activeShoots={activeShoots}
             selectedMonth={selectedMonth}
             onToggleBillStatus={toggleBillStatus}
+            onConfirmPriorBillPayments={confirmPriorBillPayments}
             onAddBill={handleAddBill}
             onDeleteBill={deleteBill}
             onSaveBillEdit={(_, scope) => saveBillEdit(scope)}
@@ -873,7 +1183,13 @@ const copySummaryToClipboard = async () => {
         )}
 
         {activeTab === "wallets" && <WalletsTab globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} />}
-        {activeTab === "expenses" && <ExpensesTab globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />}
+        {activeTab === "expenses" && (
+          <ErrorBoundary>
+            <Suspense fallback={<p role="status" className="p-4 text-sm text-muted">Loading expenses…</p>}>
+              <ExpensesTab selectedMonth={selectedMonth} globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />
+            </Suspense>
+          </ErrorBoundary>
+        )}
 
         {activeTab === "account" && (
           <AccountTab

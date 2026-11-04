@@ -25,7 +25,6 @@ const activeBills = useMemo<BillViewModel[]>(() => {
     return globalData.library.bills.filter(b => {
       const start = parseMonthKey(b.startMonth || fallbackStartMonth);
       if (currentMonthDate < start) return false;
-      if (b.type === "Loan / Installment" && b.endMonth && currentMonthDate > parseMonthKey(b.endMonth)) return false;
       return true;
     }).map(b => {
       let oldestUnpaid: string | null = null;
@@ -33,10 +32,9 @@ const activeBills = useMemo<BillViewModel[]>(() => {
       let paidLoanInstallments = 0;
 
       const startMonth = b.startMonth || fallbackStartMonth;
-      const monthsToCheck = getMonthRange(
-        startMonth,
-        selectedMonth
-      );
+      const endMonth = b.type === "Loan / Installment" ? b.endMonth : undefined;
+      const lastMonth = endMonth && currentMonthDate > parseMonthKey(endMonth) ? endMonth : selectedMonth;
+      const monthsToCheck = getMonthRange(startMonth, lastMonth);
 
       for (const monthKey of monthsToCheck) {
         if (
@@ -52,11 +50,12 @@ const activeBills = useMemo<BillViewModel[]>(() => {
         if (!isPaid) {
           if (!oldestUnpaid) oldestUnpaid = monthKey;
         } else if (b.type === "Loan / Installment") {
+          const settlements = globalData.logs?.[monthKey]?.billSettlements?.[b.id];
+          const settlement = settlements?.[settlements.length - 1];
           const override = globalData.logs?.[monthKey]?.billOverrides?.[b.id];
           totalLoanPaid +=
-            override !== undefined && Number.isFinite(override)
-              ? override
-              : b.amount;
+            settlement && !settlement.reversedAt ? settlement.amount :
+              override !== undefined && Number.isFinite(override) ? override : b.amount;
           paidLoanInstallments += 1;
         }
       }
@@ -83,7 +82,8 @@ const effectiveAmount = getEffectiveBillAmount(
         totalLoanPaid,
         paidLoanInstallments
       };
-    }).sort((a, b) => {
+    }).filter(b => !(b.paid && b.type === "Loan / Installment" && b.endMonth &&
+      currentMonthDate > parseMonthKey(b.endMonth))).sort((a, b) => {
       if (a.paid !== b.paid) return a.paid ? 1 : -1;
       if (a.daysLeft !== b.daysLeft) return a.daysLeft - b.daysLeft;
       const dayA = parseInt(a.dueDay, 10) || 99;
@@ -141,6 +141,13 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
 
   return {
         ...r,
+        paydayReceived: (globalData.logs?.[targetMonthForDue]?.receivableSettlements?.[r.id] ?? [])
+          .reduce<Record<number, number>>((totals, receipt) => {
+            if (!receipt.reversedAt && receipt.paydayDay !== undefined) {
+              totals[receipt.paydayDay] = (totals[receipt.paydayDay] ?? 0) + receipt.amount;
+            }
+            return totals;
+          }, {}),
         amountReceived,
         collected: isCollected,
         targetMonthForDue

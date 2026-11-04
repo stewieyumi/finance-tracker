@@ -1,3 +1,4 @@
+import { isValidTwiceMonthlySchedule } from "../utils/dateHelpers";
 import {
   EditFormData,
   Receivable,
@@ -22,6 +23,11 @@ export function useReceivableSaveActions({
 }: UseReceivableSaveActionsParams) {
   const saveReceivableEdit = () => {
     if (!editingId) return;
+    if (editForm.frequency === "Bi-monthly" && editForm.biMonthlyDays &&
+      !isValidTwiceMonthlySchedule(editForm.biMonthlyDays)) {
+      showToast("Choose two different days for a twice-monthly inflow.");
+      return;
+    }
 
     const inputAmount =
       editForm.grossAmount !== undefined

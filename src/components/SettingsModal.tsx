@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Settings, Briefcase, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2, CalendarPlus } from "lucide-react";
+import { X, Settings, Briefcase, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2, CalendarPlus, Search, Wallet, ChevronRight } from "lucide-react";
 import { Deduction, DeductionType, UnifiedFinanceData } from "../types/finance";
 import { migrateLegacyBills } from "../utils/financeMigrations";
 import { Modal } from "./ui/Modal";
@@ -15,9 +15,39 @@ import { generateId } from "../utils/idHelpers";
 import { exportPaydaysToCalendar } from "../utils/calendarExport";
 import { applyTheme, ThemeMode } from "../hooks/useTheme";
 
+const SETTINGS_SECTIONS = {
+  general: {
+    label: "General", icon: Settings, color: "bg-neutral-500",
+    description: "Personalize your appearance and dashboard labels.",
+    keywords: "appearance theme dark light system terminology employee",
+  },
+  baselines: {
+    label: "Payday", icon: Banknote, color: "bg-emerald-700",
+    description: "Set your salary, deductions, and pay dates.",
+    keywords: "salary deductions pay dates schedule calendar income tax baselines",
+  },
+  wallets: {
+    label: "Wallet Defaults", icon: Wallet, color: "bg-blue-700",
+    description: "Choose which wallets handle payments and allocations.",
+    keywords: "bill payments expenses routing savings transit living allowance",
+  },
+  sync: {
+    label: "Cloud Sync", icon: Cloud, color: "bg-violet-700",
+    description: "Manage sync, backups, and recovery.",
+    keywords: "backup import export restore recovery network diagnostics scanner migration",
+  },
+} as const;
+
+type SettingsSection = keyof typeof SETTINGS_SECTIONS;
+const sectionKeys = Object.keys(SETTINGS_SECTIONS) as SettingsSection[];
+
+const settingsGroup = "overflow-hidden rounded-2xl bg-surface divide-y divide-subtle";
+const settingsRow = "flex min-h-12 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3";
+const settingsAction = `${settingsRow} w-full text-left text-sm font-medium text-primary transition hover:bg-fill focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500`;
+
 interface SettingsModalProps {
   isOpen: boolean;
-  initialTab?: "general" | "baselines" | "sync";
+  initialTab?: SettingsSection;
   onClose: () => void;
   globalData: UnifiedFinanceData;
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
@@ -27,6 +57,7 @@ interface SettingsModalProps {
   onForcePull: () => void | Promise<void>;
   onExport: () => void;
   onImportClick: () => void;
+  onRestoreImportBackup?: () => void;
 }
 
 const PRESETS = {
@@ -51,11 +82,22 @@ const formatOrdinal = (n: number) => {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab = "general", onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull, onExport, onImportClick }) => {
-  const [activeTab, setActiveTab] = useState<"general"|"baselines"|"wallets"|"sync">(initialTab);
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab = "general", onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull, onExport, onImportClick, onRestoreImportBackup }) => {
+  const [activeTab, setActiveTab] = useState<SettingsSection>(initialTab);
+  const [sectionSearch, setSectionSearch] = useState("");
+  const searchWords = sectionSearch.trim().toLowerCase().split(/\s+/);
+  const matchingSections = sectionKeys.filter(key => {
+    const { label, keywords } = SETTINGS_SECTIONS[key];
+    return searchWords.every(word => `${label} ${keywords}`.toLowerCase().includes(word));
+  });
+  const activeSection = SETTINGS_SECTIONS[activeTab];
+  const SectionIcon = activeSection.icon;
 
   useEffect(() => {
-    if (isOpen) setActiveTab(initialTab);
+    if (isOpen) {
+      setActiveTab(initialTab);
+      setSectionSearch("");
+    }
   }, [isOpen, initialTab]);
   const [form, setForm] = useState(() =>
     createSettingsForm(globalData.settings, globalData.wallets, {
@@ -179,10 +221,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
 
   const handleMigrateWallets = () => {
     if (confirm("Permanently lock all old bills to their automatically assigned wallets (using the old routing rules)?")) {
-      setGlobalData(prev => ({
-        ...migrateLegacyBills(prev),
-        updatedAt: Date.now()
-      }));
+      setGlobalData(migrateLegacyBills);
       alert("Migration complete! All old bills are securely linked.");
     }
   };
@@ -202,11 +241,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
       variant="floating"
       ariaLabel="App Settings"
     >
-      <div className="bg-surface-elevated border border-inverse/[0.08] rounded-3xl p-6 w-full max-w-lg shadow-2xl">
-        <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06] mb-4">
+      <div className="flex max-h-[88dvh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-default bg-surface-low shadow-2xl">
+        <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-3 pt-4 sm:px-6 sm:pt-5">
           <div className="flex items-center gap-2">
             <Settings size={18} className="text-secondary" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-strong">App Settings</h3>
+            <h3 className="text-lg font-bold tracking-tight text-strong">App Settings</h3>
           </div>
           <button
             onClick={handleCancel}
@@ -218,41 +257,121 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
           </button>
         </div>
 
-        <div className="flex gap-4 border-b border-inverse/[0.06] mb-5 overflow-x-auto whitespace-nowrap hide-scrollbar">
-          <button onClick={() => setActiveTab("general")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'general' ? 'text-strong border-b-2 border-blue-500' : 'text-faint hover:text-secondary'}`}>General</button>
-          <button onClick={() => setActiveTab("baselines")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'baselines' ? 'text-strong border-b-2 border-purple-500' : 'text-faint hover:text-secondary'}`}>Flow & Baselines</button>
-          
-          <button onClick={() => setActiveTab("sync")} className={`pb-2 text-xs font-semibold uppercase tracking-wide transition ${activeTab === 'sync' ? 'text-strong border-b-2 border-amber-500' : 'text-faint hover:text-secondary'}`}>Cloud Sync</button>
-        </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-2 px-2 pb-2 min-[480px]:flex-row">
+          <nav aria-label="Settings sections" className="shrink-0 rounded-2xl border border-default bg-surface-low px-2 py-2 min-[480px]:w-[34%] min-[480px]:max-w-56 min-[480px]:overflow-y-auto">
+            <label className="flex min-h-9 items-center gap-2 rounded-xl bg-fill px-3 text-muted focus-within:ring-2 focus-within:ring-blue-500">
+              <Search size={15} aria-hidden="true" />
+              <input
+                type="search"
+                aria-label="Search settings"
+                placeholder="Search"
+                value={sectionSearch}
+                onChange={event => setSectionSearch(event.target.value)}
+                className="min-w-0 w-full bg-transparent text-sm text-primary outline-none placeholder:text-muted"
+              />
+            </label>
+            <div className="mt-2 grid grid-cols-2 gap-0.5 min-[480px]:grid-cols-1">
+              {matchingSections.map(tab => {
+                const { label, color, icon: Icon } = SETTINGS_SECTIONS[tab];
+                const selected = activeTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => {
+                      setActiveTab(tab);
+                      setSectionSearch("");
+                    }}
+                    className={`flex min-h-10 items-center gap-2 rounded-lg px-2 text-left text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 md:text-sm ${selected ? "bg-[var(--bg-selection)] text-white" : "text-primary hover:bg-fill-strong"}`}
+                  >
+                    <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-md text-white ${color}`}>
+                      <Icon size={14} aria-hidden="true" />
+                    </span>
+                    <span className="flex-1">{label}</span>
+                    <ChevronRight size={13} aria-hidden="true" className="hidden shrink-0 opacity-60 min-[480px]:block" />
+                  </button>
+                );
+              })}
+            </div>
+            {matchingSections.length === 0 && (
+              <p role="status" className="px-2 py-2 text-xs text-muted">No matching settings.</p>
+            )}
+          </nav>
 
-        <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-1">
-          {activeTab === "general" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-amber-400 uppercase tracking-wider"><Briefcase size={14} /> Dashboard Terminology</div>
-                <div className="flex gap-2">
-                  {(Object.keys(PRESETS) as Array<keyof typeof PRESETS>).map(k => (
-                    <button key={k} onClick={() => applyPreset(k)} className="flex-1 bg-inverse/[0.03] hover:bg-inverse/[0.08] border border-inverse/[0.05] py-2 px-1 rounded-lg text-[10px] text-secondary transition focus:bg-amber-500/20 focus:text-amber-300 focus:border-amber-500/40">{PRESETS[k].label}</button>
-                  ))}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div key={activeTab} className="min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-2 sm:px-5">
+              <header className="flex items-center gap-3 rounded-2xl bg-surface p-3">
+                <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white ${activeSection.color}`}>
+                  <SectionIcon size={22} aria-hidden="true" />
+                </span>
+                <div>
+                  <h4 className="text-base font-semibold tracking-tight text-strong">{activeSection.label}</h4>
+                  <p className="text-xs leading-relaxed text-muted">{activeSection.description}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div><label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Receivables Title</label><input type="text" value={form.inflowsLabel} onChange={e => setForm({...form, inflowsLabel: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-amber-500" /></div>
-                  <div><label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Gigs/Tasks Title</label><input type="text" value={form.gigsLabel} onChange={e => setForm({...form, gigsLabel: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-amber-500" /></div>
+              </header>
+          {activeTab === "general" && (
+            <div className="space-y-5">
+              <div className={settingsGroup}>
+                <div className={settingsRow}>
+                  <span className="text-sm font-medium text-primary">Appearance</span>
+                  <div className="flex max-w-full gap-1 rounded-xl bg-fill p-1">
+                    {(["dark", "light", "system"] as const).map(opt => (
+                      <button
+                        key={opt}
+                        type="button"
+                        aria-pressed={form.theme === opt}
+                        onClick={() => setForm(prev => ({ ...prev, theme: opt }))}
+                        className={`min-h-9 rounded-lg px-3 text-xs font-semibold capitalize transition ${form.theme === opt ? "bg-blue-600 text-white" : "text-muted hover:text-primary"}`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
+
+              <section aria-labelledby="settings-terminology">
+                <h5 id="settings-terminology" className="mb-2 flex items-center gap-2 px-1 text-xs font-semibold text-muted">
+                  <Briefcase size={14} /> Dashboard terminology
+                </h5>
+                <div className={settingsGroup}>
+                  <div className={settingsRow}>
+                    <span className="text-sm font-medium text-primary">Preset</span>
+                    <div className="grid min-w-0 flex-1 grid-cols-2 gap-1">
+                      {(Object.keys(PRESETS) as Array<keyof typeof PRESETS>).map(key => (
+                        <button key={key} type="button" onClick={() => applyPreset(key)}
+                          className="min-h-10 rounded-lg bg-fill px-2 py-1 text-xs text-secondary hover:bg-fill-strong">
+                          {PRESETS[key].label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {([
+                    ["inflowsLabel", "Receivables Title"],
+                    ["gigsLabel", "Gigs/Tasks Title"],
+                  ] as const).map(([key, label]) => (
+                    <label key={key} className={settingsRow}>
+                      <span className="text-sm font-medium text-primary">{label}</span>
+                      <input type="text" value={form[key]} onChange={event => setForm({ ...form, [key]: event.target.value })}
+                        className="min-w-0 flex-1 rounded-lg border border-strong bg-surface-input px-3 py-2 text-xs text-primary focus-visible:outline focus-visible:outline-blue-500" />
+                    </label>
+                  ))}
+                </div>
+              </section>
             </div>
           )}
 
           {activeTab === "baselines" && (
             <div className="space-y-5 animate-in fade-in duration-200">
-              <div className="text-xs text-muted mb-2">Configure the default amounts injected into your wallets during the 15th/30th Payday Distribution. (Note: These scale down safely if your bills consume too much of your paycheck).</div>
+              <div className="text-xs text-muted mb-2">Configure the default amounts injected into your wallets on your configured payday schedule. (Note: These scale down safely if your bills consume too much of your paycheck).</div>
               
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-purple-400 uppercase tracking-wider">
                   <Banknote size={14} /> Payday Salary & Deductions
                 </div>
 
-                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 space-y-4">
+                <div className="bg-surface-sunken border border-subtle rounded-2xl p-4 space-y-4">
                   <div>
                     <label
                       htmlFor="gross-salary-input"
@@ -292,7 +411,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                     </div>
 
                     {form.salaryDeductions.length === 0 ? (
-                      <div className="text-[11px] text-faint py-2.5 px-3 rounded-xl bg-surface-lowest border border-inverse/[0.05]">
+                      <div className="text-[11px] text-faint py-2.5 px-3 rounded-xl bg-surface-lowest border border-subtle">
                         No deductions configured. Net equals gross.
                       </div>
                     ) : (
@@ -301,7 +420,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                           <div
                             key={deduction.id}
                             data-testid={`deduction-row-${deduction.id}`}
-                            className="flex items-center gap-2 bg-surface-lowest p-2 rounded-xl border border-inverse/[0.05]"
+                            className="flex items-center gap-2 bg-surface-lowest p-2 rounded-xl border border-subtle"
                           >
                             <input
                               type="text"
@@ -357,8 +476,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                     )}
                   </div>
 
-                  <div className="pt-2 border-t border-inverse/[0.05]">
-                    <div className="bg-surface-lowest border border-inverse/[0.05] rounded-xl p-3 grid grid-cols-3 gap-2 text-center">
+                  <div className="pt-2 border-t border-subtle">
+                    <div className="bg-surface-lowest border border-subtle rounded-xl p-3 grid grid-cols-3 gap-2 text-center">
                       <div>
                         <div className="text-[10px] text-faint uppercase font-semibold">
                           Gross
@@ -418,115 +537,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-purple-400 uppercase tracking-wider"><ArrowRightLeft size={14} /> Routing Rules</div>
-                
-                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Living Allowance (₱)</label>
-                    <input type="number" value={form.baseLivingAllowance} onChange={e => setForm({...form, baseLivingAllowance: Number(e.target.value)})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-purple-500" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Routes To</label>
-                    <select value={form.livingWallet} onChange={e => setForm({...form, livingWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
-                      <WalletSelectOptions />
-                    </select>
-                  </div>
-                </div>
-
-                <div className="bg-surface-sunken border border-emerald-500/20 rounded-2xl p-4 grid grid-cols-2 gap-3 relative overflow-hidden">
-                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-emerald-400" />
-                  <div className="col-span-2 flex items-center justify-between mb-0.5">
-                    <div>
-                      <div className="text-[10px] text-emerald-500 uppercase font-bold tracking-wider">Savings</div>
-                      <div className="text-[10px] text-faint mt-0.5">
-                        Set your savings allocation and destination wallet.
-                      </div>
-                    </div>
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_currentColor]" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Savings Target (₱)</label>
-                    <input type="number" value={form.baseSavingsTarget} onChange={e => setForm({...form, baseSavingsTarget: Number(e.target.value)})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-purple-500" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Routes To</label>
-                    <select value={form.savingsWallet} onChange={e => setForm({...form, savingsWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
-                      <WalletSelectOptions />
-                    </select>
-                  </div>
-                </div>
-
-                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Transit / Misc (₱)</label>
-                    <input type="number" value={form.defaultTransitAllocation} onChange={e => setForm({...form, defaultTransitAllocation: Number(e.target.value)})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-purple-500" />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Routes To</label>
-                    <select value={form.transitWallet} onChange={e => setForm({...form, transitWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
-                      <WalletSelectOptions />
-                    </select>
-                  </div>
-                </div>
-
-                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
-                  <div>
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Default Wallet for New Bills</label>
-                    <div className="text-[10px] text-faint mb-2">Pre-selected when you add a bill. Existing bills are unaffected.</div>
-                    <select value={form.defaultWallet} onChange={e => setForm({...form, defaultWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
-                      <WalletSelectOptions />
-                    </select>
-                  </div>
-                </div>
-
-                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
-                  <div className="mb-3">
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Expense Routing</label>
-                    <div className="text-[10px] text-faint">Choose the wallet automatically used for each new expense category.</div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {EXPENSE_CATEGORIES.map(category => (
-                      <div key={category} className="space-y-1.5">
-                        <label className="text-[10px] text-muted font-semibold block">{category}</label>
-                        <select
-                          value={form.expenseWallets[category] || ""}
-                          onChange={e => setForm({
-                            ...form,
-                            expenseWallets: {
-                              ...form.expenseWallets,
-                              [category]: e.target.value
-                            }
-                          })}
-                          className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer"
-                        >
-                          <WalletSelectOptions />
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
-                  <label className="text-[10px] text-faint uppercase font-semibold mb-2 block">Appearance</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["dark", "light", "system"] as const).map(opt => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => {
-                          applyTheme(opt);
-                          setForm(prev => ({ ...prev, theme: opt }));
-                        }}
-                        className={`py-2 rounded-xl text-[11px] font-semibold capitalize transition border ${form.theme === opt ? "bg-blue-600 border-blue-500 text-white" : "bg-surface-input border-strong text-muted hover:border-default"}`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
+                <div className="bg-surface-sunken border border-subtle rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Payday Schedule</label>
@@ -535,7 +546,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                     <button
                       type="button"
                       onClick={() => exportPaydaysToCalendar(form.paydayDays.length ? form.paydayDays : [15, 30])}
-                      className="px-2.5 py-1 text-muted hover:text-emerald-400 bg-inverse/[0.04] hover:bg-inverse/[0.08] border border-inverse/[0.08] rounded-lg text-[10px] uppercase font-bold tracking-wider transition flex items-center gap-1 shrink-0 ml-2"
+                      className="px-2.5 py-1 text-muted hover:text-emerald-400 bg-inverse/[0.04] hover:bg-inverse/[0.08] border border-subtle rounded-lg text-[10px] uppercase font-bold tracking-wider transition flex items-center gap-1 shrink-0 ml-2"
                       title="Export Paydays to Calendar (.ics)"
                       aria-label="Export Paydays to Calendar"
                     >
@@ -545,7 +556,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                   </div>
 
                   {form.paydayDays.length === 0 ? (
-                    <div className="p-3 rounded-xl bg-surface-lowest border border-inverse/[0.05] mb-3 flex items-center justify-between">
+                    <div className="p-3 rounded-xl bg-surface-lowest border border-subtle mb-3 flex items-center justify-between">
                       <div className="space-y-0.5">
                         <div className="text-xs font-semibold text-strong flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
@@ -624,49 +635,168 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
             </div>
           )}
 
+          {activeTab === "wallets" && (
+            <div className="space-y-4">
+              <p className="text-xs text-muted">Choose the wallets used for new payments, expenses, and payday allocations.</p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-purple-400 uppercase tracking-wider"><ArrowRightLeft size={14} /> Routing Rules</div>
+
+                <div className="bg-surface-sunken border border-subtle rounded-2xl p-4 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Living Allowance (₱)</label>
+                    <input type="number" value={form.baseLivingAllowance} onChange={e => setForm({...form, baseLivingAllowance: Number(e.target.value)})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-purple-500" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Routes To</label>
+                    <select value={form.livingWallet} onChange={e => setForm({...form, livingWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
+                      <WalletSelectOptions />
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bg-surface-sunken border border-emerald-500/20 rounded-2xl p-4 grid grid-cols-2 gap-3 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-emerald-400" />
+                  <div className="col-span-2 flex items-center justify-between mb-0.5">
+                    <div>
+                      <div className="text-[10px] text-emerald-500 uppercase font-bold tracking-wider">Savings</div>
+                      <div className="text-[10px] text-faint mt-0.5">
+                        Set your savings allocation and destination wallet.
+                      </div>
+                    </div>
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_currentColor]" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Savings Target (₱)</label>
+                    <input type="number" value={form.baseSavingsTarget} onChange={e => setForm({...form, baseSavingsTarget: Number(e.target.value)})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-purple-500" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Routes To</label>
+                    <select value={form.savingsWallet} onChange={e => setForm({...form, savingsWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
+                      <WalletSelectOptions />
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bg-surface-sunken border border-subtle rounded-2xl p-4 grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Transit / Misc (₱)</label>
+                    <input type="number" value={form.defaultTransitAllocation} onChange={e => setForm({...form, defaultTransitAllocation: Number(e.target.value)})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong font-mono outline-none focus:border-purple-500" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Routes To</label>
+                    <select value={form.transitWallet} onChange={e => setForm({...form, transitWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
+                      <WalletSelectOptions />
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bg-surface-sunken border border-subtle rounded-2xl p-4">
+                  <div>
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Default Wallet for New Bills</label>
+                    <div className="text-[10px] text-faint mb-2">Pre-selected when you add a bill. Existing bills are unaffected.</div>
+                    <select value={form.defaultWallet} onChange={e => setForm({...form, defaultWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
+                      <WalletSelectOptions />
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bg-surface-sunken border border-subtle rounded-2xl p-4">
+                  <div className="mb-3">
+                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Expense Routing</label>
+                    <div className="text-[10px] text-faint">Choose the wallet automatically used for each new expense category.</div>
+                  </div>
+
+                  <div className={settingsGroup}>
+                    {EXPENSE_CATEGORIES.map(category => (
+                      <label key={category} className={settingsRow}>
+                        <span className="text-sm font-medium text-primary">{category}</span>
+                        <select
+                          value={form.expenseWallets[category] || ""}
+                          onChange={e => setForm({
+                            ...form,
+                            expenseWallets: {
+                              ...form.expenseWallets,
+                              [category]: e.target.value
+                            }
+                          })}
+                          className="max-w-full min-w-0 bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer"
+                        >
+                          <WalletSelectOptions />
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+
           {activeTab === "sync" && (
             <div className="space-y-4 animate-in fade-in duration-200 text-xs font-mono text-secondary">
-              <div className="bg-surface-lowest p-3.5 rounded-2xl border border-inverse/[0.05] space-y-1">
-                <div className="text-faint font-semibold text-[10px] uppercase tracking-wider mb-2">Cloud Status</div>
-                <div>• Endpoint: <span className="text-emerald-400 font-bold">/api/sync</span></div>
-                <div>• Auth: <span className="text-blue-400">Secure Passcode</span></div>
-                <div>• Local Liquid: <span className="text-emerald-400 font-bold">₱{totalLiquid.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span></div>
-              </div>
-              <div className="bg-surface-lowest p-3.5 rounded-2xl border border-inverse/[0.05] space-y-1">
-                <div className="text-faint font-semibold text-[10px] uppercase tracking-wider mb-2">Network Log</div>
-                <div className="text-[11px] text-amber-300 break-all">{debugLog || "No network action triggered yet."}</div>
-              </div>
-              
+              <section aria-labelledby="settings-cloud-status" className="font-sans">
+                <h4 id="settings-cloud-status" className="mb-2 px-1 text-xs font-semibold text-muted">Cloud Status</h4>
+                <dl className={settingsGroup}>
+                  <div className={settingsRow}>
+                    <dt className="text-sm text-primary">Endpoint</dt>
+                    <dd className="font-mono text-xs text-muted">/api/sync</dd>
+                  </div>
+                  <div className={settingsRow}>
+                    <dt className="text-sm text-primary">Authentication</dt>
+                    <dd className="text-xs text-muted">Google sign-in</dd>
+                  </div>
+                  <div className={settingsRow}>
+                    <dt className="text-sm text-primary">Local liquid cash</dt>
+                    <dd className="privacy-blur text-xs tabular-nums text-muted">₱{totalLiquid.toLocaleString("en-US", { minimumFractionDigits: 2 })}</dd>
+                  </div>
+                </dl>
+              </section>
+              <details className="rounded-2xl bg-surface px-4 py-3 font-sans">
+                <summary className="cursor-pointer text-sm font-medium text-primary">Network Log</summary>
+                <p className="mt-2 break-all font-mono text-xs text-muted">{debugLog || "No network action triggered yet."}</p>
+              </details>
+
               <div className="grid grid-cols-2 gap-2 pt-2">
                 <button onClick={onForcePush} className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><Cloud size={13} /> Push Data</button>
                 <button onClick={onForcePull} className="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/30 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><Database size={13} /> Pull Data</button>
               </div>
               
-              <div className="flex flex-col gap-2 pt-2 border-t border-inverse/[0.05]">
-                <button onClick={onExport} className="w-full bg-surface-high hover:bg-inverse/[0.06] border border-inverse/[0.06] text-primary font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Download size={13} /> Export JSON Backup</button>
-                <button onClick={onImportClick} className="w-full bg-surface-high hover:bg-inverse/[0.06] border border-inverse/[0.06] text-primary font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 transition text-xs shadow-md"><Upload size={13} /> Import JSON Backup</button>
-              </div>
+              <section aria-labelledby="settings-backups">
+                <h4 id="settings-backups" className="mb-2 px-1 font-sans text-xs font-semibold text-muted">Backups &amp; recovery</h4>
+                <div className={`${settingsGroup} font-sans`}>
+                  {[
+                    { label: "Export JSON Backup", action: onExport, icon: Download },
+                    { label: "Import JSON Backup", action: onImportClick, icon: Upload },
+                    { label: "Restore Pre-Import Backup", action: onRestoreImportBackup, icon: Database },
+                  ].map(({ label, action, icon: Icon }) => action && (
+                    <button key={label} type="button" onClick={action} className={settingsAction}>
+                      <span className="flex items-center gap-2"><Icon size={15} aria-hidden="true" />{label}</span>
+                      <ChevronRight size={15} aria-hidden="true" className="text-muted" />
+                    </button>
+                  ))}
+                </div>
+              </section>
 
-              <details className="mt-4 bg-surface-lowest border border-inverse/[0.05] rounded-xl p-3 group">
+              <details className="mt-4 bg-surface-lowest border border-subtle rounded-xl p-3 group">
                 <summary className="text-[10px] text-muted font-semibold cursor-pointer outline-none flex items-center justify-between uppercase tracking-wider" style={{ listStyle: "none" }}>
                   <span>System & AI Scanner Debug Logs</span>
                   <span className="text-disabled text-[9px]">Tap to view</span>
                 </summary>
-                <div className="mt-3 pt-3 border-t border-inverse/[0.05] space-y-3">
+                <div className="mt-3 pt-3 border-t border-subtle space-y-3">
                   <div>
                     <div className="text-[10px] text-blue-400 font-bold mb-1 uppercase tracking-wider">Cloud Sync Log</div>
-                    <pre className="text-[10px] text-muted font-mono overflow-auto whitespace-pre-wrap break-words bg-surface-input p-2 rounded-lg border border-inverse/[0.05]">{debugLog || 'No sync activity yet.'}</pre>
+                    <pre className="text-[10px] text-muted font-mono overflow-auto whitespace-pre-wrap break-words bg-surface-input p-2 rounded-lg border border-subtle">{debugLog || 'No sync activity yet.'}</pre>
                   </div>
                   <div>
                     <div className="text-[10px] text-purple-400 font-bold mb-1 uppercase tracking-wider">AI Scanner Log</div>
-                    <pre className="text-[10px] text-faint font-mono overflow-auto max-h-32 whitespace-pre-wrap break-words bg-surface-input p-2 rounded-lg border border-inverse/[0.05]">
+                    <pre className="text-[10px] text-faint font-mono overflow-auto max-h-32 whitespace-pre-wrap break-words bg-surface-input p-2 rounded-lg border border-subtle">
                       {(() => {
                         if (typeof window === 'undefined') return '';
                         try {
-                          const log = window.localStorage.getItem('scanner_debug_log');
+                          const log = window.localStorage.getItem('scanner_status');
                           return log ? JSON.stringify(JSON.parse(log), null, 2) : 'No recent scans.';
                         } catch (e) {
-                          return window.localStorage.getItem('scanner_debug_log') || 'No recent scans.';
+                          return 'No recent scans.';
                         }
                       })()}
                     </pre>
@@ -681,7 +811,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
         </div>
 
         {activeTab !== "sync" && (
-          <div className="flex items-center gap-2 mt-6">
+          <div className="flex shrink-0 items-center gap-2 border-t border-subtle bg-surface-elevated p-4 sm:px-6">
             <button
               type="button"
               onClick={handleCancel}
@@ -692,12 +822,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
             <button
               type="button"
               onClick={handleSave}
-              className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20"
+              className="flex-1 bg-[var(--bg-selection)] hover:bg-[var(--bg-selection-hover)] text-white text-xs font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20"
             >
               <Save size={14} /> Save Settings
             </button>
           </div>
         )}
+          </div>
+        </div>
       </div>
     </Modal>
   );

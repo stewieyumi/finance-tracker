@@ -46,3 +46,26 @@ export function isValidFinanceData(data: unknown): data is UnifiedFinanceData {
 
   return true;
 }
+
+/** Check backup input independently of the legacy sync reader. */
+export function isValidFinanceBackup(data: unknown): data is UnifiedFinanceData {
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === "object" && !Array.isArray(value);
+  const isIdentifiedRecord = (value: unknown) =>
+    isRecord(value) && typeof value.id === "string" && value.id.trim() !== "";
+  const isMoney = (value: unknown) => typeof value === "number" && Number.isFinite(value);
+
+  if (!isRecord(data) || !isValidFinanceData(data) ||
+    !isRecord(data.wallets) || !isRecord(data.library) ||
+    !isRecord(data.logs) || !isRecord(data.settings)) return false;
+
+  return Object.values(data.wallets).every(isMoney) &&
+    Object.values(data.logs).every(isRecord) &&
+    data.library.bills.every(bill => isIdentifiedRecord(bill) && isMoney(bill.amount)) &&
+    data.library.receivables.every(receivable => isIdentifiedRecord(receivable) && isMoney(receivable.amount)) &&
+    data.library.shoots.every(isIdentifiedRecord) &&
+    (data.library.expenses === undefined || (Array.isArray(data.library.expenses) &&
+      data.library.expenses.every(expense => isIdentifiedRecord(expense) && isMoney(expense.amount)))) &&
+    (data.library.manualTransactions === undefined || (Array.isArray(data.library.manualTransactions) &&
+      data.library.manualTransactions.every(entry => isIdentifiedRecord(entry) && isMoney(entry.amount))));
+}
