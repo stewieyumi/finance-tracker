@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { UnifiedFinanceData } from "../types/finance";
-import { getLocalPasscode } from "./useCloudSync";
+import { getLocalPasscode, notifyAuthTokenRejected } from "./useCloudSync";
 import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
 
 function recordScannerStatus(status: number | "invalid-response" | "network-error", atCapacity = false) {
@@ -131,8 +131,8 @@ export function useExpenseScanner({
               res.status === 503;
 
             if (isAuthExpired) {
-              window.dispatchEvent(new Event("auth-expired"));
-              showToast("🔄 Session expired. Refreshing sign-in...");
+              notifyAuthTokenRejected(token);
+              showToast("Reconnect your Google account, then try the scan again.");
             } else if (isMissingApiKey) {
               showToast("⚠️ AI Scanner is not configured on the server (missing Gemini API key). Please enter details manually.");
             } else if (isOverloaded) {

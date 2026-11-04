@@ -2,7 +2,7 @@ import { PaymentHistoryMenu } from "./components/PaymentHistoryMenu";
 import { recordPaymentAction, type PaymentHistory, type PaymentHistoryAction } from "./utils/paymentHistory";
 import React, { useState, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { GoogleLogin, googleLogout, useGoogleOneTapLogin } from "@react-oauth/google";
+import { GoogleLogin, googleLogout } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff, Bell } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
@@ -315,7 +315,7 @@ const {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const handleGoogleSuccess = (credentialResponse: any) => {
+  const handleGoogleSuccess = (credentialResponse: any, reconnecting = false) => {
     try {
       const credential = String(credentialResponse?.credential || "");
 
@@ -328,6 +328,12 @@ const {
       const nextSub = extractSubFromToken(credential);
       if (!nextSub) {
         showToast("Failed to decode Google token");
+        return;
+      }
+
+      const currentSub = extractSubFromToken(getLocalPasscode());
+      if (reconnecting && nextSub !== currentSub) {
+        showToast("Reconnect with the Google account already open in Finance Tracker.");
         return;
       }
 
@@ -344,13 +350,14 @@ const {
       // Save profile for Meta-style Welcome Back screen
       localStorage.setItem("ft_last_profile", JSON.stringify({ name: decoded.name, email: decoded.email, picture: decoded.picture }));
 
-      const nextScopedData = safeLoadAll(nextSub);
-      setDataOwnerSub(nextSub);
-      setGlobalData(nextScopedData);
+      if (dataOwnerSub !== nextSub) {
+        setDataOwnerSub(nextSub);
+        setGlobalData(safeLoadAll(nextSub));
+      }
       setGoogleUser(decoded);
       notifyAuthTokenChanged?.();
 
-      showToast(`Welcome, ${decoded.name || "User"}!`);
+      if (!currentSub) showToast(`Welcome, ${decoded.name || "User"}!`);
     } catch {
       showToast("Failed to decode Google token");
     }
@@ -367,67 +374,6 @@ const {
     showToast("Signed out of Google");
   };
 
-  // Runs on every mount, even if already "logged in" (googleUser restored
-  // from localStorage) — with auto_select:true this silently refreshes the
-  // ID token in the background instead of only recovering reactively after
-  // a 401. Proactive refresh: re-arm this by remounting the prompt every
-  // 45 minutes so the ~1hr-lived token never gets a chance to fully expire.
-  useGoogleOneTapLogin({
-    onSuccess: handleGoogleSuccess,
-    onError: () => console.log("One Tap silent refresh failed"),
-    auto_select: true,
-  });
-
-  React.useEffect(() => {
-    if (!googleUser) return;
-    const refreshInterval = setInterval(() => {
-      if ((window as any).google?.accounts?.id) {
-        (window as any).google.accounts.id.prompt();
-      }
-    }, 45 * 60 * 1000);
-    return () => clearInterval(refreshInterval);
-  }, [googleUser]);
-
-  // Prevents concurrent auth recovery attempts when multiple 401 responses
-  // dispatch auth-expired in rapid succession. Only the first attempt proceeds;
-  // duplicates are silently dropped. The guard is cleared once recovery resolves.
-  const authRefreshInProgressRef = useRef(false);
-
-  React.useEffect(() => {
-    const handleAuthExpired = () => {
-      // If a recovery is already in progress, silently ignore this duplicate event.
-      if (authRefreshInProgressRef.current) return;
-      authRefreshInProgressRef.current = true;
-
-      showToast("🔄 Session expired. Refreshing...");
-
-      // Remove both keys together so that a page refresh during recovery
-      // cannot land in the inconsistent state: ft_google_user present but
-      // ft_google_token absent (which forces the user to the login screen).
-      localStorage.removeItem("ft_google_token");
-      localStorage.removeItem("ft_google_user");
-      setDataOwnerSub(null);
-      setGlobalData(INITIAL_UNIFIED_DATA);
-      notifyAuthTokenChanged?.();
-
-      if ((window as any).google?.accounts?.id) {
-        (window as any).google.accounts.id.prompt((notification: any) => {
-          authRefreshInProgressRef.current = false;
-          if (notification.isNotDisplayed() || notification.isSkippedMoment() || notification.isDismissedMoment()) {
-            handleGoogleLogout();
-            showToast("⚠️ Session expired. Please sign in again.");
-          }
-        });
-      } else {
-        authRefreshInProgressRef.current = false;
-        handleGoogleLogout();
-      }
-    };
-
-    window.addEventListener("auth-expired", handleAuthExpired);
-    return () => window.removeEventListener("auth-expired", handleAuthExpired);
-  }, []);
-
   React.useEffect(() => {
     const handleStorageAuthChange = (e: StorageEvent) => {
       if (e.key === "ft_google_token" || e.key === "ft_google_user" || e.key === null) {
@@ -437,8 +383,10 @@ const {
           setDataOwnerSub(null);
           setGlobalData(INITIAL_UNIFIED_DATA);
         } else {
-          setDataOwnerSub(nextSub);
-          setGlobalData(safeLoadAll(nextSub));
+          if (dataOwnerSub !== nextSub) {
+            setDataOwnerSub(nextSub);
+            setGlobalData(safeLoadAll(nextSub));
+          }
           const savedUser = localStorage.getItem("ft_google_user");
           if (savedUser) {
             try {
@@ -452,7 +400,7 @@ const {
     };
     window.addEventListener("storage", handleStorageAuthChange);
     return () => window.removeEventListener("storage", handleStorageAuthChange);
-  }, []);
+  }, [dataOwnerSub]);
 
 
 
@@ -558,6 +506,7 @@ const { saveShootEdit } = useShootSaveActions({
   const {
     isSyncing,
     isOnline,
+    syncNeedsSignIn,
     debugLog,
     setDebugLog,
     forceManualSync,
@@ -927,17 +876,36 @@ const copySummaryToClipboard = async () => {
   // If the user has no existing local data for this subject, wait for the initial cloud sync
   // to settle before determining whether they need onboarding, unless a validated conflict
   // belonging to the active subject requires immediate recovery UI access.
+  const reconnectNotice = syncNeedsSignIn ? (
+    <section aria-label="Cloud sync paused" className="dashboard-material flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
+      <div role="status" className="text-sm text-primary">
+        <p className="font-semibold">Cloud sync paused</p>
+        <p className="text-xs text-muted">Reconnect your Google account to sync your local changes.</p>
+      </div>
+      <div className="google-sign-in-frame">
+        <GoogleLogin
+          onSuccess={(response) => handleGoogleSuccess(response, true)}
+          onError={() => showToast("Google sign-in failed. Cloud sync is still paused.")}
+          theme="filled_black"
+          shape="pill"
+          size="medium"
+        />
+      </div>
+    </section>
+  ) : null;
   const returning = isDataOwnedByActiveSub && isReturningUser(globalData);
   if (
     !isDataOwnedByActiveSub ||
-    (!returning && !hasInitialSyncCompleted && !hasValidatedActiveConflict)
+    (!returning && (syncNeedsSignIn || !hasInitialSyncCompleted) && !hasValidatedActiveConflict)
   ) {
     return (
       <div className="min-h-screen bg-shell flex flex-col items-center justify-center p-6 text-text-secondary font-sans">
-        <div className="flex flex-col items-center gap-3">
-          <RefreshCw size={24} className="animate-spin text-blue-400" />
-          <p className="text-xs text-muted font-medium">Checking for existing cloud data...</p>
-        </div>
+        {reconnectNotice ?? (
+          <div className="flex flex-col items-center gap-3">
+            <RefreshCw size={24} className="animate-spin text-blue-400" />
+            <p className="text-xs text-muted font-medium">Checking for existing cloud data...</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -985,6 +953,7 @@ const copySummaryToClipboard = async () => {
       )}
 
       <div className="w-full max-w-[860px] space-y-4">
+        {reconnectNotice}
         {cashShortfall > 0 && (
           <div className="warning-material text-xs rounded-2xl px-4 py-3 flex items-center gap-2.5 leading-relaxed">
             <AlertTriangle size={14} className="shrink-0" />
@@ -998,8 +967,8 @@ const copySummaryToClipboard = async () => {
               <h1 className="text-2xl font-bold tracking-tight text-strong">
                 {{ home: "Dashboard", operations: "Plan", wallets: "Wallets", expenses: "Expenses", account: "Account" }[activeTab]}
               </h1>
-              <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium no-privacy-blur transition-all ${!isOnline ? "chip-amber" : isSyncing ? "chip-blue" : "chip-emerald"}`}>
-                {!isOnline ? <><WifiOff size={10} className="text-amber-400" /><span>Offline</span></> : isSyncing ? <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" /><span>Syncing...</span></> : <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span>Live</span></>}
+              <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium no-privacy-blur transition-all ${!isOnline || syncNeedsSignIn ? "chip-amber" : isSyncing ? "chip-blue" : "chip-emerald"}`}>
+                {!isOnline ? <><WifiOff size={10} className="text-amber-400" /><span>Offline</span></> : syncNeedsSignIn ? <span>Sync paused</span> : isSyncing ? <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" /><span>Syncing...</span></> : <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span>Live</span></>}
               </div>
             </div>
 

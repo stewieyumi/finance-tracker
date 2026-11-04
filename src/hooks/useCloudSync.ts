@@ -208,6 +208,13 @@ export function loadScopedFinanceData(sub: string | null | undefined): UnifiedFi
 
 
 export const AUTH_TOKEN_CHANGE_EVENT = "ft-auth-token-changed";
+const AUTH_TOKEN_REJECTED_EVENT = "auth-expired";
+
+export function notifyAuthTokenRejected(token: string): void {
+  if (token && token === getLocalPasscode() && typeof window !== "undefined") {
+    window.dispatchEvent(new Event(AUTH_TOKEN_REJECTED_EVENT));
+  }
+}
 
 export function notifyAuthTokenChanged(): void {
   if (typeof window !== "undefined") {
@@ -260,6 +267,9 @@ export function useCloudSync(
   const [hasInitialSyncCompleted, setHasInitialSyncCompleted] = useState<boolean>(() => !getGoogleSub());
   const [activeSub, setActiveSub] = useState<string | null>(getGoogleSub());
   const activeSubRef = useRef<string | null>(activeSub);
+  const [syncNeedsSignIn, setSyncNeedsSignIn] = useState(false);
+  const rejectedTokenRef = useRef("");
+  const resumeSyncRef = useRef<() => void>(() => {});
 
   const [conflictState, setConflictState] = useState<SyncConflictState | null>(() =>
     loadScopedConflictState(activeSubRef.current, { cleanupInvalid: true })
@@ -356,6 +366,8 @@ export function useCloudSync(
         return;
       }
 
+      rejectedTokenRef.current = "";
+      setSyncNeedsSignIn(false);
       activeSubRef.current = newSub;
       accountSessionGenerationRef.current += 1;
       pullRequestIdRef.current += 1;
@@ -397,13 +409,21 @@ export function useCloudSync(
   );
 
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === PASSCODE_STORAGE_KEY || e.key === null) {
-        transitionToSub(getGoogleSub());
+    const handleSameTabAuthChange = () => {
+      const token = getLocalPasscode();
+      const sub = getGoogleSubFromToken(token);
+      if (sub !== activeSubRef.current) {
+        transitionToSub(sub);
+      } else if (sub && rejectedTokenRef.current && token !== rejectedTokenRef.current) {
+        rejectedTokenRef.current = "";
+        setSyncNeedsSignIn(false);
+        resumeSyncRef.current();
       }
     };
-    const handleSameTabAuthChange = () => {
-      transitionToSub(getGoogleSub());
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === PASSCODE_STORAGE_KEY || e.key === null) {
+        handleSameTabAuthChange();
+      }
     };
     window.addEventListener("storage", handleStorageChange);
     window.addEventListener(AUTH_TOKEN_CHANGE_EVENT, handleSameTabAuthChange);
@@ -543,6 +563,22 @@ export function useCloudSync(
     []
   );
 
+  const pauseSyncForRejectedToken = useCallback((token: string) => {
+    if (!token || token !== getLocalPasscode() ||
+        getGoogleSubFromToken(token) !== activeSubRef.current) return false;
+    rejectedTokenRef.current = token;
+    cancelPushRetry();
+    setSyncNeedsSignIn(true);
+    setDebugLog("Cloud sync paused: reconnect your Google account.");
+    return true;
+  }, [cancelPushRetry]);
+
+  useEffect(() => {
+    const handleTokenRejected = () => pauseSyncForRejectedToken(getLocalPasscode());
+    window.addEventListener(AUTH_TOKEN_REJECTED_EVENT, handleTokenRejected);
+    return () => window.removeEventListener(AUTH_TOKEN_REJECTED_EVENT, handleTokenRejected);
+  }, [pauseSyncForRejectedToken]);
+
   type PushOutcome =
     | { kind: "accepted"; revision: number }
     | { kind: "conflict"; conflict: SyncConflictState }
@@ -579,6 +615,8 @@ export function useCloudSync(
       return { kind: "skipped", reason: "no-token" };
     }
 
+    if (token === rejectedTokenRef.current) return { kind: "auth" };
+    let retryWithNewToken = false;
     const requestAccountGen = accountSessionGenerationRef.current;
     const pushId = ++pushRequestIdRef.current;
     const submittedPending = pendingRef.current;
@@ -730,12 +768,7 @@ export function useCloudSync(
       }
 
       if (res.status === 401) {
-        cancelPushRetry();
-        setDebugLog(
-          "❌ AUTH ERROR (401): Google session is invalid or expired."
-        );
-
-        window.dispatchEvent(new Event("auth-expired"));
+        retryWithNewToken = !pauseSyncForRejectedToken(token) && !options?.isResolutionAttempt;
         return { kind: "auth" };
       }
 
@@ -863,6 +896,7 @@ export function useCloudSync(
       ) {
         isPushingRef.current = false;
         setIsSyncing(false);
+        if (retryWithNewToken && pendingRef.current) resumeSyncRef.current();
       }
     }
   };
@@ -1100,6 +1134,7 @@ export function useCloudSync(
       return;
     }
 
+    if (token === rejectedTokenRef.current) return;
     const requestAccountGen = accountSessionGenerationRef.current;
     const requestId = ++pullRequestIdRef.current;
     const authHeader = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
@@ -1127,11 +1162,7 @@ export function useCloudSync(
       }
 
       if (res.status === 401) {
-        setDebugLog(
-          "❌ AUTH ERROR (401): Google session is invalid or expired."
-        );
-
-        window.dispatchEvent(new Event("auth-expired"));
+        if (!pauseSyncForRejectedToken(token)) void pullLatestData(silent);
         return;
       }
 
@@ -1270,8 +1301,16 @@ export function useCloudSync(
         if (!silent && !isPushingRef.current) {
           setIsSyncing(false);
         }
-        setHasInitialSyncCompleted(true);
+        if (rejectedTokenRef.current !== token) setHasInitialSyncCompleted(true);
       }
+    }
+  };
+
+  resumeSyncRef.current = () => {
+    if (pendingRef.current) {
+      void pushToCloudRef.current(latestDataRef.current);
+    } else {
+      void pullLatestData(false);
     }
   };
 
@@ -1366,7 +1405,7 @@ export function useCloudSync(
         try {
           const token = getLocalPasscode();
           const requestSub = getGoogleSubFromToken(token);
-          if (!token || !requestSub) return;
+          if (!token || !requestSub || token === rejectedTokenRef.current) return;
 
           const authHeader = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
 
@@ -1376,6 +1415,11 @@ export function useCloudSync(
           });
 
           if (getGoogleSub() !== requestSub || conflictStateRef.current || isDirtyRef.current) {
+            return;
+          }
+
+          if (res.status === 401) {
+            pauseSyncForRejectedToken(token);
             return;
           }
 
@@ -1669,6 +1713,7 @@ export function useCloudSync(
     commitDataChange,
     isSyncing,
     isOnline,
+    syncNeedsSignIn,
     debugLog,
     setDebugLog,
     forceManualSync,

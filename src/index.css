@@ -299,3 +299,8 @@ input::-webkit-inner-spin-button {
   user-select: auto !important;
   opacity: 1 !important;
 }
+
+/* Match the Google iframe's canvas scheme. The SDK controls its button theme. */
+.google-sign-in-frame iframe {
+  color-scheme: only light;
+}

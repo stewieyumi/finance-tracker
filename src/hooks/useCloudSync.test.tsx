@@ -576,49 +576,36 @@ describe('useCloudSync', () => {
     expect(putCalls).toHaveLength(4);
   });
 
-  it('does not schedule retry on 401', async () => {
-    vi.useFakeTimers();
-
-    const mockSetGlobalData = vi.fn();
-    const mockShowToast = vi.fn();
-    const initialData = { ...INITIAL_UNIFIED_DATA, updatedAt: 1000 };
-
-    const { result } = renderHook(() =>
-      useCloudSync(initialData, mockSetGlobalData, mockShowToast)
-    );
-
-    await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+  it("pauses requests after a 401 and sends the latest pending edit with its original base revision after reconnect", async () => {
+    const initial = { ...INITIAL_UNIFIED_DATA, updatedAt: 1000 };
+    localStorage.setItem("ft_sync_base_revision_user_123", "10");
+    const { result } = renderHook(() => useCloudSync(initial, vi.fn(), vi.fn()));
+    const rejected = localStorage.getItem("ft_google_token")!;
+    await act(async () => {});
     mockFetch.mockClear();
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
 
-    mockFetch.mockImplementation(async (_url, options) => {
-      if (options?.method === 'PUT') {
-        return {
-          ok: false,
-          status: 401,
-          json: async () => ({ error: 'Unauthorized' })
-        };
-      }
-      return { ok: true, json: async () => ({}) };
-    });
-
+    await act(async () => result.current.commitDataChange(prev => ({ ...prev, targetFund: 88888 })));
+    expect(result.current.syncNeedsSignIn).toBe(true);
     await act(async () => {
-      result.current.commitDataChange((prev) => ({
-        ...prev,
-        targetFund: 88888
-      }));
-      await Promise.resolve();
+      result.current.commitDataChange(prev => ({ ...prev, targetFund: 99999 }));
+      await result.current.pullLatestData();
+      setLocalPasscode(rejected);
     });
+    const pendingKey = Object.keys(store).find(key => key.startsWith("ft_sync_pending_writer:user_123:"))!;
+    expect(JSON.parse(store[pendingKey])).toMatchObject({ baseRevision: 10, snapshot: { targetFund: 99999 } });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
 
-    let putCalls = mockFetch.mock.calls.filter(c => c[1]?.method === 'PUT');
-    expect(putCalls).toHaveLength(1);
+    const fresh = rejected.replace(/\.sig$/, ".fresh");
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ success: true, accepted: true, revision: 11 }) });
+    await act(async () => setLocalPasscode(fresh));
 
-    // Advance timers: should not retry
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(10000);
-      await Promise.resolve();
-    });
-    putCalls = mockFetch.mock.calls.filter(c => c[1]?.method === 'PUT');
-    expect(putCalls).toHaveLength(1);
+    expect(result.current.syncNeedsSignIn).toBe(false);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    const request = mockFetch.mock.calls[1][1];
+    expect(request.headers.Authorization).toBe(`Bearer ${fresh}`);
+    expect(JSON.parse(request.body)).toMatchObject({ baseRevision: 10, data: { targetFund: 99999 } });
+    expect(store[pendingKey]).toBeUndefined();
   });
 
   it('does not schedule retry on 409', async () => {
@@ -2198,7 +2185,7 @@ describe('useCloudSync', () => {
       expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("10");
     });
 
-    it("F-03: stale 401 from Account A GET does not dispatch auth-expired after Account B becomes active", async () => {
+    it("F-03: stale 401 from Account A GET does not pause sync after Account B becomes active", async () => {
       const { result } = renderHook(() => useCloudSync(globalData, setGlobalData, showToast));
 
       await act(async () => {
@@ -2207,40 +2194,33 @@ describe('useCloudSync', () => {
 
       mockFetch.mockReset();
 
-      const authExpiredListener = vi.fn();
-      window.addEventListener("auth-expired", authExpiredListener);
-
-      try {
-        let resolveGetA: ((value: any) => void) | undefined;
-        mockFetch.mockImplementationOnce(() => {
-          return new Promise((resolve) => {
-            resolveGetA = resolve;
-          });
+      let resolveGetA: ((value: any) => void) | undefined;
+      mockFetch.mockImplementationOnce(() => {
+        return new Promise((resolve) => {
+          resolveGetA = resolve;
         });
+      });
 
-        let pullPromiseA: Promise<void> | undefined;
-        act(() => {
-          pullPromiseA = result.current.pullLatestData();
+      let pullPromiseA: Promise<void> | undefined;
+      act(() => {
+        pullPromiseA = result.current.pullLatestData();
+      });
+
+      // Switch active account to Account B (user_456)
+      localStorage.setItem("ft_google_token", "header.eyJzdWIiOiJ1c2VyXzQ1NiJ9.sig");
+
+      // Account A's GET resolves with 401
+      await act(async () => {
+        resolveGetA!({
+          ok: false,
+          status: 401,
+          json: async () => ({ error: "Unauthorized" }),
         });
+        await pullPromiseA!;
+        await vi.advanceTimersByTimeAsync(1);
+      });
 
-        // Switch active account to Account B (user_456)
-        localStorage.setItem("ft_google_token", "header.eyJzdWIiOiJ1c2VyXzQ1NiJ9.sig");
-
-        // Account A's GET resolves with 401
-        await act(async () => {
-          resolveGetA!({
-            ok: false,
-            status: 401,
-            json: async () => ({ error: "Unauthorized" }),
-          });
-          await pullPromiseA!;
-          await vi.advanceTimersByTimeAsync(1);
-        });
-
-        expect(authExpiredListener).not.toHaveBeenCalled();
-      } finally {
-        window.removeEventListener("auth-expired", authExpiredListener);
-      }
+      expect(result.current.syncNeedsSignIn).toBe(false);
     });
 
     it("F-03: stale Account A version-poll response does not trigger a GET using Account B's token", async () => {
@@ -2744,82 +2724,75 @@ describe('useCloudSync', () => {
       setGlobalData.mockClear();
       showToast.mockClear();
 
-      const authExpiredListener = vi.fn();
-      window.addEventListener("auth-expired", authExpiredListener);
-
-      try {
-        // 4. Now resolve superseded GET A with a different snapshot/revision A (even with a newer updatedAt: 6000)
-        const snapshotA = { ...globalData, updatedAt: 6000, targetFund: 99000 };
-        await act(async () => {
-          resolveGetA!({
-            ok: true,
-            status: 200,
-            json: async () => ({
-              record: snapshotA,
-              revision: 99,
-            }),
-          });
-          await pullPromiseA!;
-          await vi.advanceTimersByTimeAsync(1);
+      // 4. Now resolve superseded GET A with a different snapshot/revision A (even with a newer updatedAt: 6000)
+      const snapshotA = { ...globalData, updatedAt: 6000, targetFund: 99000 };
+      await act(async () => {
+        resolveGetA!({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            record: snapshotA,
+            revision: 99,
+          }),
         });
+        await pullPromiseA!;
+        await vi.advanceTimersByTimeAsync(1);
+      });
 
-        // Superseded GET A is completely ignored: B's data and base revision remain unchanged, no stale toast/auth event
-        expect(setGlobalData).not.toHaveBeenCalled();
-        expect(globalData.targetFund).toBe(31000);
-        expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("21");
-        expect(showToast).not.toHaveBeenCalled();
-        expect(authExpiredListener).not.toHaveBeenCalled();
+      // Superseded GET A is completely ignored: B's data and base revision remain unchanged, no stale toast/auth event
+      expect(setGlobalData).not.toHaveBeenCalled();
+      expect(globalData.targetFund).toBe(31000);
+      expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("21");
+      expect(showToast).not.toHaveBeenCalled();
+      expect(result.current.syncNeedsSignIn).toBe(false);
 
-        // 5. Verify a superseded request finishing BEFORE the newer request does not clear isSyncing or dispatch auth-expired
-        let resolveGetC: ((value: any) => void) | undefined;
-        let resolveGetD: ((value: any) => void) | undefined;
-        mockFetch
-          .mockImplementationOnce(() => new Promise((r) => { resolveGetC = r; }))
-          .mockImplementationOnce(() => new Promise((r) => { resolveGetD = r; }));
+      // 5. Verify a superseded request finishing BEFORE the newer request does not clear isSyncing or pause sync
+      let resolveGetC: ((value: any) => void) | undefined;
+      let resolveGetD: ((value: any) => void) | undefined;
+      mockFetch
+        .mockImplementationOnce(() => new Promise((r) => { resolveGetC = r; }))
+        .mockImplementationOnce(() => new Promise((r) => { resolveGetD = r; }));
 
-        let pullPromiseC: Promise<void> | undefined;
-        let pullPromiseD: Promise<void> | undefined;
-        act(() => {
-          pullPromiseC = result.current.pullLatestData();
-          pullPromiseD = result.current.pullLatestData();
+      let pullPromiseC: Promise<void> | undefined;
+      let pullPromiseD: Promise<void> | undefined;
+      act(() => {
+        pullPromiseC = result.current.pullLatestData();
+        pullPromiseD = result.current.pullLatestData();
+      });
+
+      expect(result.current.isSyncing).toBe(true);
+
+      // Superseded GET C resolves with 401 while GET D is still pending
+      await act(async () => {
+        resolveGetC!({
+          ok: false,
+          status: 401,
+          json: async () => ({ error: "Unauthorized" }),
         });
+        await pullPromiseC!;
+      });
 
-        expect(result.current.isSyncing).toBe(true);
+      expect(result.current.syncNeedsSignIn).toBe(false);
+      // GET D is still active so loading indicator remains true
+      expect(result.current.isSyncing).toBe(true);
 
-        // Superseded GET C resolves with 401 while GET D is still pending
-        await act(async () => {
-          resolveGetC!({
-            ok: false,
-            status: 401,
-            json: async () => ({ error: "Unauthorized" }),
-          });
-          await pullPromiseC!;
+      // Now resolve GET D normally
+      const snapshotD = { ...globalData, updatedAt: 5000, targetFund: 45000 };
+      await act(async () => {
+        resolveGetD!({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            record: snapshotD,
+            revision: 22,
+          }),
         });
+        await pullPromiseD!;
+      });
 
-        expect(authExpiredListener).not.toHaveBeenCalled();
-        // GET D is still active so loading indicator remains true
-        expect(result.current.isSyncing).toBe(true);
-
-        // Now resolve GET D normally
-        const snapshotD = { ...globalData, updatedAt: 5000, targetFund: 45000 };
-        await act(async () => {
-          resolveGetD!({
-            ok: true,
-            status: 200,
-            json: async () => ({
-              record: snapshotD,
-              revision: 22,
-            }),
-          });
-          await pullPromiseD!;
-        });
-
-        expect(result.current.isSyncing).toBe(false);
-        expect(globalData.targetFund).toBe(45000);
-        expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("22");
-      } finally {
-        window.removeEventListener("auth-expired", authExpiredListener);
-      }
+      expect(result.current.isSyncing).toBe(false);
+      expect(globalData.targetFund).toBe(45000);
+      expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("22");
     });
 
     // ==========================================
@@ -3311,7 +3284,7 @@ describe('useCloudSync', () => {
     // ==========================================
     // P0-B2 Gate 3: Async Request & Cross-Tab Isolation
     // ==========================================
-    it("B2-Test 3 (Late GET after A -> B): late A success and late A 401 cannot affect B data, revision, loading, initial-sync state, active subject, or auth-expired behavior", async () => {
+    it("B2-Test 3 (Late GET after A -> B): late A success and late A 401 cannot affect B data, revision, loading, initial-sync state, active subject, or sync pause state", async () => {
       const tokenB = "header.eyJzdWIiOiJ1c2VyXzQ1NiJ9.sig";
       localStorage.setItem("ft_sync_base_revision_user_123", "10");
       localStorage.setItem("ft_sync_base_revision_user_456", "3");
@@ -3326,85 +3299,78 @@ describe('useCloudSync', () => {
 
       mockFetch.mockReset();
 
-      const authExpiredListener = vi.fn();
-      window.addEventListener("auth-expired", authExpiredListener);
+      // 1. Start two manual GETs under Account A (one will resolve 200, one will resolve 401 after switch to B)
+      let resolveGetA200: ((value: any) => void) | undefined;
+      let resolveGetA401: ((value: any) => void) | undefined;
+      let resolveGetB: ((value: any) => void) | undefined;
 
-      try {
-        // 1. Start two manual GETs under Account A (one will resolve 200, one will resolve 401 after switch to B)
-        let resolveGetA200: ((value: any) => void) | undefined;
-        let resolveGetA401: ((value: any) => void) | undefined;
-        let resolveGetB: ((value: any) => void) | undefined;
+      mockFetch
+        .mockImplementationOnce(() => new Promise((r) => { resolveGetA200 = r; }))
+        .mockImplementationOnce(() => new Promise((r) => { resolveGetA401 = r; }))
+        .mockImplementationOnce(() => new Promise((r) => { resolveGetB = r; }));
 
-        mockFetch
-          .mockImplementationOnce(() => new Promise((r) => { resolveGetA200 = r; }))
-          .mockImplementationOnce(() => new Promise((r) => { resolveGetA401 = r; }))
-          .mockImplementationOnce(() => new Promise((r) => { resolveGetB = r; }));
+      let pullPromiseA1: Promise<void> | undefined;
+      let pullPromiseA2: Promise<void> | undefined;
+      act(() => {
+        pullPromiseA1 = result.current.pullLatestData(false);
+        pullPromiseA2 = result.current.pullLatestData(false);
+      });
 
-        let pullPromiseA1: Promise<void> | undefined;
-        let pullPromiseA2: Promise<void> | undefined;
-        act(() => {
-          pullPromiseA1 = result.current.pullLatestData(false);
-          pullPromiseA2 = result.current.pullLatestData(false);
+      expect(result.current.isSyncing).toBe(true);
+
+      // 2. Switch to Account B while A's GETs are still pending
+      await act(async () => {
+        setLocalPasscode(tokenB);
+        rerender();
+      });
+
+      // Transition immediately resets isSyncing and sets hasInitialSyncCompleted = false while B's initial GET is pending
+      expect(result.current.activeSub).toBe("user_456");
+      expect(result.current.isSyncing).toBe(false);
+      expect(result.current.hasInitialSyncCompleted).toBe(false);
+
+      // 3. Settle both of A's late GETs (200 with newer data and 401) BEFORE B's GET resolves
+      await act(async () => {
+        resolveGetA200!({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            record: { ...globalData, updatedAt: 99000, targetFund: 91000 },
+            revision: 77,
+          }),
         });
-
-        expect(result.current.isSyncing).toBe(true);
-
-        // 2. Switch to Account B while A's GETs are still pending
-        await act(async () => {
-          setLocalPasscode(tokenB);
-          rerender();
+        resolveGetA401!({
+          ok: false,
+          status: 401,
+          json: async () => ({ error: "Unauthorized" }),
         });
+        await pullPromiseA1!;
+        await pullPromiseA2!;
+      });
 
-        // Transition immediately resets isSyncing and sets hasInitialSyncCompleted = false while B's initial GET is pending
-        expect(result.current.activeSub).toBe("user_456");
-        expect(result.current.isSyncing).toBe(false);
-        expect(result.current.hasInitialSyncCompleted).toBe(false);
+      // B's state, revision, initial-sync gate, activeSub, and sync pause state remain completely unaffected
+      expect(result.current.activeSub).toBe("user_456");
+      expect(result.current.hasInitialSyncCompleted).toBe(false);
+      expect(globalData.targetFund).toBe(INITIAL_UNIFIED_DATA.targetFund);
+      expect(localStorage.getItem("ft_sync_base_revision_user_456")).toBe("3");
+      expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("10");
+      expect(result.current.syncNeedsSignIn).toBe(false);
 
-        // 3. Settle both of A's late GETs (200 with newer data and 401) BEFORE B's GET resolves
-        await act(async () => {
-          resolveGetA200!({
-            ok: true,
-            status: 200,
-            json: async () => ({
-              record: { ...globalData, updatedAt: 99000, targetFund: 91000 },
-              revision: 77,
-            }),
-          });
-          resolveGetA401!({
-            ok: false,
-            status: 401,
-            json: async () => ({ error: "Unauthorized" }),
-          });
-          await pullPromiseA1!;
-          await pullPromiseA2!;
+      // 4. Now resolve B's initial GET -> B hydrates cleanly
+      const cloudDataB = { ...INITIAL_UNIFIED_DATA, updatedAt: 2500, targetFund: 29000 };
+      await act(async () => {
+        resolveGetB!({
+          ok: true,
+          status: 200,
+          json: async () => ({ record: cloudDataB, revision: 4 }),
         });
+        await vi.advanceTimersByTimeAsync(1);
+        rerender();
+      });
 
-        // B's state, revision, initial-sync gate, activeSub, and auth-expired remain completely unaffected
-        expect(result.current.activeSub).toBe("user_456");
-        expect(result.current.hasInitialSyncCompleted).toBe(false);
-        expect(globalData.targetFund).toBe(INITIAL_UNIFIED_DATA.targetFund);
-        expect(localStorage.getItem("ft_sync_base_revision_user_456")).toBe("3");
-        expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("10");
-        expect(authExpiredListener).not.toHaveBeenCalled();
-
-        // 4. Now resolve B's initial GET -> B hydrates cleanly
-        const cloudDataB = { ...INITIAL_UNIFIED_DATA, updatedAt: 2500, targetFund: 29000 };
-        await act(async () => {
-          resolveGetB!({
-            ok: true,
-            status: 200,
-            json: async () => ({ record: cloudDataB, revision: 4 }),
-          });
-          await vi.advanceTimersByTimeAsync(1);
-          rerender();
-        });
-
-        expect(result.current.hasInitialSyncCompleted).toBe(true);
-        expect(globalData.targetFund).toBe(29000);
-        expect(localStorage.getItem("ft_sync_base_revision_user_456")).toBe("4");
-      } finally {
-        window.removeEventListener("auth-expired", authExpiredListener);
-      }
+      expect(result.current.hasInitialSyncCompleted).toBe(true);
+      expect(globalData.targetFund).toBe(29000);
+      expect(localStorage.getItem("ft_sync_base_revision_user_456")).toBe("4");
     });
 
     it("B2-Test 4 (Late PUT/finally after A -> B): B can start a push while A remains pending, and settling A cannot release B's lock or alter B's isSyncing, dirty/retry state, or toasts", async () => {

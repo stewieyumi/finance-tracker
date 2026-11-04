@@ -1,16 +1,6 @@
-/**
- * App.auth.test.tsx
- *
- * Regression tests for the P0 auth-expired fix:
- *  1. Concurrent auth-expired events must not trigger concurrent prompts.
- *  2. Both ft_google_token and ft_google_user must be removed on auth-expired.
- *  3. Successful silent re-auth clears the guard and restores the session.
- *  4. Failed re-auth triggers logout, clears the guard for future attempts.
- */
-
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, act } from "@testing-library/react";
+import { render, act, screen } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
 // Module mocks — must be declared before any imports that use them
@@ -19,13 +9,18 @@ import { render, act } from "@testing-library/react";
 // @react-oauth/google: prevent real network calls and DOM embedding
 vi.mock("@react-oauth/google", () => ({
   GoogleOAuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  GoogleLogin: () => <div data-testid="google-login" />,
+  GoogleLogin: ({ onSuccess }: { onSuccess: (response: { credential: string }) => void }) => {
+    reconnectWithGoogle = onSuccess;
+    return <div data-testid="google-login" />;
+  },
   googleLogout: vi.fn(),
   useGoogleOneTapLogin: vi.fn(),
 }));
 
 // All hooks that touch cloud sync, keyboard shortcuts, etc. — keep tests focused
 const mockCommitDataChange = vi.fn();
+let mockSyncNeedsSignIn = false;
+let reconnectWithGoogle: ((response: { credential: string }) => void) | undefined;
 let mockHasInitialSyncCompleted = true;
 let mockHasActiveConflict: boolean | undefined = undefined;
 let mockConflictState: any = null;
@@ -38,6 +33,7 @@ vi.mock("./hooks/useCloudSync", () => ({
     commitDataChange: mockCommitDataChange,
     isSyncing: false,
     isOnline: true,
+    syncNeedsSignIn: mockSyncNeedsSignIn,
     debugLog: "",
     setDebugLog: vi.fn(),
     forceManualSync: vi.fn(),
@@ -211,22 +207,6 @@ vi.stubGlobal("localStorage", mockStorage);
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Build a mock Google GIS prompt that calls its callback with the given
- * notification state.
- */
-function makePromptMock(state: "success" | "notDisplayed" | "skipped" | "dismissed") {
-  return vi.fn((callback?: (notification: any) => void) => {
-    if (callback) {
-      callback({
-        isNotDisplayed: () => state === "notDisplayed",
-        isSkippedMoment: () => state === "skipped",
-        isDismissedMoment: () => state === "dismissed",
-      });
-    }
-  });
-}
-
 function seedAuthenticatedStorage() {
   store = {
     ft_google_token: "header.eyJzdWIiOiJ1c2VyXzEyMyJ9.sig",
@@ -235,7 +215,7 @@ function seedAuthenticatedStorage() {
       wallets: { main: 0 },
       library: { bills: [], receivables: [], shoots: [] },
       logs: {},
-      settings: {},
+      settings: { hasCompletedOnboarding: true },
       updatedAt: 1000,
     }),
   };
@@ -245,10 +225,12 @@ function seedAuthenticatedStorage() {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("App — auth-expired handler", () => {
+describe("App — Google session recovery", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     seedAuthenticatedStorage();
+    mockSyncNeedsSignIn = false;
+    reconnectWithGoogle = undefined;
     mockHasInitialSyncCompleted = true;
     mockHasActiveConflict = undefined;
     mockConflictState = null;
@@ -256,130 +238,60 @@ describe("App — auth-expired handler", () => {
     renderedDashboardTargetFunds.length = 0;
     lastLandingOnGoogleSuccess = null;
     lastAccountOnGoogleLogout = null;
-    // Default: no GIS available (tests opt-in per case)
-    (window as any).google = undefined;
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.stubGlobal("localStorage", mockStorage);
-    (window as any).google = undefined;
     store = {};
   });
 
-  // -------------------------------------------------------------------------
-  // Test 1 — Duplicate auth-expired events must not trigger concurrent prompts
-  // -------------------------------------------------------------------------
-  it("Test 1: dispatching auth-expired twice calls the GIS prompt exactly once", async () => {
-    // Use a prompt mock that never calls its callback, simulating a prompt
-    // that is displayed and awaiting user interaction (i.e., still "in progress").
-    // This is the exact scenario the guard exists to protect: two 401 responses
-    // arrive before the first prompt has resolved. The guard must be true when
-    // the second event fires.
-    const neverResolvingPromptMock = vi.fn((_callback?: (n: any) => void) => {
-      // Intentionally does NOT call _callback — the prompt is displayed but
-      // the user has not interacted yet.
-    });
-    (window as any).google = { accounts: { id: { prompt: neverResolvingPromptMock } } };
+  it("keeps the dashboard and account open while cloud sync needs sign-in", () => {
+    mockSyncNeedsSignIn = true;
+    const token = store.ft_google_token;
 
-    await act(async () => {
-      render(<App />);
-    });
+    render(<App />);
 
-    await act(async () => {
-      // First event: starts recovery (guard → true), calls prompt once.
-      window.dispatchEvent(new Event("auth-expired"));
-      // Second event: guard is still true (prompt hasn't resolved), must be dropped.
-      window.dispatchEvent(new Event("auth-expired"));
-    });
-
-    expect(neverResolvingPromptMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("dashboard-tab")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Cloud sync paused" })).toBeInTheDocument();
+    expect(store.ft_google_token).toBe(token);
+    expect(googleLogout).not.toHaveBeenCalled();
   });
 
-  // -------------------------------------------------------------------------
-  // Test 2 — Both localStorage keys must be removed on auth-expired
-  // -------------------------------------------------------------------------
-  it("Test 2: auth-expired removes both ft_google_token and ft_google_user", async () => {
-    // No GIS — takes the else branch which calls handleGoogleLogout immediately
-    (window as any).google = undefined;
-
-    await act(async () => {
-      render(<App />);
+  it("accepts a fresh credential for the open account without reloading its data", async () => {
+    mockSyncNeedsSignIn = true;
+    render(<App />);
+    const freshToken = "header.eyJzdWIiOiJ1c2VyXzEyMyJ9.fresh";
+    // An out-of-date persisted copy should not replace the current dashboard.
+    store.ft_master_data_v1_user_123 = JSON.stringify({
+      ...JSON.parse(store.ft_master_data_v1_user_123), targetFund: 999,
     });
+    await act(async () => reconnectWithGoogle!({ credential: freshToken }));
 
-    await act(async () => {
-      window.dispatchEvent(new Event("auth-expired"));
-    });
-
-    expect(mockStorage.removeItem).toHaveBeenCalledWith("ft_google_token");
-    expect(mockStorage.removeItem).toHaveBeenCalledWith("ft_google_user");
+    expect(store.ft_google_token).toBe(freshToken);
+    expect(mockNotifyAuthTokenChanged).toHaveBeenCalled();
+    expect(renderedDashboardTargetFunds).not.toContain(999);
   });
 
-  // -------------------------------------------------------------------------
-  // Test 3 — Successful silent re-auth: guard is cleared; future events work
-  // -------------------------------------------------------------------------
-  it("Test 3: after a successful prompt the guard is cleared and a subsequent auth-expired can trigger recovery", async () => {
-    // First prompt succeeds (callback receives a non-failure notification —
-    // i.e., none of isNotDisplayed/isSkipped/isDismissed are true).
-    // We model this by not firing any of those methods as true.
-    const successfulPromptMock = vi.fn((callback?: (n: any) => void) => {
-      if (callback) {
-        callback({
-          isNotDisplayed: () => false,
-          isSkippedMoment: () => false,
-          isDismissedMoment: () => false,
-        });
-      }
-    });
-    (window as any).google = { accounts: { id: { prompt: successfulPromptMock } } };
+  it("rejects another Google account during reconnect", async () => {
+    mockSyncNeedsSignIn = true;
+    const token = store.ft_google_token;
+    render(<App />);
+    await act(async () => reconnectWithGoogle!({ credential: "header.eyJzdWIiOiJ1c2VyXzQ1NiJ9.sig" }));
 
-    await act(async () => {
-      render(<App />);
-    });
-
-    // First auth-expired → prompt fires once
-    await act(async () => {
-      window.dispatchEvent(new Event("auth-expired"));
-    });
-
-    expect(successfulPromptMock).toHaveBeenCalledTimes(1);
-
-    // Guard should be cleared now (callback was called with success).
-    // A second independent auth-expired event should trigger a second prompt.
-    await act(async () => {
-      window.dispatchEvent(new Event("auth-expired"));
-    });
-
-    expect(successfulPromptMock).toHaveBeenCalledTimes(2);
+    expect(store.ft_google_token).toBe(token);
+    expect(mockNotifyAuthTokenChanged).not.toHaveBeenCalled();
+    expect(screen.getByRole("region", { name: "Cloud sync paused" })).toBeInTheDocument();
   });
 
-  // -------------------------------------------------------------------------
-  // Test 4 — Failed re-auth: logout occurs, guard is cleared for future events
-  // -------------------------------------------------------------------------
-  it("Test 4: when the prompt is dismissed, logout runs and the guard is cleared for future events", async () => {
-    const dismissedPromptMock = makePromptMock("dismissed");
-    (window as any).google = { accounts: { id: { prompt: dismissedPromptMock } } };
+  it("offers reconnect instead of onboarding when the first cloud pull needs sign-in", () => {
+    mockSyncNeedsSignIn = true;
+    mockHasInitialSyncCompleted = false;
+    delete store.ft_master_data_v1_user_123;
+    render(<App />);
 
-    await act(async () => {
-      render(<App />);
-    });
-
-    // First auth-expired → prompt fires and is dismissed → logout
-    await act(async () => {
-      window.dispatchEvent(new Event("auth-expired"));
-    });
-
-    expect(dismissedPromptMock).toHaveBeenCalledTimes(1);
-    // googleLogout (from @react-oauth/google) should have been called
-    expect(googleLogout).toHaveBeenCalledTimes(1);
-
-    // Guard should be cleared — a subsequent auth-expired event should attempt
-    // recovery again (another prompt call).
-    await act(async () => {
-      window.dispatchEvent(new Event("auth-expired"));
-    });
-
-    expect(dismissedPromptMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("region", { name: "Cloud sync paused" })).toBeInTheDocument();
+    expect(screen.queryByTestId("dashboard-tab")).not.toBeInTheDocument();
   });
 
   // -------------------------------------------------------------------------

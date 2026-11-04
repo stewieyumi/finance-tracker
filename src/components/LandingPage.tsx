@@ -39,7 +39,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoogleSuccess }) => 
             <h2 className="text-xl font-semibold text-primary mb-8">{lastProfile.name.split(' ')[0]}</h2>
 
             <div className="w-full bg-surface-elevated/80 backdrop-blur-xl border border-inverse/[0.08] p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-5">
-              <GoogleLogin onSuccess={onGoogleSuccess} onError={() => alert('Google Sign-In Failed')} theme="filled_black" shape="pill" size="large" text="continue_with" />
+              <div className="google-sign-in-frame">
+                <GoogleLogin onSuccess={onGoogleSuccess} onError={() => alert('Google Sign-In Failed')} theme="filled_black" shape="pill" size="large" text="continue_with" />
+              </div>
               
               <div className="w-full h-[1px] bg-inverse/[0.05]" />
               
@@ -61,7 +63,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoogleSuccess }) => 
             <p className="text-muted text-sm text-center mb-10">Sign in to sync your data securely across all devices.</p>
 
             <div className="w-full bg-surface-elevated/80 backdrop-blur-xl border border-inverse/[0.08] p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-6">
-              <GoogleLogin onSuccess={onGoogleSuccess} onError={() => alert('Google Sign-In Failed')} theme="filled_black" shape="pill" size="large" text="continue_with" />
+              <div className="google-sign-in-frame">
+                <GoogleLogin onSuccess={onGoogleSuccess} onError={() => alert('Google Sign-In Failed')} theme="filled_black" shape="pill" size="large" text="continue_with" />
+              </div>
 
               <div className="w-full h-[1px] bg-inverse/[0.05]" />
 

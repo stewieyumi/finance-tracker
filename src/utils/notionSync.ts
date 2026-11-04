@@ -1,4 +1,5 @@
 import { Shoot } from "../types/finance";
+import { notifyAuthTokenRejected } from "../hooks/useCloudSync";
 
 export interface NotionSyncResult {
   success: boolean;
@@ -115,9 +116,7 @@ export async function syncShootsToNotion(
         });
 
         if (res.status === 401) {
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new Event("auth-expired"));
-          }
+          notifyAuthTokenRejected(token);
           return {
             success: false,
             total,
