@@ -3,10 +3,11 @@ import { GoogleLogin } from '@react-oauth/google';
 import { ShieldCheck, Cloud, Sparkles, UserMinus } from 'lucide-react';
 
 interface LandingPageProps {
-  onGoogleSuccess: (res: any) => void;
+  onGoogleSuccess: (res: { credential?: string }) => void;
+  signInError?: string;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onGoogleSuccess }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onGoogleSuccess, signInError }) => {
   const [lastProfile, setLastProfile] = useState<any>(null);
 
   // Load the last logged-in user profile to create the Meta-style Welcome Back screen
@@ -32,11 +33,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoogleSuccess }) => 
           // META-STYLE "WELCOME BACK" UI
           <div className="w-full flex flex-col items-center animate-in fade-in zoom-in-95 duration-500">
             <div className="relative mb-5">
-              <img src={lastProfile.picture} alt="Profile" className="w-24 h-24 rounded-full border border-inverse/[0.1] shadow-2xl shadow-blue-900/30 object-cover bg-fill" />
+              <img src={lastProfile.picture || "/icon-192.png"} alt="Profile" className="w-24 h-24 rounded-full border border-inverse/[0.1] shadow-2xl shadow-blue-900/30 object-cover bg-fill" />
               <div className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 border-[2.5px] border-shell rounded-full shadow-sm"></div>
             </div>
             <h1 className="text-2xl font-bold text-strong mb-1 tracking-tight">Welcome back,</h1>
-            <h2 className="text-xl font-semibold text-primary mb-8">{lastProfile.name.split(' ')[0]}</h2>
+            <h2 className="text-xl font-semibold text-primary mb-8">{typeof lastProfile.name === 'string' && lastProfile.name.trim() ? lastProfile.name.trim().split(' ')[0] : 'there'}</h2>
 
             <div className="w-full bg-surface-elevated/80 backdrop-blur-xl border border-inverse/[0.08] p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-5">
               <div className="google-sign-in-frame">
@@ -78,6 +79,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGoogleSuccess }) => 
             
           </div>
         )}
+        {signInError && <p role="alert" className="warning-material mt-4 w-full rounded-xl p-3 text-sm">{signInError}</p>}
       </div>
     </div>
   );

@@ -596,14 +596,19 @@ describe('useCloudSync', () => {
     expect(JSON.parse(store[pendingKey])).toMatchObject({ baseRevision: 10, snapshot: { targetFund: 99999 } });
     expect(mockFetch).toHaveBeenCalledTimes(1);
 
-    const fresh = rejected.replace(/\.sig$/, ".fresh");
+    const binding = "a".repeat(32);
     mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ success: true, accepted: true, revision: 11 }) });
-    await act(async () => setLocalPasscode(fresh));
+    await act(async () => {
+      localStorage.setItem("ft_app_session", JSON.stringify({ profile: { sub: "user_123" }, binding }));
+      localStorage.removeItem("ft_google_token");
+      notifyAuthTokenChanged();
+    });
 
     expect(result.current.syncNeedsSignIn).toBe(false);
     expect(mockFetch).toHaveBeenCalledTimes(2);
     const request = mockFetch.mock.calls[1][1];
-    expect(request.headers.Authorization).toBe(`Bearer ${fresh}`);
+    expect(request.headers["X-Finance-Session"]).toBe(binding);
+    expect(request.headers.Authorization).toBeUndefined();
     expect(JSON.parse(request.body)).toMatchObject({ baseRevision: 10, data: { targetFund: 99999 } });
     expect(store[pendingKey]).toBeUndefined();
   });

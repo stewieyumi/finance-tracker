@@ -13,6 +13,11 @@ vi.mock("@react-oauth/google", () => ({
   useGoogleOneTapLogin: vi.fn(),
 }));
 
+vi.mock("./utils/financeAuth", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./utils/financeAuth")>(),
+  getFinanceSubject: () => "user_123",
+}));
+
 vi.mock("./hooks/useCloudSync", () => ({
   useCloudSync: (_data: any, setGlobalData: any) => ({
     commitDataChange: vi.fn((action: any) => {

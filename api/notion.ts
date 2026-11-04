@@ -1,3 +1,4 @@
+import { readFinanceSession, usesFinanceSession } from "../server/financeSession.js";
 declare const process: {
   env: {
     NOTION_API_SECRET?: string;
@@ -246,34 +247,45 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
     return res.status(500).json({ error: "CONFIG_ERROR", message: "Server configuration error." });
   }
 
-  const clientToken = getClientToken(req);
-  if (!clientToken) {
-    return res.status(401).json({ error: "AUTH_REQUIRED", message: "Missing authorization token." });
-  }
-
-  if (!clientToken.startsWith("eyJ") || clientToken.split(".").length !== 3) {
-    return res.status(401).json({ error: "AUTH_INVALID", message: "Invalid token format." });
-  }
-
-  let tokenInfo: any;
-  try {
-    const googleRes = await fetch(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(clientToken)}`
-    );
-    if (!googleRes.ok) {
-      return res.status(401).json({ error: "AUTH_INVALID", message: "Invalid or expired Google token." });
+  let tokenInfo: { sub?: string; aud?: string; email?: string };
+  if (usesFinanceSession(req)) {
+    try {
+      const profile = await readFinanceSession(req);
+      if (!profile) return res.status(401).json({ error: "AUTH_INVALID", message: "Session expired or changed." });
+      tokenInfo = profile;
+    } catch {
+      return res.status(503).json({ error: "AUTH_FAILED", message: "Unable to verify session." });
     }
-    tokenInfo = await googleRes.json();
-  } catch {
-    return res.status(500).json({ error: "AUTH_FAILED", message: "Internal error validating Google token." });
-  }
+  } else {
+    const clientToken = getClientToken(req);
+    if (!clientToken) {
+      return res.status(401).json({ error: "AUTH_REQUIRED", message: "Missing authorization token." });
+    }
 
-  if (!tokenInfo?.sub) {
-    return res.status(401).json({ error: "AUTH_INVALID", message: "Invalid token payload: missing sub." });
-  }
+    if (!clientToken.startsWith("eyJ") || clientToken.split(".").length !== 3) {
+      return res.status(401).json({ error: "AUTH_INVALID", message: "Invalid token format." });
+    }
 
-  if (tokenInfo.aud !== process.env.VITE_GOOGLE_CLIENT_ID) {
-    return res.status(401).json({ error: "AUTH_INVALID", message: "Invalid token audience." });
+    try {
+      const googleRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(clientToken)}`
+      );
+      if (!googleRes.ok) {
+        return res.status(401).json({ error: "AUTH_INVALID", message: "Invalid or expired Google token." });
+      }
+      tokenInfo = await googleRes.json();
+    } catch {
+      return res.status(500).json({ error: "AUTH_FAILED", message: "Internal error validating Google token." });
+    }
+
+    if (!tokenInfo?.sub) {
+      return res.status(401).json({ error: "AUTH_INVALID", message: "Invalid token payload: missing sub." });
+    }
+
+    if (tokenInfo.aud !== process.env.VITE_GOOGLE_CLIENT_ID) {
+      return res.status(401).json({ error: "AUTH_INVALID", message: "Invalid token audience." });
+    }
+
   }
 
   if (!tokenInfo.email || typeof tokenInfo.email !== "string") {

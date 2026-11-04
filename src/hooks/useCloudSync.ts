@@ -3,29 +3,13 @@ import { UnifiedFinanceData } from "../types/finance";
 import { isValidFinanceData } from "../utils/validationHelpers";
 import { SyncConflictState, LastResolvedConflict } from "../types/finance";
 import { INITIAL_UNIFIED_DATA } from "../constants/initialData";
-import { jwtDecode } from "jwt-decode";
+import { getFinanceAuth, getFinanceSubject, getLegacyToken, LEGACY_TOKEN_KEY, SESSION_STORAGE_KEY } from "../utils/financeAuth";
 
-const PASSCODE_STORAGE_KEY = "ft_google_token";
+export { getGoogleSubFromToken } from "../utils/financeAuth";
 export const DATA_STORAGE_KEY = "ft_master_data_v1";
 const BROADCAST_CHANNEL_NAME = "ft_sync_channel";
 
-
-export function getGoogleSubFromToken(token: string | null | undefined): string | null {
-  if (!token || typeof token !== "string") return null;
-  const normalized = token.trim().replace(/^Bearer\s+/i, "");
-  if (!normalized) return null;
-  try {
-    const payload = jwtDecode<{ sub?: unknown }>(normalized);
-    if (payload && typeof payload.sub === "string" && payload.sub.trim() !== "") {
-      return payload.sub.trim();
-    }
-    return null;
-  } catch { return null; }
-}
-
-export function getGoogleSub(): string | null {
-  return getGoogleSubFromToken(getLocalPasscode());
-}
+export const getGoogleSub = getFinanceSubject;
 
 export function getScopedKeyForSub(base: string, sub: string | null | undefined): string | null {
   if (typeof sub !== "string" || sub.trim() === "") return null;
@@ -211,7 +195,7 @@ export const AUTH_TOKEN_CHANGE_EVENT = "ft-auth-token-changed";
 const AUTH_TOKEN_REJECTED_EVENT = "auth-expired";
 
 export function notifyAuthTokenRejected(token: string): void {
-  if (token && token === getLocalPasscode() && typeof window !== "undefined") {
+  if (token && token === getFinanceAuth().key && typeof window !== "undefined") {
     window.dispatchEvent(new Event(AUTH_TOKEN_REJECTED_EVENT));
   }
 }
@@ -222,13 +206,11 @@ export function notifyAuthTokenChanged(): void {
   }
 }
 
-export function getLocalPasscode(): string {
-  try { return localStorage.getItem(PASSCODE_STORAGE_KEY) || ""; } catch { return ""; }
-}
+export const getLocalPasscode = getLegacyToken;
 
 export function setLocalPasscode(code: string): void {
   try {
-    localStorage.setItem(PASSCODE_STORAGE_KEY, code.trim());
+    localStorage.setItem(LEGACY_TOKEN_KEY, code.trim());
     notifyAuthTokenChanged();
   } catch {}
 }
@@ -410,8 +392,7 @@ export function useCloudSync(
 
   useEffect(() => {
     const handleSameTabAuthChange = () => {
-      const token = getLocalPasscode();
-      const sub = getGoogleSubFromToken(token);
+      const { key: token, sub } = getFinanceAuth();
       if (sub !== activeSubRef.current) {
         transitionToSub(sub);
       } else if (sub && rejectedTokenRef.current && token !== rejectedTokenRef.current) {
@@ -421,7 +402,7 @@ export function useCloudSync(
       }
     };
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === PASSCODE_STORAGE_KEY || e.key === null) {
+      if (e.key === LEGACY_TOKEN_KEY || e.key === SESSION_STORAGE_KEY || e.key === null) {
         handleSameTabAuthChange();
       }
     };
@@ -564,8 +545,8 @@ export function useCloudSync(
   );
 
   const pauseSyncForRejectedToken = useCallback((token: string) => {
-    if (!token || token !== getLocalPasscode() ||
-        getGoogleSubFromToken(token) !== activeSubRef.current) return false;
+    const current = getFinanceAuth();
+    if (!token || token !== current.key || current.sub !== activeSubRef.current) return false;
     rejectedTokenRef.current = token;
     cancelPushRetry();
     setSyncNeedsSignIn(true);
@@ -574,7 +555,7 @@ export function useCloudSync(
   }, [cancelPushRetry]);
 
   useEffect(() => {
-    const handleTokenRejected = () => pauseSyncForRejectedToken(getLocalPasscode());
+    const handleTokenRejected = () => pauseSyncForRejectedToken(getFinanceAuth().key);
     window.addEventListener(AUTH_TOKEN_REJECTED_EVENT, handleTokenRejected);
     return () => window.removeEventListener(AUTH_TOKEN_REJECTED_EVENT, handleTokenRejected);
   }, [pauseSyncForRejectedToken]);
@@ -607,8 +588,7 @@ export function useCloudSync(
       return { kind: "skipped", reason: "offline" };
     }
 
-    const token = getLocalPasscode();
-    const requestSub = getGoogleSubFromToken(token);
+    const { key: token, sub: requestSub, headers } = getFinanceAuth();
 
     if (!token || !requestSub || requestSub !== activeSubRef.current) {
       setDebugLog("⚠️ PUSH SKIPPED: No Google token available.");
@@ -649,7 +629,7 @@ export function useCloudSync(
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": token.startsWith("Bearer ") ? token : `Bearer ${token}`
+          ...headers
         },
         body: JSON.stringify(payload),
         keepalive: true
@@ -1124,8 +1104,7 @@ export function useCloudSync(
       return;
     }
 
-    const token = getLocalPasscode();
-    const requestSub = getGoogleSubFromToken(token);
+    const { key: token, sub: requestSub, headers } = getFinanceAuth();
 
     // No authenticated session means there is nothing to pull.
     // Do not make a network request with an empty or invalid token.
@@ -1137,7 +1116,6 @@ export function useCloudSync(
     if (token === rejectedTokenRef.current) return;
     const requestAccountGen = accountSessionGenerationRef.current;
     const requestId = ++pullRequestIdRef.current;
-    const authHeader = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
 
     try {
       if (!silent) {
@@ -1146,9 +1124,7 @@ export function useCloudSync(
 
       const res = await fetch(`/api/sync?t=${Date.now()}`, {
         method: "GET",
-        headers: {
-          "Authorization": authHeader
-        },
+        headers,
         cache: "no-store"
       });
 
@@ -1403,14 +1379,11 @@ export function useCloudSync(
       // Only poll if the app is visible, online, and the user isn't actively typing
       if (document.visibilityState === "visible" && navigator.onLine && !isDirtyRef.current && !conflictStateRef.current) {
         try {
-          const token = getLocalPasscode();
-          const requestSub = getGoogleSubFromToken(token);
+          const { key: token, sub: requestSub, headers } = getFinanceAuth();
           if (!token || !requestSub || token === rejectedTokenRef.current) return;
 
-          const authHeader = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-
           const res = await fetch(`/api/sync?version_only=true&t=${Date.now()}`, {
-            headers: { "Authorization": authHeader },
+            headers,
             cache: "no-store"
           });
 

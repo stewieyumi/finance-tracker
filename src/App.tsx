@@ -3,7 +3,6 @@ import { recordPaymentAction, type PaymentHistory, type PaymentHistoryAction } f
 import React, { useState, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GoogleLogin, googleLogout } from "@react-oauth/google";
-import { jwtDecode } from "jwt-decode";
 import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff, Bell } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { getMonthKey, getAdjacentMonth, getDaysUntil, parseMonthKey } from "./utils/dateHelpers";
@@ -18,7 +17,8 @@ import {
 } from "./utils/financeHelpers";
 import { migrateBaseWallets, migrateLegacyBills } from "./utils/financeMigrations";
 
-import { useCloudSync, getLocalPasscode, notifyAuthTokenChanged } from "./hooks/useCloudSync";
+import { useCloudSync, notifyAuthTokenChanged } from "./hooks/useCloudSync";
+import { endAppSession, getFinanceSubject, getLegacyToken, readAppSession, startAppSession, LEGACY_TOKEN_KEY, SESSION_STORAGE_KEY } from "./utils/financeAuth";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import { useFinanceCalculations } from "./hooks/useFinanceCalculations";
@@ -39,7 +39,6 @@ import { ShootsTable } from "./components/ShootsTable";
 import { DashboardTab } from "./components/DashboardTab";
 import { NotificationModal } from "./components/NotificationModal";
 import { WalletsTab } from "./components/WalletsTab";
-import { ExpensesTab } from "./components/ExpensesTab";
 import { BottomNav, TabType } from "./components/BottomNav";
 import { SyncConflictModal } from "./components/SyncConflictModal";
 import { useAppUpdate } from "./hooks/useAppUpdate";
@@ -50,6 +49,9 @@ import { OperationsTab } from "./components/OperationsTab";
 import { AccountTab } from "./components/AccountTab";
 import { isReturningUser, shouldShowOnboarding } from "./utils/onboardingHelpers";
 import { isValidFinanceBackup, isValidFinanceData } from "./utils/validationHelpers";
+
+const ExpensesTab = lazy(() => import("./components/ExpensesTab")
+  .then(module => ({ default: module.ExpensesTab })));
 
 const HistoricalLedgerModal = lazy(() => import("./components/HistoricalLedgerModal")
   .then(module => ({ default: module.HistoricalLedgerModal })));
@@ -75,21 +77,6 @@ const deferredModalFallback = (
   </div>
 );
 
-function extractSubFromToken(token: string | null | undefined): string | null {
-  if (!token || typeof token !== "string") return null;
-  const normalized = token.trim().replace(/^Bearer\s+/i, "");
-  if (!normalized) return null;
-  try {
-    const payload = jwtDecode<{ sub?: unknown }>(normalized);
-    if (payload && typeof payload.sub === "string" && payload.sub.trim() !== "") {
-      return payload.sub.trim();
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 function isValidAppRevision(value: unknown): value is number {
   return (
     typeof value === "number" &&
@@ -108,7 +95,7 @@ function isValidAppConflictState(data: any): boolean {
   return true;
 }
 
-function safeLoadAll(sub: string | null = extractSubFromToken(getLocalPasscode())): UnifiedFinanceData {
+function safeLoadAll(sub: string | null = getFinanceSubject()): UnifiedFinanceData {
   if (!sub || typeof sub !== "string" || sub.trim() === "") {
     return INITIAL_UNIFIED_DATA;
   }
@@ -188,14 +175,14 @@ export default function App() {
   const { updateAvailable } = useAppUpdate();
   const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
   const [dataOwnerSub, setDataOwnerSub] = useState<string | null>(() =>
-    extractSubFromToken(getLocalPasscode())
+    getFinanceSubject()
   );
   const [globalData, setGlobalData] = useState<UnifiedFinanceData>(() =>
-    safeLoadAll(extractSubFromToken(getLocalPasscode()))
+    safeLoadAll(getFinanceSubject())
   );
   const handleSetGlobalData = useCallback(
     (action: React.SetStateAction<UnifiedFinanceData>) => {
-      setDataOwnerSub(extractSubFromToken(getLocalPasscode()));
+      setDataOwnerSub(getFinanceSubject());
       setGlobalData(action);
     },
     []
@@ -306,78 +293,82 @@ const {
   );
 
   const [googleUser, setGoogleUser] = useState<any>(() => {
-    const saved = localStorage.getItem("ft_google_user");
-    const passcode = localStorage.getItem("ft_google_token");
-    if (saved && !passcode) {
-      localStorage.removeItem("ft_google_user");
+    const session = readAppSession();
+    if (session) return session.profile;
+    try {
+      const saved = localStorage.getItem("ft_google_user");
+      return saved && getLegacyToken() ? JSON.parse(saved) : null;
+    } catch {
       return null;
     }
-    return saved ? JSON.parse(saved) : null;
   });
+  const authRequestPending = useRef(false);
+  const [signInError, setSignInError] = useState("");
 
-  const handleGoogleSuccess = (credentialResponse: any, reconnecting = false) => {
+  const handleGoogleSuccess = async (response: { credential?: string }, reconnecting = false) => {
+    if (authRequestPending.current) return;
+    const currentSub = getFinanceSubject();
+    if (!response.credential) {
+      const message = "Google did not return a sign-in credential. Please try again.";
+      if (currentSub) showToast(message);
+      else setSignInError(message);
+      return;
+    }
+    if (reconnecting && !currentSub) return;
+    authRequestPending.current = true;
+    setSignInError("");
     try {
-      const credential = String(credentialResponse?.credential || "");
-
-      if (!credential) {
-        showToast("Google sign-in returned no credential");
-        return;
+      const session = await startAppSession(response.credential, currentSub ?? undefined);
+      const { profile } = session;
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+      localStorage.removeItem(LEGACY_TOKEN_KEY);
+      localStorage.removeItem("ft_google_user");
+      localStorage.setItem("ft_last_profile", JSON.stringify(profile));
+      if (dataOwnerSub !== profile.sub) {
+        setDataOwnerSub(profile.sub);
+        setGlobalData(safeLoadAll(profile.sub));
       }
-
-      const decoded: any = jwtDecode(credential);
-      const nextSub = extractSubFromToken(credential);
-      if (!nextSub) {
-        showToast("Failed to decode Google token");
-        return;
-      }
-
-      const currentSub = extractSubFromToken(getLocalPasscode());
-      if (reconnecting && nextSub !== currentSub) {
-        showToast("Reconnect with the Google account already open in Finance Tracker.");
-        return;
-      }
-
-      localStorage.setItem(
-        "ft_google_user",
-        JSON.stringify(decoded)
-      );
-
-      // Store the Google ID token for secure server-side sync
-      localStorage.setItem(
-        "ft_google_token",
-        credential
-      );
-      // Save profile for Meta-style Welcome Back screen
-      localStorage.setItem("ft_last_profile", JSON.stringify({ name: decoded.name, email: decoded.email, picture: decoded.picture }));
-
-      if (dataOwnerSub !== nextSub) {
-        setDataOwnerSub(nextSub);
-        setGlobalData(safeLoadAll(nextSub));
-      }
-      setGoogleUser(decoded);
+      setGoogleUser(profile);
       notifyAuthTokenChanged?.();
-
-      if (!currentSub) showToast(`Welcome, ${decoded.name || "User"}!`);
-    } catch {
-      showToast("Failed to decode Google token");
+      if (!currentSub) showToast(`Welcome, ${profile.name || "User"}!`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Sign-in failed. Please try again.";
+      if (getFinanceSubject()) showToast(message);
+      else setSignInError(message);
+    } finally {
+      authRequestPending.current = false;
     }
   };
 
-  const handleGoogleLogout = () => {
-    googleLogout();
-    localStorage.removeItem("ft_google_user");
-    localStorage.removeItem("ft_google_token");
-    setGoogleUser(null);
-    setDataOwnerSub(null);
-    setGlobalData(INITIAL_UNIFIED_DATA);
-    notifyAuthTokenChanged?.();
-    showToast("Signed out of Google");
+  const handleGoogleLogout = async () => {
+    if (authRequestPending.current) return;
+    authRequestPending.current = true;
+    try {
+      const session = readAppSession();
+      if (session) {
+        await endAppSession(session);
+        if (readAppSession()?.binding !== session.binding) return;
+      }
+      googleLogout();
+      localStorage.removeItem(LEGACY_TOKEN_KEY);
+      localStorage.removeItem("ft_google_user");
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      setGoogleUser(null);
+      setDataOwnerSub(null);
+      setGlobalData(INITIAL_UNIFIED_DATA);
+      notifyAuthTokenChanged?.();
+      showToast("Signed out");
+    } catch {
+      showToast("Could not sign out. Check your connection and try again.");
+    } finally {
+      authRequestPending.current = false;
+    }
   };
 
   React.useEffect(() => {
     const handleStorageAuthChange = (e: StorageEvent) => {
-      if (e.key === "ft_google_token" || e.key === "ft_google_user" || e.key === null) {
-        const nextSub = extractSubFromToken(getLocalPasscode());
+      if (e.key === LEGACY_TOKEN_KEY || e.key === SESSION_STORAGE_KEY || e.key === "ft_google_user" || e.key === null) {
+        const nextSub = getFinanceSubject();
         if (!nextSub) {
           setGoogleUser(null);
           setDataOwnerSub(null);
@@ -387,8 +378,11 @@ const {
             setDataOwnerSub(nextSub);
             setGlobalData(safeLoadAll(nextSub));
           }
+          const session = readAppSession();
           const savedUser = localStorage.getItem("ft_google_user");
-          if (savedUser) {
+          if (session) {
+            setGoogleUser(session.profile);
+          } else if (savedUser) {
             try {
               setGoogleUser(JSON.parse(savedUser));
             } catch {
@@ -419,7 +413,7 @@ const {
   };
 
   const showToast = (msg: string, action?: PaymentHistoryAction) => {
-    if (action && dataOwnerSub && dataOwnerSub === extractSubFromToken(getLocalPasscode())) {
+    if (action && dataOwnerSub && dataOwnerSub === getFinanceSubject()) {
       setPaymentHistory(previous => recordPaymentAction(previous, dataOwnerSub, action));
     }
     if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
@@ -521,7 +515,7 @@ const { saveShootEdit } = useShootSaveActions({
 
   commitDataChangeRef.current = commitDataChange;
 
-  const activeTokenSub = extractSubFromToken(getLocalPasscode());
+  const activeTokenSub = getFinanceSubject();
   const isAuth = Boolean(activeTokenSub);
   const isDataOwnedByActiveSub = Boolean(
     activeTokenSub &&
@@ -553,7 +547,7 @@ const { saveShootEdit } = useShootSaveActions({
   const redoPayment = canUsePaymentHistory ? paymentHistory.redo.at(-1) : undefined;
   const runPaymentAction = (action: PaymentHistoryAction) => {
     const current = action.label === "Undo" ? undoPayment : redoPayment;
-    if (current !== action || extractSubFromToken(getLocalPasscode()) !== activeTokenSub) return false;
+    if (current !== action || getFinanceSubject() !== activeTokenSub) return false;
     action.onClick();
     return true;
   };
@@ -755,12 +749,12 @@ const copySummaryToClipboard = async () => {
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const importSub = extractSubFromToken(getLocalPasscode());
+    const importSub = getFinanceSubject();
     if (!importSub || importSub !== dataOwnerSub) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        if (extractSubFromToken(getLocalPasscode()) !== importSub) {
+        if (getFinanceSubject() !== importSub) {
           alert("The signed-in account changed. Select the backup again.");
           return;
         }
@@ -789,7 +783,7 @@ const copySummaryToClipboard = async () => {
           let applied = false;
           // The sync commit evaluates this against its latest snapshot.
           syncedSetGlobalData(current => {
-            if (extractSubFromToken(getLocalPasscode()) !== importSub) {
+            if (getFinanceSubject() !== importSub) {
               importError = "The signed-in account changed. Select the backup again.";
               return current;
             }
@@ -826,7 +820,7 @@ const copySummaryToClipboard = async () => {
   };
 
   const restorePreImportBackup = () => {
-    const sub = extractSubFromToken(getLocalPasscode());
+    const sub = getFinanceSubject();
     if (!sub || sub !== dataOwnerSub) return;
     if (hasActiveConflict) {
       alert("Resolve the active sync conflict before restoring an import backup.");
@@ -848,7 +842,7 @@ const copySummaryToClipboard = async () => {
       const comparable = (data: UnifiedFinanceData) => JSON.stringify({ ...data, updatedAt: undefined });
       let restored = false;
       syncedSetGlobalData(current => {
-        if (extractSubFromToken(getLocalPasscode()) !== sub ||
+        if (getFinanceSubject() !== sub ||
           localStorage.getItem(`ft_import_preimage_${sub}`) !== raw ||
           comparable(current) !== comparable(imported)) return current;
         restored = true;
@@ -868,7 +862,7 @@ const copySummaryToClipboard = async () => {
   // --- WHITE-LABEL AUTH GATE ---
   // If they don't have a valid Google JWT subject session, trap them on the Landing Page.
   if (!isAuth) {
-    return <LandingPage onGoogleSuccess={handleGoogleSuccess} />;
+    return <LandingPage onGoogleSuccess={handleGoogleSuccess} signInError={signInError} />;
   }
 
   // --- CLOUD HYDRATION & ONBOARDING GATE ---
@@ -1189,7 +1183,13 @@ const copySummaryToClipboard = async () => {
         )}
 
         {activeTab === "wallets" && <WalletsTab globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} />}
-        {activeTab === "expenses" && <ExpensesTab selectedMonth={selectedMonth} globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />}
+        {activeTab === "expenses" && (
+          <ErrorBoundary>
+            <Suspense fallback={<p role="status" className="p-4 text-sm text-muted">Loading expenses…</p>}>
+              <ExpensesTab selectedMonth={selectedMonth} globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />
+            </Suspense>
+          </ErrorBoundary>
+        )}
 
         {activeTab === "account" && (
           <AccountTab

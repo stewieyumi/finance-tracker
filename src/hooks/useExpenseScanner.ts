@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { UnifiedFinanceData } from "../types/finance";
-import { getLocalPasscode, notifyAuthTokenRejected } from "./useCloudSync";
+import { notifyAuthTokenRejected } from "./useCloudSync";
+import { getFinanceAuth } from "../utils/financeAuth";
 import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
 
 function recordScannerStatus(status: number | "invalid-response" | "network-error", atCapacity = false) {
@@ -56,7 +57,7 @@ export function useExpenseScanner({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const token = getLocalPasscode();
+    const { key: token, headers } = getFinanceAuth();
     if (!token) {
       showToast("⚠️ Sign-in required: Please sign in with Google to use the AI Scanner.");
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -89,16 +90,18 @@ export function useExpenseScanner({
         const base64 = canvas.toDataURL("image/jpeg", 0.7);
 
         try {
+          if (getFinanceAuth().key !== token) return;
           const res = await fetch("/api/scan", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`
+              ...headers
             },
             body: JSON.stringify({ image: base64 })
           });
           
           const textResponse = await res.text();
+          if (getFinanceAuth().key !== token) return;
           let data;
           try {
             data = JSON.parse(textResponse);

@@ -1,3 +1,4 @@
+import { readFinanceSession, usesFinanceSession } from "../server/financeSession.js";
 import { Redis } from "@upstash/redis";
 
 declare const process: {
@@ -84,39 +85,51 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
     return res.status(500).json({ error: "Server configuration error: Missing Redis credentials." });
   }
 
-  const clientToken = getClientToken(req);
-  if (!clientToken) {
-    return res.status(401).json({ error: "Unauthorized: Missing token." });
-  }
-
-  let USER_REDIS_KEY = "";
-  let isAuthenticated = false;
-
-  if (clientToken.startsWith("eyJ") && clientToken.split(".").length === 3) {
+  let USER_REDIS_KEY: string;
+  if (usesFinanceSession(req)) {
+    res.setHeader("Cache-Control", "no-store");
     try {
-      const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${clientToken}`);
-      if (!googleRes.ok) {
-        return res.status(401).json({ error: "Unauthorized: Invalid or expired Google token." });
-      }
-
-      const tokenInfo = await googleRes.json();
-      if (!tokenInfo.sub) {
-        return res.status(401).json({ error: "Unauthorized: Invalid token payload." });
-      }
-
-      if (tokenInfo.aud !== process.env.VITE_GOOGLE_CLIENT_ID) {
-        return res.status(401).json({ error: "Unauthorized: Invalid token audience (cross-app replay risk)." });
-      }
-
-      USER_REDIS_KEY = `finance_data_g_${tokenInfo.sub}`;
-      isAuthenticated = true;
-    } catch (err) {
-      return res.status(500).json({ error: "Internal error validating Google token." });
+      const profile = await readFinanceSession(req);
+      if (!profile) return res.status(401).json({ error: "Unauthorized: Session expired or changed." });
+      USER_REDIS_KEY = `finance_data_g_${profile.sub}`;
+    } catch {
+      return res.status(503).json({ error: "Unable to verify session." });
     }
-  }
+  } else {
+    const clientToken = getClientToken(req);
+    if (!clientToken) {
+      return res.status(401).json({ error: "Unauthorized: Missing token." });
+    }
 
-  if (!isAuthenticated) {
-    return res.status(401).json({ error: "Unauthorized: Invalid Google token." });
+    let googleSub: string | undefined;
+
+    if (clientToken.startsWith("eyJ") && clientToken.split(".").length === 3) {
+      try {
+        const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${clientToken}`);
+        if (!googleRes.ok) {
+          return res.status(401).json({ error: "Unauthorized: Invalid or expired Google token." });
+        }
+
+        const tokenInfo = await googleRes.json();
+        if (!tokenInfo.sub) {
+          return res.status(401).json({ error: "Unauthorized: Invalid token payload." });
+        }
+
+        if (tokenInfo.aud !== process.env.VITE_GOOGLE_CLIENT_ID) {
+          return res.status(401).json({ error: "Unauthorized: Invalid token audience (cross-app replay risk)." });
+        }
+
+        googleSub = tokenInfo.sub;
+      } catch (err) {
+        return res.status(500).json({ error: "Internal error validating Google token." });
+      }
+    }
+
+    if (!googleSub) {
+      return res.status(401).json({ error: "Unauthorized: Invalid Google token." });
+    }
+
+    USER_REDIS_KEY = `finance_data_g_${googleSub}`;
   }
 
   try {

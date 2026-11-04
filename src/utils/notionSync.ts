@@ -1,5 +1,6 @@
 import { Shoot } from "../types/finance";
 import { notifyAuthTokenRejected } from "../hooks/useCloudSync";
+import { getFinanceAuth } from "./financeAuth";
 
 export interface NotionSyncResult {
   success: boolean;
@@ -56,16 +57,7 @@ export async function syncShootsToNotion(
     };
   }
 
-  let token: string | null = null;
-  try {
-    if (typeof localStorage !== "undefined") {
-      token = localStorage.getItem("ft_google_token");
-    } else if (typeof window !== "undefined" && window.localStorage) {
-      token = window.localStorage.getItem("ft_google_token");
-    }
-  } catch {
-    token = null;
-  }
+  const { key: token, headers } = getFinanceAuth();
 
   if (!token) {
     return {
@@ -89,6 +81,9 @@ export async function syncShootsToNotion(
 
     for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
       const batchNumber = batchIndex + 1;
+      if (getFinanceAuth().key !== token) {
+        return { success: false, total, processed, created, updated, failedBatch: batchNumber, error: "The signed-in account changed." };
+      }
       const chunk = shoots.slice(
         batchIndex * BATCH_SIZE,
         (batchIndex + 1) * BATCH_SIZE
@@ -110,7 +105,7 @@ export async function syncShootsToNotion(
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            ...headers,
           },
           body: JSON.stringify(payload),
         });

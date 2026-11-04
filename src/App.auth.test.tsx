@@ -1,3 +1,4 @@
+import { getGoogleSubFromToken } from "./utils/financeAuth";
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, act, screen } from "@testing-library/react";
@@ -238,6 +239,14 @@ describe("App — Google session recovery", () => {
     renderedDashboardTargetFunds.length = 0;
     lastLandingOnGoogleSuccess = null;
     lastAccountOnGoogleLogout = null;
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
+      if (url !== "/api/session") throw new Error("Unexpected request");
+      const { credential, expectedSub, action } = JSON.parse(String(init.body));
+      if (action === "logout") return new Response(null, { status: 204 });
+      const sub = getGoogleSubFromToken(credential);
+      if (!sub || (expectedSub && sub !== expectedSub)) return new Response(null, { status: 409 });
+      return Response.json({ profile: { sub, name: "Test User" }, binding: "a".repeat(32) });
+    }));
   });
 
   afterEach(() => {
@@ -268,7 +277,8 @@ describe("App — Google session recovery", () => {
     });
     await act(async () => reconnectWithGoogle!({ credential: freshToken }));
 
-    expect(store.ft_google_token).toBe(freshToken);
+    expect(store.ft_google_token).toBeUndefined();
+    expect(JSON.parse(store.ft_app_session)).toMatchObject({ profile: { sub: "user_123" } });
     expect(mockNotifyAuthTokenChanged).toHaveBeenCalled();
     expect(renderedDashboardTargetFunds).not.toContain(999);
   });
@@ -282,6 +292,24 @@ describe("App — Google session recovery", () => {
     expect(store.ft_google_token).toBe(token);
     expect(mockNotifyAuthTokenChanged).not.toHaveBeenCalled();
     expect(screen.getByRole("region", { name: "Cloud sync paused" })).toBeInTheDocument();
+  });
+
+  it("reopens a remembered app session without a Google token and revokes it on sign-out", async () => {
+    delete store.ft_google_token;
+    delete store.ft_google_user;
+    const binding = "a".repeat(32);
+    store.ft_app_session = JSON.stringify({ profile: { sub: "user_123", name: "Test User" }, binding });
+    render(<App />);
+    expect(screen.getByTestId("dashboard-tab")).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
+    await act(async () => screen.getByTestId("nav-account").click());
+    await act(async () => lastAccountOnGoogleLogout!());
+    expect(fetch).toHaveBeenCalledWith("/api/session", expect.objectContaining({
+      headers: expect.objectContaining({ "X-Finance-Session": binding }),
+      body: JSON.stringify({ action: "logout" }),
+    }));
+    expect(store.ft_app_session).toBeUndefined();
+    expect(screen.getByTestId("landing-page")).toBeInTheDocument();
   });
 
   it("offers reconnect instead of onboarding when the first cloud pull needs sign-in", () => {
