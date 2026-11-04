@@ -9,7 +9,7 @@ import { BillAddModal } from "./BillAddModal";
 import { BillPriorPaymentModal } from "./BillPriorPaymentModal";
 import { BillsList } from "./BillsList";
 import { Bill, BillViewModel, BillType, EditFormData, CustomWallet } from "../types/finance";
-import { formatDaysRemaining } from "../utils/dateHelpers";
+import { formatDaysRemaining, getMonthKey, parseMonthKey } from "../utils/dateHelpers";
 import { filterBills, sortBills, groupBillsByHalf, BillSortOption } from "../utils/bills/billListHelpers";
 import { PayPeriodFilter } from "./BillsList";
 import { exportMonthBillsToCalendar } from "../utils/calendarExport";
@@ -18,7 +18,9 @@ const BILL_TYPES = ["All", "Bill", "Subscription", "Loan / Installment"];
 
 interface BillsTableProps {
   activeBills: BillViewModel[];
+  jumpToBillId?: string;
   selectedMonth: string;
+  onConfirmPriorBillPayments?: (billId: string, months: string[]) => void;
   onToggleStatus: (bill: BillViewModel, skipWalletMutation?: boolean) => void;
   onAddBill: (bill: { name: string; amount: number; dueDay: string; type: BillType; startMonth: string; endMonth: string; wallet?: string }) => Bill | null;
   onDeleteBill: (id: string) => void;
@@ -33,14 +35,13 @@ interface BillsTableProps {
   walletLabels?: Record<string, string>;
   defaultWallet?: string;
   highlightOverdue?: boolean;
-  onExportCalendar?: (bill: BillViewModel) => void;
   onExportMonthCalendar?: (bills: BillViewModel[], monthKey: string) => void;
 }
 
 export const BillsTable: React.FC<BillsTableProps> = React.memo(({
-  activeBills, selectedMonth, onToggleStatus, onAddBill, onDeleteBill, onSaveEdit, onResetMonthOverride,
+  activeBills, selectedMonth, jumpToBillId, onToggleStatus, onAddBill, onDeleteBill, onSaveEdit, onResetMonthOverride,
   editingId, setEditingId, editForm, setEditForm, customWallets, defaultWallet = "main", highlightOverdue = false,
-  onExportCalendar, onExportMonthCalendar
+  onExportMonthCalendar, onConfirmPriorBillPayments
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [newBill, setNewBill] = useState({ name: "", amount: "", dueDay: "1", type: "Bill" as BillType, startMonth: selectedMonth, endMonth: selectedMonth, wallet: defaultWallet });
@@ -62,9 +63,21 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!jumpToBillId) return;
+    const row = Array.from(tableRef.current?.querySelectorAll<HTMLElement>("[data-commitment-id]") ?? [])
+      .find(element => element.dataset.commitmentId === jumpToBillId && element.getClientRects().length > 0);
+    row?.focus({ preventScroll: true });
+    row?.scrollIntoView({ block: "center" });
+  }, [jumpToBillId]);
+
   const filteredBills = useMemo(() => filterBills(activeBills, selectedFilter, searchQuery, hideSettled), [activeBills, selectedFilter, searchQuery, hideSettled]);
   const sortedBills = useMemo(() => sortBills(filteredBills, sortBy), [filteredBills, sortBy]);
   const { firstHalfBills, secondHalfBills } = useMemo(() => groupBillsByHalf(sortedBills), [sortedBills]);
+
+  const editingLoan = activeBills.find(bill => bill.id === editingId && bill.type === "Loan / Installment");
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,8 +90,8 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
     setNewBill({ name: "", amount: "", dueDay: "1", type: "Bill", startMonth: selectedMonth, endMonth: selectedMonth, wallet: defaultWallet });
     setIsAdding(false);
 
-    if (createdBill.type === "Loan / Installment" && createdBill.startMonth === selectedMonth) {
-      setPendingPriorPayment({ bill: createdBill, month: selectedMonth });
+    if (createdBill.type === "Loan / Installment" && createdBill.startMonth && parseMonthKey(createdBill.startMonth) <= parseMonthKey(getMonthKey(new Date()))) {
+      setPendingPriorPayment({ bill: createdBill, month: getMonthKey(new Date()) });
     }
   };
 
@@ -98,7 +111,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
 
 
   return (
-    <div className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-lg">
+    <div ref={tableRef} className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-lg">
       <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
         <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 shrink-0">
           <Calendar size={13} className="text-blue-400" /> {selectedMonth} Commitments
@@ -224,7 +237,6 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
        highlightOverdue={highlightOverdue}
        onToggleStatus={onToggleStatus}
        onEdit={handleStartEdit}
-       onExportCalendar={onExportCalendar}
        hideSettled={hideSettled}
      />
 
@@ -243,6 +255,10 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
          editScope={editScope}
          onScopeChange={handleScopeChange}
          onCancel={handleCancelEdit}
+         onReviewPriorPayments={editingLoan && onConfirmPriorBillPayments ? () => {
+           handleCancelEdit();
+           setPendingPriorPayment({ bill: editingLoan, month: getMonthKey(new Date()) });
+         } : undefined}
          onDeleteBill={onDeleteBill}
          onResetMonthOverride={onResetMonthOverride}
          onSaveEdit={onSaveEdit}
@@ -268,6 +284,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
           pendingPriorPayment={pendingPriorPayment}
           setPendingPriorPayment={setPendingPriorPayment}
           onToggleStatus={onToggleStatus}
+          onConfirmPriorBillPayments={onConfirmPriorBillPayments}
         />
       )}
     </div>

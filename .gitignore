@@ -31,4 +31,5 @@ dist-ssr
 codebase*.xml
 
 *.json
+!tsconfig.api.json
 finance_backup.json

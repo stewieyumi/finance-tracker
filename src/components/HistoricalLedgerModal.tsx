@@ -17,10 +17,9 @@ const applyManualTransactionWalletEffect = (
   transaction: ManualTransaction,
   direction: 1 | -1,
 ) => {
+  if (transaction.postingMode === "history-only" || !transaction.wallet) return wallets;
   const nextWallets = { ...wallets };
   const amount = Number(transaction.amount) || 0;
-
-  if (!transaction.wallet) return nextWallets;
 
   if (transaction.type === "income") {
     nextWallets[transaction.wallet] =
@@ -58,13 +57,20 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
     wallet: globalData.settings?.defaultWallet || 'main',
     destinationWallet: '',
     category: '',
-    note: ''
+    note: '',
+    updateWallets: true,
   });
 
   if (!isOpen) return null;
 
   const transactions = globalData.library?.manualTransactions || [];
   const customWallets = globalData.settings?.customWallets || [];
+  const archivedWallets = globalData.settings?.archivedWallets ?? [];
+  const walletLabel = (id?: string) => customWallets.find(wallet => wallet.id === id)?.label ??
+    archivedWallets.find(wallet => wallet.id === id)?.label ?? id;
+  const usesArchivedWallet = (data: UnifiedFinanceData, tx: ManualTransaction) =>
+    tx.postingMode !== "history-only" && data.settings?.archivedWallets?.some(wallet => wallet.id === tx.wallet || wallet.id === tx.destinationWallet);
+
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,15 +92,18 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
         destinationWallet: form.type === 'transfer' ? form.destinationWallet : undefined,
         category: form.category,
         note: form.note,
+        postingMode: form.updateWallets ? "wallet" : "history-only",
         createdAt: editingId ? (prev.library?.manualTransactions?.find(t => t.id === editingId)?.createdAt || Date.now()) : Date.now()
       };
 
+      if (usesArchivedWallet(prev, newTx)) return prev;
       let nextWallets = { ...prev.wallets };
 
       // REVERSE OLD TRANSACTION EFFECT
       if (editingId) {
         const oldTx = prev.library?.manualTransactions?.find(t => t.id === editingId);
         if (oldTx) {
+          if (usesArchivedWallet(prev, oldTx)) return prev;
           nextWallets = applyManualTransactionWalletEffect(nextWallets, oldTx, -1);
         }
       }
@@ -124,8 +133,16 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
   };
 
   const handleDelete = (tx: ManualTransaction) => {
-    if (!confirm(`Delete "${tx.title}" and reverse its wallet impact?`)) return;
+    if (usesArchivedWallet(globalData, tx)) {
+      showToast("Restore the archived wallet before reversing this transaction.");
+      return;
+    }
+    const prompt = tx.postingMode === "history-only"
+      ? `Delete "${tx.title}" from history?`
+      : `Delete "${tx.title}" and reverse its wallet impact?`;
+    if (!confirm(prompt)) return;
     setGlobalData(prev => {
+      if (usesArchivedWallet(prev, tx)) return prev;
       const nextWallets = applyManualTransactionWalletEffect(
         prev.wallets,
         tx,
@@ -143,6 +160,10 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
   };
 
   const openEdit = (tx: ManualTransaction) => {
+    if (usesArchivedWallet(globalData, tx)) {
+      showToast("Restore the archived wallet before editing this transaction.");
+      return;
+    }
     setEditingId(tx.id);
     setForm({
       title: tx.title,
@@ -152,7 +173,8 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
       wallet: tx.wallet || 'main',
       destinationWallet: tx.destinationWallet || '',
       category: tx.category || '',
-      note: tx.note || ''
+      note: tx.note || '',
+      updateWallets: tx.postingMode !== 'history-only',
     });
     setView('form');
   };
@@ -163,7 +185,7 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
       title: '', amount: '', type: 'expense',
       date: new Date().toISOString().split('T')[0],
       wallet: globalData.settings?.defaultWallet || 'main',
-      destinationWallet: '', category: '', note: ''
+      destinationWallet: '', category: '', note: '', updateWallets: true
     });
     setView('form');
   };
@@ -175,7 +197,7 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
       variant="sheet"
       ariaLabel="Historical Ledger"
     >
-      <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-lg mx-auto shadow-[0_0_60px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
+      <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-lg mx-auto shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
         <div className="flex items-center justify-between p-5 border-b border-inverse/[0.05]">
           <h2 className="text-sm font-bold text-strong uppercase tracking-wider">{view === 'form' ? (editingId ? 'Edit Transaction' : 'New Transaction') : 'Historical Ledger'}</h2>
           <button onClick={onClose} className="text-faint hover:text-strong p-2 rounded-full hover:bg-inverse/[0.05] transition"><X size={18} /></button>
@@ -194,7 +216,7 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="text-xs font-bold text-primary">{tx.title}</div>
-                        <div className="text-[10px] text-faint mt-0.5">{tx.date} • {tx.type.toUpperCase()}</div>
+                        <div className="text-[10px] text-faint mt-0.5">{tx.date} • {tx.type.toUpperCase()}{tx.postingMode === 'history-only' ? ' • HISTORY ONLY' : ''}</div>
                       </div>
                       <div className={`text-xs font-mono font-bold ${tx.type === 'income' ? 'text-emerald-400' : tx.type === 'expense' ? 'text-strong' : 'text-blue-400'}`}>
                         {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}₱{tx.amount.toLocaleString()}
@@ -202,11 +224,11 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
                     </div>
                     <div className="flex items-center justify-between mt-3 pt-3 border-t border-inverse/[0.02]">
                       <div className="text-[10px] text-muted flex items-center gap-1.5">
-                        <span className="px-1.5 py-0.5 bg-fill-strong rounded">{customWallets.find(w => w.id === tx.wallet)?.label || tx.wallet}</span>
+                        <span className="px-1.5 py-0.5 bg-fill-strong rounded">{walletLabel(tx.wallet)}</span>
                         {tx.type === 'transfer' && (
                           <>
                             <ArrowRight size={10} />
-                            <span className="px-1.5 py-0.5 bg-fill-strong rounded">{customWallets.find(w => w.id === tx.destinationWallet)?.label || tx.destinationWallet}</span>
+                            <span className="px-1.5 py-0.5 bg-fill-strong rounded">{walletLabel(tx.destinationWallet)}</span>
                           </>
                         )}
                       </div>
@@ -259,6 +281,11 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
                   </div>
                 )}
               </div>
+              <label className="flex items-center gap-2 text-xs text-primary">
+                <input type="checkbox" checked={form.updateWallets} onChange={event => setForm({ ...form, updateWallets: event.target.checked })} />
+                Update wallet balances
+              </label>
+              <p className="text-xs text-muted">Turn this off to record history without applying a wallet movement.</p>
               <div className="flex gap-2 pt-3">
                 <button type="button" onClick={() => setView('list')} className="flex-1 py-3 bg-inverse/[0.05] hover:bg-inverse/[0.1] text-xs font-semibold rounded-xl transition">Cancel</button>
                 <button type="submit" className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl transition shadow-lg shadow-emerald-900/20">{editingId ? 'Update' : 'Save'}</button>

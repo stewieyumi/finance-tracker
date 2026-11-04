@@ -106,7 +106,7 @@ export const SyncDiagnosticsModal: React.FC<SyncDiagnosticsModalProps> = ({
               3. Last Cloud Network Action
             </div>
 
-            <div className="text-[11px] text-amber-300 break-all">
+            <div className="text-[11px] text-warning break-all">
               {debugLog || "No network action triggered yet."}
             </div>
           </div>

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Camera, Check, Circle, Edit2, Save, Trash2, Plus, Filter, ChevronDown, Calendar, X, CalendarPlus, Upload, RefreshCw } from "lucide-react";
 import { Shoot, ShootCategory, ShootStatus, EditFormData } from "../types/finance";
 import { exportGigToCalendar } from "../utils/calendarExport";
+import { Modal } from "./ui/Modal";
 import { syncShootsToNotion } from "../utils/notionSync";
 
 const SHOOT_CATEGORIES: (ShootCategory | "All")[] = ["All", "Solo Shoot", "Assistant", "Video Edit", "Event", "Commercial", "Other"];
@@ -44,6 +45,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
   const categoriesList = gigCategories?.length ? gigCategories : ["Solo Shoot", "Assistant", "Video Edit", "Event", "Commercial", "Other"];
   const filterList = ["All", ...categoriesList];
 
+  const [calendarGig, setCalendarGig] = useState<Shoot | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [newShoot, setNewShoot] = useState({ title: "", date: "", category: "Solo Shoot" as ShootCategory, status: "Confirmed" as ShootStatus });
   const [selectedFilter, setSelectedFilter] = useState<"All" | ShootCategory>("All");
@@ -132,11 +134,11 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
       alert("Please set a date for this gig first.");
       return;
     }
-    exportGigToCalendar(shoot);
+    setCalendarGig(shoot);
   };
 
   return (
-    <div className="bg-surface-low border border-inverse/[0.08] rounded-2xl p-4 sm:p-5 shadow-lg w-full">
+    <div className="w-full rounded-2xl bg-surface p-3 sm:p-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><Camera size={13} className="text-amber-400" />{selectedMonth} Upcoming Shoots & Production Gigs</h2>
         <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
@@ -198,7 +200,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
       </div>
 
       {/* MOBILE LIST */}
-      <div className="block lg:hidden space-y-2 mb-3">
+      <div className="mb-3 block overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle lg:hidden">
         {filteredShoots.length === 0 ? (
           <div className="py-6 text-center text-faint text-xs italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} production gigs found.</div>
         ) : filteredShoots.map(shoot => (
@@ -206,7 +208,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
             key={shoot.id}
             data-testid={`shoot-mobile-card-${shoot.id}`}
             onClick={() => handleStartEdit(shoot)}
-            className={`p-3 rounded-xl border transition-all cursor-pointer ${shoot.completed ? "bg-fill-subtle/40 border-strong/60 opacity-45 hover:opacity-75" : "bg-surface border-strong/80 shadow-sm hover:border-inverse/[0.15]"}`}
+            className={`cursor-pointer px-3 py-2.5 transition-colors hover:bg-surface-high ${shoot.completed ? "bg-surface-low" : ""}`}
           >
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-2">
@@ -323,8 +325,8 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
 
       {/* EDIT MODAL */}
       {editingId && activeShoots.some(s => s.id === editingId) && (
-        <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => { if(e.target === e.currentTarget) handleCancelEdit(); }}>
-          <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[200] bg-[var(--bg-modal-scrim)] backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => { if(e.target === e.currentTarget) handleCancelEdit(); }}>
+          <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400"><Edit2 size={18} /></div>
@@ -366,8 +368,8 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
 
       {/* ADD MODAL */}
       {isAdding && (
-        <div className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => { if(e.target === e.currentTarget) setIsAdding(false); }}>
-          <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[200] bg-[var(--bg-modal-scrim)] backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => { if(e.target === e.currentTarget) setIsAdding(false); }}>
+          <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400"><Plus size={18} /></div>
@@ -405,6 +407,26 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
             </form>
           </div>
         </div>
+      )}
+      {calendarGig && (
+        <Modal isOpen onClose={() => setCalendarGig(null)} ariaLabel="Add gig to calendar">
+          <div className="w-full max-w-sm space-y-3 rounded-2xl border border-subtle bg-surface p-4 shadow-xl">
+            <h2 className="text-sm font-semibold text-primary">Add to Calendar</h2>
+            <p className="text-xs text-muted">Share to an available calendar app, or download the calendar file to import it.</p>
+            <button type="button" className="w-full rounded-lg bg-fill p-2 text-sm text-primary hover:bg-fill-strong"
+              onClick={() => { exportGigToCalendar(calendarGig); setCalendarGig(null); }}>
+              Share or open calendar file
+            </button>
+            <button type="button" className="w-full rounded-lg bg-fill p-2 text-sm text-primary hover:bg-fill-strong"
+              onClick={() => { exportGigToCalendar(calendarGig, false); setCalendarGig(null); }}>
+              Download calendar file (.ics)
+            </button>
+            <button type="button" className="w-full rounded-lg p-2 text-sm text-muted hover:bg-fill"
+              onClick={() => setCalendarGig(null)}>
+              Cancel
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );

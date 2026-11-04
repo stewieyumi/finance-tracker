@@ -28,6 +28,13 @@ import {
   PaydayExecution
 } from "../types/finance";
 import { calculateSafeToSpend, calculateDebtRunway } from "../utils/financialAnalytics";
+import { getPaydayDatesInRange, normalizePaydayDays, parseMonthKey } from "../utils/dateHelpers";
+
+const carouselSlideClass = "flex w-[94%] shrink-0 snap-center px-1.5 sm:w-[72.25%] sm:px-2.5";
+const carouselEdgeClass =
+  "group/edge absolute inset-y-0 z-20 hidden w-9 cursor-pointer items-center focus-visible:outline-none md:w-16 [@media(pointer:fine)]:flex";
+const carouselChevronClass =
+  "flex size-4 items-center justify-center rounded-full text-strong opacity-0 transition-opacity group-hover/edge:opacity-100 group-focus-visible/edge:opacity-100 group-focus-visible/edge:ring-2 group-focus-visible/edge:ring-[var(--focus-outline)] md:size-8";
 
 interface DashboardTabProps {
   globalData: UnifiedFinanceData;
@@ -129,20 +136,17 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
     [debtLoans]
   );
 
-  const pdDays = globalData?.settings?.paydayDays?.length
-    ? globalData.settings.paydayDays
-    : [15, 30];
+  const pdDays = normalizePaydayDays(globalData.settings?.paydayDays);
+  const monthStart = parseMonthKey(selectedMonth);
+  const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+  const payoutCount = getPaydayDatesInRange(monthStart, monthEnd, pdDays).length;
+  const monthlyNetSalary = (globalData.settings?.perPayoutSalary ?? 0) * payoutCount;
 
   const formatOrdinal = (n: number) => {
     const s = ["th", "st", "nd", "rd"];
     const v = n % 100;
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   };
-
-  const totalPaydayAllocated = useMemo(
-    () => Object.values(paydayAllocations).reduce((a, b) => a + b, 0),
-    [paydayAllocations]
-  );
 
   const unpaidCount = useMemo(() => {
     if (activeBills && activeBills.length > 0) {
@@ -227,7 +231,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   };
 
   const getCarouselCardClass = (isActive: boolean, interactiveHover?: string) =>
-    `w-full h-[156px] sm:h-[160px] bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.07] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.35)] rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-[transform,opacity] duration-[220ms] ease-out will-change-[transform,opacity] ${
+    `min-w-0 flex-1 min-h-[156px] sm:h-[160px] bg-surface-elevated/90 backdrop-blur-xl border border-subtle shadow-md rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-3 sm:gap-0 transition-[transform,opacity] duration-[220ms] ease-out will-change-[transform,opacity] ${
       isActive
         ? `scale-100 opacity-100 z-10 blur-0 ${interactiveHover || ""}`
         : "scale-[0.94] opacity-80 z-0 blur-[0.75px] hover:opacity-95 cursor-pointer"
@@ -238,25 +242,22 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       {/* 1. FINANCIAL OVERVIEW CAROUSEL STAGE */}
       <div className="w-full space-y-2.5">
         {/* Contained Stage Viewport */}
-        <div className="relative rounded-3xl bg-surface-low/30 border border-inverse/[0.06] overflow-hidden">
+        <div className="relative rounded-3xl bg-surface-low/30 border border-subtle overflow-hidden">
           {/* Scroll Viewport */}
           <div
             ref={carouselRef}
             onScroll={handleCarouselScroll}
-            className="w-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory pt-5 pb-11 sm:pt-6 sm:pb-12"
+            className="w-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory pt-3 pb-5 sm:pt-6 sm:pb-12"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
-            {/* Scroll Track with 7.5% end padding so first and last slides center perfectly */}
-            <div
-              className="flex items-center"
-              style={{ paddingLeft: "7.5%", paddingRight: "7.5%" }}
-            >
+            {/* Flex spacers reserve half the remaining width at both scroll limits. */}
+            <div className="flex before:shrink-0 before:basis-[3%] after:shrink-0 after:basis-[3%] sm:before:basis-[13.875%] sm:after:basis-[13.875%]">
               {/* SLIDE 1: FINANCIAL OVERVIEW */}
               <div
                 ref={(el) => {
                   slideRefs.current[0] = el;
                 }}
-                className="w-[85%] min-w-[85%] max-w-[85%] flex-shrink-0 snap-center px-1.5 sm:px-2.5"
+                className={carouselSlideClass}
               >
                 <div
                   role={activeSlide !== 0 ? "button" : undefined}
@@ -273,7 +274,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                   }}
                   className={getCarouselCardClass(activeSlide === 0)}
                 >
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 sm:mb-2">
                     <div className="flex items-center gap-2">
                       <TrendingUp size={14} className="text-blue-400" />
                       <h2 className="text-xs font-bold uppercase tracking-wider text-primary">
@@ -283,26 +284,26 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     <span className="text-[10px] text-faint font-mono">{selectedMonth}</span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center my-auto">
-                    <div className="bg-surface/80 border border-inverse/[0.04] rounded-xl p-2.5 sm:p-3">
+                  <div className="grid gap-2 sm:my-auto sm:grid-cols-3 sm:gap-3 sm:text-center">
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-inverse/[0.04] bg-surface/80 px-3 py-2 sm:block sm:p-3">
                       <div className="text-xs font-medium text-muted">Fund Progress</div>
-                      <div className="text-sm sm:text-base font-semibold font-mono tracking-tight mt-1 text-strong">
+                      <div className="text-sm sm:text-base font-semibold font-mono tracking-tight text-right sm:mt-1 sm:text-center text-strong">
                         {fundProgressPercent}%
                       </div>
                     </div>
 
-                    <div className="bg-surface/80 border border-inverse/[0.04] rounded-xl p-2.5 sm:p-3">
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-inverse/[0.04] bg-surface/80 px-3 py-2 sm:block sm:p-3">
                       <div className="text-xs font-medium text-muted">Pending Inflows</div>
-                      <div className="text-sm sm:text-base font-semibold font-mono tracking-tight mt-1 text-amber-300">
+                      <div className="text-sm sm:text-base font-semibold font-mono tracking-tight text-right sm:mt-1 sm:text-center text-warning">
                         ₱{totalPendingReceivables.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </div>
                     </div>
 
-                    <div className="bg-surface/80 border border-inverse/[0.04] rounded-xl p-2.5 sm:p-3">
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-inverse/[0.04] bg-surface/80 px-3 py-2 sm:block sm:p-3">
                       <div className="text-xs font-medium text-muted">
                         {selectedMonth.split(" ")[0]} Income
                       </div>
-                      <div className="text-sm sm:text-base font-semibold font-mono tracking-tight mt-1 text-emerald-400">
+                      <div className="text-sm sm:text-base font-semibold font-mono tracking-tight text-right sm:mt-1 sm:text-center text-emerald-400">
                         ₱{monthIncomeCollected.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </div>
                     </div>
@@ -315,7 +316,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 ref={(el) => {
                   slideRefs.current[1] = el;
                 }}
-                className="w-[85%] min-w-[85%] max-w-[85%] flex-shrink-0 snap-center px-1.5 sm:px-2.5"
+                className={carouselSlideClass}
               >
                 <div
                   role="button"
@@ -366,7 +367,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-inverse/[0.04] text-[11px] text-faint">
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-2 border-t border-inverse/[0.04] text-[11px] text-faint">
                     <span className="font-mono">
                       Liquid: ₱{totalLiquid.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </span>
@@ -382,7 +383,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 ref={(el) => {
                   slideRefs.current[2] = el;
                 }}
-                className="w-[85%] min-w-[85%] max-w-[85%] flex-shrink-0 snap-center px-1.5 sm:px-2.5"
+                className={carouselSlideClass}
               >
                 <div
                   role="button"
@@ -435,7 +436,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-inverse/[0.04] text-[11px]">
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-2 border-t border-inverse/[0.04] text-[11px]">
                     <span className="text-faint font-mono">
                       {debtLoans.length > 0 ? `${debtLoans.length} installment plan${debtLoans.length === 1 ? "" : "s"}` : "Zero balance"}
                     </span>
@@ -453,7 +454,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 ref={(el) => {
                   slideRefs.current[3] = el;
                 }}
-                className="w-[85%] min-w-[85%] max-w-[85%] flex-shrink-0 snap-center px-1.5 sm:px-2.5"
+                className={carouselSlideClass}
               >
                 <div
                   role="button"
@@ -500,7 +501,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-inverse/[0.04] text-[11px]">
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-2 border-t border-inverse/[0.04] text-[11px]">
                     <span className="text-faint font-mono">12-Month Horizon</span>
                     {onOpenYearlyModal && (
                       <span className="font-medium text-emerald-400 flex items-center gap-1 group-hover:text-emerald-300 transition">
@@ -513,44 +514,42 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             </div>
           </div>
 
-          {/* Desktop Left Edge Hover Interaction Zone */}
+          {/* Desktop Left Edge Control */}
           {activeSlide > 0 && (
             <button
               type="button"
               onClick={() => scrollToSlide(activeSlide - 1)}
               aria-label="Previous slide"
-              className="hidden md:flex absolute left-0 top-0 bottom-0 w-12 sm:w-16 items-center justify-start pl-3 z-20 cursor-pointer group/edge bg-transparent hover:bg-gradient-to-r hover:from-surface-elevated/50 hover:to-transparent transition-all duration-200"
+              className={`${carouselEdgeClass} left-0 justify-start pl-0.5 md:pl-3`}
             >
-              <ChevronLeft
-                size={18}
-                className="opacity-0 group-hover/edge:opacity-100 text-primary transform -translate-x-1 group-hover/edge:translate-x-0 transition-all duration-200 drop-shadow-sm"
-              />
+              <span className={carouselChevronClass}>
+                <ChevronLeft size={16} aria-hidden="true" />
+              </span>
             </button>
           )}
 
-          {/* Desktop Right Edge Hover Interaction Zone */}
+          {/* Desktop Right Edge Control */}
           {activeSlide < 3 && (
             <button
               type="button"
               onClick={() => scrollToSlide(activeSlide + 1)}
               aria-label="Next slide"
-              className="hidden md:flex absolute right-0 top-0 bottom-0 w-12 sm:w-16 items-center justify-end pr-3 z-20 cursor-pointer group/edge bg-transparent hover:bg-gradient-to-l hover:from-surface-elevated/50 hover:to-transparent transition-all duration-200"
+              className={`${carouselEdgeClass} right-0 justify-end pr-0.5 md:pr-3`}
             >
-              <ChevronRight
-                size={18}
-                className="opacity-0 group-hover/edge:opacity-100 text-primary transform translate-x-1 group-hover/edge:translate-x-0 transition-all duration-200 drop-shadow-sm"
-              />
+              <span className={carouselChevronClass}>
+                <ChevronRight size={16} aria-hidden="true" />
+              </span>
             </button>
           )}
         </div>
 
-        {/* Carousel Pagination Dots */}
         <div className="flex items-center justify-center gap-1.5 pt-0.5 pb-1">
           {[0, 1, 2, 3].map((idx) => (
             <button
               key={idx}
               type="button"
               aria-label={`Go to slide ${idx + 1}`}
+              aria-current={activeSlide === idx ? "true" : undefined}
               onClick={() => scrollToSlide(idx)}
               className={`h-1.5 rounded-full transition-all duration-300 ${
                 activeSlide === idx
@@ -562,36 +561,65 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         </div>
       </div>
 
-      {/* 2. COMPACT WALLETS & UPCOMING CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {/* Wallets Card */}
-        <div
-          onClick={onNavigateToWallets}
-          className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.07] hover:border-blue-500/30 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.35)] rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group active:scale-[0.99] flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Wallet size={14} className="text-blue-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted group-hover:text-primary transition">
-                Wallets
-              </h3>
-            </div>
-            <ArrowRight size={13} className="text-faint group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
-          </div>
-          <div>
-            <div className="privacy-blur text-lg sm:text-xl font-bold font-mono text-strong tracking-tight">
-              ₱{totalLiquid.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-            </div>
-            <div className="text-xs text-muted mt-1 font-medium">
-              Across {Object.keys(globalData?.wallets || {}).length} wallets
-            </div>
-          </div>
-        </div>
+      <button
+        type="button"
+        onClick={onNavigateToWallets}
+        className="group block w-full rounded-3xl border border-strong bg-surface-elevated p-5 text-left shadow-sm transition hover:border-blue-500/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 sm:p-6"
+      >
+        <span className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-2 text-sm font-semibold text-muted">
+            <Wallet size={16} /> Wallets
+          </span>
+          <ArrowRight size={16} className="text-muted transition group-hover:translate-x-0.5" />
+        </span>
+        <span className="privacy-blur mt-3 block font-mono text-3xl font-bold tracking-tight text-strong sm:text-4xl">
+          ₱{totalLiquid.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+        </span>
+        <span className="mt-2 block text-xs text-muted">
+          Liquid cash across {Object.keys(globalData.wallets || {}).length} wallets
+        </span>
+      </button>
 
-        {/* Upcoming Card */}
+      <section aria-labelledby="dashboard-goals">
+        <h2 id="dashboard-goals" className="mb-2 px-1 text-sm font-semibold text-primary">Goals</h2>
+        <ErrorBoundary>
+          <MilestoneProgressBar
+            currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0}
+            targetFund={targetMilestoneFund}
+            goalName={globalData?.settings?.goalName}
+            onConfigureGoal={onConfigureGoal}
+          />
+        </ErrorBoundary>
+      </section>
+
+      <section aria-labelledby="dashboard-quick-actions" className="rounded-2xl border border-subtle bg-surface-elevated p-4 shadow-sm sm:p-5">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 id="dashboard-quick-actions" className="text-sm font-semibold text-primary">Quick Actions</h2>
+          <button type="button" onClick={() => setShowQuickAdd(true)} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-fill px-2.5 text-xs font-medium text-primary transition hover:bg-fill-strong">
+            <Plus size={14} aria-hidden="true" /> Quick Add
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {([
+            { action: "expense", label: "Expenses", icon: Receipt, available: onNavigateToExpenses },
+            { action: "bill", label: "Commitments", icon: Calendar, available: onNavigateToOps },
+            { action: "inflow", label: "Inflows", icon: ArrowDownLeft, available: onNavigateToOps },
+            { action: "wallet", label: "Wallets", icon: Wallet, available: onNavigateToWallets },
+          ] as const).filter(item => item.available).map(({ action, label, icon: Icon }) => (
+            <button key={action} type="button" onClick={() => handleQuickAddAction(action)}
+              className="flex min-h-11 min-w-0 items-center gap-2 rounded-xl border border-subtle bg-surface px-3 py-2 text-left text-xs font-medium text-primary transition hover:bg-fill-strong">
+              <Icon size={15} className="shrink-0 text-muted" aria-hidden="true" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* 2. UPCOMING COMMITMENTS */}
+      <div>
         <div
           onClick={() => setShowUpcomingModal(true)}
-          className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.07] hover:border-amber-500/30 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.35)] rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group active:scale-[0.99] flex flex-col justify-between"
+          className="bg-surface-elevated/90 backdrop-blur-xl border border-subtle hover:border-amber-500/30 shadow-md rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group active:scale-[0.99] flex flex-col justify-between"
         >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -603,13 +631,13 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             <ArrowRight size={13} className="text-faint group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all" />
           </div>
           <div>
-            <div className="flex items-baseline justify-between gap-2">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div className="text-lg sm:text-xl font-bold font-mono text-strong tracking-tight">
                 ₱{totalUnpaidCommitments.toLocaleString("en-US", { minimumFractionDigits: 2 })}
               </div>
               {overdueBills.length > 0 && (
-                <span className="text-[11px] font-semibold text-orange-400 bg-orange-950/40 border border-orange-800/50 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <AlertCircle size={12} className="text-orange-400 shrink-0" />
+                <span className="chip-amber text-[11px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <AlertCircle size={12} className="shrink-0" />
                   {overdueBills.length} overdue
                 </span>
               )}
@@ -624,49 +652,39 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       {/* 3. COMPACT PAYDAY PLAN CARD */}
       <div
         onClick={() => setShowPaydayModal(true)}
-        className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.07] hover:border-emerald-500/30 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.35)] rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group active:scale-[0.99] flex items-center justify-between"
+        className="bg-surface-elevated/90 backdrop-blur-xl border border-subtle hover:border-emerald-500/30 shadow-md rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group active:scale-[0.99] flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
       >
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
             <Banknote size={18} />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
                 Payday Plan
               </h3>
               {hasExecutedToday && (
-                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-semibold chip-emerald px-2 py-0.5 rounded-full">
                   ✓ Distributed
                 </span>
               )}
             </div>
             <div className="text-xs text-muted mt-0.5 font-medium">
-              Auto-distribute to wallets • {pdDays.map(formatOrdinal).join(" & ")}
+              Monthly take-home pay • {pdDays.map(formatOrdinal).join(" & ")}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full shrink-0 items-center justify-between gap-2 sm:w-auto">
           <span className="font-mono font-bold text-sm sm:text-base text-primary">
-            ₱{totalPaydayAllocated.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            ₱{monthlyNetSalary.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
           <ArrowRight size={14} className="text-faint group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
         </div>
       </div>
 
-      {/* 4. GOALS */}
-      <ErrorBoundary>
-        <MilestoneProgressBar
-          currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0}
-          targetFund={targetMilestoneFund}
-          goalName={globalData?.settings?.goalName}
-          onConfigureGoal={onConfigureGoal}
-        />
-      </ErrorBoundary>
-
       {/* 5. RECENT ACTIVITY */}
       <ErrorBoundary>
-        <div className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.07] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.35)] rounded-2xl p-4 sm:p-5">
+        <div className="bg-surface-elevated/90 backdrop-blur-xl border border-subtle shadow-md rounded-2xl p-4 sm:p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
               <History size={13} className="text-purple-400" /> Recent Activity
@@ -685,7 +703,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               <div className="py-4 text-center text-faint text-xs italic">No transactions yet.</div>
             ) : (
               recentTransactions.slice(0, 5).map((tx: TransactionHistoryItem) => (
-                <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-inverse/[0.08] transition">
+                <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-subtle transition">
                   <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
                     <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${tx.type === "inflow" ? "transaction-inflow-icon" : tx.type === "bill" ? "transaction-bill-icon" : "bg-fill border-strong text-muted"}`}>
                       {tx.type === "inflow" ? <ArrowDownLeft size={14} /> : tx.type === "bill" ? <Calendar size={14} /> : <Receipt size={14} />}
@@ -712,18 +730,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       </ErrorBoundary>
 
       {/* 6. COPY SUMMARY BUTTON */}
-      <button onClick={onCopySummary} className="w-full bg-surface-elevated/90 hover:bg-inverse/[0.06] border border-inverse/[0.06] text-primary font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition text-xs shadow-md">
+      <button onClick={onCopySummary} className="w-full bg-surface-elevated/90 hover:bg-inverse/[0.06] border border-subtle text-primary font-semibold py-3 px-4 rounded-2xl flex items-center justify-center gap-2 transition text-xs shadow-md">
         <Copy size={14} /> Copy Summary
-      </button>
-
-      {/* 7. QUICK ADD FLOATING BUTTON */}
-      <button
-        onClick={() => setShowQuickAdd(true)}
-        aria-label="Quick Add"
-        title="Quick Add (+)"
-        className="fixed bottom-20 right-5 sm:right-8 z-40 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 active:scale-95 text-white shadow-xl shadow-blue-600/30 flex items-center justify-center transition-all"
-      >
-        <Plus size={22} className="stroke-[2.5]" />
       </button>
 
       {/* UPCOMING MODAL */}

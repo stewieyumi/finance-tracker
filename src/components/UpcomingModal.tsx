@@ -51,7 +51,7 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
     >
       <div className="bg-surface-modal border border-inverse/[0.1] rounded-3xl p-5 sm:p-6 w-full max-w-md space-y-4 shadow-2xl animate-fade-in">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
+        <div className="flex items-center justify-between pb-3 border-b border-subtle">
           <div className="flex items-center gap-2">
             <Calendar size={16} className="text-amber-400" />
             <h3 className="text-sm font-bold uppercase tracking-wider text-strong">
@@ -70,7 +70,7 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
 
         {/* Urgency Summary Cards */}
         <div className="grid grid-cols-2 gap-2.5 text-xs">
-          <div className="bg-surface-low border border-inverse/[0.05] rounded-2xl p-3">
+          <div className="bg-surface-low border border-subtle rounded-2xl p-3">
             <span className="text-muted text-[11px] font-medium block">Total Unpaid</span>
             <span className="text-base font-bold font-mono text-strong mt-0.5 block">
               ₱{fmt(totalUnpaidCommitments)}
@@ -80,7 +80,7 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
             </span>
           </div>
 
-          <div className="bg-surface-low border border-inverse/[0.05] rounded-2xl p-3">
+          <div className="bg-surface-low border border-subtle rounded-2xl p-3">
             <span className="text-muted text-[11px] font-medium block">Top Priority</span>
             <span className="text-base font-bold font-mono text-blue-400 mt-0.5 block">
               ₱{fmt(priorityUnpaidSum || totalUnpaidCommitments)}
@@ -93,26 +93,27 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
 
         {/* Overdue Alert Banner if applicable */}
         {overdueBills.length > 0 && (
-          <div
+          <button
+            type="button"
             onClick={() => {
               onJumpToOverdue?.();
               onClose();
             }}
-            className={`p-3 rounded-2xl bg-orange-950/25 border border-orange-800/40 text-orange-300 flex items-center justify-between text-xs transition ${onJumpToOverdue ? "cursor-pointer hover:bg-orange-950/40" : ""}`}
+            className="chip-amber flex w-full items-center justify-between rounded-2xl p-3 text-left text-xs transition hover:brightness-95 focus-visible:outline focus-visible:outline-2"
           >
             <div className="flex items-center gap-2">
-              <AlertCircle size={15} className="text-orange-400 shrink-0" />
+              <AlertCircle size={15} className="shrink-0" />
               <div>
                 <span className="font-semibold block">
                   {overdueBills.length} Overdue Commitment{overdueBills.length > 1 ? "s" : ""}
                 </span>
-                <span className="text-[10px] text-orange-300/80">
-                  Totaling ₱{fmt(overdueSum)} • Tap to jump to overdue
+                <span className="text-[10px] opacity-80">
+                  Totaling ₱{fmt(overdueSum)}{onJumpToOverdue ? " • Jump to overdue" : ""}
                 </span>
               </div>
             </div>
-            {onJumpToOverdue && <ArrowRight size={13} className="text-orange-400 shrink-0" />}
-          </div>
+            {onJumpToOverdue && <ArrowRight size={13} className="shrink-0" />}
+          </button>
         )}
 
         {/* Urgent Items List */}
@@ -122,7 +123,7 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
             <span className="text-faint">{selectedMonth}</span>
           </div>
 
-          <div className="space-y-1.5 bg-surface-low border border-inverse/[0.05] rounded-2xl p-3">
+          <div className="space-y-1.5 bg-surface-low border border-subtle rounded-2xl p-3">
             {urgentBills.length === 0 ? (
               <div className="py-3 text-center text-xs text-faint flex items-center justify-center gap-1.5">
                 <CheckCircle2 size={14} className="text-emerald-400" />
@@ -148,7 +149,7 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
                       )}
                     </span>
                   </div>
-                  <span className={`font-mono font-semibold shrink-0 ${bill.daysLeft !== undefined && bill.daysLeft < 0 ? "text-orange-300" : "text-strong"}`}>
+                  <span className={`font-mono font-semibold shrink-0 ${bill.daysLeft !== undefined && bill.daysLeft < 0 ? "text-warning" : "text-strong"}`}>
                     ₱{fmt(bill.amount)}
                   </span>
                 </div>

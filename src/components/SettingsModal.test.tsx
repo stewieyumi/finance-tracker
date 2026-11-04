@@ -105,6 +105,29 @@ const extractSavedSettings = (setGlobalData: ReturnType<typeof vi.fn>, initialDa
   return updatedData.settings;
 };
 
+it("groups wallet defaults separately and keeps payday edits when switching sections", () => {
+  const data = createMockData();
+  const { setGlobalData } = renderSettingsModal(data);
+  fireEvent.change(screen.getByLabelText(/Gross Salary \/ Pay Period/i), { target: { value: "23000" } });
+  fireEvent.click(screen.getByRole("button", { name: "Wallet Defaults" }));
+  expect(screen.getByText("Default Wallet for New Bills")).toBeInTheDocument();
+  expect(screen.queryByText("Payday Schedule")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "General" }));
+  expect(screen.getByRole("button", { name: "light" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Save Settings" }));
+  expect(extractSavedSettings(setGlobalData, data).grossPerPayoutSalary).toBe(23000);
+});
+
+it("finds settings by topic and opens the matching section", () => {
+  renderSettingsModal(createMockData(), { initialTab: "general" });
+  const search = screen.getByRole("searchbox", { name: "Search settings" });
+  fireEvent.change(search, { target: { value: "restore backup" } });
+  expect(screen.queryByRole("button", { name: "Payday" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Cloud Sync" }));
+  expect(screen.getByRole("heading", { name: "Backups & recovery" })).toBeInTheDocument();
+  expect(search).toHaveValue("");
+});
+
 describe("SettingsModal - Custom Payday Configuration", () => {
   it("displays System Default state when paydayDays is an empty array []", () => {
     const data = createMockData({
@@ -502,7 +525,7 @@ describe("SettingsModal - Theme Live-Preview & Persistence", () => {
       settings: { ...createMockData().settings!, theme: "dark" },
     });
 
-    const { setGlobalData } = renderSettingsModal(data);
+    const { setGlobalData } = renderSettingsModal(data, { initialTab: "general" });
 
     // Initial state is dark
     expect(document.documentElement.classList.contains("dark")).toBe(true);
@@ -524,7 +547,7 @@ describe("SettingsModal - Theme Live-Preview & Persistence", () => {
       settings: { ...createMockData().settings!, theme: "light" },
     });
 
-    const { setGlobalData } = renderSettingsModal(data);
+    const { setGlobalData } = renderSettingsModal(data, { initialTab: "general" });
 
     // Initial state is light
     expect(document.documentElement.classList.contains("light")).toBe(true);
@@ -559,7 +582,7 @@ describe("SettingsModal - Theme Live-Preview & Persistence", () => {
         settings: { ...createMockData().settings!, theme: "dark" },
       });
 
-      renderSettingsModal(data);
+      renderSettingsModal(data, { initialTab: "general" });
 
       const systemBtn = screen.getByRole("button", { name: /^system$/i });
       fireEvent.click(systemBtn);
@@ -577,7 +600,7 @@ describe("SettingsModal - Theme Live-Preview & Persistence", () => {
       settings: { ...createMockData().settings!, theme: "dark" },
     });
 
-    const { onClose, setGlobalData } = renderSettingsModal(data);
+    const { onClose, setGlobalData } = renderSettingsModal(data, { initialTab: "general" });
 
     // User previews Light
     const lightBtn = screen.getByRole("button", { name: /^light$/i });
@@ -600,7 +623,7 @@ describe("SettingsModal - Theme Live-Preview & Persistence", () => {
       settings: { ...createMockData().settings!, theme: "dark" },
     });
 
-    const { onClose, setGlobalData } = renderSettingsModal(data);
+    const { onClose, setGlobalData } = renderSettingsModal(data, { initialTab: "general" });
 
     // User previews Light
     const lightBtn = screen.getByRole("button", { name: /^light$/i });
@@ -623,7 +646,7 @@ describe("SettingsModal - Theme Live-Preview & Persistence", () => {
       settings: { ...createMockData().settings!, theme: "dark" },
     });
 
-    const { onClose, setGlobalData } = renderSettingsModal(data);
+    const { onClose, setGlobalData } = renderSettingsModal(data, { initialTab: "general" });
 
     // Initial state is dark
     expect(document.documentElement.classList.contains("dark")).toBe(true);
@@ -648,7 +671,7 @@ describe("SettingsModal - Theme Live-Preview & Persistence", () => {
       settings: { ...createMockData().settings!, theme: "dark" },
     });
 
-    const { onClose, setGlobalData } = renderSettingsModal(data);
+    const { onClose, setGlobalData } = renderSettingsModal(data, { initialTab: "general" });
 
     // Initial state is dark
     expect(document.documentElement.classList.contains("dark")).toBe(true);
@@ -674,7 +697,7 @@ describe("SettingsModal - Theme Live-Preview & Persistence", () => {
       settings: { ...createMockData().settings!, theme: "dark" },
     });
 
-    const { onClose, setGlobalData } = renderSettingsModal(data);
+    const { onClose, setGlobalData } = renderSettingsModal(data, { initialTab: "general" });
 
     // User selects Light
     const lightBtn = screen.getByRole("button", { name: /^light$/i });
@@ -698,7 +721,7 @@ describe("SettingsModal - Theme Live-Preview & Persistence", () => {
       settings: { ...createMockData().settings!, theme: "dark" },
     });
 
-    const firstRender = renderSettingsModal(data);
+    const firstRender = renderSettingsModal(data, { initialTab: "general" });
 
     // Preview Light, then cancel
     const lightBtn = screen.getByRole("button", { name: /^light$/i });
@@ -711,7 +734,7 @@ describe("SettingsModal - Theme Live-Preview & Persistence", () => {
     firstRender.onClose();
 
     // Reopen modal: render a new instance with the still-saved data (theme: "dark")
-    renderSettingsModal(data);
+    renderSettingsModal(data, { initialTab: "general" });
 
     // Observable behavior: document stays dark, Dark button is active
     expect(document.documentElement.classList.contains("dark")).toBe(true);

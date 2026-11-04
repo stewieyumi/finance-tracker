@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { ReceivablesTable } from "./ReceivablesTable";
 import { ReceivableViewModel } from "../types/finance";
 
@@ -122,7 +122,7 @@ describe("ReceivablesTable - list, filtering, and interaction wiring", () => {
     expect(screen.getAllByText("Bi-Monthly Inflow").length).toBeGreaterThan(0);
   });
 
-  it("opens edit modal when clicking the desktop row, and keeps status toggle strictly independent", () => {
+  it("records payment from the desktop row and keeps Edit separate", () => {
     const rec = createReceivable({
       id: "rec-desktop-test",
       name: "Desktop Gig",
@@ -135,25 +135,18 @@ describe("ReceivablesTable - list, filtering, and interaction wiring", () => {
 
     const desktopRow = screen.getByTestId("receivable-desktop-row-rec-desktop-test");
 
-    // 1. Click desktop row -> calls onEdit (setEditingId, setEditForm), NOT onToggleStatus
     fireEvent.click(desktopRow);
+    expect(onToggleStatus).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: "rec-desktop-test" }));
+    expect(setEditingId).not.toHaveBeenCalled();
+
+    onToggleStatus.mockClear();
+    fireEvent.click(within(desktopRow).getByRole("button", { name: "Edit" }));
     expect(setEditingId).toHaveBeenCalledWith("rec-desktop-test");
     expect(setEditForm).toHaveBeenCalledWith(expect.objectContaining({ id: "rec-desktop-test" }));
     expect(onToggleStatus).not.toHaveBeenCalled();
-
-    setEditingId.mockClear();
-    setEditForm.mockClear();
-    onToggleStatus.mockClear();
-
-    // 2. Click desktop status toggle -> calls onToggleStatus, NOT onEdit
-    const statusBtn = screen.getAllByRole("button", { name: /mark desktop gig as received/i })[1];
-    fireEvent.click(statusBtn);
-    expect(onToggleStatus).toHaveBeenCalledTimes(1);
-    expect(onToggleStatus).toHaveBeenCalledWith(expect.objectContaining({ id: "rec-desktop-test" }));
-    expect(setEditingId).not.toHaveBeenCalled();
   });
 
-  it("opens edit modal when clicking the mobile card, and keeps status toggle strictly independent", () => {
+  it("records payment from the mobile card and keeps Edit separate", () => {
     const rec = createReceivable({
       id: "rec-mobile-test",
       name: "Mobile Gig",
@@ -166,22 +159,15 @@ describe("ReceivablesTable - list, filtering, and interaction wiring", () => {
 
     const mobileCard = screen.getByTestId("receivable-mobile-row-rec-mobile-test");
 
-    // 1. Click mobile card -> calls onEdit, NOT onToggleStatus
     fireEvent.click(mobileCard);
+    expect(onToggleStatus).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: "rec-mobile-test" }));
+    expect(setEditingId).not.toHaveBeenCalled();
+
+    onToggleStatus.mockClear();
+    fireEvent.click(within(mobileCard).getByRole("button", { name: "Edit" }));
     expect(setEditingId).toHaveBeenCalledWith("rec-mobile-test");
     expect(setEditForm).toHaveBeenCalledWith(expect.objectContaining({ id: "rec-mobile-test" }));
     expect(onToggleStatus).not.toHaveBeenCalled();
-
-    setEditingId.mockClear();
-    setEditForm.mockClear();
-    onToggleStatus.mockClear();
-
-    // 2. Click mobile status button -> calls onToggleStatus, NOT onEdit
-    const mobileStatusBtn = screen.getAllByRole("button", { name: /mark mobile gig as received/i })[0];
-    fireEvent.click(mobileStatusBtn);
-    expect(onToggleStatus).toHaveBeenCalledTimes(1);
-    expect(onToggleStatus).toHaveBeenCalledWith(expect.objectContaining({ id: "rec-mobile-test" }));
-    expect(setEditingId).not.toHaveBeenCalled();
   });
 
   it("keeps payment actions independent from the edit modal", () => {
@@ -196,15 +182,41 @@ describe("ReceivablesTable - list, filtering, and interaction wiring", () => {
     const onAddPayment = vi.fn();
     const { setEditingId } = renderReceivablesTable([rec], { onAddPayment });
 
-    // Click quick add half (+1/2) button
-    const halfButtons = screen.getAllByRole("button", { name: "+1/2" });
-    fireEvent.click(halfButtons[0]);
+    fireEvent.click(screen.getByTestId(`receivable-mobile-row-${rec.id}`));
 
     expect(onAddPayment).toHaveBeenCalledWith(
       expect.objectContaining({ id: "rec-payment-test" }),
-      2000
+      2000,
+      15
     );
     expect(setEditingId).not.toHaveBeenCalled();
+  });
+
+  it("settles the remaining payday when the status control is tapped after a partial payment", () => {
+    const rec = createReceivable({
+      name: "Salary", amount: 4000, amountReceived: 2000, frequency: "Bi-monthly",
+      biMonthlyDays: [5, 20], paydayReceived: { 5: 2000 },
+    });
+    const onAddPayment = vi.fn();
+    renderReceivablesTable([rec], { onAddPayment });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Settle remaining payment for Salary" })[0]);
+    expect(onAddPayment).toHaveBeenCalledWith(expect.objectContaining({ id: rec.id }), 2000, 20);
+  });
+
+  it("passes a custom partial amount to the explicitly selected payday", () => {
+    const rec = createReceivable({ frequency: "Bi-monthly", biMonthlyDays: [5, 20] });
+    const onAddPayment = vi.fn();
+    renderReceivablesTable([rec], { onAddPayment });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "+₱" })[0]);
+    fireEvent.change(screen.getAllByRole("combobox", { name: "Apply payment to" })[0], {
+      target: { value: "20" },
+    });
+    fireEvent.change(screen.getAllByPlaceholderText("₱ Amount")[0], { target: { value: "250" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Add" })[0]);
+
+    expect(onAddPayment).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: rec.id }), 250, 20);
   });
 
   it("displays expected, received, and remaining amounts for partial receivables", () => {
@@ -262,6 +274,7 @@ describe("ReceivablesTable - list, filtering, and interaction wiring", () => {
     expect(toggleBtn).toHaveAttribute("aria-label", "Hide collected receivables");
 
     // Payment action was never called
+    fireEvent.click(screen.getByTestId("receivable-mobile-row-rec-collected-test"));
     expect(onToggleStatus).not.toHaveBeenCalled();
   });
 });

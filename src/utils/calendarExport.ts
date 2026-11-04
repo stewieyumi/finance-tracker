@@ -338,7 +338,8 @@ export function generateGigIcs(shoot: Shoot): string {
 export function downloadOrShareIcs(
   fileName: string,
   icsContent: string,
-  title?: string
+  title?: string,
+  preferShare = true
 ): void {
   if (typeof window === "undefined") return;
 
@@ -348,6 +349,7 @@ export function downloadOrShareIcs(
     const file = new File([icsContent], safeFileName, { type: "text/calendar;charset=utf-8" });
 
     if (
+      preferShare &&
       typeof navigator !== "undefined" &&
       navigator.canShare &&
       navigator.canShare({ files: [file] })
@@ -424,8 +426,8 @@ export function exportPaydaysToCalendar(
 /**
  * Convenience helper to export a single gig to calendar.
  */
-export function exportGigToCalendar(shoot: Shoot): void {
+export function exportGigToCalendar(shoot: Shoot, preferShare = true): void {
   const ics = generateGigIcs(shoot);
   const fileName = `${shoot.title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.ics`;
-  downloadOrShareIcs(fileName, ics, shoot.title);
+  downloadOrShareIcs(fileName, ics, shoot.title, preferShare);
 }

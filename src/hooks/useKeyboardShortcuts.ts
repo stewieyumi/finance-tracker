@@ -10,6 +10,7 @@ interface KeyboardShortcutsOptions {
   onPullData: () => void;
   onTogglePrivacy: () => void;
   onCloseAll: () => void;
+  onPaymentHistory?: (redo: boolean) => boolean;
   onSelectTab?: (tab: TabType) => void;
   onSelectOpsTab?: (subTab: "bills" | "inflows" | "gigs") => void;
   activeTab?: TabType;
@@ -24,6 +25,7 @@ export function useKeyboardShortcuts({
   onPullData,
   onTogglePrivacy,
   onCloseAll,
+  onPaymentHistory,
   onSelectTab,
   onSelectOpsTab,
   activeTab,
@@ -50,6 +52,11 @@ export function useKeyboardShortcuts({
 
       const key = e.key.toLowerCase();
       const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+
+      if (isCmdOrCtrl && key === "z" && !e.altKey && !e.repeat) {
+        if (onPaymentHistory?.(e.shiftKey)) e.preventDefault();
+        return;
+      }
 
       // Tab Navigation (1 - 5 or Cmd+1 - Cmd+5)
       if (["1", "2", "3", "4", "5"].includes(key)) {
@@ -108,6 +115,7 @@ export function useKeyboardShortcuts({
     onPullData,
     onTogglePrivacy,
     onCloseAll,
+  onPaymentHistory,
     onSelectTab,
     onSelectOpsTab,
     activeTab,

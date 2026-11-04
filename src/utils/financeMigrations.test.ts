@@ -155,3 +155,15 @@ describe("migrateLegacyBills", () => {
     expect(data).toEqual(original);
   });
 });
+
+it("restarts both metadata migrations without changing balances or historical records", () => {
+  const data = createTestData();
+  data.wallets = { maya: 123.45, gcash: 42 };
+  data.library.bills = [{ id: "legacy", name: "Unobank Loan", amount: 1000, dueDay: "15", type: "Loan / Installment" }];
+  data.logs = { "September 2026": { billsPaid: ["legacy"], paymentDates: { legacy: "2026-09-15" } } };
+
+  const migrated = migrateLegacyBills(migrateBaseWallets(data));
+  expect(migrated.wallets).toBe(data.wallets);
+  expect(migrated.logs).toBe(data.logs);
+  expect(migrateLegacyBills(migrateBaseWallets(migrated))).toBe(migrated);
+});

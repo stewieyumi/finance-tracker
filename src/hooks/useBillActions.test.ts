@@ -47,6 +47,26 @@ const getStateUpdaterResult = (
 };
 
 describe("useBillActions - payment mutations", () => {
+  it("confirms only selected, elapsed installments without moving wallets", () => {
+    const data = createTestData();
+    const bill = createBill({ startMonth: "August 2020", endMonth: "December 2020" });
+    data.library = { ...data.library, bills: [bill] };
+    const setter = vi.fn();
+    const { result } = renderHook(() => useBillActions({
+      globalData: data, setGlobalData: setter, selectedMonth: "September 2020", showToast: vi.fn(),
+    }));
+    act(() => result.current.confirmPriorBillPayments(bill.id, ["August 2020", "October 2020", "October 2020", "January 2021"]));
+
+    const confirmed = getStateUpdaterResult(setter, data);
+    expect(confirmed.wallets).toBe(data.wallets);
+    expect(Object.keys(confirmed.logs)).toEqual(["August 2020", "October 2020"]);
+    expect(confirmed.logs["October 2020"].billSettlements?.[bill.id]).toEqual([
+      expect.objectContaining({ priorConfirmation: true, wallet: null, walletDebit: 0 }),
+    ]);
+    expect(confirmed.logs["October 2020"].paymentDates).toBeUndefined();
+    expect(getStateUpdaterResult(setter, confirmed)).toBe(confirmed);
+  });
+
   it("marks an unpaid bill as paid and deducts its amount from the routed wallet", () => {
     const mockSetGlobalData = vi.fn();
     const mockShowToast = vi.fn();
@@ -77,11 +97,75 @@ describe("useBillActions - payment mutations", () => {
     ).not.toBe("Invalid Date");
   });
 
+  it("ignores repeated paid actions and rechecks the latest wallet balance", () => {
+    const initialData = createTestData();
+    const setGlobalData = vi.fn();
+    const { result } = renderHook(() => useBillActions({
+      globalData: initialData,
+      setGlobalData,
+      selectedMonth: "September 2026",
+      showToast: vi.fn(),
+    }));
+
+    act(() => {
+      result.current.toggleBillStatus(createBill());
+    });
+
+    const paid = getStateUpdaterResult(setGlobalData, initialData);
+    expect(paid.wallets.maya).toBe(4000);
+    expect(getStateUpdaterResult(setGlobalData, paid)).toBe(paid);
+
+    const depleted = { ...initialData, wallets: { ...initialData.wallets, maya: 500 } };
+    expect(getStateUpdaterResult(setGlobalData, depleted)).toBe(depleted);
+  });
+
+  it("redoes an undone payment only when its original wallet can cover the exact debit", () => {
+    const bill = createBill();
+    let state = createTestData();
+    state.library = { ...state.library, bills: [bill] };
+    const showToast = vi.fn();
+    const { result } = renderHook(() => useBillActions({
+      globalData: state,
+      setGlobalData: updater => { state = typeof updater === "function" ? updater(state) : updater; },
+      selectedMonth: "September 2026",
+      showToast,
+    }));
+
+    act(() => result.current.toggleBillStatus(bill));
+    const undo = showToast.mock.lastCall?.[1];
+    act(() => undo.onClick());
+    const redo = showToast.mock.lastCall?.[1];
+    expect(redo.label).toBe("Redo");
+    expect(redo.paymentId).toBe(undo.paymentId);
+
+    state = { ...state, wallets: { ...state.wallets, maya: 500 } };
+    const insufficientState = state;
+    act(() => redo.onClick());
+    expect(state).toBe(insufficientState);
+
+    state = {
+      ...state,
+      wallets: { ...state.wallets, maya: 5000 },
+      library: { ...state.library, bills: [{ ...bill, wallet: "gcash" }] },
+    };
+    act(() => redo.onClick());
+    act(() => redo.onClick());
+    expect(state.wallets.maya).toBe(4000);
+    expect(state.wallets.gcash).toBe(5000);
+    const month = state.logs["September 2026"];
+    expect(month.billsPaid).toEqual([bill.id]);
+    expect(month.billSettlements?.[bill.id]).toEqual([
+      expect.objectContaining({ id: undo.paymentId, wallet: "maya", walletDebit: 1000, reversedAt: undefined }),
+    ]);
+  });
+
   it("Undoing a newly paid bill reverses both wallet and ledger state", () => {
     const mockSetGlobalData = vi.fn();
     const mockShowToast = vi.fn();
     const initialData = createTestData();
     const bill = createBill();
+    let state = initialData;
+    mockSetGlobalData.mockImplementation(updater => { state = updater(state); });
 
     const { result } = renderHook(() =>
       useBillActions({
@@ -103,7 +187,7 @@ describe("useBillActions - payment mutations", () => {
 
     expect(undoAction.label).toBe("Undo");
 
-    const paidData = getStateUpdaterResult(mockSetGlobalData, initialData);
+    const paidData = state;
 
     expect(paidData.wallets.maya).toBe(4000);
     expect(paidData.logs["September 2026"].billsPaid).toContain(
@@ -122,7 +206,32 @@ describe("useBillActions - payment mutations", () => {
     expect(monthLog.paymentDates?.["bill-test-1"]).toBeUndefined();
   });
 
-  it("unmarks a paid bill and refunds its amount to the routed wallet", () => {
+  it.each([false, true])("reverses only the recorded wallet debit (skip debit: %s)", skipDebit => {
+    const initialData = createTestData();
+    const setGlobalData = vi.fn();
+    const { result } = renderHook(() => useBillActions({
+      globalData: initialData, setGlobalData, selectedMonth: "September 2026", showToast: vi.fn(),
+    }));
+
+    act(() => { result.current.toggleBillStatus(createBill(), skipDebit); });
+    const paid = getStateUpdaterResult(setGlobalData, initialData);
+    expect(paid.wallets.maya).toBe(skipDebit ? 5000 : 4000);
+
+    act(() => {
+      result.current.toggleBillStatus(createBill({ paid: true, wallet: "gcash", amount: 2000 }));
+    });
+    const reversed = getStateUpdaterResult(setGlobalData, paid);
+    expect(reversed.wallets).toEqual(initialData.wallets);
+    expect(reversed.logs["September 2026"].billSettlements?.["bill-test-1"]).toEqual([
+      expect.objectContaining({
+        amount: 1000, wallet: skipDebit ? null : "maya", walletDebit: skipDebit ? 0 : 1000,
+        reversedAt: expect.any(String),
+      }),
+    ]);
+    expect(getStateUpdaterResult(setGlobalData, reversed)).toBe(reversed);
+  });
+
+  it("unmarks a legacy paid bill without inventing a wallet refund", () => {
     const mockSetGlobalData = vi.fn();
     const mockShowToast = vi.fn();
     const initialData = createTestData();
@@ -154,7 +263,7 @@ describe("useBillActions - payment mutations", () => {
     const nextData = getStateUpdaterResult(mockSetGlobalData, initialData);
     const monthLog = nextData.logs["September 2026"];
 
-    expect(nextData.wallets.maya).toBe(5000);
+    expect(nextData.wallets.maya).toBe(4000);
     expect(monthLog.billsPaid).not.toContain("bill-test-1");
     expect(monthLog.paymentDates?.["bill-test-1"]).toBeUndefined();
   });

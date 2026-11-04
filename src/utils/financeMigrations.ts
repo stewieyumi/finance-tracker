@@ -24,6 +24,8 @@ const DEFAULT_WALLET_LABELS: Record<string, string> = {
 export function migrateBaseWallets(
   data: UnifiedFinanceData
 ): UnifiedFinanceData {
+  if (data.settings?.hasMigratedBaseWallets) return data;
+
   const oldLabels = data.settings?.walletLabels || {};
   const existingCustom = data.settings?.customWallets || [];
   const newCustomWallets = [...existingCustom];
@@ -51,14 +53,17 @@ export function migrateBaseWallets(
 export function migrateLegacyBills(
   data: UnifiedFinanceData
 ): UnifiedFinanceData {
+  const needsWallet = (bill: UnifiedFinanceData["library"]["bills"][number]) =>
+    !!bill && !bill.wallet && typeof bill.name === "string";
+  if (!data.library.bills.some(needsWallet)) return data;
+
   return {
     ...data,
     library: {
       ...data.library,
-      bills: data.library.bills.map(bill => ({
-        ...bill,
-        wallet: bill.wallet || getWalletForBill(bill.name),
-      })),
+      bills: data.library.bills.map(bill =>
+        needsWallet(bill) ? { ...bill, wallet: getWalletForBill(bill.name) } : bill
+      ),
     },
   };
 }

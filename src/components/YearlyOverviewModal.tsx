@@ -111,7 +111,7 @@ const fallbackStartMonth = getMonthKey(new Date());
       variant="floating"
       ariaLabel="Yearly Overview Modal"
     >
-      <div className="bg-surface-elevated border border-inverse/[0.09] rounded-3xl p-5 sm:p-6 w-full max-w-lg space-y-5 shadow-[0_24px_64px_rgba(0,0,0,0.8)] max-h-[88vh] overflow-y-auto">
+      <div className="bg-surface-elevated border border-inverse/[0.09] rounded-3xl p-5 sm:p-6 w-full max-w-lg space-y-5 shadow-2xl max-h-[88vh] overflow-y-auto">
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-2.5">
             <Calendar size={16} className="text-blue-400" />

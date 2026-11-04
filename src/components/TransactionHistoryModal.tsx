@@ -133,7 +133,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
       variant="sheet"
       ariaLabel="Transaction History"
     >
-      <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-2xl mx-auto shadow-[0_0_60px_rgba(0,0,0,0.8)] flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
+      <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-2xl mx-auto shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-3">

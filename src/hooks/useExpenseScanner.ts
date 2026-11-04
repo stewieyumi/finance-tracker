@@ -3,6 +3,15 @@ import { UnifiedFinanceData } from "../types/finance";
 import { getLocalPasscode } from "./useCloudSync";
 import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
 
+function recordScannerStatus(status: number | "invalid-response" | "network-error", atCapacity = false) {
+  try {
+    localStorage.removeItem("scanner_debug_log");
+    localStorage.setItem("scanner_status", JSON.stringify({ status, atCapacity }));
+  } catch {
+    // Diagnostics are optional when browser storage is unavailable.
+  }
+}
+
 interface ScanResult {
   merchant: string;
   amount: string;
@@ -94,12 +103,12 @@ export function useExpenseScanner({
           try {
             data = JSON.parse(textResponse);
           } catch (e) {
-            localStorage.setItem('scanner_debug_log', JSON.stringify({ error: 'Failed to parse server response as JSON', raw: textResponse }));
+            recordScannerStatus("invalid-response");
             showToast("Unable to read scanner response. Please enter details manually.");
             return;
           }
 
-          localStorage.setItem('scanner_debug_log', JSON.stringify(data));
+          recordScannerStatus(res.status, data.code === "AI_CAPACITY" || res.status === 429 || res.status === 503);
           
           if (!res.ok || data.error) {
             const errorText = String(data.error || "").toLowerCase();
@@ -183,8 +192,8 @@ export function useExpenseScanner({
           });
           
           showToast("✨ Receipt scanned successfully! Review and tap Save & Deduct.");
-        } catch (err: any) {
-          localStorage.setItem('scanner_debug_log', JSON.stringify({ error: 'Network error', message: err.message }));
+        } catch {
+          recordScannerStatus("network-error");
           showToast("Unable to scan this receipt. Please try again or enter the details manually.");
         } finally {
           setIsScanning(false);

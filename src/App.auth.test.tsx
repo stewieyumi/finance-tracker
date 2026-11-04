@@ -25,9 +25,17 @@ vi.mock("@react-oauth/google", () => ({
 }));
 
 // All hooks that touch cloud sync, keyboard shortcuts, etc. — keep tests focused
+const mockCommitDataChange = vi.fn();
+let mockHasInitialSyncCompleted = true;
+let mockHasActiveConflict: boolean | undefined = undefined;
+let mockConflictState: any = null;
+const mockResolveConflict = vi.fn();
+let mockSyncActiveSub: string | null | undefined = undefined;
+const mockNotifyAuthTokenChanged = vi.fn();
+
 vi.mock("./hooks/useCloudSync", () => ({
   useCloudSync: () => ({
-    commitDataChange: vi.fn(),
+    commitDataChange: mockCommitDataChange,
     isSyncing: false,
     isOnline: true,
     debugLog: "",
@@ -36,9 +44,14 @@ vi.mock("./hooks/useCloudSync", () => ({
     pullLatestData: vi.fn(),
     pushToCloud: vi.fn(),
     promptPasscode: vi.fn(),
-    hasInitialSyncCompleted: true,
+    hasInitialSyncCompleted: mockHasInitialSyncCompleted,
+    hasActiveConflict: mockHasActiveConflict,
+    conflictState: mockConflictState,
+    resolveConflict: mockResolveConflict,
+    activeSub: mockSyncActiveSub,
   }),
-  getLocalPasscode: vi.fn(() => "eyJtest.token.here"),
+  getLocalPasscode: vi.fn(() => store["ft_google_token"] ?? ""),
+  notifyAuthTokenChanged: (...args: any[]) => mockNotifyAuthTokenChanged(...args),
 }));
 
 vi.mock("./hooks/useKeyboardShortcuts", () => ({
@@ -132,14 +145,39 @@ vi.mock("./hooks/usePaydayActions", () => ({
   })),
 }));
 
-// Tab components — render nothing so tests stay fast
-vi.mock("./components/DashboardTab", () => ({ DashboardTab: () => <div data-testid="dashboard-tab" /> }));
+// Tab components — render nothing so tests stay fast, while capturing props for B2 assertions
+const renderedDashboardTargetFunds: number[] = [];
+let lastLandingOnGoogleSuccess: ((res: any) => void) | null = null;
+let lastAccountOnGoogleLogout: (() => void) | null = null;
+
+vi.mock("./components/DashboardTab", () => ({
+  DashboardTab: (props: any) => {
+    renderedDashboardTargetFunds.push(props.globalData?.targetFund);
+    return <div data-testid="dashboard-tab" data-target-fund={props.globalData?.targetFund} />;
+  },
+}));
 vi.mock("./components/OperationsTab", () => ({ OperationsTab: () => <div data-testid="ops-tab" /> }));
 vi.mock("./components/WalletsTab", () => ({ WalletsTab: () => <div data-testid="wallets-tab" /> }));
 vi.mock("./components/ExpensesTab", () => ({ ExpensesTab: () => <div data-testid="expenses-tab" /> }));
-vi.mock("./components/AccountTab", () => ({ AccountTab: () => <div data-testid="account-tab" /> }));
-vi.mock("./components/LandingPage", () => ({ LandingPage: () => <div data-testid="landing-page" /> }));
-vi.mock("./components/BottomNav", () => ({ BottomNav: () => <div data-testid="bottom-nav" /> }));
+vi.mock("./components/AccountTab", () => ({
+  AccountTab: (props: any) => {
+    lastAccountOnGoogleLogout = props.onGoogleLogout;
+    return <div data-testid="account-tab" />;
+  },
+}));
+vi.mock("./components/LandingPage", () => ({
+  LandingPage: (props: any) => {
+    lastLandingOnGoogleSuccess = props.onGoogleSuccess;
+    return <div data-testid="landing-page" />;
+  },
+}));
+vi.mock("./components/BottomNav", () => ({
+  BottomNav: (props: any) => (
+    <div data-testid="bottom-nav">
+      <button data-testid="nav-account" onClick={() => props.onChange("account")} />
+    </div>
+  ),
+}));
 vi.mock("./components/BillsTable", () => ({ BillsTable: () => null }));
 vi.mock("./components/ReceivablesTable", () => ({ ReceivablesTable: () => null }));
 vi.mock("./components/ShootsTable", () => ({ ShootsTable: () => null }));
@@ -191,9 +229,9 @@ function makePromptMock(state: "success" | "notDisplayed" | "skipped" | "dismiss
 
 function seedAuthenticatedStorage() {
   store = {
-    ft_google_token: "eyJtoken.valid.here",
-    ft_google_user: JSON.stringify({ name: "Test User", email: "t@t.com", picture: "" }),
-    ft_master_data_v1: JSON.stringify({
+    ft_google_token: "header.eyJzdWIiOiJ1c2VyXzEyMyJ9.sig",
+    ft_google_user: JSON.stringify({ sub: "user_123", name: "Test User", email: "t@t.com", picture: "" }),
+    ft_master_data_v1_user_123: JSON.stringify({
       wallets: { main: 0 },
       library: { bills: [], receivables: [], shoots: [] },
       logs: {},
@@ -211,6 +249,13 @@ describe("App — auth-expired handler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     seedAuthenticatedStorage();
+    mockHasInitialSyncCompleted = true;
+    mockHasActiveConflict = undefined;
+    mockConflictState = null;
+    mockSyncActiveSub = undefined;
+    renderedDashboardTargetFunds.length = 0;
+    lastLandingOnGoogleSuccess = null;
+    lastAccountOnGoogleLogout = null;
     // Default: no GIS available (tests opt-in per case)
     (window as any).google = undefined;
   });
@@ -335,5 +380,371 @@ describe("App — auth-expired handler", () => {
     });
 
     expect(dismissedPromptMock).toHaveBeenCalledTimes(2);
+  });
+
+  // -------------------------------------------------------------------------
+  // P0-B2 Test 1 (App UI) — Same-tab A logout -> B login without stale-data flash
+  // -------------------------------------------------------------------------
+  it("B2-Test 1 (App UI): same-tab logout from A and login to B clears A's data before B data is shown and gates UI until B hydration completes", async () => {
+    const tokenA = "header.eyJzdWIiOiJ1c2VyXzEyMyJ9.sig";
+    const tokenB = "header.eyJzdWIiOiJ1c2VyXzQ1NiJ9.sig";
+
+    store = {
+      ft_google_token: tokenA,
+      ft_google_user: JSON.stringify({ sub: "user_123", name: "User A", email: "a@t.com", picture: "" }),
+      ft_master_data_v1_user_123: JSON.stringify({
+        wallets: { main: 55000 },
+        library: { bills: [], receivables: [], shoots: [] },
+        logs: {},
+        settings: { hasCompletedOnboarding: true, hasMigratedBaseWallets: true },
+        targetFund: 55000,
+        updatedAt: 5000,
+      }),
+    };
+    mockSyncActiveSub = "user_123";
+    mockHasInitialSyncCompleted = true;
+
+    let container!: HTMLElement;
+    let rerender!: (ui: React.ReactElement) => void;
+    await act(async () => {
+      const rendered = render(<App />);
+      container = rendered.container;
+      rerender = rendered.rerender;
+    });
+
+    // Account A's dashboard is rendered with targetFund: 55000
+    expect(container.querySelector('[data-testid="dashboard-tab"]')?.getAttribute("data-target-fund")).toBe("55000");
+
+    // Navigate to Account tab to invoke same-tab logout
+    await act(async () => {
+      (container.querySelector('[data-testid="nav-account"]') as HTMLElement)?.click();
+    });
+    expect(lastAccountOnGoogleLogout).toBeTypeOf("function");
+
+    // 1. Same-tab logout from Account A
+    await act(async () => {
+      mockSyncActiveSub = null;
+      lastAccountOnGoogleLogout!();
+    });
+
+    // Landing page is rendered; no authenticated finance UI remains visible
+    expect(container.querySelector('[data-testid="landing-page"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="dashboard-tab"]')).toBeNull();
+    expect(mockNotifyAuthTokenChanged).toHaveBeenCalled();
+
+    // 2. Same-tab login to Account B while B's initial cloud sync is still incomplete
+    renderedDashboardTargetFunds.length = 0;
+    mockHasInitialSyncCompleted = false;
+    mockSyncActiveSub = "user_456";
+
+    await act(async () => {
+      lastLandingOnGoogleSuccess!({ credential: tokenB });
+    });
+
+    // Account A's 55000 was NEVER rendered for even a single intermediate frame under Account B,
+    // and the hydration gate ("Checking for existing cloud data...") remains closed!
+    expect(renderedDashboardTargetFunds).not.toContain(55000);
+    expect(renderedDashboardTargetFunds).toHaveLength(0);
+    expect(container.querySelector('[data-testid="dashboard-tab"]')).toBeNull();
+    expect(container.textContent).toContain("Checking for existing cloud data...");
+
+    // 3. Complete Account B's hydration with B's scoped data -> B's data renders cleanly
+    store["ft_master_data_v1_user_456"] = JSON.stringify({
+      wallets: { main: 24000 },
+      library: { bills: [], receivables: [], shoots: [] },
+      logs: {},
+      settings: { hasCompletedOnboarding: true, hasMigratedBaseWallets: true },
+      targetFund: 24000,
+      updatedAt: 2000,
+    });
+    mockHasInitialSyncCompleted = true;
+
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "ft_google_token",
+          newValue: tokenB,
+        })
+      );
+      rerender(<App />);
+    });
+
+    expect(renderedDashboardTargetFunds).not.toContain(55000);
+  });
+
+  // -------------------------------------------------------------------------
+  // P0-B2 Test 11 — Auto-migration gate in App.tsx
+  // -------------------------------------------------------------------------
+  it("B2-Test 11 (Auto-migration gate): migration effects do not run signed out or before hydration, and run only on hydrated active-account data", async () => {
+    const tokenA = "header.eyJzdWIiOiJ1c2VyXzEyMyJ9.sig";
+    const unmigratedSnapshot = {
+      wallets: { main: 1000 },
+      library: {
+        bills: [{ id: "b1", name: "Internet", amount: 1500, dueDay: 5 }], // missing .wallet
+        receivables: [],
+        shoots: [],
+      },
+      logs: {},
+      settings: {
+        hasCompletedOnboarding: true,
+        hasMigratedBaseWallets: false, // unmigrated base wallets
+      },
+      targetFund: 10000,
+      updatedAt: 1000,
+    };
+
+    // 1. Signed out (even if unscoped legacy key or user_123 key has unmigrated data)
+    store = {
+      ft_master_data_v1: JSON.stringify(unmigratedSnapshot),
+      ft_master_data_v1_user_123: JSON.stringify(unmigratedSnapshot),
+    };
+    mockSyncActiveSub = null;
+    mockHasInitialSyncCompleted = true;
+
+    let rerender!: (ui: React.ReactElement) => void;
+    await act(async () => {
+      const rendered = render(<App />);
+      rerender = rendered.rerender;
+    });
+
+    expect(mockCommitDataChange).not.toHaveBeenCalled();
+
+    // 2. Signed in as user_123, but initial hydration is NOT yet complete (hasInitialSyncCompleted = false)
+    store["ft_google_token"] = tokenA;
+    store["ft_google_user"] = JSON.stringify({ sub: "user_123", name: "User A", email: "a@t.com", picture: "" });
+    mockSyncActiveSub = "user_123";
+    mockHasInitialSyncCompleted = false;
+
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "ft_google_token",
+          newValue: tokenA,
+        })
+      );
+      rerender(<App />);
+    });
+
+    expect(mockCommitDataChange).not.toHaveBeenCalled();
+
+    // 3. Signed in as user_123, hydration is complete, but hook activeSub mismatches token sub (stale transition frame)
+    mockSyncActiveSub = "user_999";
+    mockHasInitialSyncCompleted = true;
+
+    await act(async () => {
+      rerender(<App />);
+    });
+
+    expect(mockCommitDataChange).not.toHaveBeenCalled();
+
+    // 4. Active subject matches displayed data owner AND initial hydration is complete -> auto-migrations run!
+    mockSyncActiveSub = "user_123";
+    mockHasInitialSyncCompleted = true;
+
+    await act(async () => {
+      rerender(<App />);
+    });
+
+    expect(mockCommitDataChange).toHaveBeenCalledTimes(2);
+  });
+
+  // -------------------------------------------------------------------------
+  // P0-B2 Follow-up — Persisted Conflict Recovery UI Reachability (Cases A, B, C, D)
+  // -------------------------------------------------------------------------
+  it("Case A (App UI): valid persisted conflict with absent/invalid scoped local snapshot reaches SyncConflictModal without deadlock or foreign data leak", async () => {
+    const tokenA = "header.eyJzdWIiOiJ1c2VyXzEyMyJ9.sig";
+    const conflictA = {
+      baseRevision: 4,
+      localSnapshot: {
+        wallets: { main: 0 },
+        library: { bills: [], receivables: [], shoots: [] },
+        logs: {},
+        settings: {},
+        targetFund: 33000,
+        updatedAt: 2100,
+      },
+      cloudSnapshot: {
+        wallets: { main: 0 },
+        library: { bills: [], receivables: [], shoots: [] },
+        logs: {},
+        settings: {},
+        targetFund: 44000,
+        updatedAt: 2600,
+      },
+      cloudRevision: 9,
+      detectedAt: 150000,
+    };
+
+    // Scoped local snapshot is absent; unscoped legacy key has unrelated user_B data (99000)
+    store = {
+      ft_google_token: tokenA,
+      ft_google_user: JSON.stringify({ sub: "user_123", name: "User A", email: "a@t.com", picture: "" }),
+      ft_sync_conflict_user_123: JSON.stringify(conflictA),
+      ft_master_data_v1: JSON.stringify({
+        wallets: { main: 99000 },
+        library: { bills: [], receivables: [], shoots: [] },
+        logs: {},
+        settings: { hasCompletedOnboarding: true },
+        targetFund: 99000,
+        updatedAt: 9900,
+      }),
+    };
+    mockSyncActiveSub = "user_123";
+    mockHasInitialSyncCompleted = false;
+    mockHasActiveConflict = true;
+    mockConflictState = conflictA;
+
+    let container!: HTMLElement;
+    await act(async () => {
+      const rendered = render(<App />);
+      container = rendered.container;
+    });
+
+    // App does not deadlock on "Checking for existing cloud data..." or show OnboardingWizard
+    expect(container.textContent).not.toContain("Checking for existing cloud data...");
+    expect(document.body.textContent).toContain("Sync Conflict Detected");
+    expect(document.body.textContent).toContain("Keep This Device Data");
+    expect(document.body.textContent).toContain("Use Cloud Data");
+    expect(document.body.textContent).toContain("Revision: 9");
+
+    // Local state comes from user_123's validated conflict localSnapshot (33000), never unscoped 99000
+    expect(renderedDashboardTargetFunds).toEqual([33000]);
+    // Auto-migrations are suppressed while conflict is unresolved
+    expect(mockCommitDataChange).not.toHaveBeenCalled();
+  });
+
+  it("Case B (App UI): valid persisted conflict with scoped local snapshot present preserves scoped snapshot and exposes SyncConflictModal", async () => {
+    const tokenA = "header.eyJzdWIiOiJ1c2VyXzEyMyJ9.sig";
+    const conflictA = {
+      baseRevision: 4,
+      localSnapshot: {
+        wallets: { main: 0 },
+        library: { bills: [], receivables: [], shoots: [] },
+        logs: {},
+        settings: {},
+        targetFund: 33000,
+        updatedAt: 2100,
+      },
+      cloudSnapshot: {
+        wallets: { main: 0 },
+        library: { bills: [], receivables: [], shoots: [] },
+        logs: {},
+        settings: {},
+        targetFund: 44000,
+        updatedAt: 2600,
+      },
+      cloudRevision: 9,
+      detectedAt: 150000,
+    };
+
+    store = {
+      ft_google_token: tokenA,
+      ft_google_user: JSON.stringify({ sub: "user_123", name: "User A", email: "a@t.com", picture: "" }),
+      ft_master_data_v1_user_123: JSON.stringify({
+        wallets: { main: 0 },
+        library: { bills: [], receivables: [], shoots: [] },
+        logs: {},
+        settings: {},
+        targetFund: 37500,
+        updatedAt: 2400,
+      }),
+      ft_sync_conflict_user_123: JSON.stringify(conflictA),
+    };
+    mockSyncActiveSub = "user_123";
+    mockHasInitialSyncCompleted = false;
+    mockHasActiveConflict = true;
+    mockConflictState = conflictA;
+
+    let container!: HTMLElement;
+    await act(async () => {
+      const rendered = render(<App />);
+      container = rendered.container;
+    });
+
+    expect(container.textContent).not.toContain("Checking for existing cloud data...");
+    expect(document.body.textContent).toContain("Sync Conflict Detected");
+    // Scoped snapshot (37500) remains the displayed local state
+    expect(renderedDashboardTargetFunds).toEqual([37500]);
+    expect(mockResolveConflict).not.toHaveBeenCalled();
+  });
+
+  it("Case C & Case D (App UI): account transition with persisted conflict exposes only B's conflict, and invalid conflict does not bypass hydration gate", async () => {
+    const tokenA = "header.eyJzdWIiOiJ1c2VyXzEyMyJ9.sig";
+    const tokenB = "header.eyJzdWIiOiJ1c2VyXzQ1NiJ9.sig";
+    const conflictB = {
+      baseRevision: 8,
+      localSnapshot: {
+        wallets: { main: 0 },
+        library: { bills: [], receivables: [], shoots: [] },
+        logs: {},
+        settings: {},
+        targetFund: 61000,
+        updatedAt: 6100,
+      },
+      cloudSnapshot: {
+        wallets: { main: 0 },
+        library: { bills: [], receivables: [], shoots: [] },
+        logs: {},
+        settings: {},
+        targetFund: 68000,
+        updatedAt: 6800,
+      },
+      cloudRevision: 14,
+      detectedAt: 200000,
+    };
+
+    // Case D first: user_123 has a malformed conflict record and unhydrated state -> stays behind loading gate
+    store = {
+      ft_google_token: tokenA,
+      ft_google_user: JSON.stringify({ sub: "user_123", name: "User A", email: "a@t.com", picture: "" }),
+      ft_sync_conflict_user_123: JSON.stringify({
+        baseRevision: 1,
+        localSnapshot: { invalidSchema: true },
+        cloudSnapshot: {},
+        cloudRevision: "bad",
+        detectedAt: -1,
+      }),
+      ft_sync_conflict_user_456: JSON.stringify(conflictB),
+    };
+    mockSyncActiveSub = "user_123";
+    mockHasInitialSyncCompleted = false;
+    mockHasActiveConflict = false;
+    mockConflictState = null;
+
+    let container!: HTMLElement;
+    let rerender!: (ui: React.ReactElement) => void;
+    await act(async () => {
+      const rendered = render(<App />);
+      container = rendered.container;
+      rerender = rendered.rerender;
+    });
+
+    // Invalid conflict does not bypass normal hydration
+    expect(container.textContent).toContain("Checking for existing cloud data...");
+    expect(document.body.textContent).not.toContain("Sync Conflict Detected");
+    expect(renderedDashboardTargetFunds).toHaveLength(0);
+
+    // Case C: switch to user_456 where user_456 has a valid persisted conflict (conflictB)
+    store["ft_google_token"] = tokenB;
+    store["ft_google_user"] = JSON.stringify({ sub: "user_456", name: "User B", email: "b@t.com", picture: "" });
+    mockSyncActiveSub = "user_456";
+    mockHasInitialSyncCompleted = false;
+    mockHasActiveConflict = true;
+    mockConflictState = conflictB;
+
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "ft_google_token",
+          newValue: tokenB,
+        })
+      );
+      rerender(<App />);
+    });
+
+    expect(container.textContent).not.toContain("Checking for existing cloud data...");
+    expect(document.body.textContent).toContain("Sync Conflict Detected");
+    expect(document.body.textContent).toContain("Revision: 14");
+    expect(renderedDashboardTargetFunds).toEqual([61000]);
   });
 });

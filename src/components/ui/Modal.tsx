@@ -73,7 +73,7 @@ export const Modal: React.FC<ModalProps> = ({
       aria-label={ariaLabel}
       aria-labelledby={ariaLabelledBy}
       onClick={handleBackdropClick}
-      className={`fixed inset-0 z-[100] bg-black/80 backdrop-blur-md animate-in fade-in duration-200 ${variantClasses} ${className}`.trim()}
+      className={`fixed inset-0 !m-0 z-[100] bg-[var(--bg-modal-scrim)] backdrop-blur-md animate-in fade-in duration-200 ${variantClasses} ${className}`.trim()}
     >
       {children}
     </div>

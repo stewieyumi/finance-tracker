@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Edit2, CreditCard, Info } from 'lucide-react';
+import { Plus, Archive, Edit2, CreditCard, Info } from 'lucide-react';
 import { UnifiedFinanceData, CustomWallet } from '../types/finance';
+import { formatPHP } from '../utils/currency';
+import { getWalletForBill } from '../utils/financeHelpers';
 import { WalletGrid } from './WalletGrid';
 
 interface WalletsTabProps {
@@ -55,81 +57,107 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
     setEditingId(id); setWalletName(currentLabel); setWalletColor(currentColor || COLORS[2]); setShowAdd(true);
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?\n\nIts balance will be permanently removed from your Total Liquid Cash. Any bills or transactions using this account will be automatically reassigned to another available account.`)) return;
+  const archiveBlock = (data: UnifiedFinanceData, id: string) => {
+    if ((data.wallets[id] ?? 0) !== 0) return "Bring this wallet to zero before archiving it.";
+    const settings = data.settings;
+    const routes = [
+      settings?.milestoneWallet, settings?.livingWallet, settings?.savingsWallet,
+      settings?.transitWallet, settings?.defaultWallet,
+      ...Object.values(settings?.expenseWallets ?? {}),
+    ];
+    if (routes.includes(id) || data.library.bills.some(bill => (bill.wallet || getWalletForBill(bill.name)) === id) ||
+      data.library.receivables.some(receivable => receivable.wallet === id) ||
+      id === "main") return "Change the wallet used by settings, commitments, or inflows before archiving.";
+  };
+
+  const handleArchive = (id: string, name: string) => {
+    const blocked = archiveBlock(globalData, id);
+    if (blocked) {
+      alert(blocked);
+      return;
+    }
+    if (!confirm(`Archive "${name}"? Its history will be kept and you can restore it anytime.`)) return;
+
+    let reason: string | undefined;
     setGlobalData(prev => {
-      const nextWallets = { ...prev.wallets };
-      delete nextWallets[id];
-      
-      const remainingCustom = prev.settings?.customWallets?.filter(w => w.id !== id) || [];
-      const fallbackWallet = remainingCustom.length > 0 ? remainingCustom[0].id : "main";
-      
-      const safeW = (wId?: string) => wId === id ? fallbackWallet : wId;
-      const safeWReq = (wId: string) => wId === id ? fallbackWallet : wId;
-
-      const safeExpenseWallets = Object.fromEntries(
-        Object.entries(prev.settings?.expenseWallets || {}).map(([category, wId]) => [
-          category,
-          safeWReq(wId)
-        ])
-      );
-
-      return { 
-        ...prev, 
-        settings: { 
-          ...(prev.settings || {}), 
-          customWallets: remainingCustom,
-          milestoneWallet: safeW(prev.settings?.milestoneWallet),
-          livingWallet: safeW(prev.settings?.livingWallet),
-          savingsWallet: safeW(prev.settings?.savingsWallet),
-          transitWallet: safeW(prev.settings?.transitWallet),
-          defaultWallet: safeW(prev.settings?.defaultWallet),
-          expenseWallets: safeExpenseWallets
-        }, 
-        library: {
-          ...prev.library,
-          bills: prev.library?.bills.map(b => ({ ...b, wallet: safeW(b.wallet) })) || [],
-          receivables: prev.library?.receivables.map(r => ({ ...r, wallet: safeW(r.wallet) })) || [],
-          expenses: prev.library?.expenses?.map(e => ({ ...e, wallet: safeWReq(e.wallet) })) || [],
-          manualTransactions: prev.library?.manualTransactions?.map(mt => {
-            const updated = { ...mt };
-            if (mt.wallet !== undefined) {
-              updated.wallet = safeW(mt.wallet);
-            }
-            if (mt.destinationWallet !== undefined) {
-              updated.destinationWallet = safeW(mt.destinationWallet);
-            }
-            return updated;
-          }) || []
+      const settings = prev.settings;
+      const wallet = settings?.customWallets?.find(entry => entry.id === id);
+      if (!wallet) return prev;
+      reason = archiveBlock(prev, id);
+      if (reason) return prev;
+      const wallets = { ...prev.wallets };
+      delete wallets[id];
+      return {
+        ...prev,
+        wallets,
+        settings: {
+          ...settings,
+          customWallets: settings?.customWallets?.filter(entry => entry.id !== id),
+          archivedWallets: [...(settings?.archivedWallets ?? []), wallet],
         },
-        wallets: nextWallets, 
-        updatedAt: Date.now() 
-      } as any;
+        updatedAt: Date.now(),
+      };
+    });
+    if (reason) alert(reason);
+  };
+
+  const handleRestore = (id: string) => {
+    setGlobalData(prev => {
+      const settings = prev.settings;
+      const wallet = settings?.archivedWallets?.find(entry => entry.id === id);
+      if (!wallet || settings?.customWallets?.some(entry => entry.id === id)) return prev;
+      return {
+        ...prev,
+        wallets: { ...prev.wallets, [id]: prev.wallets[id] ?? 0 },
+        settings: {
+          ...settings,
+          customWallets: [...(settings?.customWallets ?? []), wallet],
+          archivedWallets: settings?.archivedWallets?.filter(entry => entry.id !== id),
+        },
+        updatedAt: Date.now(),
+      };
     });
   };
 
   const customWallets = globalData.settings?.customWallets || [];
+  const totalWalletBalance = customWallets.reduce((total, wallet) => total + (Number(globalData.wallets[wallet.id]) || 0), 0);
 
   return (
     <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
+      <section aria-labelledby="wallets-total" className="rounded-2xl border border-subtle bg-surface-elevated p-4 shadow-sm sm:p-5">
+        <h2 id="wallets-total" className="text-sm font-semibold text-muted">Total Wallet Balance</h2>
+        <p className="privacy-blur mt-1 break-words font-mono text-2xl font-bold text-strong">{formatPHP(totalWalletBalance)}</p>
+        <p className="mt-1 text-xs text-muted">Across {customWallets.length} active {customWallets.length === 1 ? "wallet" : "wallets"}</p>
+      </section>
       <WalletGrid wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} savingsWallet={globalData.settings?.savingsWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
-      <div className="bg-surface-elevated/90 backdrop-blur-xl border border-inverse/[0.07] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] rounded-2xl p-4 sm:p-5">
+      <div className="rounded-2xl bg-surface p-3 sm:p-4">
         <div className="flex items-center justify-between mb-4"><h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><CreditCard size={14} className="text-emerald-400" /> Account Management</h2></div>
         {customWallets.length > 0 && !showAdd && (
-          <div className="space-y-2.5 mb-4">
+          <div className="mb-4 overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle">
             {customWallets.map(w => (
-              <div key={w.id} className="flex items-center justify-between bg-surface border border-inverse/[0.04] p-3.5 rounded-xl shadow-sm">
+              <div key={w.id} className="flex min-h-12 items-center justify-between px-3 py-2">
                 <div className="flex items-center gap-2.5"><div className={`w-2.5 h-2.5 rounded-full bg-current ${w.color || 'text-emerald-400'} shadow-[0_0_8px_currentColor]`} /><span className="privacy-blur text-xs font-semibold text-primary">{w.label}</span></div>
                 <div className="flex items-center gap-1">
                   <button onClick={() => openEdit(w.id, w.label, w.color || COLORS[2])} aria-label="Edit account" className="text-faint hover:text-amber-400 p-1.5 transition rounded-lg hover:bg-amber-500/10"><Edit2 size={14} /></button>
-                  <button onClick={() => handleDelete(w.id, w.label)} aria-label="Delete account" className="text-faint hover:text-rose-400 p-1.5 transition rounded-lg hover:bg-rose-500/10"><Trash2 size={14} /></button>
+                  <button onClick={() => handleArchive(w.id, w.label)} aria-label="Archive account" className="text-faint hover:text-rose-400 p-1.5 transition rounded-lg hover:bg-rose-500/10"><Archive size={14} /></button>
                 </div>
               </div>
             ))}
           </div>
         )}
+        {!!globalData.settings?.archivedWallets?.length && (
+          <details className="mb-4 rounded-xl border border-subtle p-3">
+            <summary className="cursor-pointer text-xs font-semibold">Archived wallets</summary>
+            {globalData.settings.archivedWallets.map(wallet => (
+              <div key={wallet.id} className="mt-3 flex items-center justify-between text-xs">
+                <span className="privacy-blur">{wallet.label}</span>
+                <button type="button" onClick={() => handleRestore(wallet.id)} aria-label={`Restore ${wallet.label}`} className="rounded-lg px-3 py-2 text-emerald-400">Restore</button>
+              </div>
+            ))}
+          </details>
+        )}
         {showAdd ? (
-          <form onSubmit={handleAddOrEdit} className="bg-surface border border-inverse/[0.06] rounded-xl p-4 space-y-4 shadow-inner">
+          <form onSubmit={handleAddOrEdit} className="bg-surface border border-subtle rounded-xl p-4 space-y-4 shadow-inner">
             <div>
               <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">Account Name</label>
               <input type="text" list="wallet-name-suggestions" placeholder="e.g., BPI, GCash, Vault..." value={walletName} onChange={e => setWalletName(e.target.value)} autoFocus className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500" required />

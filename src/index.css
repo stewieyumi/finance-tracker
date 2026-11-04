@@ -4,74 +4,117 @@
 @tailwind utilities;
 
 :root {
+  --shadow-contact: 0 1px 2px rgba(0, 0, 0, .18);
+  --shadow-surface: 0 2px 6px rgba(0, 0, 0, .16);
+  --shadow-floating: 0 8px 22px rgba(0, 0, 0, .28);
+  --shadow-dialog: 0 12px 32px rgba(0, 0, 0, .24);
+  --focus-outline: #64a8ff;
+  --bg-selection: #2e6fd3;
+  --bg-selection-hover: #2865c2;
   --color-inverse: 255 255 255;
 
   /* Dark is the default palette */
-  --bg-app: #0b0b0d;
-  --bg-shell: #070709;
+  --bg-app: #181818;
+  --bg-shell: #181818;
+  --bg-navigation: rgba(28, 28, 28, .94);
 
   /* Granular surfaces */
-  --bg-surface: #14141a;
-  --bg-surface-low: #101014;
-  --bg-surface-elevated: #121217;
-  --bg-surface-high: #1a1a22;
-  --bg-surface-sunken: #0a0a0d;
-  --bg-surface-lowest: #09090c;
-  --bg-surface-input: #0b0b0e;
-  --bg-surface-modal: #121216;
+  --bg-surface: #202020;
+  --bg-surface-low: #1c1c1c;
+  --bg-surface-elevated: #232323;
+  --bg-surface-high: #292929;
+  --bg-surface-sunken: #1b1b1b;
+  --bg-surface-lowest: #151515;
+  --bg-surface-input: #1c1c1c;
+  --bg-surface-modal: #232323;
+  --bg-modal-scrim: rgba(24, 24, 24, 0.48);
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.055);
   --border-default: rgba(255, 255, 255, 0.1);
-  --border-strong: #27272a; /* zinc-800 */
+  --border-strong: #353535;
 
   --text-strong: #ffffff;
-  --text-primary: #e2e2e8;
-  --text-secondary: #d4d4d8;
-  --text-muted: #a1a1aa; /* zinc-400 */
-  --text-faint: #71717a; /* zinc-500 */
-  --text-disabled: #52525b; /* zinc-600 */
+  --text-warning: #fcd34d;
+  --text-primary: #f2f2f7;
+  --text-secondary: #e5e5ea;
+  --text-muted: #aeaeb2;
+  --text-faint: #98989d;
+  --text-disabled: #636366;
 
-  --bg-fill-strong: #27272a; /* zinc-800 */
-  --bg-fill: #18181b; /* zinc-900 */
-  --bg-fill-subtle: #09090b; /* zinc-950 */
+  --bg-fill-strong: #333333;
+  --bg-fill: #292929;
+  --bg-fill-subtle: #202020;
 }
 
 :root.light {
+  --shadow-contact: 0 1px 2px rgba(28, 28, 30, .08);
+  --shadow-surface: 0 3px 9px rgba(28, 28, 30, .10);
+  --shadow-floating: 0 8px 22px rgba(28, 28, 30, .14);
+  --shadow-dialog: 0 12px 32px rgba(28, 28, 30, .12);
+  --focus-outline: #005bc4;
+  --bg-selection: #005bc4;
+  --bg-selection-hover: #004faa;
   --color-inverse: 0 0 0;
 
-  --bg-app: #f4f4f6;
-  --bg-shell: #eeeef1;
+  --bg-app: #f2f2f7;
+  --bg-shell: #e5e5ea;
+  --bg-navigation: rgba(249, 249, 251, .9);
 
   --bg-surface: #ffffff;
-  --bg-surface-low: #fdfdfd;
+  --bg-surface-low: #f2f2f7;
   --bg-surface-elevated: #ffffff;
-  --bg-surface-high: #f9f9fb;
-  --bg-surface-sunken: #f7f7f9;
-  --bg-surface-lowest: #f4f4f6;
+  --bg-surface-high: #f7f7fa;
+  --bg-surface-sunken: #f2f2f7;
+  --bg-surface-lowest: #ededf2;
   --bg-surface-input: #ffffff;
   --bg-surface-modal: #ffffff;
+  --bg-modal-scrim: rgba(42, 42, 46, 0.18);
 
   --border-subtle: rgba(0, 0, 0, 0.08);
   --border-default: rgba(0, 0, 0, 0.12);
   --border-strong: rgba(0, 0, 0, 0.2);
 
   --text-strong: #000000;
-  --text-primary: #18181b;
-  --text-secondary: #3f3f46;
-  --text-muted: #52525b;
-  --text-faint: #71717a;
-  --text-disabled: #a1a1aa;
+  --text-warning: #92400e;
+  --text-primary: #1c1c1e;
+  --text-secondary: #3a3a3c;
+  --text-muted: #48484a;
+  --text-faint: #636366;
+  --text-disabled: #8e8e93;
 
-  --bg-fill-strong: #e4e4e7;
-  --bg-fill: #f4f4f5;
-  --bg-fill-subtle: #fafafa;
+  --bg-fill-strong: #e5e5ea;
+  --bg-fill: #f2f2f7;
+  --bg-fill-subtle: #f7f7fa;
+}
+
+@layer utilities {
+  .text-warning { color: var(--text-warning); }
 }
 
 @layer base {
+  *, ::before, ::after {
+    border-color: var(--border-subtle);
+  }
+
+
+  :where(button, a, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--focus-outline);
+    outline-offset: 2px;
+  }
+
+  :root:not(.light) {
+    color-scheme: dark;
+  }
+
+  :root.light {
+    color-scheme: light;
+  }
+
   html, body {
     overscroll-behavior-y: none;
   }
   body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     background-color: var(--bg-app);
     color: var(--text-secondary);
     transition: background-color 0.15s ease, color 0.15s ease;
@@ -108,14 +151,6 @@
     color: #047857;
   }
 
-
-  .settings-modal-backdrop {
-    background: rgba(0, 0, 0, 0.5);
-  }
-
-  :root:not(.light) .settings-modal-backdrop {
-    background: rgba(0, 0, 0, 0.85);
-  }
 
   .settings-legacy-migration-button {
     background: #fffbeb;

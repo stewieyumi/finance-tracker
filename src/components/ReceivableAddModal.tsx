@@ -2,6 +2,7 @@ import React from "react";
 import { Plus, X } from "lucide-react";
 import { ReceivableCategory, ReceivableFrequency } from "../types/finance";
 import { formatOrdinal } from "../utils/displayHelpers";
+import { formatPHP, roundMoney } from "../utils/currency";
 import { Modal } from "./ui/Modal";
 
 export interface NewReceivableForm {
@@ -39,7 +40,7 @@ export default function ReceivableAddModal({
       variant="sheet"
       ariaLabel="Add New Inflow"
     >
-      <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md mx-auto shadow-[0_0_60px_rgba(0,0,0,0.8)] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
+      <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md mx-auto shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
@@ -77,7 +78,7 @@ export default function ReceivableAddModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
-                Amount (₱)
+                {newReceivable.frequency === "Bi-monthly" ? "Amount per payday (₱)" : "Amount (₱)"}
               </label>
               <input
                 type="number"
@@ -85,10 +86,14 @@ export default function ReceivableAddModal({
                 step="0.01"
                 value={newReceivable.amount}
                 onChange={(e) => onChange({ ...newReceivable, amount: e.target.value })}
+                min="0.01"
                 placeholder="0.00"
                 className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-strong outline-none focus:border-emerald-500"
                 required
               />
+              {newReceivable.frequency === "Bi-monthly" && (
+                <p className="mt-1 text-xs text-muted">Monthly total: {formatPHP(roundMoney(Number(newReceivable.amount)) * 2)}</p>
+              )}
             </div>
 
             <div>

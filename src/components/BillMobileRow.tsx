@@ -1,9 +1,8 @@
 import React from "react";
-import { Check, Circle, Edit2, CalendarPlus } from "lucide-react";
+import { Check, Circle, Edit2 } from "lucide-react";
 import { BillViewModel, CustomWallet } from "../types/finance";
 import { formatDaysRemaining } from "../utils/dateHelpers";
 import { LoanProgressBadge } from "./LoanProgressBadge";
-import { exportBillToCalendar } from "../utils/calendarExport";
 
 interface BillMobileRowProps {
   bill: BillViewModel;
@@ -12,7 +11,6 @@ interface BillMobileRowProps {
   highlightOverdue: boolean;
   onToggleStatus: (bill: BillViewModel) => void;
   onEdit: (bill: BillViewModel) => void;
-  onExportCalendar?: (bill: BillViewModel) => void;
 }
 
 export const BillMobileRow: React.FC<BillMobileRowProps> = ({
@@ -22,21 +20,16 @@ export const BillMobileRow: React.FC<BillMobileRowProps> = ({
   highlightOverdue,
   onToggleStatus,
   onEdit,
-  onExportCalendar,
 }) => (
   <div
     key={bill.id}
+    data-commitment-id={bill.id}
+    tabIndex={-1}
     data-testid={`bill-mobile-row-${bill.id}`}
-    onClick={() => onEdit(bill)}
-    className={`p-3 rounded-xl border transition-all cursor-pointer ${
-      bill.paid
-        ? "bg-fill-subtle/40 border-strong/60 opacity-40 hover:opacity-60"
-        : "bg-surface-sunken border-strong/80 shadow-sm hover:border-inverse/[0.15]"
-    } ${
-      highlightOverdue &&
-      (bill.daysLeft ?? 0) < 0 &&
-      !bill.paid
-        ? "ring-2 ring-orange-500/50"
+    onClick={bill.paid ? undefined : () => onToggleStatus(bill)}
+    className={`${bill.paid ? "" : "cursor-pointer"} px-3 py-2.5 transition-colors hover:bg-surface-high ${bill.paid ? "bg-surface-low" : ""} ${
+      highlightOverdue && (bill.daysLeft ?? 0) < 0 && !bill.paid
+        ? "bg-amber-500/10"
         : ""
     }`}
   >
@@ -151,36 +144,17 @@ export const BillMobileRow: React.FC<BillMobileRowProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0 mt-1">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onExportCalendar) {
-                onExportCalendar(bill);
-              } else {
-                exportBillToCalendar(bill, selectedMonth || "");
-              }
-            }}
-            className="px-2 py-0.5 text-muted hover:text-blue-400 bg-fill-strong/70 hover:bg-fill-strong border border-strong/40 rounded-md transition flex items-center gap-1 text-[10px]"
-            title="Add to Calendar"
-            aria-label={`Export ${bill.name} to calendar`}
-          >
-            <CalendarPlus size={9} />
-            <span>Sync</span>
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(bill);
-            }}
-            className="px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 hover:bg-fill-strong border border-strong/40 rounded-md transition flex items-center gap-1 text-[10px]"
-          >
-            <Edit2 size={9} />
-            <span>Edit</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(bill);
+          }}
+          className="mt-1 inline-flex min-h-10 shrink-0 items-center gap-1 rounded-lg bg-fill px-2.5 text-xs text-muted transition hover:bg-fill-strong hover:text-primary"
+        >
+          <Edit2 size={10} aria-hidden="true" />
+          Edit
+        </button>
       </div>
     </div>
   </div>

@@ -8,6 +8,27 @@ export default {
   darkMode: "class",
   theme: {
     extend: {
+      boxShadow: {
+        sm: "var(--shadow-contact)",
+        DEFAULT: "var(--shadow-surface)",
+        md: "var(--shadow-surface)",
+        lg: "var(--shadow-floating)",
+        xl: "var(--shadow-floating)",
+        "2xl": "var(--shadow-dialog)",
+      },
+      borderColor: {
+        subtle: "color-mix(in srgb, var(--border-subtle) calc(<alpha-value> * 100%), transparent)",
+        default: "color-mix(in srgb, var(--border-default) calc(<alpha-value> * 100%), transparent)",
+        strong: "color-mix(in srgb, var(--border-strong) calc(<alpha-value> * 100%), transparent)",
+      },
+      textColor: {
+        strong: "var(--text-strong)",
+        primary: "var(--text-primary)",
+        secondary: "var(--text-secondary)",
+        muted: "var(--text-muted)",
+        faint: "var(--text-faint)",
+        disabled: "var(--text-disabled)",
+      },
       colors: {
         inverse: "rgb(var(--color-inverse) / <alpha-value>)",
         app: "var(--bg-app)",

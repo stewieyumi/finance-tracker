@@ -1,3 +1,5 @@
+import { roundMoney } from "../utils/currency";
+import { isValidTwiceMonthlySchedule, normalizePaydayDays } from "../utils/dateHelpers";
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Check, Hourglass, Plus, ArrowDownLeft, Filter, ChevronDown, X, Eye, EyeOff } from "lucide-react";
 import { Receivable, ReceivableViewModel, ReceivableCategory, ReceivableFrequency, EditFormData, CustomWallet } from "../types/finance";
@@ -18,7 +20,7 @@ interface ReceivablesTableProps {
   activeReceivables: ReceivableViewModel[];
   selectedMonth: string;
   onToggleStatus: (rec: ReceivableViewModel) => void;
-  onAddPayment: (rec: ReceivableViewModel, amt: number) => void;
+  onAddPayment: (rec: ReceivableViewModel, amt: number, paydayDay?: number) => void;
   onAddReceivable: (rec: { name: string; amount: number; category: ReceivableCategory; frequency: ReceivableFrequency; biMonthlyDays?: number[]; monthlyDay?: number; date?: string; wallet?: string; }) => void;
   onDeleteReceivable: (id: string) => void;
   onSaveEdit: (category: "receivables") => void;
@@ -45,6 +47,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [payPopoverId, setPayPopoverId] = useState<string | null>(null);
   const [customPayAmount, setCustomPayAmount] = useState<string>("");
+  const [customPayday, setCustomPayday] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -71,9 +74,15 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newReceivable.name || !newReceivable.amount) return;
+    const amount = roundMoney(Number(newReceivable.amount));
+    const monthlyAmount = newReceivable.frequency === "Bi-monthly" ? roundMoney(amount * 2) : amount;
+    if (!newReceivable.name.trim() || !Number.isFinite(monthlyAmount) || monthlyAmount <= 0) return;
+    if (newReceivable.frequency === "Bi-monthly" && !isValidTwiceMonthlySchedule(newReceivable.biMonthlyDays)) {
+      alert("Choose two different days for a twice-monthly inflow.");
+      return;
+    }
     onAddReceivable({
-      name: newReceivable.name, amount: parseFloat(newReceivable.amount) || 0, category: newReceivable.category, frequency: newReceivable.frequency,
+      name: newReceivable.name, amount: monthlyAmount, category: newReceivable.category, frequency: newReceivable.frequency,
       biMonthlyDays: newReceivable.frequency === "Bi-monthly" ? newReceivable.biMonthlyDays : undefined, monthlyDay: newReceivable.frequency === "Monthly" ? newReceivable.monthlyDay : undefined,
       date: newReceivable.frequency === "By Date" ? newReceivable.date : undefined, wallet: newReceivable.wallet
     });
@@ -83,13 +92,62 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
 
   const handleStartEdit = (rec: ReceivableViewModel) => { setEditingId(rec.id); setEditForm({ ...rec }); setPayPopoverId(null); };
   const handleCancelEdit = () => { setEditingId(null); setEditForm({}); };
-  const handleQuickAddHalf = (rec: ReceivableViewModel) => { onAddPayment(rec, (rec.amount || 0) / 2); setPayPopoverId(null); };
-  const handleCustomPaySubmit = (rec: ReceivableViewModel) => { const val = parseFloat(customPayAmount); if (val > 0) { onAddPayment(rec, val); setCustomPayAmount(""); setPayPopoverId(null); } };
+  const handlePaymentStatus = (rec: ReceivableViewModel) => {
+    if (rec.frequency !== "Bi-monthly" || rec.collected || rec.amount <= 0) {
+      onToggleStatus(rec);
+      return;
+    }
+
+    const days = normalizePaydayDays(rec.biMonthlyDays);
+    const firstAmount = roundMoney(rec.amount / 2);
+    const remaining = roundMoney(rec.amount - rec.amountReceived);
+    if (rec.amountReceived <= 0 && days.length === 2 && firstAmount < remaining) {
+      onAddPayment(rec, firstAmount, days[0]);
+      return;
+    }
+
+    const firstReceived = roundMoney(rec.paydayReceived?.[days[0]] ?? 0);
+    const secondReceived = roundMoney(rec.paydayReceived?.[days[1]] ?? 0);
+    const secondRemaining = roundMoney(rec.amount - firstAmount - secondReceived);
+    if (days.length === 2 && firstReceived >= firstAmount && remaining === secondRemaining) {
+      onAddPayment(rec, remaining, days[1]);
+    } else {
+      // A legacy or custom monthly receipt may have no payday assignment.
+      onAddPayment(rec, rec.amountReceived > 0 ? remaining : firstAmount);
+    }
+  };
+  const handleCustomPaySubmit = (rec: ReceivableViewModel) => {
+    const amount = Number(customPayAmount);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    if (customPayday && rec.frequency === "Bi-monthly") {
+      onAddPayment(rec, amount, Number(customPayday));
+    } else {
+      onAddPayment(rec, amount);
+    }
+    setPayPopoverId(null);
+  };
+  const togglePaymentPopover = (id: string) => {
+    setCustomPayAmount("");
+    setCustomPayday("");
+    setPayPopoverId(current => current === id ? null : id);
+  };
+  const renderPaydayChoice = (rec: ReceivableViewModel) => {
+    const days = normalizePaydayDays(rec.biMonthlyDays);
+    if (rec.frequency !== "Bi-monthly" || days.length !== 2) return null;
+    return (
+      <select aria-label="Apply payment to" value={customPayday}
+        onChange={event => setCustomPayday(event.target.value)}
+        className="max-w-full rounded border border-strong bg-surface-input px-2 py-1 text-xs text-strong">
+        <option value="">Monthly total</option>
+        {days.map(day => <option key={day} value={day}>{formatOrdinal(day)} payday</option>)}
+      </select>
+    );
+  };
 
   return (
-    <div className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-lg w-full">
+    <div className="w-full rounded-2xl bg-surface p-3 sm:p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><ArrowDownLeft size={13} className="text-emerald-400" />{selectedMonth} {inflowsLabel || 'Receivables & Inflows'}</h2>
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-primary"><ArrowDownLeft size={13} className="text-emerald-400" />{selectedMonth} {inflowsLabel || 'Receivables & Inflows'}</h2>
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-faint font-mono hidden sm:inline">{activeReceivables.filter(r => r.collected).length}/{activeReceivables.length} Received</span>
           <div className="relative" ref={dropdownRef}>
@@ -163,7 +221,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
       </div>
 
       {/* MOBILE LIST */}
-      <div className="block lg:hidden space-y-2 mb-3">
+      <div className="mb-3 block overflow-hidden rounded-2xl bg-surface divide-y divide-subtle lg:hidden">
         {filteredReceivables.length === 0 ? (
           <div className="py-6 text-center text-faint text-xs italic">No {hideSettled ? "uncollected " : ""}{selectedFilter !== "All" ? selectedFilter.toLowerCase() + " " : ""}receivables found.</div>
           ) : filteredReceivables.map(rec => (
@@ -172,12 +230,10 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
               rec={rec}
               walletLabel={rec.wallet ? allWallets.find(w => w.id === rec.wallet)?.label : undefined}
               customPayAmount={customPayAmount}
+              paydayChoice={payPopoverId === rec.id ? renderPaydayChoice(rec) : null}
               payPopoverId={payPopoverId}
-              onToggleStatus={onToggleStatus}
-              onQuickAddHalf={handleQuickAddHalf}
-              onTogglePaymentPopover={(id) =>
-                setPayPopoverId(payPopoverId === id ? null : id)
-              }
+              onToggleStatus={handlePaymentStatus}
+              onTogglePaymentPopover={togglePaymentPopover}
               onEdit={handleStartEdit}
               onCustomPayAmountChange={setCustomPayAmount}
               onCustomPaySubmit={handleCustomPaySubmit}
@@ -208,12 +264,10 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
                 rec={rec}
                 walletLabel={rec.wallet ? allWallets.find(w => w.id === rec.wallet)?.label : undefined}
                 customPayAmount={customPayAmount}
+                paydayChoice={payPopoverId === rec.id ? renderPaydayChoice(rec) : null}
                 payPopoverId={payPopoverId}
-                onToggleStatus={onToggleStatus}
-                onQuickAddHalf={handleQuickAddHalf}
-                onTogglePaymentPopover={(id) =>
-                  setPayPopoverId(payPopoverId === id ? null : id)
-                }
+                onToggleStatus={handlePaymentStatus}
+                onTogglePaymentPopover={togglePaymentPopover}
                 onEdit={handleStartEdit}
                 onCustomPayAmountChange={setCustomPayAmount}
                 onCustomPaySubmit={handleCustomPaySubmit}

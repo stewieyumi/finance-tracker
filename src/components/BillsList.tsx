@@ -17,7 +17,6 @@ interface BillsListProps {
   highlightOverdue: boolean;
   onToggleStatus: (bill: BillViewModel, skipWalletMutation?: boolean) => void;
   onEdit: (bill: BillViewModel) => void;
-  onExportCalendar?: (bill: BillViewModel) => void;
   hideSettled?: boolean;
 }
 
@@ -33,7 +32,6 @@ export const BillsList: React.FC<BillsListProps> = ({
   highlightOverdue,
   onToggleStatus,
   onEdit,
-  onExportCalendar,
   hideSettled = false,
 }) => {
   const showFirstHalf = payPeriod === "all" || payPeriod === "firstHalf";
@@ -55,7 +53,6 @@ export const BillsList: React.FC<BillsListProps> = ({
       highlightOverdue={highlightOverdue}
       onToggleStatus={onToggleStatus}
       onEdit={onEdit}
-      onExportCalendar={onExportCalendar}
     />
   );
 
@@ -68,7 +65,6 @@ export const BillsList: React.FC<BillsListProps> = ({
       highlightOverdue={highlightOverdue}
       onToggleStatus={onToggleStatus}
       onEdit={onEdit}
-      onExportCalendar={onExportCalendar}
     />
   );
 
@@ -85,13 +81,17 @@ export const BillsList: React.FC<BillsListProps> = ({
             {showFirstHalf && firstHalfBills.length > 0 && (
               <div className="space-y-2">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-faint px-1">Days 1–15</div>
-                {firstHalfBills.map(bill => renderMobileRow(bill))}
+                <div className="overflow-hidden rounded-2xl bg-surface divide-y divide-subtle">
+                  {firstHalfBills.map(bill => renderMobileRow(bill))}
+                </div>
               </div>
             )}
             {showSecondHalf && secondHalfBills.length > 0 && (
               <div className="space-y-2">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-faint px-1">Days 16–31</div>
-                {secondHalfBills.map(bill => renderMobileRow(bill))}
+                <div className="overflow-hidden rounded-2xl bg-surface divide-y divide-subtle">
+                  {secondHalfBills.map(bill => renderMobileRow(bill))}
+                </div>
               </div>
             )}
           </>

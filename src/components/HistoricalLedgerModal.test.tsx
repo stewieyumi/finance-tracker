@@ -82,6 +82,29 @@ describe("HistoricalLedgerModal wallet mutations", () => {
     expect(next.library.manualTransactions?.[0].type).toBe("income");
   });
 
+  it("records a history-only entry without changing wallets", () => {
+    const data = makeData();
+    const setGlobalData = renderModal(data);
+
+    fireEvent.click(screen.getByRole("button", { name: /add manual transaction/i }));
+    fireEvent.click(screen.getByRole("button", { name: /income/i }));
+    fireEvent.change(screen.getByPlaceholderText("0.00"), {
+      target: { value: "250" },
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText(/Backdated Salary, Bank Transfer/i),
+      { target: { value: "Test Income" } }
+    );
+    fireEvent.click(screen.getByRole("checkbox", { name: /update wallet balances/i }));
+    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+    const next = applyUpdate(setGlobalData, data);
+
+    expect(next.wallets).toEqual(data.wallets);
+    expect(next.library.manualTransactions).toHaveLength(1);
+    expect(next.library.manualTransactions?.[0]).toMatchObject({ type: "income", postingMode: "history-only" });
+  });
+
   it("subtracts expense from the selected wallet", () => {
     const data = makeData();
     const setGlobalData = renderModal(data);
@@ -179,7 +202,7 @@ describe("HistoricalLedgerModal wallet mutations", () => {
     expect(next.library.manualTransactions?.[0].amount).toBe(250);
   });
 
-  it("reverses a transaction's wallet effect when deleted", () => {
+  it.each(["wallet", "history-only"] as const)("deletes a %s transaction with the appropriate wallet effect", postingMode => {
     const data = makeData({
       wallets: {
         maribank: 0,
@@ -204,6 +227,7 @@ describe("HistoricalLedgerModal wallet mutations", () => {
             category: "Other",
             note: "",
             createdAt: 1758362400000,
+            postingMode,
           },
         ],
       },
@@ -220,7 +244,7 @@ describe("HistoricalLedgerModal wallet mutations", () => {
 
     const next = applyUpdate(setGlobalData, data);
 
-    expect(next.wallets.maya).toBe(1000);
+    expect(next.wallets.maya).toBe(postingMode === "wallet" ? 1000 : 750);
     expect(next.library.manualTransactions).toHaveLength(0);
   });
 });

@@ -27,6 +27,7 @@ export interface ManualTransaction {
   category?: string;
   note?: string;
   createdAt: number;
+  postingMode?: "history-only" | "wallet";
 }
 
 export interface Expense {
@@ -76,6 +77,7 @@ export interface Receivable {
 }
 
 export interface ReceivableViewModel extends Receivable {
+  paydayReceived?: Record<number, number>;
   amountReceived: number;
   collected: boolean;
   targetMonthForDue: string;
@@ -94,8 +96,30 @@ export interface WalletState {
   [key: string]: number;
 }
 
+export interface BillSettlement {
+  id: string;
+  paidAt: string;
+  amount: number;
+  wallet: string | null;
+  walletDebit: number;
+  priorConfirmation?: boolean;
+  reversedAt?: string;
+}
+
+export interface ReceivableSettlement {
+  id?: string;
+  receivedAt: string;
+  amount: number;
+  wallet: string | null;
+  walletCredit: number;
+  paydayDay?: number;
+  reversedAt?: string;
+}
+
 export interface MonthLog {
+  receivableSettlements?: Record<string, ReceivableSettlement[]>;
   billsPaid?: string[];
+  billSettlements?: Record<string, BillSettlement[]>;
   billOverrides?: {
     [billId: string]: number;
   };
@@ -143,6 +167,7 @@ export interface AppSettings {
   hasMigratedBaseWallets?: boolean;
   hasCompletedOnboarding?: boolean;
   customWallets?: CustomWallet[];
+  archivedWallets?: CustomWallet[];
   dismissedNotifications?: Record<string, number>;
 }
 
@@ -162,7 +187,9 @@ export interface UnifiedFinanceData {
   wallets: WalletState;
   library: {
     bills: Bill[];
+    archivedBills?: Bill[];
     receivables: Receivable[];
+    archivedReceivables?: Receivable[];
     shoots: Shoot[];
     expenses?: Expense[];
   manualTransactions?: ManualTransaction[];
@@ -224,4 +251,26 @@ export interface AppNotification {
   isGroup?: boolean;
   count?: number;
   groupedIds?: string[];
+}
+
+export interface SyncRecord {
+  data: UnifiedFinanceData;
+  revision: number;
+}
+
+export interface SyncConflictState {
+  baseRevision: number | null;
+  localSnapshot: UnifiedFinanceData;
+  cloudSnapshot: UnifiedFinanceData;
+  cloudRevision: number;
+  detectedAt: number;
+}
+
+export interface LastResolvedConflict {
+  localSnapshot: UnifiedFinanceData;
+  cloudSnapshot: UnifiedFinanceData;
+  detectedAt: number;
+  resolvedAt: number;
+  resolution: "local" | "cloud";
+  cloudRevision: number;
 }

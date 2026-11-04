@@ -4,8 +4,6 @@ import { ReceivableViewModel } from "../types/finance";
 
 interface ReceivablePaymentActionsProps {
   rec: ReceivableViewModel;
-  isBiMonthly: boolean;
-  onQuickAddHalf: (rec: ReceivableViewModel) => void;
   onTogglePaymentPopover: (recId: string) => void;
   onEdit: (rec: ReceivableViewModel) => void;
   variant: "mobile" | "desktop";
@@ -13,8 +11,6 @@ interface ReceivablePaymentActionsProps {
 
 export const ReceivablePaymentActions: React.FC<ReceivablePaymentActionsProps> = ({
   rec,
-  isBiMonthly,
-  onQuickAddHalf,
   onTogglePaymentPopover,
   onEdit,
   variant,
@@ -25,24 +21,6 @@ export const ReceivablePaymentActions: React.FC<ReceivablePaymentActionsProps> =
     <>
       {!rec.collected && (
         <>
-          {isBiMonthly && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onQuickAddHalf(rec);
-              }}
-              title={isMobile ? undefined : "Add 1st/2nd half payment"}
-              className={
-                isMobile
-                  ? "whitespace-nowrap shrink-0 px-1.5 py-0.5 chip-cyan rounded text-[9px] font-medium"
-                  : "whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[9px] font-mono chip-cyan rounded transition"
-              }
-            >
-              +1/2
-            </button>
-          )}
-
           <button
             type="button"
             onClick={(e) => {
@@ -52,7 +30,7 @@ export const ReceivablePaymentActions: React.FC<ReceivablePaymentActionsProps> =
             title={isMobile ? undefined : "Add custom payment"}
             className={
               isMobile
-                ? "whitespace-nowrap shrink-0 px-1.5 py-0.5 chip-emerald rounded text-[9px] font-medium"
+                ? "min-h-10 min-w-10 whitespace-nowrap shrink-0 rounded-lg px-2 chip-emerald text-xs font-semibold"
                 : "whitespace-nowrap shrink-0 px-1.5 py-0.5 text-[10px] font-mono chip-emerald rounded transition"
             }
           >
@@ -69,7 +47,7 @@ export const ReceivablePaymentActions: React.FC<ReceivablePaymentActionsProps> =
         }}
         className={
           isMobile
-            ? "whitespace-nowrap shrink-0 px-2 py-0.5 text-muted hover:text-amber-300 bg-fill-strong/70 rounded text-[10px]"
+            ? "min-h-10 min-w-10 whitespace-nowrap shrink-0 rounded-lg bg-fill px-2 text-xs text-muted hover:bg-fill-strong hover:text-primary"
             : "whitespace-nowrap shrink-0 px-2 py-1 text-muted hover:text-amber-300 hover:bg-inverse/[0.05] rounded-md text-[11px] flex items-center transition"
         }
       >

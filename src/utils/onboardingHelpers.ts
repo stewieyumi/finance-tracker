@@ -55,7 +55,7 @@ export function hasConfiguredSettings(settings?: AppSettings): boolean {
   // Customized salary or deductions
   if (typeof settings.grossPerPayoutSalary === "number" && settings.grossPerPayoutSalary > 0) return true;
   if (Array.isArray(settings.salaryDeductions) && settings.salaryDeductions.length > 0) return true;
-  if (typeof settings.perPayoutSalary === "number" && settings.perPayoutSalary !== 15000) return true;
+  if (typeof settings.perPayoutSalary === "number" && settings.perPayoutSalary > 0 && settings.perPayoutSalary !== 15000) return true;
 
   // Customized theme
   if (settings.theme && settings.theme !== "dark") return true;

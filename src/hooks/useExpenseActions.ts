@@ -90,6 +90,10 @@ export function useExpenseActions({
 
   const handleDeleteExpense = useCallback(
     (exp: Expense) => {
+      if (globalData.settings?.archivedWallets?.some(wallet => wallet.id === exp.wallet)) {
+        showToast("Restore the archived wallet before reversing this expense.");
+        return;
+      }
       const refundAmount = exp.deductedAmount ?? exp.amount;
 
       if (
@@ -101,6 +105,7 @@ export function useExpenseActions({
       }
 
       setGlobalData((prev) => {
+        if (prev.settings?.archivedWallets?.some(wallet => wallet.id === exp.wallet)) return prev;
         const nextWallets = { ...prev.wallets };
 
         if (nextWallets[exp.wallet] !== undefined) {
@@ -125,7 +130,7 @@ export function useExpenseActions({
 
       showToast("Expense deleted and refunded.");
     },
-    [setGlobalData, showToast]
+    [globalData.settings, setGlobalData, showToast]
   );
 
   return {
