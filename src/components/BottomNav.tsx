@@ -18,8 +18,8 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
   ] as const;
 
   return (
-    <nav aria-label="Main navigation" className="fixed inset-x-0 bottom-0 z-50 border-t border-subtle bg-[var(--bg-navigation)] pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
-      <div className="mx-auto grid w-full max-w-lg grid-cols-5 gap-1 px-2 py-1.5 sm:gap-3 sm:px-4">
+    <nav aria-label="Main navigation" className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <div className="navigation-glass pointer-events-auto mx-auto grid w-full max-w-lg grid-cols-5 gap-1 rounded-3xl p-1.5 sm:gap-2">
         {tabs.map(({ id, label, icon: Icon, accent }) => {
           const isActive = activeTab === id;
           return (
@@ -28,7 +28,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
               type="button"
               onClick={() => onChange(id)}
               className={`flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 py-1 transition-colors motion-reduce:transition-none ${isActive
-                ? `${accent} shadow-sm`
+                ? `${accent} nav-current`
                 : "border-transparent text-muted hover:bg-fill hover:text-primary"
               }`}
               aria-label={label}

@@ -120,11 +120,11 @@ describe("DashboardTab", () => {
     expect(cards.length).toBe(4);
     cards.forEach((card) => {
       expect(card.className).toContain("h-[156px]");
-      expect(card.className).toContain("sm:h-[160px]");
+      expect(card.className).toContain("sm:min-h-[160px]");
       expect(card.className).toContain("rounded-2xl");
       expect(card.className).toContain("p-4");
       expect(card.className).toContain("sm:p-5");
-      expect(card.className).toContain("bg-surface-elevated/90");
+      expect(card.className).toContain("dashboard-material");
     });
   });
 

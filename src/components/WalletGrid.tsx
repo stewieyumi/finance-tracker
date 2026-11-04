@@ -41,21 +41,22 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
 
             const roleClasses =
               isMilestoneWallet && isSavingsWallet
-                ? "ring-1 ring-inset ring-violet-400/50"
+                ? "wallet-role wallet-role-shared"
                 : isMilestoneWallet
-                  ? "ring-1 ring-inset ring-blue-500/55"
+                  ? "wallet-role wallet-role-goal"
                   : isSavingsWallet
-                    ? "ring-1 ring-inset ring-emerald-500/45"
+                    ? "wallet-role wallet-role-savings"
                     : "";
 
             const displayColor = `${w.color || "text-strong"} font-bold`;
 
             return (
-              <button key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`group flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-high ${roleClasses}`}>
+              <button key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`wallet-balance-row group relative flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-high ${roleClasses}`}>
                 <span className="flex min-w-0 items-center gap-2">
                   <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full bg-current ${w.color || "text-muted"}`} />
                   <span className="privacy-blur truncate text-sm font-medium text-primary">{w.label}</span>
                   {isMilestoneWallet && <span className="sr-only">Goal wallet</span>}
+                  {isSavingsWallet && <span className="sr-only">Savings wallet</span>}
                 </span>
                 <div className="flex items-baseline gap-0.5 shrink-0">
                   <span className="text-[10px] text-faint font-mono">₱</span>

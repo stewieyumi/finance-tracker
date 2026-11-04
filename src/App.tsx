@@ -986,7 +986,7 @@ const copySummaryToClipboard = async () => {
 
       <div className="w-full max-w-[860px] space-y-4">
         {cashShortfall > 0 && (
-          <div className="chip-amber text-xs rounded-2xl px-4 py-3 flex items-center gap-2.5 shadow-lg leading-relaxed">
+          <div className="warning-material text-xs rounded-2xl px-4 py-3 flex items-center gap-2.5 leading-relaxed">
             <AlertTriangle size={14} className="shrink-0" />
             <span>Liquid cash is <strong className="font-mono font-semibold">₱{cashShortfall.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> short of covering unpaid commitments{overdueBills.length > 0 ? ` (including ${overdueBills.length} overdue)` : ""}.</span>
           </div>
@@ -1061,8 +1061,8 @@ const copySummaryToClipboard = async () => {
                 <option value="CUSTOM_DATE_JUMP" className="bg-surface-modal font-semibold text-blue-400">Select Month...</option>
               </select>
             </div>
-            <button onClick={() => setShowAnalyticsModal(true)} className="flex items-center gap-1.5 chip-amber hover:brightness-95 px-3 py-1.5 rounded-xl text-xs shadow-md transition font-medium"><Sparkles size={13} /><span>Runway</span></button>
-            <button onClick={() => setShowYearlyModal(true)} className="flex items-center gap-1.5 bg-surface-elevated border border-emerald-500/30 hover:border-emerald-400/60 text-emerald-300 px-3 py-1.5 rounded-xl text-xs shadow-md transition font-medium"><BarChart2 size={13} className="text-emerald-400" /><span>Yearly</span></button>
+            <button onClick={() => setShowAnalyticsModal(true)} className="flex items-center gap-1.5 warning-material hover:brightness-95 px-3 py-1.5 rounded-xl text-xs transition font-medium"><Sparkles size={13} /><span>Runway</span></button>
+            <button onClick={() => setShowYearlyModal(true)} className="flex items-center gap-1.5 dashboard-material text-positive hover:border-default px-3 py-1.5 rounded-xl text-xs transition font-medium"><BarChart2 size={13} /><span>Yearly</span></button>
           </div>
         </div>
 
