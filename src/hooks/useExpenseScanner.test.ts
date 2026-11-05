@@ -391,3 +391,61 @@ describe("useExpenseScanner", () => {
     expect(result.current.isScanning).toBe(false);
   });
 });
+
+// These statuses belong to server/provider availability, so a valid app session must remain usable.
+describe("scanner availability and draft validation", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(financeAuth, "getFinanceAuth").mockReturnValue({ sub: "fixture-user", key: "fixture-session", headers: { "X-Finance-Session": "fixture" } });
+    class ImageFixture {
+      width = 200; height = 100; onload: (() => void) | null = null;
+      set src(_value: string) { this.onload?.(); }
+    }
+    vi.stubGlobal("Image", ImageFixture);
+    vi.stubGlobal("URL", { ...URL, createObjectURL: vi.fn(() => "blob:fixture"), revokeObjectURL: vi.fn() });
+    const create = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => tag === "canvas"
+      ? { getContext: () => ({ drawImage: vi.fn() }), toDataURL: () => "data:image/jpeg;base64,Zml4dHVyZQ==" } as unknown as HTMLCanvasElement : create(tag));
+    vi.stubGlobal("localStorage", { setItem: vi.fn(), removeItem: vi.fn(), getItem: vi.fn() });
+  });
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+  async function scan(body: unknown, status = 200) {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: status < 400, status, text: async () => JSON.stringify(body) }));
+    const onScanComplete = vi.fn();
+    const hook = renderHook(() => useExpenseScanner({ showToast: vi.fn(), globalData: baseGlobalData, onScanStart: vi.fn(), onScanComplete }));
+    await act(async () => {
+      hook.result.current.handleCapture({ currentTarget: { files: [new File(["fixture"], "receipt.jpg", { type: "image/jpeg" })], value: "" } } as unknown as React.ChangeEvent<HTMLInputElement>);
+    });
+    return { ...hook, onScanComplete };
+  }
+  it.each([
+    [502, "SCANNER_UNAVAILABLE", false, "scanner is unavailable"],
+    [503, "SCANNER_UNAVAILABLE", false, "scanner is unavailable"],
+    [503, "AUTH_UNAVAILABLE", true, "Unable to verify your sign-in"],
+    [504, "AI_TIMEOUT", true, "Scanning took too long"],
+  ])("keeps app authentication for %s %s", async (status, code, canRetry, message) => {
+    const rejected = vi.fn(); window.addEventListener("auth-expired", rejected);
+    try {
+      const { result, onScanComplete } = await scan({ error: "Service unavailable", code }, status);
+      expect(result.current.failure).toEqual({ message: expect.stringContaining(message), canRetry });
+      expect(rejected).not.toHaveBeenCalled();
+      expect(onScanComplete).not.toHaveBeenCalled();
+      expect(result.current.isScanning).toBe(false);
+    } finally { window.removeEventListener("auth-expired", rejected); }
+  });
+  it.each(["12.34.56", "100garbage", "1,00", true, 0.001])("rejects an ambiguous amount %s", async amount => {
+    const { result, onScanComplete } = await scan({ parsed: { merchant: "Sample", amount } });
+    expect(onScanComplete).not.toHaveBeenCalled();
+    expect(result.current.failure?.message).toContain("valid expense amount");
+  });
+  it("accepts a clearly formatted peso amount while keeping the configured wallet", async () => {
+    const { onScanComplete } = await scan({ parsed: { merchant: "Sample", amount: "PHP 1,234.50", date: "2028-02-29", category: "Shopping" } });
+    expect(onScanComplete).toHaveBeenCalledWith(expect.objectContaining({ amount: "1234.5", date: "2028-02-29", wallet: expect.any(String) }));
+  });
+  it("uses the existing today fallback for an impossible receipt date", async () => {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const { onScanComplete } = await scan({ parsed: { merchant: "Sample", amount: 100, date: "2026-02-30" } });
+    expect(onScanComplete).toHaveBeenCalledWith(expect.objectContaining({ date: today }));
+  });
+});

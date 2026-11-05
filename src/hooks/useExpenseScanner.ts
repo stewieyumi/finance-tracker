@@ -135,8 +135,11 @@ export function useExpenseScanner({
       let data;
       try { data = JSON.parse(body); } catch { data = null; }
       const errorText = String(data?.error ?? "").toLowerCase();
-      const atCapacity = data?.code === "AI_CAPACITY" || res.status === 429 || res.status === 503 ||
-        /high demand|overloaded|resource exhausted/.test(errorText);
+      const unavailable = data?.code === "SCANNER_UNAVAILABLE" ||
+        (res.status === 500 && /gemini_api_key is missing|missing api key|api key is missing/.test(errorText));
+      const authUnavailable = data?.code === "AUTH_UNAVAILABLE";
+      const atCapacity = !unavailable && !authUnavailable && (data?.code === "AI_CAPACITY" || res.status === 429 || res.status === 503 ||
+        /high demand|overloaded|resource exhausted/.test(errorText));
       recordScannerStatus(data && typeof data === "object" ? res.status : "invalid-response", atCapacity);
 
       if (res.status === 401 || data?.code === "AUTH_EXPIRED" || data?.code === "AUTH_REQUIRED") {
@@ -144,12 +147,20 @@ export function useExpenseScanner({
         fail("Reconnect your Google account after closing this form, then reopen Log Expense to retry this photo.");
         return;
       }
-      if (atCapacity) {
-        fail("The scanner is busy. Retry this photo in a moment or enter the details manually.");
+      if (authUnavailable) {
+        fail("Unable to verify your sign-in right now. Retry this photo shortly or enter the details manually.");
         return;
       }
-      if (res.status === 500 && /gemini_api_key is missing|missing api key|api key is missing/.test(errorText)) {
+      if (unavailable) {
         fail("The scanner is unavailable. Enter the details manually.", false);
+        return;
+      }
+      if (data?.code === "AI_TIMEOUT") {
+        fail("Scanning took too long. Retry this photo or enter the details manually.");
+        return;
+      }
+      if (atCapacity) {
+        fail("The scanner is busy. Retry this photo in a moment or enter the details manually.");
         return;
       }
       if (!res.ok || !data?.parsed || data.error || data.success === false || typeof data.parsed !== "object") {
@@ -158,11 +169,12 @@ export function useExpenseScanner({
       }
 
       const parsed = data.parsed;
-      const amount = typeof parsed.amount === "number"
-        ? parsed.amount
-        : parseFloat(String(parsed.amount || "").replace(/[^0-9.-]+/g, ""));
+      const amountText = typeof parsed.amount === "string" ? parsed.amount.trim().replace(/^(?:PHP|₱)\s*/i, "") : "";
+      const amount = typeof parsed.amount === "number" ? parsed.amount
+        : /^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d{1,2})?$/.test(amountText) ? Number(amountText.replaceAll(",", "")) : NaN;
       const merchant = typeof parsed.merchant === "string" ? parsed.merchant.trim() : "";
-      if (!Number.isFinite(amount) || amount <= 0 || amount > 10_000_000) {
+      if (!Number.isFinite(amount) || amount <= 0 || amount > 10_000_000 ||
+          Math.abs(Math.round(amount * 100) - amount * 100) > 0.000001) {
         fail(merchant
           ? "Could not detect a valid expense amount. Enter the details manually."
           : "Could not detect receipt details. Enter the details manually.");
@@ -171,8 +183,10 @@ export function useExpenseScanner({
 
       const categories = ["Food & Dining", "Transport", "Utilities", "Laundry & Home", "Shopping", "Other"];
       const category = categories.includes(parsed.category) ? parsed.category : "Other";
-      const date = typeof parsed.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date) &&
-        !isNaN(Date.parse(parsed.date)) ? parsed.date : getLocalToday();
+      const dateValue = typeof parsed.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date)
+        ? new Date(parsed.date + "T00:00:00Z") : null;
+      const date = dateValue && Number.isFinite(dateValue.getTime()) && dateValue.toISOString().slice(0, 10) === parsed.date
+        ? parsed.date : getLocalToday();
       retryPhoto.current = null;
       onScanComplete({
         merchant, amount: String(amount), category, date,
