@@ -1,5 +1,5 @@
 import type { Shoot, UnifiedFinanceData } from "../types/finance";
-import { GIG_BOOKING_STATUSES, type GigCalendarGroup } from "./gigStatus";
+import { GIG_BOOKING_STATUSES, type GigCalendarGroup } from "./gigStatus.js";
 
 export interface AppleCalendarEvent {
   uid: string;

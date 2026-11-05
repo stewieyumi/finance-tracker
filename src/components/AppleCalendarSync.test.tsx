@@ -130,3 +130,15 @@ it("discards connection results when the app account changes during connect", as
   expect(screen.queryByText("Connected · calendar@example.test")).not.toBeInTheDocument();
   expect(screen.getByText(/account changed/)).toBeInTheDocument();
 });
+
+it("handles a non-JSON platform error with a clear retry message and recovers on retry", async () => {
+  vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500, json: async () => { throw new SyntaxError("Unexpected token A: A server error occurred"); } } as any);
+  render(<Fixture />);
+  fireEvent.click(screen.getByRole("button", { name: "Apple Calendar" }));
+  await screen.findByText("Calendar service is unavailable. Please try again shortly.");
+  expect(screen.queryByText(/Unexpected token/)).not.toBeInTheDocument();
+  expect(screen.getByText("Sample gig unfinished")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Check connection" }));
+  await screen.findByRole("button", { name: "Use calendar version" });
+  expect(screen.getByText("Sample gig unfinished")).toBeInTheDocument();
+});

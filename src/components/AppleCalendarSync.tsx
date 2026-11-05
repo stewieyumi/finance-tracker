@@ -47,8 +47,10 @@ export default function AppleCalendarSync({ data, setData, autoOpen = false, onC
       throw new Error("The account changed. Close this review and reopen it.");
     }
     if (response.status === 401) notifyAuthTokenRejected(auth.key);
-    const result = await response.json();
-    if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "Could not connect to iCloud.");
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result || typeof result !== "object") {
+      throw new Error(typeof result?.error === "string" ? result.error : "Calendar service is unavailable. Please try again shortly.");
+    }
     return result;
   }
 
