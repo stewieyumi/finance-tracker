@@ -33,3 +33,5 @@ export const FUND_MILESTONES = [
 ];
 
 export const DEFAULT_TARGET_FUND = 0;
+
+export const QUICK_EXPENSE_HASH = "#quick-expense";

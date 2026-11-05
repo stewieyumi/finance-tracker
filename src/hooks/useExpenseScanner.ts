@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { UnifiedFinanceData } from "../types/finance";
 import { notifyAuthTokenRejected } from "./useCloudSync";
 import { getFinanceAuth } from "../utils/financeAuth";
@@ -30,6 +30,8 @@ interface UseExpenseScannerOptions {
 
 interface UseExpenseScannerReturn {
   isScanning: boolean;
+  failure: { message: string; canRetry: boolean } | null;
+  retryScan: () => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleCapture: (e: React.ChangeEvent<HTMLInputElement>) => void;
   stopScanning: () => void;
@@ -40,6 +42,31 @@ const getLocalToday = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+async function prepareReceipt(file: File, signal: AbortSignal) {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Unreadable receipt image"));
+      image.src = objectUrl;
+    });
+    const scale = Math.min(1, 1000 / Math.max(image.width, image.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Unable to prepare receipt image");
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.7);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+const GENERIC_FAILURE = "Unable to scan this receipt. Try again or enter the details manually.";
+
 export function useExpenseScanner({
   showToast,
   globalData,
@@ -47,169 +74,142 @@ export function useExpenseScanner({
   onScanComplete,
 }: UseExpenseScannerOptions): UseExpenseScannerReturn {
   const [isScanning, setIsScanning] = useState(false);
-  const stopScanning = () => setIsScanning(false);
+  const [failure, setFailure] = useState<UseExpenseScannerReturn["failure"]>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const activeScan = useRef<AbortController | null>(null);
+  const retryPhoto = useRef<{ file: File; subject: string } | null>(null);
 
-  const handleCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Guard against duplicate / concurrent scans
-    if (isScanning) return;
+  useEffect(() => () => activeScan.current?.abort(), []);
 
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const stopScanning = () => {
+    activeScan.current?.abort();
+    activeScan.current = null;
+    retryPhoto.current = null;
+    setIsScanning(false);
+    setFailure(null);
+  };
 
-    const { key: token, headers } = getFinanceAuth();
-    if (!token) {
-      showToast("⚠️ Sign-in required: Please sign in with Google to use the AI Scanner.");
-      if (fileInputRef.current) fileInputRef.current.value = "";
+  const scanReceipt = async (file: File, expectedSubject?: string) => {
+    if (activeScan.current) return;
+    const { key: token, sub: subject, headers } = getFinanceAuth();
+    if (expectedSubject && subject !== expectedSubject) {
+      retryPhoto.current = null;
+      setFailure({ message: "Choose the receipt again for this account.", canRetry: false });
+      return;
+    }
+    if (!token || !subject) {
+      retryPhoto.current = null;
+      onScanStart();
+      setFailure({ message: "Sign in with Google to scan receipts, or enter the details manually.", canRetry: false });
       return;
     }
 
+    const controller = new AbortController();
+    activeScan.current = controller;
+    retryPhoto.current = { file, subject };
+    setFailure(null);
     setIsScanning(true);
     onScanStart();
 
+    const isCurrent = () => {
+      const auth = getFinanceAuth();
+      return !controller.signal.aborted && auth.key === token && auth.sub === subject;
+    };
+    const fail = (message: string, canRetry = true) => {
+      if (!canRetry) retryPhoto.current = null;
+      setFailure({ message, canRetry });
+    };
+
     try {
-      const img = new Image();
-      img.onload = async () => {
-        // Compress massive iPhone photos down to max 1000px and 70% JPEG quality
-        const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 1000;
-        const MAX_HEIGHT = 1000;
-        let width = img.width;
-        let height = img.height;
+      const image = await prepareReceipt(file, controller.signal);
+      if (!isCurrent()) return;
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify({ image }),
+        signal: controller.signal,
+      });
+      const body = await res.text();
+      if (!isCurrent()) return;
 
-        if (width > height) {
-          if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
-        } else {
-          if (height > MAX_HEIGHT) { width = Math.round((width * MAX_HEIGHT) / height); height = MAX_HEIGHT; }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0, width, height);
+      let data;
+      try { data = JSON.parse(body); } catch { data = null; }
+      const errorText = String(data?.error ?? "").toLowerCase();
+      const atCapacity = data?.code === "AI_CAPACITY" || res.status === 429 || res.status === 503 ||
+        /high demand|overloaded|resource exhausted/.test(errorText);
+      recordScannerStatus(data && typeof data === "object" ? res.status : "invalid-response", atCapacity);
 
-        const base64 = canvas.toDataURL("image/jpeg", 0.7);
+      if (res.status === 401 || data?.code === "AUTH_EXPIRED" || data?.code === "AUTH_REQUIRED") {
+        notifyAuthTokenRejected(token);
+        fail("Reconnect your Google account after closing this form, then reopen Log Expense to retry this photo.");
+        return;
+      }
+      if (atCapacity) {
+        fail("The scanner is busy. Retry this photo in a moment or enter the details manually.");
+        return;
+      }
+      if (res.status === 500 && /gemini_api_key is missing|missing api key|api key is missing/.test(errorText)) {
+        fail("The scanner is unavailable. Enter the details manually.", false);
+        return;
+      }
+      if (!res.ok || !data?.parsed || data.error || data.success === false || typeof data.parsed !== "object") {
+        fail(GENERIC_FAILURE);
+        return;
+      }
 
-        try {
-          if (getFinanceAuth().key !== token) return;
-          const res = await fetch("/api/scan", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...headers
-            },
-            body: JSON.stringify({ image: base64 })
-          });
-          
-          const textResponse = await res.text();
-          if (getFinanceAuth().key !== token) return;
-          let data;
-          try {
-            data = JSON.parse(textResponse);
-          } catch (e) {
-            recordScannerStatus("invalid-response");
-            showToast("Unable to read scanner response. Please enter details manually.");
-            return;
-          }
+      const parsed = data.parsed;
+      const amount = typeof parsed.amount === "number"
+        ? parsed.amount
+        : parseFloat(String(parsed.amount || "").replace(/[^0-9.-]+/g, ""));
+      const merchant = typeof parsed.merchant === "string" ? parsed.merchant.trim() : "";
+      if (!Number.isFinite(amount) || amount <= 0 || amount > 10_000_000) {
+        fail(merchant
+          ? "Could not detect a valid expense amount. Enter the details manually."
+          : "Could not detect receipt details. Enter the details manually.");
+        return;
+      }
 
-          recordScannerStatus(res.status, data.code === "AI_CAPACITY" || res.status === 429 || res.status === 503);
-          
-          if (!res.ok || data.error) {
-            const errorText = String(data.error || "").toLowerCase();
-            const isAuthExpired =
-              res.status === 401 ||
-              data.code === "AUTH_EXPIRED";
-
-            const isMissingApiKey =
-              res.status === 500 &&
-              (errorText.includes("gemini_api_key is missing") ||
-               errorText.includes("missing api key") ||
-               errorText.includes("api key is missing"));
-
-            const isOverloaded =
-              data.code === "AI_CAPACITY" ||
-              errorText.includes("high demand") ||
-              errorText.includes("overloaded") ||
-              errorText.includes("resource exhausted") ||
-              res.status === 429 ||
-              res.status === 503;
-
-            if (isAuthExpired) {
-              notifyAuthTokenRejected(token);
-              showToast("Reconnect your Google account, then try the scan again.");
-            } else if (isMissingApiKey) {
-              showToast("⚠️ AI Scanner is not configured on the server (missing Gemini API key). Please enter details manually.");
-            } else if (isOverloaded) {
-              showToast("Gemini AI is currently at capacity. Please enter this receipt manually.");
-            } else {
-              showToast("Unable to scan this receipt. Please try again or enter the details manually.");
-            }
-
-            return;
-          }
-
-          if (data.success === false || !data.parsed || typeof data.parsed !== "object") {
-            showToast("Unable to scan this receipt. Please try again or enter the details manually.");
-            return;
-          }
-
-          const parsed = data.parsed;
-          const rawAmount = parsed.amount;
-          const numAmount = typeof rawAmount === "number"
-            ? rawAmount
-            : parseFloat(String(rawAmount || "").replace(/[^0-9.-]+/g, ""));
-
-          const isValidAmount =
-            !isNaN(numAmount) &&
-            Number.isFinite(numAmount) &&
-            numAmount > 0 &&
-            numAmount <= 10_000_000;
-
-          const merchant = typeof parsed.merchant === "string" ? parsed.merchant.trim() : "";
-
-          // Reject incomplete or invalid scan data
-          if (!isValidAmount && !merchant) {
-            showToast("⚠️ Could not detect receipt details. Please enter details manually.");
-            return;
-          }
-
-          if (!isValidAmount) {
-            showToast("⚠️ Could not detect a valid expense amount. Please enter details manually.");
-            return;
-          }
-
-          const validCategories = ["Food & Dining", "Transport", "Utilities", "Laundry & Home", "Shopping", "Other"];
-          const scannedCategory = validCategories.includes(parsed.category) ? parsed.category : "Other";
-
-          const isValidDate =
-            typeof parsed.date === "string" &&
-            /^\d{4}-\d{2}-\d{2}$/.test(parsed.date) &&
-            !isNaN(Date.parse(parsed.date));
-          const scannedDate = isValidDate ? parsed.date : getLocalToday();
-
-          onScanComplete({
-            merchant,
-            amount: String(numAmount),
-            category: scannedCategory,
-            wallet: getDefaultExpenseWalletId(scannedCategory, globalData.settings, globalData.wallets),
-            date: scannedDate
-          });
-          
-          showToast("✨ Receipt scanned successfully! Review and tap Save & Deduct.");
-        } catch {
-          recordScannerStatus("network-error");
-          showToast("Unable to scan this receipt. Please try again or enter the details manually.");
-        } finally {
+      const categories = ["Food & Dining", "Transport", "Utilities", "Laundry & Home", "Shopping", "Other"];
+      const category = categories.includes(parsed.category) ? parsed.category : "Other";
+      const date = typeof parsed.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date) &&
+        !isNaN(Date.parse(parsed.date)) ? parsed.date : getLocalToday();
+      retryPhoto.current = null;
+      onScanComplete({
+        merchant, amount: String(amount), category, date,
+        wallet: getDefaultExpenseWalletId(category, globalData.settings, globalData.wallets),
+      });
+      showToast("✨ Receipt scanned successfully! Review and tap Save & Deduct.");
+    } catch {
+      if (isCurrent()) {
+        recordScannerStatus("network-error");
+        fail(GENERIC_FAILURE);
+      }
+    } finally {
+      if (activeScan.current === controller) {
+        activeScan.current = null;
+        if (!controller.signal.aborted) {
           setIsScanning(false);
-          if (fileInputRef.current) fileInputRef.current.value = "";
+          const auth = getFinanceAuth();
+          if (auth.sub !== subject) {
+            retryPhoto.current = null;
+          } else if (auth.key !== token && retryPhoto.current) {
+            fail("Your sign-in changed during the scan. Retry this photo or enter the details manually.");
+          }
         }
-      };
-      img.src = URL.createObjectURL(file);
-    } catch (err) {
-      showToast("Unable to scan this receipt. Please try again or enter the details manually.");
-      setIsScanning(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      }
     }
   };
 
-  return { isScanning, fileInputRef, handleCapture, stopScanning };
+  const handleCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.currentTarget.files?.[0];
+    e.currentTarget.value = "";
+    if (file) void scanReceipt(file);
+  };
+
+  const retryScan = () => {
+    const photo = retryPhoto.current;
+    if (photo) void scanReceipt(photo.file, photo.subject);
+  };
+
+  return { isScanning, failure, retryScan, fileInputRef, handleCapture, stopScanning };
 }

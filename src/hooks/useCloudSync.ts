@@ -139,6 +139,14 @@ export function loadScopedConflictState(
   return null;
 }
 
+function clearResolvedConflict(sub: string, winningRevision: number) {
+  const key = getScopedKeyForSub("ft_sync_conflict", sub);
+  if (!key || (loadScopedConflictState(sub)?.cloudRevision ?? 0) > winningRevision) return;
+  try {
+    localStorage.removeItem(key);
+  } catch {}
+}
+
 const CONFLICT_BACKUP_LIMIT = 5;
 
 export function loadScopedConflictBackups(sub: string | null): LastResolvedConflict[] {
@@ -451,9 +459,10 @@ export function useCloudSync(
     (
       incomingData: UnifiedFinanceData,
       source: "cloud" | "broadcast" | "storage",
-      options?: { allowOlderTimestamp?: boolean; resolvingConflict?: boolean }
+      options?: { allowOlderTimestamp?: boolean; resolvingConflict?: boolean; preserveStoredData?: boolean }
     ): boolean => {
-      if (pendingRef.current && !options?.resolvingConflict) return false;
+      if (!options?.resolvingConflict &&
+          (conflictStateRef.current || pendingRef.current || isDirtyRef.current)) return false;
 
       if (!isValidFinanceData(incomingData)) {
         setDebugLog(
@@ -493,6 +502,8 @@ export function useCloudSync(
 
       latestDataRef.current = incomingData;
       setGlobalData(incomingData);
+
+      if (options?.preserveStoredData) return true;
 
       try {
         window.localStorage.setItem(
@@ -930,6 +941,16 @@ export function useCloudSync(
       return;
     }
 
+    const broadcastResolution = (winningSnapshot: UnifiedFinanceData, winningRevision: number) => {
+      clearResolvedConflict(activeAccountSub, winningRevision);
+      try {
+        broadcastChannelRef.current?.postMessage({
+          type: "CONFLICT_RESOLVED",
+          payload: { sub: activeAccountSub, resolution, winningSnapshot, winningRevision }
+        });
+      } catch {}
+    };
+
     isResolvingConflictRef.current = true;
     try {
       if (resolution === "cloud") {
@@ -961,22 +982,7 @@ export function useCloudSync(
         setConflictState(null);
         setConflictOwnerSub(null);
         setHasInitialSyncCompleted(true);
-        try {
-          const conflictKey = getScopedKeyForSub("ft_sync_conflict", activeAccountSub);
-          if (conflictKey) window.localStorage.removeItem(conflictKey);
-        } catch {}
-
-        try {
-          broadcastChannelRef.current?.postMessage({
-            type: "CONFLICT_RESOLVED",
-            payload: {
-              sub: activeAccountSub,
-              resolution,
-              winningSnapshot: conflict.cloudSnapshot,
-              winningRevision: conflict.cloudRevision
-            }
-          });
-        } catch {}
+        broadcastResolution(conflict.cloudSnapshot, conflict.cloudRevision);
       } else {
         // Keep local: Attempt the compare-and-swap push against the conflict's cloudRevision
         const submittedSnapshot = localSnapshot;
@@ -1003,10 +1009,7 @@ export function useCloudSync(
           setConflictState(null);
           setConflictOwnerSub(null);
           setHasInitialSyncCompleted(true);
-          try {
-            const conflictKey = getScopedKeyForSub("ft_sync_conflict", activeAccountSub);
-            if (conflictKey) window.localStorage.removeItem(conflictKey);
-          } catch {}
+          broadcastResolution(submittedSnapshot, outcome.revision);
 
           const hasNewerLocalMutation =
             localMutationGenerationRef.current > submittedGeneration ||
@@ -1488,39 +1491,24 @@ export function useCloudSync(
             return;
           }
 
-          const knownRevision = Math.max(
-            baseRevisionRef.current ?? 0,
-            conflictStateRef.current?.cloudRevision ?? 0
-          );
-          if (winningRevision < knownRevision) return;
+          const baseRevision = baseRevisionRef.current;
+          const conflict = conflictStateRef.current;
+          if (winningRevision < Math.max(baseRevision ?? 0, conflict?.cloudRevision ?? 0)) return;
+          if (winningRevision > 0 && winningRevision === baseRevision && !conflict) return;
 
-          const adopted = applyRemoteData(winningSnapshot, "broadcast");
-          if (adopted) {
-            baseRevisionRef.current = winningRevision;
-            try {
-              const baseRevKey = getScopedKeyForSub("ft_sync_base_revision", currentSub);
-              if (baseRevKey) {
-                window.localStorage.setItem(
-                  baseRevKey,
-                  winningRevision.toString()
-                );
-              }
-            } catch {}
-            conflictStateRef.current = null;
-            conflictOwnerSubRef.current = null;
-            setConflictState(null);
-            setConflictOwnerSub(null);
-            setHasInitialSyncCompleted(true);
-            try {
-              const conflictKey = getScopedKeyForSub("ft_sync_conflict", currentSub);
-              if (conflictKey) {
-                window.localStorage.removeItem(conflictKey);
-              }
-            } catch {}
-          } else {
-            if (!conflictStateRef.current) {
+          const baseRevKey = getScopedKeyForSub("ft_sync_base_revision", currentSub);
+          try {
+            const storedRevision = baseRevKey ? localStorage.getItem(baseRevKey) : null;
+            if (storedRevision !== null && Number(storedRevision) > winningRevision) return;
+          } catch {}
+
+          if (isPushingRef.current || isResolvingConflictRef.current) return;
+
+          if (pendingRef.current || isDirtyRef.current) {
+            if (!conflict || winningRevision > conflict.cloudRevision) {
+              // This conflict belongs to this tab's pending edit, not to clean peers.
               const reconciliationConflict: SyncConflictState = {
-                baseRevision: baseRevisionRef.current,
+                baseRevision: conflict ? conflict.baseRevision : baseRevision,
                 localSnapshot: latestDataRef.current,
                 cloudSnapshot: winningSnapshot,
                 cloudRevision: winningRevision,
@@ -1530,20 +1518,32 @@ export function useCloudSync(
               conflictOwnerSubRef.current = currentSub;
               setConflictState(reconciliationConflict);
               setConflictOwnerSub(currentSub);
-              try {
-                const conflictKey = getScopedKeyForSub("ft_sync_conflict", currentSub);
-                if (conflictKey) {
-                  window.localStorage.setItem(
-                    conflictKey,
-                    JSON.stringify(reconciliationConflict)
-                  );
-                }
-              } catch {}
+              cancelPushRetry();
             }
             showToast(
               "⚠️ Another tab resolved a sync conflict, but this tab has newer local changes."
             );
+            return;
           }
+
+          const adopted = applyRemoteData(winningSnapshot, "broadcast", {
+            allowOlderTimestamp: winningRevision > (baseRevision ?? 0),
+            resolvingConflict: true,
+            // Another writer may already have saved a newer draft to shared storage.
+            preserveStoredData: Boolean(loadPendingSync(currentSub)),
+          });
+          if (!adopted) return;
+
+          baseRevisionRef.current = winningRevision;
+          try {
+            if (baseRevKey) localStorage.setItem(baseRevKey, winningRevision.toString());
+          } catch {}
+          conflictStateRef.current = null;
+          conflictOwnerSubRef.current = null;
+          setConflictState(null);
+          setConflictOwnerSub(null);
+          setHasInitialSyncCompleted(true);
+          clearResolvedConflict(currentSub, winningRevision);
         }
       };
     }
@@ -1561,7 +1561,8 @@ export function useCloudSync(
         if (!e.newValue) {
            // A peer can remove the shared conflict key while this tab still
            // owns an unaccepted edit. Wait for an applicable resolution.
-           if (pendingRef.current) return;
+           if (pendingRef.current || isDirtyRef.current ||
+               isPushingRef.current || isResolvingConflictRef.current) return;
            conflictStateRef.current = null;
            conflictOwnerSubRef.current = null;
            setConflictState(null);
@@ -1570,7 +1571,8 @@ export function useCloudSync(
         } else {
            try {
              const parsed = JSON.parse(e.newValue);
-             if (isValidConflictState(parsed)) {
+             if (isValidConflictState(parsed) &&
+                 parsed.cloudRevision >= Math.max(baseRevisionRef.current ?? 0, conflictStateRef.current?.cloudRevision ?? 0)) {
                conflictStateRef.current = parsed;
                conflictOwnerSubRef.current = currentSub;
                setConflictState(parsed);
@@ -1620,7 +1622,7 @@ export function useCloudSync(
         handleStorageChange
       );
     };
-  }, [applyRemoteData, showToast]);
+  }, [applyRemoteData, cancelPushRetry, showToast]);
 
   useEffect(() => {
     if (isFirstMount.current) {

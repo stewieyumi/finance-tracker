@@ -2,12 +2,15 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Camera, Check, Circle, Edit2, Save, Trash2, Plus, Filter, ChevronDown, Calendar, X, CalendarPlus, Upload, RefreshCw } from "lucide-react";
 import { Shoot, ShootCategory, ShootStatus, EditFormData } from "../types/finance";
 import { exportGigToCalendar } from "../utils/calendarExport";
+import { GIG_BOOKING_STATUSES, GIG_CALENDAR_GROUPS, getGigCalendarGroup } from "../utils/gigStatus";
 import { Modal } from "./ui/Modal";
 import { syncShootsToNotion } from "../utils/notionSync";
 
 const SHOOT_CATEGORIES: (ShootCategory | "All")[] = ["All", "Solo Shoot", "Assistant", "Video Edit", "Event", "Commercial", "Other"];
 
 interface ShootsTableProps {
+  calendarSync?: React.ReactNode;
+  onChangeStatus?: (id: string, status: ShootStatus) => void;
   gigsLabel?: string;
   gigCategories?: string[];
   activeShoots: Shoot[];
@@ -40,7 +43,7 @@ const getLocalToday = () => {
 };
 
 export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
-  gigsLabel, gigCategories, activeShoots, selectedMonth, onToggleCompletion, onAddShoot, onDeleteShoot, onSaveEdit, editingId, setEditingId, editForm, setEditForm
+  calendarSync, onChangeStatus, gigsLabel, gigCategories, activeShoots, selectedMonth, onToggleCompletion, onAddShoot, onDeleteShoot, onSaveEdit, editingId, setEditingId, editForm, setEditForm
 }) => {
   const categoriesList = gigCategories?.length ? gigCategories : ["Solo Shoot", "Assistant", "Video Edit", "Event", "Commercial", "Other"];
   const filterList = ["All", ...categoriesList];
@@ -129,6 +132,21 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
   const handleStartEdit = (shoot: Shoot) => { setEditingId(shoot.id); setEditForm({ ...shoot }); };
   const handleCancelEdit = () => { setEditingId(null); setEditForm({}); };
 
+  const statusSelect = (shoot: Shoot) => (
+    <label className="relative shrink-0" onClick={event => event.stopPropagation()}>
+      <span className="sr-only">Booking status for {shoot.title}</span>
+      <select
+        value={shoot.status}
+        disabled={!onChangeStatus}
+        onChange={event => onChangeStatus?.(shoot.id, event.target.value as ShootStatus)}
+        className={`min-h-9 appearance-none rounded-lg py-1 pl-2.5 pr-7 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 ${GIG_CALENDAR_GROUPS[getGigCalendarGroup(shoot)].chip}`}
+      >
+        {GIG_BOOKING_STATUSES.map(status => <option key={status} value={status} className="bg-surface text-primary">{status}</option>)}
+      </select>
+      <ChevronDown size={12} aria-hidden className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" />
+    </label>
+  );
+
   const handleAddToCalendar = (shoot: Shoot) => {
     if (!shoot.date) {
       alert("Please set a date for this gig first.");
@@ -156,6 +174,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
               {syncStatus.message}
             </span>
           )}
+          {calendarSync}
           <span className="text-[11px] text-faint font-mono hidden md:inline">{activeShoots.filter(s => s.completed).length}/{activeShoots.length} Done</span>
           <button
             type="button"
@@ -220,7 +239,8 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                       onToggleCompletion(shoot.id);
                     }}
                     className="shrink-0 min-w-[36px] min-h-[36px] -ml-1.5 -my-1.5 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 rounded-full"
-                    aria-label={shoot.completed ? `Mark ${shoot.title} as active` : `Mark ${shoot.title} as settled`}
+                    disabled={shoot.status === "Cancelled"}
+                    aria-label={shoot.completed ? `Mark ${shoot.title} as unfinished` : `Mark ${shoot.title} as done`}
                   >
                     <div className="shrink-0">
                       {shoot.completed ? <span className="w-4 h-4 rounded-full chip-emerald flex items-center justify-center"><Check size={9} className="stroke-[3]" /></span> : <span className="w-4 h-4 rounded-full bg-fill/60 border border-strong/60 text-faint flex items-center justify-center"><Circle size={6} /></span>}
@@ -228,7 +248,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                   </button>
                   <span className={`privacy-blur text-xs font-semibold truncate ${shoot.completed ? "line-through text-faint" : "text-strong"} hover:text-amber-400 transition-colors`}>{shoot.title}</span>
                 </div>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md shrink-0 ${shoot.status === "Confirmed" ? "chip-emerald" : shoot.status === "Pencil" ? "chip-amber" : "chip-neutral"}`}>{shoot.status}</span>
+                {statusSelect(shoot)}
               </div>
               <div className="flex items-center justify-between pl-6 text-[10px] text-muted">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -283,10 +303,10 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
             {filteredShoots.length === 0 ? (
               <tr><td colSpan={6} className="py-8 text-center text-faint italic">No {selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} production gigs found.</td></tr>
             ) : filteredShoots.map(shoot => (
-              <tr key={shoot.id} className={`group transition-all duration-150 ${shoot.completed ? "opacity-45" : "hover:bg-inverse/[0.02]"}`}>
+              <tr key={shoot.id} className={`group transition-all duration-150 ${shoot.completed ? "bg-surface-low" : "hover:bg-inverse/[0.02]"}`}>
                 <td className="py-3 px-4 whitespace-nowrap">
-                  <button onClick={() => onToggleCompletion(shoot.id)} className="flex items-center gap-1.5 focus:outline-none">
-                    {shoot.completed ? <span className="flex items-center justify-center gap-1 w-[72px] text-[10px] font-bold chip-emerald px-2 py-0.5 rounded-lg"><Check size={10} className="stroke-[3]" /> Settled</span> : <span className="flex items-center justify-center gap-1 w-[72px] text-muted text-[10px] font-medium bg-fill/40 px-2 py-0.5 rounded-lg border border-strong/30"><Circle size={6} /> Active</span>}
+                  <button type="button" disabled={shoot.status === "Cancelled"} aria-label={shoot.completed ? `Mark ${shoot.title} as unfinished` : `Mark ${shoot.title} as done`} onClick={() => onToggleCompletion(shoot.id)} className="flex min-h-9 items-center gap-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 disabled:opacity-50">
+                    {shoot.completed ? <span className="flex items-center justify-center gap-1 w-[72px] text-[10px] font-bold chip-emerald px-2 py-0.5 rounded-lg"><Check size={10} className="stroke-[3]" /> Done</span> : <span className="flex items-center justify-center gap-1 w-[72px] text-muted text-[10px] font-medium bg-fill/40 px-2 py-0.5 rounded-lg border border-strong/30"><Circle size={6} /> Active</span>}
                   </button>
                 </td>
                 <td className="py-3 px-4 text-primary font-medium">
@@ -302,7 +322,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                   {shoot.date ? (shoot.date === todayStr ? <span className="inline-flex items-center gap-1 text-rose-400 font-bold text-[10px] bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md shadow-[0_0_10px_rgba(244,63,94,0.1)]"><Calendar size={10} className="text-rose-400" />DUE TODAY</span> : <span className="inline-flex items-center gap-1 text-secondary font-mono text-[11px]"><Calendar size={10} className="text-faint" />{formatShortDate(shoot.date)}</span>) : <span className="text-disabled">—</span>}
                 </td>
                 <td className="py-3 px-4 text-center whitespace-nowrap">
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${shoot.status === "Confirmed" ? "chip-emerald" : shoot.status === "Pencil" ? "chip-amber" : "chip-neutral"}`}>{shoot.status}</span>
+                  {statusSelect(shoot)}
                 </td>
                 <td className="py-3 px-4 text-center whitespace-nowrap">
                   <span className="chip-amber px-2 py-0.5 rounded-md text-[10px] font-medium">{shoot.category}</span>

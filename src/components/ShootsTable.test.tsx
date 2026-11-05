@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ShootsTable } from "./ShootsTable";
 import { Shoot } from "../types/finance";
@@ -78,8 +78,8 @@ describe("ShootsTable - Mobile Card Interactions", () => {
       />
     );
 
-    const toggleBtn = screen.getByRole("button", {
-      name: "Mark Wedding Video Coverage as settled",
+    const toggleBtn = within(screen.getByTestId("shoot-mobile-card-shoot-1")).getByRole("button", {
+      name: "Mark Wedding Video Coverage as done",
     });
     fireEvent.click(toggleBtn);
 
@@ -329,4 +329,18 @@ describe("ShootsTable - Notion Sync Interactions", () => {
     const status = await screen.findByTestId("notion-sync-status");
     expect(status).toHaveTextContent("Notion database schema mismatch.");
   });
+});
+
+it("changes the booking status from the badge without opening the edit form", () => {
+  const onChangeStatus = vi.fn();
+  const setEditingId = vi.fn();
+  render(<ShootsTable activeShoots={mockShoots} selectedMonth="October 2026"
+    onChangeStatus={onChangeStatus} onToggleCompletion={vi.fn()} onAddShoot={vi.fn()} onDeleteShoot={vi.fn()}
+    onSaveEdit={vi.fn()} editingId={null} setEditingId={setEditingId} editForm={{}} setEditForm={vi.fn()} />);
+  const card = within(screen.getByTestId("shoot-mobile-card-shoot-1"));
+  const select = card.getByRole("combobox", { name: "Booking status for Wedding Video Coverage" });
+  fireEvent.click(select);
+  fireEvent.change(select, { target: { value: "Moved" } });
+  expect(onChangeStatus).toHaveBeenCalledExactlyOnceWith("shoot-1", "Moved");
+  expect(setEditingId).not.toHaveBeenCalled();
 });

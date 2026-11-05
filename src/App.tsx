@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GoogleLogin, googleLogout } from "@react-oauth/google";
 import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff, Bell } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
+import { QUICK_EXPENSE_HASH } from "./constants/config";
 import { getMonthKey, getAdjacentMonth, getDaysUntil, parseMonthKey } from "./utils/dateHelpers";
 import { UnifiedFinanceData, WalletState, EditFormData, TransactionHistoryItem, PaydayExecution } from "./types/finance";
 import { buildFinancialSummary } from "./utils/summaryHelpers";
@@ -52,6 +53,8 @@ import { isValidFinanceBackup, isValidFinanceData } from "./utils/validationHelp
 
 const ExpensesTab = lazy(() => import("./components/ExpensesTab")
   .then(module => ({ default: module.ExpensesTab })));
+
+const AppleCalendarSync = lazy(() => import("./components/AppleCalendarSync"));
 
 const HistoricalLedgerModal = lazy(() => import("./components/HistoricalLedgerModal")
   .then(module => ({ default: module.HistoricalLedgerModal })));
@@ -210,7 +213,18 @@ const {
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showGoalSetupModal, setShowGoalSetupModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>("home");
+  const [activeTab, setActiveTab] = useState<TabType>(() =>
+    window.location.hash === QUICK_EXPENSE_HASH ? "expenses" : "home"
+  );
+  React.useEffect(() => {
+    const openQuickExpense = () => {
+      if (window.location.hash !== QUICK_EXPENSE_HASH) return;
+      setSelectedMonth(getMonthKey(new Date()));
+      setActiveTab("expenses");
+    };
+    window.addEventListener("hashchange", openQuickExpense);
+    return () => window.removeEventListener("hashchange", openQuickExpense);
+  }, []);
   const [opsTab, setOpsTab] = useState<"bills" | "inflows" | "gigs">("bills");
   const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "sync">("general");
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -460,6 +474,7 @@ const {
 const {
   addShoot: handleAddShoot,
   toggleShootCompletion,
+  changeShootStatus,
   deleteShoot
 } = useShootActions({
   setGlobalData: syncedSetGlobalData,
@@ -912,6 +927,10 @@ const copySummaryToClipboard = async () => {
       <OnboardingWizard
         globalData={globalData}
         userName={googleUser?.name}
+        onSkip={() => syncedSetGlobalData(previous => ({
+          ...previous,
+          settings: { ...previous.settings, hasCompletedOnboarding: true },
+        }))}
         onComplete={(completedData) => {
           syncedSetGlobalData(completedData);
           showToast("✨ Setup complete! Welcome to Finance Tracker.");
@@ -1164,6 +1183,8 @@ const copySummaryToClipboard = async () => {
             onAddReceivable={handleAddReceivable}
             onDeleteReceivable={deleteReceivable}
             onSaveReceivableEdit={saveReceivableEdit}
+            calendarSync={<Suspense fallback={null}><AppleCalendarSync data={globalData} setData={syncedSetGlobalData} /></Suspense>}
+            onChangeShootStatus={changeShootStatus}
             onToggleShootCompletion={toggleShootCompletion}
             onAddShoot={handleAddShoot}
             onDeleteShoot={deleteShoot}

@@ -26,7 +26,7 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
   } else {
     const clientToken = getClientToken(req);
     if (!clientToken) {
-      return res.status(401).json({ error: 'Unauthorized: Missing token.' });
+      return res.status(401).json({ error: 'Unauthorized: Missing token.', code: 'AUTH_REQUIRED' });
     }
 
     let isAuthenticated = false;
@@ -110,19 +110,19 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
       body: JSON.stringify(payload)
     });
 
-    const data = await response.json();
-    if (data.error) {
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data || data.error) {
       // Preserve Gemini's status so the client can distinguish
       // capacity/rate-limit failures from other scanner errors.
-      return res.status(response.status || 502).json({
-        error: data.error.message,
+      return res.status(response.ok ? 502 : response.status).json({
+        error: data?.error?.message || "The receipt scanner service could not process the request.",
         code: response.status === 429 || response.status === 503
           ? 'AI_CAPACITY'
           : 'AI_ERROR'
       });
     }
 
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
     const cleanText = text.replace(/```json/gi, "").replace(/```/g, "").trim();
     
     try {

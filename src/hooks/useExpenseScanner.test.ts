@@ -31,6 +31,7 @@ describe("useExpenseScanner", () => {
     vi.stubGlobal("URL", {
       ...URL,
       createObjectURL: vi.fn(() => "blob:fake"),
+      revokeObjectURL: vi.fn(),
     });
 
     // Mock canvas
@@ -56,7 +57,7 @@ describe("useExpenseScanner", () => {
     vi.unstubAllGlobals();
   });
 
-  it("shows auth toast and does not proceed when no passcode exists", () => {
+  it("opens manual entry and does not upload without an account", () => {
     vi.spyOn(financeAuth, "getFinanceAuth").mockReturnValue({ sub: null, key: "", headers: {} });
 
     const showToast = vi.fn();
@@ -69,15 +70,15 @@ describe("useExpenseScanner", () => {
 
     const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
     const event = {
-      target: { files: [file] },
+      currentTarget: { files: [file], value: "" },
     } as unknown as React.ChangeEvent<HTMLInputElement>;
 
     act(() => {
       result.current.handleCapture(event);
     });
 
-    expect(showToast).toHaveBeenCalledWith("⚠️ Sign-in required: Please sign in with Google to use the AI Scanner.");
-    expect(onScanStart).not.toHaveBeenCalled();
+    expect(result.current.failure).toEqual({ message: expect.stringContaining("Sign in with Google"), canRetry: false });
+    expect(onScanStart).toHaveBeenCalledOnce();
     expect(onScanComplete).not.toHaveBeenCalled();
     expect(result.current.isScanning).toBe(false);
   });
@@ -109,7 +110,7 @@ describe("useExpenseScanner", () => {
 
     const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
     const event = {
-      target: { files: [file] },
+      currentTarget: { files: [file], value: "" },
     } as unknown as React.ChangeEvent<HTMLInputElement>;
 
     await act(async () => {
@@ -149,7 +150,7 @@ describe("useExpenseScanner", () => {
 
     const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
     const event = {
-      target: { files: [file] },
+      currentTarget: { files: [file], value: "" },
     } as unknown as React.ChangeEvent<HTMLInputElement>;
 
     await act(async () => {
@@ -159,7 +160,7 @@ describe("useExpenseScanner", () => {
 
     expect(onScanStart).toHaveBeenCalledTimes(1);
     expect(onScanComplete).not.toHaveBeenCalled();
-    expect(showToast).toHaveBeenCalledWith("Unable to read scanner response. Please enter details manually.");
+    expect(result.current.failure?.message).toContain("Unable to scan this receipt");
     expect(result.current.isScanning).toBe(false);
   });
 
@@ -184,7 +185,7 @@ describe("useExpenseScanner", () => {
 
     const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
     const event = {
-      target: { files: [file] },
+      currentTarget: { files: [file], value: "" },
     } as unknown as React.ChangeEvent<HTMLInputElement>;
 
     await act(async () => {
@@ -193,9 +194,7 @@ describe("useExpenseScanner", () => {
     });
 
     expect(onScanComplete).not.toHaveBeenCalled();
-    expect(showToast).toHaveBeenCalledWith(
-      "⚠️ AI Scanner is not configured on the server (missing Gemini API key). Please enter details manually."
-    );
+    expect(result.current.failure?.message).toContain("The scanner is unavailable");
     expect(result.current.isScanning).toBe(false);
   });
 
@@ -225,7 +224,7 @@ describe("useExpenseScanner", () => {
 
     const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
     const event = {
-      target: { files: [file] },
+      currentTarget: { files: [file], value: "" },
     } as unknown as React.ChangeEvent<HTMLInputElement>;
 
     await act(async () => {
@@ -234,9 +233,7 @@ describe("useExpenseScanner", () => {
     });
 
     expect(onScanComplete).not.toHaveBeenCalled();
-    expect(showToast).toHaveBeenCalledWith(
-      "⚠️ Could not detect a valid expense amount. Please enter details manually."
-    );
+    expect(result.current.failure?.message).toContain("Could not detect a valid expense amount");
     expect(result.current.isScanning).toBe(false);
   });
 
@@ -265,7 +262,7 @@ describe("useExpenseScanner", () => {
 
     const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
     const event = {
-      target: { files: [file] },
+      currentTarget: { files: [file], value: "" },
     } as unknown as React.ChangeEvent<HTMLInputElement>;
 
     await act(async () => {
@@ -274,9 +271,7 @@ describe("useExpenseScanner", () => {
     });
 
     expect(onScanComplete).not.toHaveBeenCalled();
-    expect(showToast).toHaveBeenCalledWith(
-      "⚠️ Could not detect receipt details. Please enter details manually."
-    );
+    expect(result.current.failure?.message).toContain("Could not detect receipt details");
     expect(result.current.isScanning).toBe(false);
   });
 
@@ -300,7 +295,7 @@ describe("useExpenseScanner", () => {
 
     const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
     const event = {
-      target: { files: [file] },
+      currentTarget: { files: [file], value: "" },
     } as unknown as React.ChangeEvent<HTMLInputElement>;
 
     // First scan triggered
@@ -332,6 +327,67 @@ describe("useExpenseScanner", () => {
       await new Promise(r => setTimeout(r, 0));
     });
 
+    expect(result.current.isScanning).toBe(false);
+  });
+
+  it.each([
+    [503, "temporarily unavailable", "The scanner is busy"],
+    [401, '{"error":"Unauthorized: Missing token."}', "Reconnect your Google account"],
+  ])("can retry the same photo after a %s response", async (status, response, message) => {
+    const auth = vi.spyOn(financeAuth, "getFinanceAuth").mockReturnValue({
+      sub: "test-user", key: "old-session", headers: { "X-Finance-Session": "old" },
+    });
+    const fetch = vi.fn().mockResolvedValueOnce({
+      ok: false, status, text: async () => response,
+    }).mockResolvedValueOnce({
+      ok: true, status: 200, text: async () => JSON.stringify({ parsed: { merchant: "Cafe", amount: 150 } }),
+    });
+    vi.stubGlobal("fetch", fetch);
+    const onScanComplete = vi.fn();
+    const onRejected = vi.fn();
+    window.addEventListener("auth-expired", onRejected);
+    try {
+      const { result } = renderHook(() => useExpenseScanner({
+        showToast: vi.fn(), globalData: baseGlobalData, onScanStart: vi.fn(), onScanComplete,
+      }));
+      const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
+      await act(async () => {
+        result.current.handleCapture({ currentTarget: { files: [file], value: "" } } as unknown as React.ChangeEvent<HTMLInputElement>);
+      });
+      expect(result.current.failure).toEqual({ message: expect.stringContaining(message), canRetry: true });
+      expect(onRejected).toHaveBeenCalledTimes(status === 401 ? 1 : 0);
+      expect(onScanComplete).not.toHaveBeenCalled();
+
+      auth.mockReturnValue({ sub: "test-user", key: "fresh-session", headers: { "X-Finance-Session": "fresh" } });
+      await act(async () => { result.current.retryScan(); });
+      expect(fetch.mock.calls[1][1].headers).toMatchObject({ "X-Finance-Session": "fresh" });
+      expect(fetch.mock.calls[1][1].body).toBe(fetch.mock.calls[0][1].body);
+      expect(onScanComplete).toHaveBeenCalledOnce();
+      expect(result.current.failure).toBeNull();
+    } finally {
+      window.removeEventListener("auth-expired", onRejected);
+    }
+  });
+
+  it("ignores a late scanner result after switching to manual entry", async () => {
+    vi.spyOn(financeAuth, "getFinanceAuth").mockReturnValue({ sub: "test-user", key: "session", headers: {} });
+    let finishScan!: (response: unknown) => void;
+    const fetch = vi.fn().mockReturnValue(new Promise(resolve => { finishScan = resolve; }));
+    vi.stubGlobal("fetch", fetch);
+    const onScanComplete = vi.fn();
+    const { result } = renderHook(() => useExpenseScanner({
+      showToast: vi.fn(), globalData: baseGlobalData, onScanStart: vi.fn(), onScanComplete,
+    }));
+    const file = new File(["fake"], "receipt.jpg", { type: "image/jpeg" });
+    await act(async () => {
+      result.current.handleCapture({ currentTarget: { files: [file], value: "" } } as unknown as React.ChangeEvent<HTMLInputElement>);
+    });
+    act(() => result.current.stopScanning());
+    expect(fetch.mock.calls[0][1].signal.aborted).toBe(true);
+    await act(async () => {
+      finishScan({ ok: true, status: 200, text: async () => JSON.stringify({ parsed: { merchant: "Cafe", amount: 150 } }) });
+    });
+    expect(onScanComplete).not.toHaveBeenCalled();
     expect(result.current.isScanning).toBe(false);
   });
 });

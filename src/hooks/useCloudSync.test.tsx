@@ -2543,6 +2543,16 @@ describe('useCloudSync', () => {
       expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("16");
       expect(globalData.targetFund).toBe(13500);
 
+      expect(mockBroadcastPostMessage).toHaveBeenCalledExactlyOnceWith({
+        type: "CONFLICT_RESOLVED",
+        payload: {
+          sub: "user_123",
+          resolution: "local",
+          winningSnapshot: submittedSnapshot,
+          winningRevision: 16,
+        },
+      });
+
       // Advance 2000ms for the scheduled follow-up PUT of the in-flight edit
       await act(async () => {
         await vi.advanceTimersByTimeAsync(2000);
@@ -2638,6 +2648,29 @@ describe('useCloudSync', () => {
         "⚠️ Another tab resolved a sync conflict, but this tab has newer local changes."
       );
 
+      const acceptedSnapshot = { ...olderWinningSnapshot, targetFund: 31000 };
+      localStorage.removeItem("ft_sync_conflict_user_123");
+      await act(async () => {
+        deliverBroadcastMessage({
+          type: "CONFLICT_RESOLVED",
+          payload: {
+            sub: "user_123",
+            resolution: "local",
+            winningSnapshot: acceptedSnapshot,
+            winningRevision: 16,
+          },
+        });
+      });
+      expect(result.current.conflictState).toMatchObject({
+        baseRevision: 10,
+        cloudRevision: 16,
+        cloudSnapshot: acceptedSnapshot,
+        localSnapshot: globalData,
+      });
+      expect(setGlobalData).not.toHaveBeenCalled();
+      expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("10");
+      expect(localStorage.getItem("ft_sync_conflict_user_123")).toBeNull();
+
       await act(async () => {
         window.dispatchEvent(new Event("online"));
         await vi.advanceTimersByTimeAsync(8000);
@@ -2645,10 +2678,10 @@ describe('useCloudSync', () => {
 
       expect(mockFetch).not.toHaveBeenCalled();
       expect(globalData.targetFund).toBe(42000);
-      expect(result.current.conflictState?.cloudRevision).toBe(15);
+      expect(result.current.conflictState?.cloudRevision).toBe(16);
     });
 
-    it("Finding A (clean peer adoption): receiving valid same-account CONFLICT_RESOLVED with newer snapshot adopts snapshot, updates scoped base revision, and clears conflict", async () => {
+    it("Finding A (clean peer adoption): adopts a higher resolved revision even if the winning snapshot timestamp is older", async () => {
       const olderLocalData = { ...globalData, updatedAt: 1200, targetFund: 11000 };
       const initialConflict = {
         baseRevision: 10,
@@ -2670,23 +2703,34 @@ describe('useCloudSync', () => {
       mockFetch.mockReset();
       setGlobalData.mockClear();
 
-      const winningSnapshot = { ...globalData, updatedAt: 3500, targetFund: 28000 };
+      const peerDraft = { ...globalData, updatedAt: 4500, targetFund: 42000 };
       await act(async () => {
         deliverBroadcastMessage({
-          type: "CONFLICT_RESOLVED",
-          payload: {
-            sub: "user_123",
-            resolution: "local",
-            winningSnapshot,
-            winningRevision: 18,
-          },
+          type: "SYNC_DATA",
+          payload: { sub: "user_123", data: peerDraft },
         });
+      });
+      expect(setGlobalData).not.toHaveBeenCalled();
+
+      const winningSnapshot = { ...globalData, updatedAt: 1000, targetFund: 28000 };
+      const resolution = {
+        type: "CONFLICT_RESOLVED",
+        payload: {
+          sub: "user_123",
+          resolution: "local",
+          winningSnapshot,
+          winningRevision: 18,
+        },
+      };
+      await act(async () => {
+        deliverBroadcastMessage(resolution);
+        deliverBroadcastMessage(resolution);
       });
 
       // Snapshot is adopted in state and localStorage
-      expect(setGlobalData).toHaveBeenCalledWith(winningSnapshot);
+      expect(setGlobalData).toHaveBeenCalledExactlyOnceWith(winningSnapshot);
       expect(globalData.targetFund).toBe(28000);
-      expect(globalData.updatedAt).toBe(3500);
+      expect(globalData.updatedAt).toBe(1000);
       expect(JSON.parse(localStorage.getItem("ft_master_data_v1_user_123")!).targetFund).toBe(28000);
 
       // Base revision is updated in scoped localStorage and conflict state clears
