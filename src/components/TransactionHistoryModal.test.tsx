@@ -143,6 +143,7 @@ describe("TransactionHistoryModal", () => {
     // Generate 65 mock transactions
     const largeList: TransactionHistoryItem[] = Array.from({ length: 65 }, (_, i) => ({
       id: `bulk-${i}`,
+      loggedAt: new Date(Date.UTC(2026, 8, 1, 12, 0, 65 - i)).toISOString(),
       title: `Bulk Item ${i}`,
       amount: -100,
       date: "2026-09-01",
@@ -165,6 +166,95 @@ describe("TransactionHistoryModal", () => {
     expect(screen.getByText("Bulk Item 50")).toBeInTheDocument();
     expect(screen.getByText("Bulk Item 64")).toBeInTheDocument();
     expect(screen.getByText("Showing all 65 transactions")).toBeInTheDocument();
+  });
+
+  it("shows same-day records newest first without mutating input and includes known local times", () => {
+    const records: TransactionHistoryItem[] = [
+      { ...mockTransactions[1], id: "z-early", title: "Early purchase", loggedAt: new Date(2026, 8, 10, 9, 15).toISOString() },
+      { ...mockTransactions[1], id: "a-late", title: "Late purchase", loggedAt: new Date(2026, 8, 10, 19, 30).toISOString() },
+    ];
+    Object.freeze(records);
+    render(<TransactionHistoryModal {...defaultProps} transactions={records} formatDateTime={undefined} />);
+    const titles = screen.getAllByText(/purchase/).map(el => el.textContent);
+    expect(titles).toEqual(["Late purchase", "Early purchase"]);
+    expect(screen.getByText("Sep 10, 2026 · 7:30 PM")).toBeInTheDocument();
+    expect(records[0].title).toBe("Early purchase");
+  });
+
+  it("filters inclusive calendar dates together with type and search, then clears the range", () => {
+    render(<TransactionHistoryModal {...defaultProps} />);
+    fireEvent.click(screen.getByText("Date range"));
+    fireEvent.change(screen.getByLabelText("From date"), { target: { value: "2026-09-10" } });
+    fireEvent.change(screen.getByLabelText("To date"), { target: { value: "2026-09-15" } });
+    expect(screen.getByText("Client Payment")).toBeInTheDocument();
+    expect(screen.getByText("Grocery Store")).toBeInTheDocument();
+    expect(screen.queryByText("Internet Bill")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Expenses/ }));
+    fireEvent.change(screen.getByLabelText("Search transactions"), { target: { value: "gcash" } });
+    expect(screen.getByText("Grocery Store")).toBeInTheDocument();
+    expect(screen.queryByText("Client Payment")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "All dates" }));
+    expect(screen.getByLabelText("From date")).toHaveValue("");
+    expect(screen.getByText("Grocery Store")).toBeInTheDocument();
+  });
+
+  it("uses local transaction days at midnight, rather than the logging day or UTC prefix", () => {
+    const records: TransactionHistoryItem[] = [
+      { ...mockTransactions[0], title: "Local midnight", date: new Date(2026, 10, 6, 0, 5).toISOString() },
+      { ...mockTransactions[1], title: "Backdated expense", date: "2026-11-05", loggedAt: new Date(2026, 10, 6, 12).toISOString() },
+    ];
+    render(<TransactionHistoryModal {...defaultProps} transactions={records} />);
+    fireEvent.click(screen.getByText("Date range"));
+    fireEvent.change(screen.getByLabelText("From date"), { target: { value: "2026-11-06" } });
+    fireEvent.change(screen.getByLabelText("To date"), { target: { value: "2026-11-06" } });
+    expect(screen.getByText("Local midnight")).toBeInTheDocument();
+    expect(screen.queryByText("Backdated expense")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Filter by month"), { target: { value: "2026-11" } });
+    expect(screen.getByLabelText("From date")).toHaveValue("");
+    expect(screen.getByText("Backdated expense")).toBeInTheDocument();
+  });
+
+  it("explains a reversed range and lets Clear all filters recover", () => {
+    render(<TransactionHistoryModal {...defaultProps} />);
+    fireEvent.click(screen.getByText("Date range"));
+    fireEvent.change(screen.getByLabelText("From date"), { target: { value: "2026-09-15" } });
+    fireEvent.change(screen.getByLabelText("To date"), { target: { value: "2026-09-10" } });
+    expect(screen.getByRole("alert")).toHaveTextContent("Choose a To date on or after the From date.");
+    expect(screen.queryByText("Client Payment")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Clear all filters" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByText("Client Payment")).toBeInTheDocument();
+  });
+
+  it("offers Today and This Month shortcuts without retaining a conflicting month selection", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date(2026, 8, 15, 10));
+      render(<TransactionHistoryModal {...defaultProps} />);
+      fireEvent.change(screen.getByLabelText("Filter by month"), { target: { value: "2026-08" } });
+      fireEvent.click(screen.getByText("Date range"));
+      fireEvent.click(screen.getByRole("button", { name: "Today" }));
+      expect(screen.getByLabelText("Filter by month")).toHaveValue("ALL");
+      expect(screen.getByLabelText("From date")).toHaveValue("2026-09-15");
+      expect(screen.getByLabelText("To date")).toHaveValue("2026-09-15");
+      expect(screen.getByText("Client Payment")).toBeInTheDocument();
+      expect(screen.queryByText("Grocery Store")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "This Month" }));
+      expect(screen.getByLabelText("From date")).toHaveValue("2026-09-01");
+      expect(screen.getByLabelText("To date")).toHaveValue("2026-09-30");
+      expect(screen.getByText("Grocery Store")).toBeInTheDocument();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("resets Load More when calendar dates change, including open-ended ranges", () => {
+    const records: TransactionHistoryItem[] = Array.from({ length: 65 }, (_, i) => ({ ...mockTransactions[1], id: `item-${i}`, title: `Purchase ${i}` }));
+    render(<TransactionHistoryModal {...defaultProps} transactions={records} />);
+    fireEvent.click(screen.getByRole("button", { name: /Load More/ }));
+    expect(screen.getByText("Showing all 65 transactions")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Date range"));
+    fireEvent.change(screen.getByLabelText("From date"), { target: { value: "2026-09-01" } });
+    expect(screen.getByRole("button", { name: "Load More (15 remaining)" })).toBeInTheDocument();
+    expect(screen.queryByText("Showing all 65 transactions")).not.toBeInTheDocument();
   });
 
   it("characterizes fallback to raw wallet ID when key is not in walletLabels prop", () => {

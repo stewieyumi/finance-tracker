@@ -121,9 +121,9 @@ describe("DashboardTab", () => {
     cards.forEach((card) => {
       expect(card.className).toContain("h-[156px]");
       expect(card.className).toContain("sm:min-h-[160px]");
-      expect(card.className).toContain("rounded-2xl");
-      expect(card.className).toContain("p-4");
-      expect(card.className).toContain("sm:p-5");
+      expect(card.className).toContain("rounded-3xl");
+      expect(card.className).toContain("p-5");
+      expect(card.className).toContain("sm:p-6");
       expect(card.className).toContain("dashboard-material");
     });
   });
@@ -303,61 +303,16 @@ describe("DashboardTab", () => {
     expect(defaultProps.onOpenLedger).toHaveBeenCalled();
   });
 
-  it("renders desktop edge navigation: shows Next slide on slide 0 and clicking it navigates to slide 1", () => {
+  it("navigates all slides with pagination dots and has no side-arrow controls", () => {
     render(<DashboardTab {...defaultProps} />);
-    // On slide 0, Next slide button is rendered
-    const nextBtn = screen.getByLabelText("Next slide");
-    expect(nextBtn).toBeInTheDocument();
-    // Previous slide button should not be present on slide 0
-    expect(screen.queryByLabelText("Previous slide")).not.toBeInTheDocument();
-
-    // Clicking Next slide advances to slide 1
-    fireEvent.click(nextBtn);
-    // Now on slide 1, Previous slide button should be present
-    expect(screen.getByLabelText("Previous slide")).toBeInTheDocument();
-  });
-
-  it("navigates reliably through all slides forward and backward (Slide 1 -> 2 -> 3 -> 4 -> 3 -> 2 -> 1)", () => {
-    render(<DashboardTab {...defaultProps} />);
-
-    // Start on Slide 1 (index 0)
-    expect(screen.getByLabelText("Next slide")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Previous slide")).not.toBeInTheDocument();
-
-    // Slide 1 -> Next -> Slide 2
-    fireEvent.click(screen.getByLabelText("Next slide"));
-    expect(screen.getByLabelText("Previous slide")).toBeInTheDocument();
-    expect(screen.getByLabelText("Next slide")).toBeInTheDocument();
-
-    // Slide 2 -> Previous -> Slide 1 (Bug 1 verification)
-    fireEvent.click(screen.getByLabelText("Previous slide"));
-    expect(screen.queryByLabelText("Previous slide")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Next slide")).toBeInTheDocument();
-
-    // Slide 1 -> Next -> Slide 2
-    fireEvent.click(screen.getByLabelText("Next slide"));
-    // Slide 2 -> Next -> Slide 3
-    fireEvent.click(screen.getByLabelText("Next slide"));
-    expect(screen.getByLabelText("Previous slide")).toBeInTheDocument();
-    expect(screen.getByLabelText("Next slide")).toBeInTheDocument();
-
-    // Slide 3 -> Next -> Slide 4 (last slide boundary)
-    fireEvent.click(screen.getByLabelText("Next slide"));
-    expect(screen.getByLabelText("Previous slide")).toBeInTheDocument();
-    // On Slide 4, Next slide button should not be present
-    expect(screen.queryByLabelText("Next slide")).not.toBeInTheDocument();
-
-    // Slide 4 -> Previous -> Slide 3
-    fireEvent.click(screen.getByLabelText("Previous slide"));
-    expect(screen.getByLabelText("Next slide")).toBeInTheDocument();
-
-    // Slide 3 -> Previous -> Slide 2
-    fireEvent.click(screen.getByLabelText("Previous slide"));
-
-    // Slide 2 -> Previous -> Slide 1
-    fireEvent.click(screen.getByLabelText("Previous slide"));
-    expect(screen.queryByLabelText("Previous slide")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Next slide")).toBeInTheDocument();
+    for (const number of [1, 2, 3, 4, 3, 2, 1]) {
+      fireEvent.click(screen.getByLabelText(`Go to slide ${number}`));
+      expect(screen.getByLabelText(`Go to slide ${number}`)).toHaveAttribute("aria-current", "true");
+      expect(screen.queryByLabelText("Next slide")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Previous slide")).not.toBeInTheDocument();
+    }
+    expect(defaultProps.onOpenAnalytics).not.toHaveBeenCalled();
+    expect(defaultProps.onOpenYearlyModal).not.toHaveBeenCalled();
   });
 
   it("invokes onConfigureGoal when milestone goal card is clicked", () => {

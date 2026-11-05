@@ -1,4 +1,5 @@
 import { TransactionHistoryItem, UnifiedFinanceData } from "../types/finance";
+import { compareTransactionsNewestFirst, transactionTimestamp } from "./transactionDates";
 import { roundMoney } from "./currency";
 import { parseMonthKey } from "./dateHelpers";
 
@@ -14,6 +15,7 @@ export function buildTransactionHistory(
       title: e.merchant,
       amount: -e.amount,
       date: e.date,
+      ...(e.loggedAt ? { loggedAt: e.loggedAt } : {}),
       type: "expense",
       wallet: e.wallet,
       category: e.category
@@ -115,6 +117,7 @@ export function buildTransactionHistory(
           title: "Payday Allocation",
           amount: amt,
           date: ex.date,
+          ...(transactionTimestamp(ex.timestamp) !== undefined ? { loggedAt: new Date(ex.timestamp).toISOString() } : {}),
           type: "inflow",
           wallet: w,
           category: "Payday"
@@ -136,6 +139,7 @@ export function buildTransactionHistory(
       title: mt.title,
       amount: finalAmt,
       date: mt.date,
+      ...(transactionTimestamp(mt.createdAt) !== undefined ? { loggedAt: new Date(mt.createdAt).toISOString() } : {}),
       type: mt.type === "income" ? "inflow" : "expense",
       wallet: mt.wallet,
       category: mt.category || mt.type
@@ -147,6 +151,7 @@ export function buildTransactionHistory(
         title: mt.title + " (Receive)",
         amount: mt.amount,
         date: mt.date,
+        ...(transactionTimestamp(mt.createdAt) !== undefined ? { loggedAt: new Date(mt.createdAt).toISOString() } : {}),
         type: "inflow",
         wallet: mt.destinationWallet,
         category: mt.category || mt.type
@@ -154,12 +159,5 @@ export function buildTransactionHistory(
     }
   });
 
-  return txs.sort((a, b) => {
-    const dateA = a.date || "";
-    const dateB = b.date || "";
-
-    if (dateA !== dateB) return dateB.localeCompare(dateA);
-
-    return b.id.localeCompare(a.id);
-  });
+  return txs.sort(compareTransactionsNewestFirst);
 }

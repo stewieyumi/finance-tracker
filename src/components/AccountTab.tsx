@@ -15,7 +15,7 @@ interface AccountTabProps {
   onOpenLedger: () => void;
   onOpenTransactionHistory?: () => void;
   walletLabels?: Record<string, string>;
-  formatDateTime: (dateStr: string) => string;
+  formatDateTime: (dateStr: string, loggedAt?: string | number) => string;
 }
 
 export const AccountTab: React.FC<AccountTabProps> = ({
@@ -88,7 +88,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
             <div className="py-8 text-center text-faint text-xs italic">No history available.</div>
           ) : (
             allTransactions.map((tx: TransactionHistoryItem) => (
-              <div key={tx.id} className="flex items-center justify-between px-3 py-2.5 transition-colors hover:bg-surface-high">
+              <div key={tx.id} className="flex flex-wrap items-center justify-between px-3 py-2.5 transition-colors hover:bg-surface-high">
                 <div className="flex items-center gap-3.5 overflow-hidden flex-1">
                   <div className={`w-9 h-9 rounded-full border flex items-center justify-center shrink-0 ${tx.type === 'inflow' ? 'transaction-inflow-icon' : tx.type === 'bill' ? 'transaction-bill-icon' : 'bg-fill border-strong text-muted'}`}>
                     {tx.type === 'inflow' ? <ArrowDownLeft size={15}/> : tx.type === 'bill' ? <Calendar size={15}/> : <Receipt size={15}/>}
@@ -105,8 +105,8 @@ export const AccountTab: React.FC<AccountTabProps> = ({
                   <span className={`privacy-blur text-[13px] font-bold font-mono ${tx.amount > 0 ? "text-emerald-400" : "text-strong"}`}>
                     {tx.amount > 0 ? "+" : tx.amount < 0 ? "−" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </span>
-                  <span className="text-[10px] text-faint font-medium mt-1 whitespace-nowrap">{formatDateTime(tx.date)}</span>
                 </div>
+                <span className="basis-full text-[10px] text-faint font-medium mt-1 text-right">{formatDateTime(tx.date, tx.loggedAt)}</span>
               </div>
             ))
           )}

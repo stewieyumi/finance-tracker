@@ -1,3 +1,4 @@
+import { compareTransactionsNewestFirst, formatTransactionDateTime } from "../utils/transactionDates";
 import { formatPHP, roundMoney } from "../utils/currency";
 import React, { useEffect, useRef, useState } from "react";
 import { Camera, ScanLine, Plus, Receipt, Trash2, CheckCircle2, Upload } from "lucide-react";
@@ -96,9 +97,16 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
     setReceiptText("");
   };
 
+  const resetDraft = () => {
+    hasDraft.current = false;
+    setImportNote("");
+    setForm({ merchant: "", amount: "", category: "Food & Dining", wallet: defaultWallet, date: getLocalToday() });
+  };
+
   const closeExpense = () => {
     if (isScanning) stopScanning();
     closePaste();
+    resetDraft();
     setSaveError("");
     setShowForm(false);
   };
@@ -123,7 +131,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
     setSaveError("");
   };
 
-  const expenses = globalData.library?.expenses || [];
+  const expenses = [...(globalData.library?.expenses || [])].sort(compareTransactionsNewestFirst);
   const duplicate = showForm ? findPossibleDuplicateExpense(expenses, form) : undefined;
 
   const handleSave = (e: React.FormEvent) => {
@@ -134,21 +142,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
     handleSaveExpense(
       form,
       () => { stopScanning(); setShowForm(false); },
-      () => {
-        hasDraft.current = false;
-        setImportNote("");
-        setForm({
-          merchant: "",
-          amount: "",
-          category: "Food & Dining",
-          wallet: getDefaultExpenseWalletId(
-            "Food & Dining",
-            globalData.settings,
-            globalData.wallets
-          ),
-          date: getLocalToday(),
-        });
-      },
+      resetDraft,
       setSaveError
     );
   };
@@ -213,11 +207,10 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
             ) : (
               expenses.map(exp => {
                 // Format the raw YYYY-MM-DD date into a cleaner format (e.g., "Sep 16, 2026")
-                const dateObj = new Date(exp.date + "T12:00:00");
-                const formattedDate = isNaN(dateObj.getTime()) ? exp.date : dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                const formattedDate = formatTransactionDateTime(exp.date, exp.loggedAt);
 
                 return (
-                  <div key={exp.id} className="group flex items-center justify-between px-3 py-2.5 transition-colors hover:bg-surface-high">
+                  <div key={exp.id} className="group flex flex-wrap items-center justify-between px-3 py-2.5 transition-colors hover:bg-surface-high">
                     <div className="flex items-center gap-3.5 overflow-hidden flex-1 pr-2">
                       <div className="w-9 h-9 rounded-full bg-fill border border-strong flex items-center justify-center shrink-0 text-muted">
                         <Receipt size={15} />
@@ -238,9 +231,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
                           <Trash2 size={13} />
                         </button>
                       </div>
-                      {/* mr-[30px] perfectly aligns the date under the amount, ignoring the delete button width */}
-                      <span className="text-[10px] text-faint font-medium mt-1 whitespace-nowrap mr-[30px]">{formattedDate}</span>
                     </div>
+                    <span className="basis-full pr-[30px] text-[10px] text-faint font-medium mt-1 text-right">{formattedDate}</span>
                   </div>
                 );
               })
