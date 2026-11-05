@@ -5,6 +5,7 @@ import {
   UnifiedFinanceData
 } from "../types/finance";
 
+import { GIG_BOOKING_STATUSES } from "../utils/gigStatus";
 import { generateId } from "../utils/idHelpers";
 
 interface UseShootActionsParams {
@@ -69,6 +70,24 @@ const toggleShootCompletion = (id: string) => {
   });
 };
 
+const changeShootStatus = (id: string, status: ShootStatus) => {
+  if (!GIG_BOOKING_STATUSES.includes(status)) return;
+  setGlobalData(prev => {
+    const target = prev.library.shoots.find(shoot => shoot.id === id);
+    if (!target || target.status === status) return prev;
+    return {
+      ...prev,
+      library: {
+        ...prev.library,
+        shoots: prev.library.shoots.map(shoot => shoot.id === id
+          ? { ...shoot, status, completed: status === "Cancelled" ? false : shoot.completed }
+          : shoot),
+      },
+      updatedAt: Date.now(),
+    };
+  });
+};
+
 const deleteShoot = (id: string) => {
   if (!confirm("Delete this shoot from your library?")) return;
 
@@ -89,6 +108,7 @@ const deleteShoot = (id: string) => {
   return {
     addShoot,
     toggleShootCompletion,
+    changeShootStatus,
     deleteShoot
   };
 }

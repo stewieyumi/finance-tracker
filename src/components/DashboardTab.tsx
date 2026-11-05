@@ -14,13 +14,15 @@ import {
   ArrowRight,
   Plus,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CircleHelp
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { MilestoneProgressBar } from "./MilestoneProgressBar";
 import { PaydayModal } from "./PaydayModal";
 import { QuickAddModal, QuickAddAction } from "./QuickAddModal";
 import { UpcomingModal } from "./UpcomingModal";
+import { Modal } from "./ui/Modal";
 import {
   UnifiedFinanceData,
   TransactionHistoryItem,
@@ -121,6 +123,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   const [showPaydayModal, setShowPaydayModal] = useState(false);
   const [showUpcomingModal, setShowUpcomingModal] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showGettingStarted, setShowGettingStarted] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -219,6 +222,30 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         break;
     }
   };
+
+  const gettingStartedSteps = ([
+    {
+      action: "wallet",
+      title: "Add a wallet",
+      description: "Choose Add New Account for a bank account, e-wallet, or cash you want to track.",
+      icon: Wallet,
+      available: onNavigateToWallets,
+    },
+    {
+      action: "expense",
+      title: "Record an expense",
+      description: "Choose Manual, enter what you spent, and pick the wallet you paid from.",
+      icon: Receipt,
+      available: onNavigateToExpenses,
+    },
+    {
+      action: "bill",
+      title: "Set up a commitment",
+      description: "Choose Add New Commitment to track a bill, subscription, or installment.",
+      icon: Calendar,
+      available: onNavigateToOps,
+    },
+  ] as const).filter(step => step.available);
 
   const getCarouselCardClass = (isActive: boolean, interactiveHover?: string) =>
     `min-w-0 flex-1 min-h-[156px] sm:min-h-[160px] dashboard-material rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-3 transition-colors ${
@@ -602,6 +629,16 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             </button>
           ))}
         </div>
+        {gettingStartedSteps.length > 0 && (
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={() => setShowGettingStarted(true)}
+            className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs font-medium text-muted transition hover:bg-fill hover:text-primary"
+          >
+            <CircleHelp size={15} aria-hidden="true" /> Getting Started
+          </button>
+        )}
       </section>
 
       {/* 2. UPCOMING COMMITMENTS */}
@@ -756,6 +793,42 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         latestExecution={latestExecution}
         onUndoSplit={onUndoPaydaySplit}
       />
+
+      <Modal
+        isOpen={showGettingStarted}
+        onClose={() => setShowGettingStarted(false)}
+        ariaLabelledBy="getting-started-title"
+        manageFocus
+      >
+        <div className="w-full max-w-md rounded-3xl border border-subtle bg-surface-modal p-5 shadow-xl sm:p-6">
+          <h2 id="getting-started-title" className="text-lg font-semibold text-strong">Getting Started</h2>
+          <p className="mt-1 text-sm text-muted">Pick one thing to try. You can come back anytime from Quick Actions.</p>
+          <ol className="my-4 divide-y divide-subtle overflow-hidden rounded-2xl bg-surface">
+            {gettingStartedSteps.map(({ action, title, description, icon: Icon }) => (
+              <li key={action}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowGettingStarted(false);
+                    handleQuickAddAction(action);
+                  }}
+                  className="flex min-h-12 w-full items-center gap-3 px-3 py-3 text-left transition hover:bg-fill focus-visible:outline-offset-[-2px]"
+                >
+                  <Icon size={17} className="shrink-0 text-muted" aria-hidden="true" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-primary">{title}</span>
+                    <span className="mt-0.5 block text-xs text-muted">{description}</span>
+                  </span>
+                  <ChevronRight size={16} className="shrink-0 text-muted" aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ol>
+          <button type="button" onClick={() => setShowGettingStarted(false)} className="min-h-11 w-full rounded-xl bg-fill px-4 text-sm font-medium text-primary transition hover:bg-fill-strong">
+            Done
+          </button>
+        </div>
+      </Modal>
 
       {/* QUICK ADD MODAL */}
       <QuickAddModal

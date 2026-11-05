@@ -13,6 +13,7 @@ describe("OnboardingWizard", () => {
       <OnboardingWizard
         globalData={INITIAL_UNIFIED_DATA}
         onComplete={onComplete}
+        onSkip={vi.fn()}
         userName="Alex"
       />
     );
@@ -82,6 +83,7 @@ describe("OnboardingWizard", () => {
       <OnboardingWizard
         globalData={INITIAL_UNIFIED_DATA}
         onComplete={onComplete}
+        onSkip={vi.fn()}
       />
     );
 
@@ -92,5 +94,17 @@ describe("OnboardingWizard", () => {
     // Step 2 -> Step 1 (Back)
     fireEvent.click(screen.getByRole("button", { name: /back/i }));
     expect(screen.getByText(/Welcome to Finance Tracker/i)).toBeInTheDocument();
+  });
+  it("can skip setup without applying partial wizard edits", () => {
+    const onComplete = vi.fn();
+    const onSkip = vi.fn();
+    render(<OnboardingWizard globalData={INITIAL_UNIFIED_DATA} onComplete={onComplete} onSkip={onSkip} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /get started/i }));
+    fireEvent.change(screen.getByLabelText("Gross Salary"), { target: { value: "30000" } });
+    fireEvent.click(screen.getByRole("button", { name: /skip setup/i }));
+
+    expect(onSkip).toHaveBeenCalledOnce();
+    expect(onComplete).not.toHaveBeenCalled();
   });
 });

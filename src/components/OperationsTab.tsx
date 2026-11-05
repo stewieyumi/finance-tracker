@@ -64,6 +64,8 @@ interface OperationsTabProps {
   onDeleteReceivable: (id: string) => void;
   onSaveReceivableEdit: () => void;
 
+  calendarSync?: React.ReactNode;
+  onChangeShootStatus?: (id: string, status: ShootStatus) => void;
   onToggleShootCompletion: (id: string) => void;
   onAddShoot: (shoot: {
     title: string;
@@ -111,6 +113,8 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
   onDeleteReceivable,
   onSaveReceivableEdit,
 
+  calendarSync,
+  onChangeShootStatus,
   onToggleShootCompletion,
   onAddShoot,
   onDeleteShoot,
@@ -221,6 +225,8 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
         <div className="animate-in fade-in zoom-in-95 duration-300 ease-out">
           <ErrorBoundary>
             <ShootsTable
+              calendarSync={calendarSync}
+              onChangeStatus={onChangeShootStatus}
               gigsLabel={gigsLabel}
               gigCategories={gigCategories}
               activeShoots={activeShoots}

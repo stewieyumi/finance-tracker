@@ -30,7 +30,8 @@ export function useExpenseActions({
     (
       form: ExpenseForm,
       onSuccess: () => void,
-      resetForm: () => void
+      resetForm: () => void,
+      onError: (message: string) => void = showToast
     ) => {
       const amount = parseFloat(form.amount);
       const walletId =
@@ -40,12 +41,12 @@ export function useExpenseActions({
       if (!form.merchant || isNaN(amount) || amount <= 0) return;
 
       if (!walletId || globalData.wallets[walletId] === undefined) {
-        showToast("⚠️ Please select a valid wallet before saving the expense.");
+        onError("⚠️ Please select a valid wallet before saving the expense.");
         return;
       }
 
       if (!hasSufficientWalletBalance(globalData.wallets[walletId], amount)) {
-        showToast(
+        onError(
           `Insufficient balance in ${
             globalData.settings?.walletLabels?.[walletId] || walletId
           }. Need ₱${amount.toLocaleString()}`

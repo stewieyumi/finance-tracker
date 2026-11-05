@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { GoogleLogin, googleLogout } from "@react-oauth/google";
 import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff, Bell } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
+import { QUICK_EXPENSE_HASH } from "./constants/config";
 import { getMonthKey, getAdjacentMonth, getDaysUntil, parseMonthKey } from "./utils/dateHelpers";
 import { UnifiedFinanceData, WalletState, EditFormData, TransactionHistoryItem, PaydayExecution } from "./types/finance";
 import { buildFinancialSummary } from "./utils/summaryHelpers";
@@ -52,6 +53,8 @@ import { isValidFinanceBackup, isValidFinanceData } from "./utils/validationHelp
 
 const ExpensesTab = lazy(() => import("./components/ExpensesTab")
   .then(module => ({ default: module.ExpensesTab })));
+
+const AppleCalendarSync = lazy(() => import("./components/AppleCalendarSync"));
 
 const HistoricalLedgerModal = lazy(() => import("./components/HistoricalLedgerModal")
   .then(module => ({ default: module.HistoricalLedgerModal })));
@@ -209,8 +212,20 @@ const {
   const [showYearlyModal, setShowYearlyModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showAppleCalendar, setShowAppleCalendar] = useState(false);
   const [showGoalSetupModal, setShowGoalSetupModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabType>("home");
+  const [activeTab, setActiveTab] = useState<TabType>(() =>
+    window.location.hash === QUICK_EXPENSE_HASH ? "expenses" : "home"
+  );
+  React.useEffect(() => {
+    const openQuickExpense = () => {
+      if (window.location.hash !== QUICK_EXPENSE_HASH) return;
+      setSelectedMonth(getMonthKey(new Date()));
+      setActiveTab("expenses");
+    };
+    window.addEventListener("hashchange", openQuickExpense);
+    return () => window.removeEventListener("hashchange", openQuickExpense);
+  }, []);
   const [opsTab, setOpsTab] = useState<"bills" | "inflows" | "gigs">("bills");
   const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "sync">("general");
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -460,6 +475,7 @@ const {
 const {
   addShoot: handleAddShoot,
   toggleShootCompletion,
+  changeShootStatus,
   deleteShoot
 } = useShootActions({
   setGlobalData: syncedSetGlobalData,
@@ -617,6 +633,7 @@ const { saveShootEdit } = useShootSaveActions({
     showYearlyModal ||
     showAnalyticsModal ||
     showSettingsModal ||
+    showAppleCalendar ||
     showLedgerModal;
 
   const isEditing = editingId !== null;
@@ -912,6 +929,10 @@ const copySummaryToClipboard = async () => {
       <OnboardingWizard
         globalData={globalData}
         userName={googleUser?.name}
+        onSkip={() => syncedSetGlobalData(previous => ({
+          ...previous,
+          settings: { ...previous.settings, hasCompletedOnboarding: true },
+        }))}
         onComplete={(completedData) => {
           syncedSetGlobalData(completedData);
           showToast("✨ Setup complete! Welcome to Finance Tracker.");
@@ -921,7 +942,7 @@ const copySummaryToClipboard = async () => {
   }
 
   return (
-    <div className={`min-h-screen bg-shell text-text-secondary px-4 sm:px-6 pb-28 sm:pb-32 pt-[max(2rem,env(safe-area-inset-top))] flex justify-center selection:bg-blue-600 selection:text-white ${isPrivacyMode ? "privacy-mode" : ""}`}>
+    <div className={`min-h-screen bg-shell text-text-secondary px-4 sm:px-6 app-navigation-clearance pt-[max(2rem,env(safe-area-inset-top))] flex justify-center selection:bg-blue-600 selection:text-white ${isPrivacyMode ? "privacy-mode" : ""}`}>
       <div className="fixed top-0 left-0 right-0 z-[200] bg-shell/80 backdrop-blur-xl pointer-events-none" style={{ height: "env(safe-area-inset-top)" }} />
 
       {updateAvailable && (
@@ -1054,10 +1075,13 @@ const copySummaryToClipboard = async () => {
         {showSettingsModal && (
           <ErrorBoundary>
             <Suspense fallback={deferredModalFallback}>
-              <SettingsModal onRestoreImportBackup={restorePreImportBackup} onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} onClose={() => setShowSettingsModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
+              <SettingsModal onOpenCalendar={() => setShowAppleCalendar(true)} onRestoreImportBackup={restorePreImportBackup} onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} onClose={() => setShowSettingsModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
             </Suspense>
           </ErrorBoundary>
         )}
+        {showAppleCalendar && <ErrorBoundary><Suspense fallback={deferredModalFallback}>
+          <AppleCalendarSync key={dataOwnerSub} autoOpen onClose={() => setShowAppleCalendar(false)} data={globalData} setData={syncedSetGlobalData} />
+        </Suspense></ErrorBoundary>}
         {showGoalSetupModal && (
           <ErrorBoundary>
             <Suspense fallback={deferredModalFallback}>
@@ -1164,6 +1188,8 @@ const copySummaryToClipboard = async () => {
             onAddReceivable={handleAddReceivable}
             onDeleteReceivable={deleteReceivable}
             onSaveReceivableEdit={saveReceivableEdit}
+            calendarSync={<button type="button" onClick={() => setShowAppleCalendar(true)} className="flex h-8 items-center gap-1.5 rounded-xl bg-fill px-2.5 text-xs font-medium text-primary hover:bg-fill-strong"><Calendar size={13} /> Apple Calendar</button>}
+            onChangeShootStatus={changeShootStatus}
             onToggleShootCompletion={toggleShootCompletion}
             onAddShoot={handleAddShoot}
             onDeleteShoot={deleteShoot}

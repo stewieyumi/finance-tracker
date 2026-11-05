@@ -25,6 +25,7 @@ import { calculateNetSalary } from "../utils/financeHelpers";
 interface OnboardingWizardProps {
   globalData: UnifiedFinanceData;
   onComplete: (completedData: UnifiedFinanceData) => void;
+  onSkip: () => void;
   userName?: string;
 }
 
@@ -37,6 +38,7 @@ const DEFAULT_WALLETS: CustomWallet[] = [
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   globalData,
   onComplete,
+  onSkip,
   userName,
 }) => {
   const [step, setStep] = useState<number>(1);
@@ -207,8 +209,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 {userName ? `Welcome, ${userName}!` : "Welcome to Finance Tracker"}
               </h1>
               <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed">
-                Take control of your cashflow, upcoming bills, and savings milestones.
-                Let's set up your core baseline in a few quick steps.
+                Set up your wallets, paydays, and savings goal now, or head straight to the dashboard.
+                The Getting Started guide in Quick Actions shows you how to add your first entries.
               </p>
             </div>
 
@@ -681,6 +683,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             </div>
           </div>
         )}
+        <button
+          type="button"
+          onClick={onSkip}
+          className="mt-4 min-h-11 w-full rounded-xl px-3 text-sm font-medium text-muted transition hover:bg-fill hover:text-primary"
+        >
+          Skip setup for now
+        </button>
       </div>
     </div>
   );
