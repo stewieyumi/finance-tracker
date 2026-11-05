@@ -4,6 +4,7 @@
 @tailwind utilities;
 
 :root {
+  --navigation-clearance: calc(6rem + max(.5rem, env(safe-area-inset-bottom, 0px)));
   --shadow-contact: 0 1px 2px rgba(0, 0, 0, .18);
   --shadow-surface: 0 2px 6px rgba(0, 0, 0, .16);
   --shadow-floating: 0 8px 22px rgba(0, 0, 0, .28);
@@ -122,6 +123,22 @@
     color: var(--text-warning);
   }
 
+  .app-navigation-clearance {
+    padding-bottom: var(--navigation-clearance);
+  }
+
+  /* Let scrolling content dissolve below the floating controls. */
+  .navigation-edge { isolation: isolate; }
+
+  .navigation-edge::before {
+    content: "";
+    position: absolute;
+    inset: -2rem 0 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent, var(--bg-shell) 80%);
+  }
+
   .navigation-glass {
     background: linear-gradient(180deg, var(--material-sheen), transparent 70%), var(--bg-navigation);
     border: 1px solid var(--material-edge);
@@ -130,6 +147,12 @@
 
   @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
     @media (prefers-reduced-transparency: no-preference) {
+      .navigation-edge::before {
+        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(8px);
+        -webkit-mask-image: linear-gradient(to bottom, transparent, #000 50%);
+        mask-image: linear-gradient(to bottom, transparent, #000 50%);
+      }
       .navigation-glass {
         background: linear-gradient(180deg, var(--material-sheen), transparent 70%), var(--bg-navigation-glass);
         -webkit-backdrop-filter: blur(16px) saturate(115%);
@@ -183,6 +206,8 @@
   :root.light {
     color-scheme: light;
   }
+
+  html { scroll-padding-bottom: var(--navigation-clearance); }
 
   html, body {
     overscroll-behavior-y: none;
