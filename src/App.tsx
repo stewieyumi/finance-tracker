@@ -212,6 +212,7 @@ const {
   const [showYearlyModal, setShowYearlyModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showAppleCalendar, setShowAppleCalendar] = useState(false);
   const [showGoalSetupModal, setShowGoalSetupModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>(() =>
     window.location.hash === QUICK_EXPENSE_HASH ? "expenses" : "home"
@@ -632,6 +633,7 @@ const { saveShootEdit } = useShootSaveActions({
     showYearlyModal ||
     showAnalyticsModal ||
     showSettingsModal ||
+    showAppleCalendar ||
     showLedgerModal;
 
   const isEditing = editingId !== null;
@@ -1073,10 +1075,13 @@ const copySummaryToClipboard = async () => {
         {showSettingsModal && (
           <ErrorBoundary>
             <Suspense fallback={deferredModalFallback}>
-              <SettingsModal onRestoreImportBackup={restorePreImportBackup} onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} onClose={() => setShowSettingsModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
+              <SettingsModal onOpenCalendar={() => setShowAppleCalendar(true)} onRestoreImportBackup={restorePreImportBackup} onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} onClose={() => setShowSettingsModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
             </Suspense>
           </ErrorBoundary>
         )}
+        {showAppleCalendar && <ErrorBoundary><Suspense fallback={deferredModalFallback}>
+          <AppleCalendarSync key={dataOwnerSub} autoOpen onClose={() => setShowAppleCalendar(false)} data={globalData} setData={syncedSetGlobalData} />
+        </Suspense></ErrorBoundary>}
         {showGoalSetupModal && (
           <ErrorBoundary>
             <Suspense fallback={deferredModalFallback}>
@@ -1183,7 +1188,7 @@ const copySummaryToClipboard = async () => {
             onAddReceivable={handleAddReceivable}
             onDeleteReceivable={deleteReceivable}
             onSaveReceivableEdit={saveReceivableEdit}
-            calendarSync={<Suspense fallback={null}><AppleCalendarSync data={globalData} setData={syncedSetGlobalData} /></Suspense>}
+            calendarSync={<button type="button" onClick={() => setShowAppleCalendar(true)} className="flex h-8 items-center gap-1.5 rounded-xl bg-fill px-2.5 text-xs font-medium text-primary hover:bg-fill-strong"><Calendar size={13} /> Apple Calendar</button>}
             onChangeShootStatus={changeShootStatus}
             onToggleShootCompletion={toggleShootCompletion}
             onAddShoot={handleAddShoot}

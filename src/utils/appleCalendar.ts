@@ -8,6 +8,7 @@ export interface AppleCalendarEvent {
   gig: Shoot;
 }
 export interface AppleCalendarPreview {
+  connectionId: string;
   events: AppleCalendarEvent[];
   missingCalendars: string[];
   skipped: number;

@@ -4,6 +4,7 @@ import { DAVClient, type DAVCalendar, type DAVCalendarObject } from "tsdav";
 import type { Shoot } from "../src/types/finance.js";
 import { GIG_BOOKING_STATUSES, GIG_CALENDAR_GROUPS, getGigCalendarGroup, type GigCalendarGroup } from "../src/utils/gigStatus.js";
 import { isCalendarGig, type AppleCalendarEvent } from "../src/utils/appleCalendar.js";
+import type { AppleCredentials } from "./appleCalendarConnection.js";
 
 export class AppleCalendarError extends Error {
   constructor(message: string, public status = 502) { super(message); }
@@ -42,10 +43,10 @@ export const appleFetch: typeof fetch = async (input, options) => {
   throw new AppleCalendarError("iCloud redirected too many times.");
 };
 
-export async function connectAppleCalendar(signal: AbortSignal) {
+export async function connectAppleCalendar(signal: AbortSignal, credentials: AppleCredentials) {
   const client = new DAVClient({
     serverUrl: "https://caldav.icloud.com",
-    credentials: { username: process.env.ICLOUD_APPLE_ID, password: process.env.ICLOUD_APP_PASSWORD },
+    credentials,
     authMethod: "Basic",
     defaultAccountType: "caldav",
     fetch: appleFetch,

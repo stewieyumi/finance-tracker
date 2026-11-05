@@ -843,3 +843,12 @@ describe("SettingsModal - Sync & Maintenance Actions", () => {
     });
   });
 });
+
+it("opens the per-user Calendar connection from settings without saving financial settings", () => {
+  const onOpenCalendar = vi.fn();
+  const { onClose, setGlobalData } = renderSettingsModal(createMockData(), { initialTab: "calendar", onOpenCalendar });
+  fireEvent.click(screen.getByRole("button", { name: "Manage Apple Calendar connection" }));
+  expect(onClose).toHaveBeenCalledOnce();
+  expect(onOpenCalendar).toHaveBeenCalledOnce();
+  expect(setGlobalData).not.toHaveBeenCalled();
+});
