@@ -219,6 +219,7 @@ describe("buildTransactionHistory", () => {
     expect(buildTransactionHistory(data)).toEqual([
       {
         id: "pd-1_gcash",
+        loggedAt: "1970-01-01T00:00:00.100Z",
         title: "Payday Allocation",
         amount: 2500,
         date: "2026-09-15",
@@ -228,6 +229,7 @@ describe("buildTransactionHistory", () => {
       },
       {
         id: "pd-1_bpi",
+        loggedAt: "1970-01-01T00:00:00.100Z",
         title: "Payday Allocation",
         amount: 1000,
         date: "2026-09-15",
@@ -264,6 +266,7 @@ describe("buildTransactionHistory", () => {
     expect(buildTransactionHistory(data)).toEqual([
       {
         id: "mt-1_dest",
+        loggedAt: "1970-01-01T00:00:00.100Z",
         title: "Move money (Receive)",
         amount: 500,
         date: "2026-09-18",
@@ -273,6 +276,7 @@ describe("buildTransactionHistory", () => {
       },
       {
         id: "mt-1",
+        loggedAt: "1970-01-01T00:00:00.100Z",
         title: "Move money",
         amount: -500,
         date: "2026-09-18",
@@ -324,6 +328,20 @@ describe("buildTransactionHistory", () => {
       "b",
       "a"
     ]);
+  });
+
+  it("preserves expense log times through a stored snapshot and orders same-day sources by real time", () => {
+    const data = makeData();
+    data.library.expenses = [
+      { id: "z-older", merchant: "Morning", amount: 10, category: "Other", wallet: "maya", date: "2026-11-06", loggedAt: "2026-11-06T01:00:00Z" },
+      { id: "a-newer", merchant: "Evening", amount: 20, category: "Other", wallet: "maya", date: "2026-11-06", loggedAt: "2026-11-06T02:00:00Z" },
+      { id: "legacy", merchant: "Unknown time", amount: 30, category: "Other", wallet: "maya", date: "2026-11-06" },
+    ];
+    data.library.manualTransactions = [{ id: "manual", title: "Manual", amount: 40, type: "income", wallet: "maya", date: "2026-11-06", createdAt: Date.parse("2026-11-06T03:00:00Z") }];
+    const history = buildTransactionHistory(JSON.parse(JSON.stringify(data)));
+    expect(history.map(tx => tx.id)).toEqual(["manual", "a-newer", "z-older", "legacy"]);
+    expect(history[1].loggedAt).toBe("2026-11-06T02:00:00Z");
+    expect(history[3]).not.toHaveProperty("loggedAt");
   });
 
   it("returns an empty array when given empty globalData", () => {
@@ -530,6 +548,7 @@ describe("buildTransactionHistory", () => {
       expect(txs).toHaveLength(1);
       expect(txs[0]).toEqual({
         id: "pd-split-1_arbitrary_wallet_key",
+        loggedAt: "1970-01-01T00:00:00.100Z",
         title: "Payday Allocation",
         amount: 1250,
         date: "2026-09-15",

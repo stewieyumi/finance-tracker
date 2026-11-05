@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Settings, Briefcase, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2, CalendarPlus, Search, Wallet, ChevronRight } from "lucide-react";
+import { X, Settings, Briefcase, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2, CalendarPlus, Search, Wallet, ChevronRight, Copy, Zap } from "lucide-react";
 import { Deduction, DeductionType, UnifiedFinanceData } from "../types/finance";
 import { migrateLegacyBills } from "../utils/financeMigrations";
 import { Modal } from "./ui/Modal";
@@ -11,6 +11,7 @@ import {
   calculateDeductionAmount,
   calculateNetSalary,
 } from "../utils/financeHelpers";
+import { QUICK_EXPENSE_HASH } from "../constants/config";
 import { generateId } from "../utils/idHelpers";
 import { exportPaydaysToCalendar } from "../utils/calendarExport";
 import { applyTheme, ThemeMode } from "../hooks/useTheme";
@@ -18,8 +19,8 @@ import { applyTheme, ThemeMode } from "../hooks/useTheme";
 const SETTINGS_SECTIONS = {
   general: {
     label: "General", icon: Settings, color: "bg-neutral-500",
-    description: "Personalize your appearance and dashboard labels.",
-    keywords: "appearance theme dark light system terminology employee",
+    description: "Personalize your appearance, shortcuts, and dashboard labels.",
+    keywords: "appearance theme dark light system terminology employee quick expense shortcuts back tap iphone daily entry",
   },
   baselines: {
     label: "Payday", icon: Banknote, color: "bg-emerald-700",
@@ -91,6 +92,17 @@ const formatOrdinal = (n: number) => {
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab = "general", onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull, onExport, onImportClick, onRestoreImportBackup, onOpenCalendar }) => {
   const [activeTab, setActiveTab] = useState<SettingsSection>(initialTab);
   const [sectionSearch, setSectionSearch] = useState("");
+  const [quickExpenseCopyStatus, setQuickExpenseCopyStatus] = useState("");
+  const quickExpenseUrl = `${window.location.origin}/${QUICK_EXPENSE_HASH}`;
+
+  const copyQuickExpenseLink = async () => {
+    try {
+      await navigator.clipboard.writeText(quickExpenseUrl);
+      setQuickExpenseCopyStatus("Link copied.");
+    } catch {
+      setQuickExpenseCopyStatus("Select and copy the link below.");
+    }
+  };
   const searchWords = sectionSearch.trim().toLowerCase().split(/\s+/);
   const matchingSections = sectionKeys.filter(key => {
     const { label, keywords } = SETTINGS_SECTIONS[key];
@@ -103,6 +115,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
     if (isOpen) {
       setActiveTab(initialTab);
       setSectionSearch("");
+      setQuickExpenseCopyStatus("");
     }
   }, [isOpen, initialTab]);
   const [form, setForm] = useState(() =>
@@ -336,6 +349,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                   </div>
                 </div>
               </div>
+
+              <details className={`${settingsGroup} group/quick-expense`}>
+                <summary className={`${settingsAction} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+                  <span className="flex items-center gap-2"><Zap size={16} aria-hidden="true" /> Quick Expense</span>
+                  <ChevronRight size={15} aria-hidden="true" className="text-muted transition-transform group-open/quick-expense:rotate-90" />
+                </summary>
+                <div className="space-y-4 px-4 py-4 text-xs leading-relaxed text-muted">
+                  <p>Open a new expense directly from a saved link or phone shortcut. Review it before saving.</p>
+                  <div className="flex flex-wrap gap-2">
+                    <a href={QUICK_EXPENSE_HASH} onClick={handleCancel} className="inline-flex min-h-11 items-center rounded-xl bg-fill px-3 font-semibold text-primary hover:bg-fill-strong">Open Quick Expense</a>
+                    <button type="button" onClick={copyQuickExpenseLink} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 font-semibold text-primary hover:bg-fill-strong"><Copy size={14} aria-hidden="true" /> Copy link</button>
+                  </div>
+                  <label className="block font-medium text-primary" htmlFor="quick-expense-link">Quick Expense link</label>
+                  <input id="quick-expense-link" readOnly value={quickExpenseUrl} onFocus={event => event.currentTarget.select()} className="w-full min-w-0 rounded-lg border border-strong bg-surface-input px-3 py-2 text-xs text-primary" />
+                  {quickExpenseCopyStatus && <p role="status">{quickExpenseCopyStatus}</p>}
+                  <div className="space-y-2">
+                    <h5 className="font-semibold text-primary">iPhone Back Tap</h5>
+                    <ol className="list-decimal space-y-2 pl-4">
+                      <li>In Shortcuts, create a shortcut named Quick Expense. Add a URL action with the link above, followed by Open URLs.</li>
+                      <li>Open iPhone Settings → Accessibility → Touch → Back Tap. Choose Double Tap or Triple Tap, then select your Quick Expense shortcut.</li>
+                      <li>Run it once to check sign-in and the expense form. It may open in your browser.</li>
+                    </ol>
+                    <a className="inline-block text-primary underline underline-offset-2" href="https://support.apple.com/en-mide/guide/shortcuts/apd897693606/ios" target="_blank" rel="noopener noreferrer">Apple’s Back Tap guide</a>
+                  </div>
+                </div>
+              </details>
 
               <section aria-labelledby="settings-terminology">
                 <h5 id="settings-terminology" className="mb-2 flex items-center gap-2 px-1 text-xs font-semibold text-muted">

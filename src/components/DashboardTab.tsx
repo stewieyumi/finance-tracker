@@ -13,7 +13,6 @@ import {
   Banknote,
   ArrowRight,
   Plus,
-  ChevronLeft,
   ChevronRight,
   CircleHelp
 } from "lucide-react";
@@ -32,11 +31,7 @@ import {
 import { calculateSafeToSpend, calculateDebtRunway } from "../utils/financialAnalytics";
 import { getPaydayDatesInRange, normalizePaydayDays, parseMonthKey } from "../utils/dateHelpers";
 
-const carouselSlideClass = "flex w-full shrink-0 snap-center px-[var(--carousel-gutter)]";
-const carouselEdgeClass =
-  "group/edge absolute inset-y-0 z-20 hidden w-[var(--carousel-gutter)] cursor-pointer items-center justify-center focus-visible:outline-none [@media(pointer:fine)]:flex";
-const carouselChevronClass =
-  "flex size-4 items-center justify-center rounded-full text-muted opacity-[.45] transition-opacity group-hover/edge:opacity-100 group-focus-visible/edge:opacity-100 group-focus-visible/edge:ring-2 group-focus-visible/edge:ring-[var(--focus-outline)] md:size-8";
+const carouselSlideClass = "flex w-full shrink-0 snap-center";
 
 interface DashboardTabProps {
   globalData: UnifiedFinanceData;
@@ -70,7 +65,7 @@ interface DashboardTabProps {
   onCommitWallet?: (walletId: string, amount: number) => void;
   onIncrementWallet?: (walletId: string, amount: number) => void;
   onCopySummary: () => void;
-  formatDateTime: (dateStr: string) => string;
+  formatDateTime: (dateStr: string, loggedAt?: string | number) => string;
 
   // Navigation callbacks
   onNavigateToWallets?: () => void;
@@ -248,7 +243,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   ] as const).filter(step => step.available);
 
   const getCarouselCardClass = (isActive: boolean, interactiveHover?: string) =>
-    `min-w-0 flex-1 min-h-[156px] sm:min-h-[160px] dashboard-material rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-3 transition-colors ${
+    `min-w-0 flex-1 min-h-[156px] sm:min-h-[160px] dashboard-material rounded-3xl p-5 sm:p-6 flex flex-col justify-between gap-3 transition-colors ${
       isActive
         ? interactiveHover || ""
         : "cursor-pointer"
@@ -259,15 +254,15 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       {/* 1. FINANCIAL OVERVIEW CAROUSEL STAGE */}
       <div className="w-full space-y-2.5">
         {/* Contained Stage Viewport */}
-        <div className="relative [--carousel-gutter:1rem] sm:[--carousel-gutter:2.75rem]">
+        <div className="relative py-2 sm:py-3">
           {/* Scroll Viewport */}
           <div
             ref={carouselRef}
             onScroll={handleCarouselScroll}
-            className="w-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory py-2 sm:py-3"
+            className="w-full overflow-x-auto overflow-y-hidden rounded-3xl snap-x snap-mandatory shadow-sm"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
-            <div className="relative flex">
+            <div className="relative flex gap-4">
               {/* SLIDE 1: FINANCIAL OVERVIEW */}
               <div
                 ref={(el) => {
@@ -300,22 +295,22 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     <span className="text-[10px] text-faint font-mono">{selectedMonth}</span>
                   </div>
 
-                  <div className="grid gap-2 sm:my-auto sm:grid-cols-3 sm:gap-3 sm:text-center">
-                    <div className="flex items-center justify-between gap-3 rounded-xl bg-fill/60 px-3 py-2 sm:block sm:p-3">
+                  <div className="grid divide-y divide-subtle sm:my-auto sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:text-center">
+                    <div className="flex min-w-0 items-center justify-between gap-3 py-3 sm:block sm:px-4">
                       <div className="text-xs font-medium text-muted">Fund Progress</div>
                       <div className="text-sm sm:text-base font-semibold font-mono tracking-tight text-right sm:mt-1 sm:text-center text-strong">
                         {fundProgressPercent}%
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-3 rounded-xl bg-fill/60 px-3 py-2 sm:block sm:p-3">
+                    <div className="flex min-w-0 items-center justify-between gap-3 py-3 sm:block sm:px-4">
                       <div className="text-xs font-medium text-muted">Pending Inflows</div>
                       <div className="text-sm sm:text-base font-semibold font-mono tracking-tight text-right sm:mt-1 sm:text-center text-warning">
                         ₱{totalPendingReceivables.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-3 rounded-xl bg-fill/60 px-3 py-2 sm:block sm:p-3">
+                    <div className="flex min-w-0 items-center justify-between gap-3 py-3 sm:block sm:px-4">
                       <div className="text-xs font-medium text-muted">
                         {selectedMonth.split(" ")[0]} Income
                       </div>
@@ -529,34 +524,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               </div>
             </div>
           </div>
-
-          {/* Desktop Left Edge Control */}
-          {activeSlide > 0 && (
-            <button
-              type="button"
-              onClick={() => scrollToSlide(activeSlide - 1)}
-              aria-label="Previous slide"
-              className={`${carouselEdgeClass} left-0`}
-            >
-              <span className={carouselChevronClass}>
-                <ChevronLeft size={16} aria-hidden="true" />
-              </span>
-            </button>
-          )}
-
-          {/* Desktop Right Edge Control */}
-          {activeSlide < 3 && (
-            <button
-              type="button"
-              onClick={() => scrollToSlide(activeSlide + 1)}
-              aria-label="Next slide"
-              className={`${carouselEdgeClass} right-0`}
-            >
-              <span className={carouselChevronClass}>
-                <ChevronRight size={16} aria-hidden="true" />
-              </span>
-            </button>
-          )}
         </div>
 
         <div className="flex items-center justify-center gap-1.5 pt-0.5 pb-1">
@@ -733,7 +700,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               <div className="py-4 text-center text-faint text-xs italic">No transactions yet.</div>
             ) : (
               recentTransactions.slice(0, 5).map((tx: TransactionHistoryItem) => (
-                <div key={tx.id} className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-subtle transition">
+                <div key={tx.id} className="flex flex-wrap items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-subtle transition">
                   <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
                     <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${tx.type === "inflow" ? "transaction-inflow-icon" : tx.type === "bill" ? "transaction-bill-icon" : "bg-fill border-strong text-muted"}`}>
                       {tx.type === "inflow" ? <ArrowDownLeft size={14} /> : tx.type === "bill" ? <Calendar size={14} /> : <Receipt size={14} />}
@@ -750,8 +717,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     <span className={`privacy-blur text-[13px] font-bold font-mono ${tx.amount > 0 ? "text-positive" : "text-strong"}`}>
                       {tx.amount > 0 ? "+" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </span>
-                    <span className="text-[10px] text-faint mt-0.5 whitespace-nowrap">{formatDateTime(tx.date)}</span>
                   </div>
+                  <span className="basis-full text-[10px] text-faint mt-1 text-right">{formatDateTime(tx.date, tx.loggedAt)}</span>
                 </div>
               ))
             )}

@@ -1,3 +1,4 @@
+import { formatTransactionDateTime as formatDateTime } from "./utils/transactionDates";
 import { PaymentHistoryMenu } from "./components/PaymentHistoryMenu";
 import { recordPaymentAction, type PaymentHistory, type PaymentHistoryAction } from "./utils/paymentHistory";
 import React, { useState, useMemo, useRef, useCallback, lazy, Suspense } from "react";
@@ -160,16 +161,7 @@ function safeLoadAll(sub: string | null = getFinanceSubject()): UnifiedFinanceDa
   return INITIAL_UNIFIED_DATA;
 }
 
-const formatDateTime = (dateStr: string) => {
-  if (!dateStr) return "";
-  try {
-    const d = dateStr.includes("T") ? new Date(dateStr) : new Date(dateStr + "T12:00:00");
-    if (isNaN(d.getTime())) return dateStr;
-    return d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  } catch {
-    return dateStr;
-  }
-};
+
 
 
 

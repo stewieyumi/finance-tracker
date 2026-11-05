@@ -31,6 +31,8 @@ export interface ManualTransaction {
 }
 
 export interface Expense {
+  /** Actual save time; absent on older records. date remains the chosen transaction date. */
+  loggedAt?: string;
   id: string;
   merchant: string;
   amount: number;
@@ -224,6 +226,7 @@ export interface EditFormData {
 }
 
 export interface TransactionHistoryItem {
+  loggedAt?: string;
   id: string;
   title: string;
   amount: number;

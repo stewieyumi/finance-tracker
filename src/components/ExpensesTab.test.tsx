@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { act, render, screen, fireEvent, within } from "@testing-library/react";
+import * as scanner from "../hooks/useExpenseScanner";
 import { ExpensesTab } from "./ExpensesTab";
 import { INITIAL_UNIFIED_DATA } from "../constants/initialData";
 import { UnifiedFinanceData } from "../types/finance";
@@ -214,5 +215,65 @@ describe("ExpensesTab - wallet balance protection", () => {
       deductedAmount: 1000,
     wallet: "maya"
     });
+  });
+});
+
+
+describe("expense draft dismissal", () => {
+  it.each(["Cancel", "Escape"])("discards a scanned draft on %s so Manual starts blank", dismissal => {
+    const data = createTestData();
+    data.settings!.customWallets = [{ id: "maya", label: "Maya" }];
+    const save = vi.fn();
+    const hook = vi.spyOn(scanner, "useExpenseScanner").mockImplementation(options => ({
+      isScanning: false, failure: null, retryScan: vi.fn(), stopScanning: vi.fn(), fileInputRef: { current: null },
+      handleCapture: () => {
+        options.onScanStart();
+        options.onScanComplete({ merchant: "SAMPLE CAFE", amount: "150.25", date: "2020-01-01", category: "Shopping", wallet: "maya" });
+      },
+    }));
+    try {
+      const { container } = render(<ExpensesTab globalData={data} setGlobalData={save} showToast={vi.fn()} />);
+      const upload = container.querySelector('input[type="file"]:not([capture])')!;
+      fireEvent.change(upload, { target: { files: [new File(["fixture"], "receipt.png", { type: "image/png" })] } });
+      expect(screen.getByPlaceholderText("e.g. Starbucks, Laundry...")).toHaveValue("SAMPLE CAFE");
+      if (dismissal === "Cancel") fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      else fireEvent.keyDown(window, { key: "Escape" });
+      expect(screen.queryByRole("dialog", { name: "Log Expense" })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /^Manual/ }));
+      const form = screen.getByRole("form", { name: "Log Expense" });
+      expect(within(form).getByPlaceholderText("e.g. Starbucks, Laundry...")).toHaveValue("");
+      expect(within(form).getByRole("spinbutton")).toHaveValue(null);
+      expect(within(form).getByRole("option", { name: "Food & Dining" })).toHaveProperty("selected", true);
+      expect(within(form).getByRole("option", { name: "Maya" })).toHaveProperty("selected", true);
+      expect(form.querySelector('input[type="date"]')).not.toHaveValue("2020-01-01");
+      expect(save).not.toHaveBeenCalled();
+    } finally { hook.mockRestore(); }
+  });
+
+  it("discards a closed manual draft before opening Quick Expense again", () => {
+    const save = vi.fn();
+    render(<ExpensesTab globalData={createTestData()} setGlobalData={save} showToast={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /^Manual/ }));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Starbucks, Laundry..."), { target: { value: "Unfinished draft" } });
+    fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "25" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    try {
+      act(() => {
+        window.history.replaceState(null, "", "/#quick-expense");
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+      });
+      expect(screen.getByPlaceholderText("e.g. Starbucks, Laundry...")).toHaveValue("");
+      expect(screen.getByRole("spinbutton")).toHaveValue(null);
+      expect(save).not.toHaveBeenCalled();
+    } finally { window.history.replaceState(null, "", "/"); }
+  });
+
+  it("keeps the current draft when returning from receipt-text entry", () => {
+    render(<ExpensesTab globalData={createTestData()} setGlobalData={vi.fn()} showToast={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /^Manual/ }));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Starbucks, Laundry..."), { target: { value: "Current draft" } });
+    fireEvent.click(screen.getByRole("button", { name: "Paste receipt text" }));
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByPlaceholderText("e.g. Starbucks, Laundry...")).toHaveValue("Current draft");
   });
 });

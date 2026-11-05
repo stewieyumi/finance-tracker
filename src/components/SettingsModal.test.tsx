@@ -852,3 +852,42 @@ it("opens the per-user Calendar connection from settings without saving financia
   expect(onOpenCalendar).toHaveBeenCalledOnce();
   expect(setGlobalData).not.toHaveBeenCalled();
 });
+
+
+describe("Quick Expense setup", () => {
+  afterEach(() => { vi.unstubAllGlobals(); window.history.replaceState(null, "", "/"); });
+
+  it("is searchable in General and opens the shortcut without saving settings", () => {
+    const { setGlobalData, onClose } = renderSettingsModal(createMockData(), { initialTab: "general" });
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search settings" }), { target: { value: "quick expense" } });
+    fireEvent.click(screen.getByRole("button", { name: "General" }));
+    fireEvent.click(screen.getByText("Quick Expense", { exact: true }));
+    const link = screen.getByRole("link", { name: "Open Quick Expense" });
+    expect(link).toHaveAttribute("href", "#quick-expense");
+    expect(screen.getByText(/Settings → Accessibility → Touch → Back Tap/)).toBeInTheDocument();
+    link.addEventListener("click", event => event.preventDefault(), { once: true });
+    fireEvent.click(link);
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(setGlobalData).not.toHaveBeenCalled();
+  });
+
+  it("copies only the current app origin and shortcut, without query parameters", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    window.history.replaceState(null, "", "/?example=private#other");
+    renderSettingsModal(createMockData(), { initialTab: "general" });
+    fireEvent.click(screen.getByText("Quick Expense", { exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/#quick-expense`);
+    expect(await screen.findByText("Link copied.")).toBeVisible();
+  });
+
+  it("keeps a selectable link if clipboard access fails", async () => {
+    vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) } });
+    renderSettingsModal(createMockData(), { initialTab: "general" });
+    fireEvent.click(screen.getByText("Quick Expense", { exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy link" }));
+    expect(await screen.findByText("Select and copy the link below.")).toBeVisible();
+    expect(screen.getByLabelText("Quick Expense link")).toHaveValue(`${window.location.origin}/#quick-expense`);
+  });
+});

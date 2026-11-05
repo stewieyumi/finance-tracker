@@ -81,6 +81,26 @@ describe("useExpenseActions", () => {
     expect(resetForm).toHaveBeenCalledTimes(1);
   });
 
+  it("records the actual save time once while preserving a backdated date and legacy records", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-11-06T02:03:04.000Z"));
+      const initialData = createTestData();
+      initialData.library.expenses = [{ id: "legacy", merchant: "Old receipt", amount: 20, category: "Other", wallet: "maya", date: "2026-01-01" }];
+      const setGlobalData = vi.fn();
+      const { result } = renderHook(() => useExpenseActions({ globalData: initialData, setGlobalData, showToast: vi.fn() }));
+      act(() => result.current.handleSaveExpense({ merchant: "Backdated", amount: "100", category: "Other", wallet: "maya", date: "2026-10-01" }, vi.fn(), vi.fn()));
+      vi.advanceTimersByTime(5000);
+      const next = setGlobalData.mock.calls[0][0](initialData);
+      expect(next.library.expenses[0]).toMatchObject({ date: "2026-10-01", loggedAt: "2026-11-06T02:03:04.000Z" });
+      expect(next.library.expenses[1]).toEqual(initialData.library.expenses[0]);
+      expect(next.library.expenses[1]).not.toHaveProperty("loggedAt");
+      expect(next.wallets.maya).toBe(4900);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("rejects an expense when the wallet has insufficient balance", () => {
     const initialData = createTestData();
     initialData.wallets.maya = 500;

@@ -54,6 +54,7 @@ export function useExpenseActions({
         return;
       }
 
+      const loggedAt = new Date().toISOString();
       setGlobalData((prev) => {
         const newExpense: Expense = {
           id: generateId("exp"),
@@ -63,6 +64,7 @@ export function useExpenseActions({
           category: form.category,
           wallet: walletId,
           date: form.date,
+          loggedAt,
         };
 
         const nextWallets = { ...prev.wallets };

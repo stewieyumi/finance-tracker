@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { TransactionHistoryItem } from "../types/finance";
 import { formatMonthYear } from "../utils/dateHelpers";
+import { compareTransactionsNewestFirst, formatTransactionDateTime, transactionDay } from "../utils/transactionDates";
 import { Modal } from "./ui/Modal";
 
 export interface TransactionHistoryModalProps {
@@ -17,7 +18,7 @@ export interface TransactionHistoryModalProps {
   onClose: () => void;
   transactions: TransactionHistoryItem[];
   walletLabels?: Record<string, string>;
-  formatDateTime?: (dateStr: string) => string;
+  formatDateTime?: (dateStr: string, loggedAt?: string | number) => string;
   onOpenManualLedger?: () => void;
 }
 
@@ -28,7 +29,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
   onClose,
   transactions,
   walletLabels,
-  formatDateTime = (d: string) => d,
+  formatDateTime = formatTransactionDateTime,
   onOpenManualLedger
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<string>("ALL");
@@ -36,17 +37,35 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [displayLimit, setDisplayLimit] = useState<number>(PAGE_SIZE);
 
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const invalidRange = Boolean(fromDate && toDate && fromDate > toDate);
+
+  const setDateRange = (from: string, to: string) => {
+    setSelectedMonth("ALL");
+    setFromDate(from);
+    setToDate(to);
+  };
+
+  const applyDateShortcut = (period: "today" | "month") => {
+    const today = transactionDay(new Date().toISOString());
+    const now = new Date();
+    const monthEnd = transactionDay(new Date(now.getFullYear(), now.getMonth() + 1, 0, 12).toISOString());
+    setDateRange(period === "today" ? today : `${today.slice(0, 7)}-01`, period === "today" ? today : monthEnd);
+  };
+
   // Reset pagination limit when filters change
   useEffect(() => {
     setDisplayLimit(PAGE_SIZE);
-  }, [selectedMonth, selectedType, searchQuery]);
+  }, [selectedMonth, selectedType, searchQuery, fromDate, toDate]);
 
   // Derive unique months (YYYY-MM) present in transactions, sorted newest first
   const availableMonths = useMemo(() => {
     const monthSet = new Set<string>();
     transactions.forEach(tx => {
-      if (tx.date && tx.date.length >= 7) {
-        const yyyyMm = tx.date.slice(0, 7);
+      const day = transactionDay(tx.date);
+      if (day) {
+        const yyyyMm = day.slice(0, 7);
         if (/^\d{4}-\d{2}$/.test(yyyyMm)) {
           monthSet.add(yyyyMm);
         }
@@ -68,10 +87,13 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
 
   // Filter transactions
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(tx => {
+    if (invalidRange) return [];
+    return [...transactions].sort(compareTransactionsNewestFirst).filter(tx => {
+      const day = transactionDay(tx.date);
+      if ((fromDate || toDate) && (!day || (fromDate && day < fromDate) || (toDate && day > toDate))) return false;
       // Month filter
       if (selectedMonth !== "ALL") {
-        if (!tx.date || !tx.date.startsWith(selectedMonth)) {
+        if (!day || !day.startsWith(selectedMonth)) {
           return false;
         }
       }
@@ -97,7 +119,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
 
       return true;
     });
-  }, [transactions, selectedMonth, selectedType, searchQuery, walletLabels]);
+  }, [transactions, selectedMonth, selectedType, searchQuery, walletLabels, fromDate, toDate, invalidRange]);
 
   // Counts for filter pills
   const typeCounts = useMemo(() => {
@@ -206,7 +228,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
             <div className="w-full sm:w-48 shrink-0">
               <select
                 value={selectedMonth}
-                onChange={e => setSelectedMonth(e.target.value)}
+                onChange={e => { setSelectedMonth(e.target.value); setFromDate(""); setToDate(""); }}
                 aria-label="Filter by month"
                 className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-blue-500 cursor-pointer"
               >
@@ -219,6 +241,30 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
               </select>
             </div>
           </div>
+
+          <details className="rounded-xl border border-subtle bg-surface-input text-xs">
+            <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 font-medium text-primary">
+              <Calendar size={14} aria-hidden="true" /> Date range
+              {(fromDate || toDate) && <span className="ml-auto text-muted">Custom dates</span>}
+            </summary>
+            <div className="space-y-3 border-t border-subtle p-3">
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => applyDateShortcut("today")} className="rounded-lg bg-fill px-3 py-2 text-primary hover:bg-fill-strong">Today</button>
+                <button type="button" onClick={() => applyDateShortcut("month")} className="rounded-lg bg-fill px-3 py-2 text-primary hover:bg-fill-strong">This Month</button>
+                <button type="button" onClick={() => setDateRange("", "")} className="ml-auto rounded-lg px-3 py-2 text-muted hover:bg-fill">All dates</button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="min-w-0 space-y-1 text-muted">From
+                  <input type="date" aria-label="From date" value={fromDate} onChange={e => setDateRange(e.target.value, toDate)} aria-invalid={invalidRange} aria-describedby={invalidRange ? "history-date-error" : undefined} className="block min-w-0 w-full rounded-lg border border-subtle bg-surface-input px-2 py-2 text-strong focus-visible:outline-primary" />
+                </label>
+                <label className="min-w-0 space-y-1 text-muted">To
+                  <input type="date" aria-label="To date" value={toDate} onChange={e => setDateRange(fromDate, e.target.value)} aria-invalid={invalidRange} aria-describedby={invalidRange ? "history-date-error" : undefined} className="block min-w-0 w-full rounded-lg border border-subtle bg-surface-input px-2 py-2 text-strong focus-visible:outline-primary" />
+                </label>
+              </div>
+              {invalidRange && <p id="history-date-error" role="alert" className="text-rose-500">Choose a To date on or after the From date.</p>}
+              <p className="text-[11px] text-muted">Filters use the transaction date. Times are shown in your local time.</p>
+            </div>
+          </details>
 
           {/* Type Segmented Buttons */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none text-[11px]">
@@ -298,8 +344,9 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
           )}
         </div>
 
+        <p className="px-4 pt-2 text-[10px] text-muted sm:px-5">Newest first</p>
         {/* Scrollable Transaction List */}
-        <div className="overflow-y-auto p-4 sm:p-5 space-y-2 flex-1 min-h-[240px]">
+        <div className="overflow-y-auto p-4 sm:p-5 space-y-2 flex-1 min-h-[100px]">
           {filteredTransactions.length === 0 ? (
             <div className="py-12 text-center text-faint text-xs italic flex flex-col items-center justify-center gap-2">
               <History size={24} className="opacity-30" />
@@ -308,13 +355,15 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
                   ? "No transactions recorded yet."
                   : "No transactions match your current filters."}
               </span>
-              {(selectedMonth !== "ALL" || selectedType !== "all" || searchQuery) && (
+              {(selectedMonth !== "ALL" || selectedType !== "all" || searchQuery || fromDate || toDate) && (
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedMonth("ALL");
                     setSelectedType("all");
                     setSearchQuery("");
+                    setFromDate("");
+                    setToDate("");
                   }}
                   className="mt-2 text-blue-400 hover:underline text-xs not-italic font-semibold"
                 >
@@ -327,7 +376,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
               {visibleTransactions.map(tx => (
                 <div
                   key={tx.id}
-                  className="flex items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-inverse/[0.08] transition shadow-sm"
+                  className="flex flex-wrap items-center justify-between p-3.5 rounded-xl bg-surface border border-inverse/[0.04] group hover:border-inverse/[0.08] transition shadow-sm"
                 >
                   <div className="flex items-center gap-3.5 overflow-hidden flex-1">
                     <div
@@ -372,10 +421,10 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
                         minimumFractionDigits: 2
                       })}
                     </span>
-                    <span className="text-[10px] text-faint font-medium mt-1 whitespace-nowrap">
-                      {formatDateTime(tx.date)}
-                    </span>
                   </div>
+                  <span className="basis-full text-[10px] text-faint font-medium mt-1 text-right">
+                    {formatDateTime(tx.date, tx.loggedAt)}
+                  </span>
                 </div>
               ))}
 

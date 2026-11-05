@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Edit2, ArrowRight } from 'lucide-react';
 import { UnifiedFinanceData, ManualTransaction } from '../types/finance';
+import { compareTransactionsNewestFirst, formatTransactionDateTime } from "../utils/transactionDates";
 import { generateId } from '../utils/idHelpers';
 import { Modal } from './ui/Modal';
 
@@ -63,7 +64,7 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
 
   if (!isOpen) return null;
 
-  const transactions = globalData.library?.manualTransactions || [];
+  const transactions = [...(globalData.library?.manualTransactions || [])].sort(compareTransactionsNewestFirst);
   const customWallets = globalData.settings?.customWallets || [];
   const archivedWallets = globalData.settings?.archivedWallets ?? [];
   const walletLabel = (id?: string) => customWallets.find(wallet => wallet.id === id)?.label ??
@@ -216,7 +217,7 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="text-xs font-bold text-primary">{tx.title}</div>
-                        <div className="text-[10px] text-faint mt-0.5">{tx.date} • {tx.type.toUpperCase()}{tx.postingMode === 'history-only' ? ' • HISTORY ONLY' : ''}</div>
+                        <div className="text-[10px] text-faint mt-0.5">{formatTransactionDateTime(tx.date, tx.createdAt)} • {tx.type.toUpperCase()}{tx.postingMode === 'history-only' ? ' • HISTORY ONLY' : ''}</div>
                       </div>
                       <div className={`text-xs font-mono font-bold ${tx.type === 'income' ? 'text-emerald-400' : tx.type === 'expense' ? 'text-strong' : 'text-blue-400'}`}>
                         {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}₱{tx.amount.toLocaleString()}
