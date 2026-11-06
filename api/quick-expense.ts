@@ -13,7 +13,7 @@ const db = () => store ??= new Redis({ url: process.env.KV_REST_API_URL!, token:
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 const decode = (value: unknown) => typeof value === "string" ? JSON.parse(value) : value;
 const object = (value: unknown): value is Record<string, any> => !!value && typeof value === "object" && !Array.isArray(value);
-interface Connection { id: string; sub: string; walletId: string; walletLabel: string; expiresAt: number; }
+interface Connection { id: string; sub: string; walletId: string; walletLabel: string; walletIds?: string[]; expiresAt: number; }
 
 function finance(raw: unknown) {
   const stored = decode(raw);
@@ -34,7 +34,8 @@ function label(data: Record<string, any>, id: string) {
   return String(data.settings.customWallets?.find((wallet: { id: string }) => wallet.id === id)?.label ?? data.settings.walletLabels?.[id] ?? id).slice(0, 120);
 }
 function validExpense(body: Record<string, any>) {
-  if (Object.keys(body).some(key => !["action", "requestId", "amount", "merchant", "category", "date"].includes(key))) return false;
+  if (Object.keys(body).some(key => !["action", "requestId", "amount", "merchant", "category", "date", "walletId"].includes(key))) return false;
+  if (body.walletId !== undefined && (typeof body.walletId !== "string" || !body.walletId || body.walletId.length > 128)) return false;
   if (typeof body.requestId !== "string" || !/^(?:[a-f0-9]{64}|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/i.test(body.requestId) ||
       typeof body.merchant !== "string" || !body.merchant.trim() || body.merchant.trim().length > 120 ||
       !categories.includes(body.category) || typeof body.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(body.date)) return false;
@@ -93,18 +94,20 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
         if (typeof body.walletId !== "string" || !usableWallet(record.data, body.walletId)) return fail(400, "Choose an active, synced wallet.");
         const token = "ftqe_" + randomBytes(32).toString("hex");
         const digest = hash(token);
-        const connection: Connection = { id: randomUUID(), sub: profile.sub, walletId: body.walletId, walletLabel: label(record.data, body.walletId), expiresAt: Date.now() + CONNECTION_TTL * 1000 };
+        const connection: Connection = { id: randomUUID(), sub: profile.sub, walletId: body.walletId, walletLabel: label(record.data, body.walletId), expiresAt: Date.now() + CONNECTION_TTL * 1000,
+          ...(body.walletSelection === "each-run" ? { walletIds: Object.keys(record.data.wallets).filter(id => usableWallet(record.data, id)) } : {}) };
         await redis.eval(REPLACE_CONNECTION, [ownerKey, PREFIX + digest], [PREFIX, digest, JSON.stringify(connection), CONNECTION_TTL]);
-        return res.status(200).json({ connected: true, token, walletId: connection.walletId, walletLabel: connection.walletLabel, expiresAt: connection.expiresAt });
+        return res.status(200).json({ connected: true, token, walletId: connection.walletId, walletLabel: connection.walletLabel, walletSelection: connection.walletIds ? "each-run" : "fixed", expiresAt: connection.expiresAt });
       }
       const digest = await redis.get<string>(ownerKey);
       const connection = digest ? decode(await redis.get(PREFIX + digest)) as Connection | null : null;
       return res.status(200).json(connection && connection.expiresAt > Date.now()
-        ? { connected: true, walletId: connection.walletId, walletLabel: connection.walletLabel, expiresAt: connection.expiresAt }
+        ? { connected: true, walletId: connection.walletId, walletLabel: connection.walletLabel, walletSelection: connection.walletIds ? "each-run" : "fixed", expiresAt: connection.expiresAt }
         : { connected: false });
     }
 
-    if (body.action !== "expense" || !validExpense(body)) return fail(400, "Check the amount, merchant, category, date, and request ID.");
+    if (body.action !== "wallets" && (body.action !== "expense" || !validExpense(body))) return fail(400, "Check the amount, merchant, category, date, and request ID.");
+    if (body.action === "wallets" && Object.keys(body).some(key => key !== "action")) return fail(400, "Invalid wallet request.");
     const authorization = req.headers.authorization;
     const token = typeof authorization === "string" ? authorization.replace(/^Bearer /i, "") : "";
     if (!/^ftqe_[a-f0-9]{64}$/.test(token)) return fail(401, "Connect this shortcut in Finance Tracker Settings.");
@@ -113,9 +116,22 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
     const rawConnection = await redis.get<string>(connectionKey);
     const connection = decode(rawConnection) as Connection | null;
     if (!connection || connection.expiresAt <= Date.now() || await redis.get(OWNER + connection.sub) !== digest) return fail(401, "This shortcut connection expired or was disconnected.");
+    const allowedWallets = connection.walletIds ?? [connection.walletId];
+    if (body.action === "wallets") {
+      const record = finance(await redis.get(`finance_data_g_${connection.sub}`));
+      if (!record) return fail(409, "Sync your app before choosing a wallet.");
+      const ids = [connection.walletId, ...allowedWallets.filter(id => id !== connection.walletId)].filter(id => allowedWallets.includes(id) && usableWallet(record.data, id));
+      if (!ids.length) return fail(409, "No connected wallets are available. Replace the connection in Settings.");
+      const walletChoices = Object.fromEntries(ids.map(id => [
+        `${label(record.data, id)} (${id})${id === connection.walletId ? " · Preferred" : ""}`, id,
+      ]));
+      return res.status(200).json({ success: true, walletChoices });
+    }
+    const selectedWallet = body.walletId ?? (connection.walletIds ? undefined : connection.walletId);
+    if (typeof selectedWallet !== "string" || !allowedWallets.includes(selectedWallet)) return fail(400, "Choose a wallet authorized by this connection. Replace the connection in Settings to include new wallets.");
     const requestId = body.requestId.toLowerCase();
-    const expense = { id: `shortcut_${connection.id}_${requestId}`, merchant: body.merchant.trim(), amount: Number(body.amount), deductedAmount: Number(body.amount), category: body.category, wallet: connection.walletId, date: body.date, loggedAt: new Date().toISOString() };
-    const fingerprint = hash(JSON.stringify({ merchant: expense.merchant, amount: expense.amount, category: expense.category, date: expense.date }));
+    const expense = { id: `shortcut_${connection.id}_${requestId}`, merchant: body.merchant.trim(), amount: Number(body.amount), deductedAmount: Number(body.amount), category: body.category, wallet: selectedWallet, date: body.date, loggedAt: new Date().toISOString() };
+    const fingerprint = hash(JSON.stringify({ merchant: expense.merchant, amount: expense.amount, category: expense.category, date: expense.date, ...(connection.walletIds ? { wallet: expense.wallet } : {}) }));
     const receiptKey = `ft_shortcut_receipt_v1:${connection.id}:${requestId}`;
     const reply = (receipt: string) => {
       const value = decode(receipt);

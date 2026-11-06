@@ -7,6 +7,7 @@ vi.mock("../utils/financeAuth", () => ({ getFinanceAuth: auth }));
 const data = { ...INITIAL_UNIFIED_DATA, wallets: { maya: 1000, cash: 500 }, settings: { ...INITIAL_UNIFIED_DATA.settings, defaultWallet: "maya", customWallets: [{ id: "maya", label: "Maya" }, { id: "cash", label: "Cash" }] } };
 const active = { connected: true, walletId: "maya", walletLabel: "Maya", expiresAt: Date.now() + 86400000 };
 beforeEach(() => {
+  vi.spyOn(window, "confirm").mockReturnValue(true);
   auth.mockReturnValue({ key: "session:a", sub: "a", headers: { "X-Finance-Session": "binding-a" } });
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ connected: false }))));
 });
@@ -20,16 +21,16 @@ it("offers a ready-made preset and loads status only when automatic saving is op
   expect(await screen.findByRole("button", { name: "Create connection" })).toBeEnabled();
   await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/quick-expense", expect.objectContaining({ method: "GET", cache: "no-store", headers: expect.objectContaining({ "X-Finance-Shortcut": "1", "X-Finance-Session": "binding-a" }) })));
 });
-it("creates a wallet-bound connection and exposes the key only after a successful explicit request", async () => {
+it("creates a picker connection with the preferred wallet and exposes the key only after a successful explicit request", async () => {
   vi.mocked(fetch).mockResolvedValueOnce(new Response('{"connected":false}')).mockResolvedValueOnce(new Response(JSON.stringify({ ...active, token: "fixture-private-key" })));
   render(<QuickExpenseShortcutSetup globalData={data} />);
   fireEvent.click(screen.getByRole("button", { name: "Automatic saving" }));
   await waitFor(() => expect(screen.getByRole("button", { name: "Create connection" })).toBeEnabled());
-  fireEvent.change(screen.getByLabelText("Shortcut payment wallet"), { target: { value: "cash" } });
+  fireEvent.change(screen.getByLabelText("Preferred shortcut wallet"), { target: { value: "cash" } });
   fireEvent.click(screen.getByRole("button", { name: "Create connection" }));
   expect(await screen.findByLabelText("Private shortcut key")).toHaveValue("fixture-private-key");
   expect(screen.getByLabelText("Private shortcut key")).toHaveAttribute("type", "password");
-  expect(vi.mocked(fetch).mock.calls[1][1]?.body).toBe(JSON.stringify({ action: "connect", walletId: "cash" }));
+  expect(vi.mocked(fetch).mock.calls[1][1]?.body).toBe(JSON.stringify({ action: "connect", walletId: "cash", walletSelection: "each-run" }));
 });
 it("does not create a key when sign-in is absent, and displays recoverable server failures", async () => {
   auth.mockReturnValue({ key: "", sub: null, headers: {} });
@@ -63,4 +64,15 @@ it("keeps failure messages visible and never claims a failed connection succeede
   fireEvent.click(screen.getByRole("button", { name: "Automatic saving" }));
   expect(await screen.findByRole("status")).toHaveTextContent("Sync your app first");
   expect(screen.queryByLabelText("Private shortcut key")).not.toBeInTheDocument();
+});
+
+it("keeps a legacy connection restricted and requires confirmation before enabling wallet choices", async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify(active)));
+  vi.mocked(window.confirm).mockReturnValue(false);
+  render(<QuickExpenseShortcutSetup globalData={data} />);
+  fireEvent.click(screen.getByRole("button", { name: "Automatic saving" }));
+  expect(await screen.findByText(/Fixed wallet: Maya/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Replace connection" }));
+  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("currently active, synced wallets"));
+  expect(fetch).toHaveBeenCalledTimes(1);
 });

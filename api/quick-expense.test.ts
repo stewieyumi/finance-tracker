@@ -172,3 +172,55 @@ describe("expense-only Apple Shortcut connection", () => {
     get.mockRejectedValueOnce(new Error("private database credential")); const r = await save(token); expect(r.status).toBe(503); expect(JSON.stringify(r.body)).not.toContain("credential");
   });
 });
+
+
+describe("per-run wallet picker", () => {
+  async function picker() {
+    const result = await manage("connect", { walletId: "maya", walletSelection: "each-run" });
+    expect(result.body.walletSelection).toBe("each-run");
+    return result.body.token as string;
+  }
+  it("lists only authorized active wallet labels and IDs without balances or history", async () => {
+    const token = await picker();
+    const current = cloud(); current.data.wallets.newWallet = 800;
+    records.set("finance_data_g_account-a", JSON.stringify(current));
+    records.set("finance_data_g_account-b", JSON.stringify({ data: { ...base(), wallets: { privateWallet: 999 } }, revision: 1 }));
+    const choices = await save(token, { action: "wallets" });
+    expect(choices.body).toEqual({ success: true, walletChoices: { "Maya (maya) · Preferred": "maya", "cash (cash)": "cash" } });
+    expect(cloud().revision).toBe(4);
+    expect((await save(token, { action: "wallets", sub: "account-b" })).status).toBe(400);
+  });
+  it("debits the explicitly chosen wallet, records its provenance, and rejects a changed-wallet replay", async () => {
+    const token = await picker(); const selected = { ...payload, walletId: "cash" };
+    const result = await save(token, selected); expect(result.status).toBe(200);
+    expect(cloud().data.wallets).toEqual({ maya: 1000, cash: 399.75 });
+    expect(cloud().data.library.expenses[0]).toMatchObject({ wallet: "cash", deductedAmount: 100.25 });
+    expect((await save(token, selected)).body).toEqual(result.body);
+    expect((await save(token, { ...selected, walletId: "maya" })).status).toBe(409);
+    expect(cloud().revision).toBe(5);
+  });
+  it("requires a choice and refuses unauthorized, newly created, deleted, or archived wallets", async () => {
+    const token = await picker();
+    expect((await save(token)).status).toBe(400);
+    const current = cloud(); current.data.wallets.newWallet = 800;
+    current.data.settings.archivedWallets = [{ id: "cash" }];
+    records.set("finance_data_g_account-a", JSON.stringify(current));
+    expect((await save(token, { ...payload, walletId: "newWallet" })).status).toBe(400);
+    expect((await save(token, { ...payload, walletId: "cash" })).status).toBe(409);
+    const choices = await save(token, { action: "wallets" });
+    expect(Object.values(choices.body.walletChoices)).toEqual(["maya"]);
+    delete current.data.wallets.maya; records.set("finance_data_g_account-a", JSON.stringify(current));
+    expect((await save(token, { ...payload, walletId: "maya" })).status).toBe(409);
+    expect((await save(token, { action: "wallets" })).status).toBe(409);
+    expect(cloud().revision).toBe(4);
+  });
+  it("preserves an old token's single-wallet scope and stops wallet discovery after revocation", async () => {
+    const token = await connect();
+    const choices = await save(token, { action: "wallets" });
+    expect(Object.values(choices.body.walletChoices)).toEqual(["maya"]);
+    expect((await save(token, { ...payload, walletId: "cash" })).status).toBe(400);
+    expect((await save(token)).status).toBe(200);
+    await manage("disconnect");
+    expect((await save(token, { action: "wallets" })).status).toBe(401);
+  });
+});

@@ -4,7 +4,7 @@ import { UnifiedFinanceData } from "../types/finance";
 import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
 import { getFinanceAuth } from "../utils/financeAuth";
 
-interface Connection { connected: boolean; walletId?: string; walletLabel?: string; expiresAt?: number; }
+interface Connection { connected: boolean; walletId?: string; walletLabel?: string; walletSelection?: "each-run" | "fixed"; expiresAt?: number; }
 export function QuickExpenseShortcutSetup({ globalData }: { globalData: UnifiedFinanceData }) {
   const [open, setOpen] = useState(false);
   const [connection, setConnection] = useState<Connection>();
@@ -24,7 +24,7 @@ export function QuickExpenseShortcutSetup({ globalData }: { globalData: UnifiedF
     try {
       const res = await fetch("/api/quick-expense", {
         method: action ? "POST" : "GET", cache: "no-store", signal: AbortSignal.timeout(15000), headers: { ...auth.headers, "Content-Type": "application/json", "X-Finance-Shortcut": "1" },
-        ...(action ? { body: JSON.stringify({ action, ...(action === "connect" ? { walletId } : {}) }) } : {}),
+        ...(action ? { body: JSON.stringify({ action, ...(action === "connect" ? { walletId, walletSelection: "each-run" } : {}) }) } : {}),
       });
       const result = await res.json();
       if (!mounted.current || getFinanceAuth().key !== auth.key) return;
@@ -43,13 +43,13 @@ export function QuickExpenseShortcutSetup({ globalData }: { globalData: UnifiedF
     <p>Download the preset, then open it and tap Add Shortcut. Connect automatic saving below and paste your private key when the preset asks for it.</p>
     <button type="button" aria-expanded={open} onClick={() => { setOpen(value => !value); if (!open) void request(); }} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 font-semibold text-primary hover:bg-fill-strong"><Link2 size={14} /> Automatic saving</button>
     {open && <div className="space-y-3 rounded-xl border border-subtle p-3">
-      <p>Save from Apple’s amount, category, and merchant prompts without opening the web form. This connection can add expenses and deduct from its selected wallet. It expires after 30 days; reconnect to renew it.</p>
-      {connection?.connected && <p className="font-medium text-primary">Connected to {connection.walletLabel}. Expires {new Date(connection.expiresAt!).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.</p>}
-      <label className="block space-y-1 font-medium text-primary">Shortcut payment wallet
-        <select aria-label="Shortcut payment wallet" value={walletId} onChange={e => setWalletId(e.target.value)} disabled={busy} className="block w-full rounded-lg border border-subtle bg-surface-input px-3 py-2 text-primary">{wallets.map(id => <option key={id} value={id}>{walletLabel(id)}</option>)}</select>
+      <p>Save from Apple’s prompts without opening the web form. Choose a payment wallet on every run and check it before confirming. This connection can deduct from your currently active, synced wallets. It expires after 30 days; replace it to renew or include newly added wallets.</p>
+      {connection?.connected && <p className="font-medium text-primary">{connection.walletSelection === "each-run" ? "Wallet picker connected" : `Fixed wallet: ${connection.walletLabel}. Replace the connection to enable wallet choices`}. Expires {new Date(connection.expiresAt!).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.</p>}
+      <label className="block space-y-1 font-medium text-primary">Preferred shortcut wallet
+        <select aria-label="Preferred shortcut wallet" value={walletId} onChange={e => setWalletId(e.target.value)} disabled={busy} className="block w-full rounded-lg border border-subtle bg-surface-input px-3 py-2 text-primary">{wallets.map(id => <option key={id} value={id}>{walletLabel(id)}</option>)}</select>
       </label>
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={busy || !wallets.includes(walletId)} onClick={() => { if (!connection?.connected || window.confirm("Replace the current shortcut connection? The old key will stop working.")) void request("connect"); }} className="min-h-11 rounded-xl bg-fill px-3 font-semibold text-primary disabled:opacity-50">{busy ? "Please wait…" : connection?.connected ? "Replace connection" : "Create connection"}</button>
+        <button type="button" disabled={busy || !wallets.includes(walletId)} onClick={() => { if (window.confirm(`${connection?.connected ? "Replace the current connection? The old key will stop working. " : ""}Allow this shortcut to choose and deduct from your currently active, synced wallets?`)) void request("connect"); }} className="min-h-11 rounded-xl bg-fill px-3 font-semibold text-primary disabled:opacity-50">{busy ? "Please wait…" : connection?.connected ? "Replace connection" : "Create connection"}</button>
         {connection?.connected && <button type="button" disabled={busy} onClick={() => { if (window.confirm("Disconnect automatic shortcut saving?")) void request("disconnect"); }} className="min-h-11 rounded-xl px-3 font-semibold text-rose-500 disabled:opacity-50">Disconnect</button>}
       </div>
       {token && <div className="space-y-2">
