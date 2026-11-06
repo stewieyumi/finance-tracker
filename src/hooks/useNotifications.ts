@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { AppNotification, UnifiedFinanceData } from "../types/finance";
 import { getMonthKey, parseMonthKey, parseDateKey, getMonthRange } from "../utils/dateHelpers";
+import { transactionDay, transactionTimestamp } from "../utils/transactionDates";
 
 export function calculateDaysUntil(
   dueDay: string | number,
@@ -195,49 +196,46 @@ export function deriveNotifications(
     derived.push(...activePendingReceivables);
   }
 
-  // 3. Log Reminder (after 3 full days without recent financial activity)
-  let latestDateStr: string | null = null;
-  const candidateDates: string[] = [];
+  // 3. Log Reminder: use actual recording time when available, with date-only
+  // fallback for legacy records. Future or invalid dates cannot hide a reminder.
+  const todayStr = transactionDay(currentDate.toISOString());
+  let latestDay = "";
+  const recordActivity = (date?: string, loggedAt?: string | number) => {
+    const timestamp = transactionTimestamp(loggedAt);
+    const loggedDay = timestamp === undefined ? "" : transactionDay(new Date(timestamp).toISOString());
+    const day = loggedDay && loggedDay <= todayStr ? loggedDay : transactionDay(date || "");
+    if (day && day <= todayStr && day > latestDay) latestDay = day;
+  };
 
-  (globalData.library?.expenses || []).forEach(e => {
-    if (e.date) candidateDates.push(e.date);
-  });
-  (globalData.library?.manualTransactions || []).forEach(mt => {
-    if (mt.date) candidateDates.push(mt.date);
-  });
+  (globalData.library?.expenses || []).forEach(e => recordActivity(e.date, e.loggedAt));
+  (globalData.library?.manualTransactions || []).forEach(mt => recordActivity(mt.date, mt.createdAt));
   Object.values(globalData.logs || {}).forEach(log => {
-    Object.values(log.paymentDates || {}).forEach(d => {
-      if (d) candidateDates.push(d);
-    });
+    Object.values(log.paymentDates || {}).forEach(date => recordActivity(date));
+    Object.values(log.billSettlements || {}).forEach(settlements => settlements.forEach(settlement => {
+      recordActivity(settlement.paidAt);
+      recordActivity(settlement.reversedAt);
+    }));
+    Object.values(log.receivableSettlements || {}).forEach(settlements => settlements.forEach(settlement => {
+      recordActivity(settlement.receivedAt);
+      recordActivity(settlement.reversedAt);
+    }));
   });
   (globalData.paydaySplitExecutions || []).forEach(ex => {
-    if (typeof ex === "object" && ex.date) candidateDates.push(ex.date);
+    if (typeof ex === "object" && ex) recordActivity(ex.date, ex.timestamp);
   });
 
-  for (const d of candidateDates) {
-    if (!latestDateStr || d > latestDateStr) {
-      latestDateStr = d;
-    }
-  }
-
-  if (latestDateStr) {
-    const latestDate = parseDateKey(latestDateStr);
-    if (!isNaN(latestDate.getTime())) {
-      const latestMidnight = new Date(latestDate.getFullYear(), latestDate.getMonth(), latestDate.getDate());
-      const diffDays = Math.floor((todayMidnight.getTime() - latestMidnight.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDays >= 3) {
-        const todayStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`;
-        const reminderId = `log_reminder_${todayStr}`;
-        if (!dismissed[reminderId]) {
-          derived.push({
-            id: reminderId,
-            type: "log_reminder",
-            title: "Reminder to Log Expenses",
-            message: `No financial activity recorded in ${diffDays} days. Remember to log your daily expenses.`,
-            actionRoute: "expenses",
-          });
-        }
-      }
+  if (latestDay) {
+    // Compare calendar dates, so a 23-hour daylight-saving day still counts as a day.
+    const diffDays = (Date.parse(`${todayStr}T00:00:00Z`) - Date.parse(`${latestDay}T00:00:00Z`)) / 86400000;
+    const reminderId = `log_reminder_${todayStr}`;
+    if (diffDays >= 3 && !dismissed[reminderId]) {
+      derived.push({
+        id: reminderId,
+        type: "log_reminder",
+        title: "Reminder to Log Expenses",
+        message: `No financial activity recorded in ${diffDays} days. Remember to log your daily expenses.`,
+        actionRoute: "expenses",
+      });
     }
   }
 
