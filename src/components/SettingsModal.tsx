@@ -1,3 +1,4 @@
+import { QuickExpenseShortcutSetup } from "./QuickExpenseShortcutSetup";
 import React, { useState, useEffect, useRef } from "react";
 import { X, Settings, Briefcase, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2, CalendarPlus, Search, Wallet, ChevronRight, Copy, Zap } from "lucide-react";
 import { Deduction, DeductionType, UnifiedFinanceData } from "../types/finance";
@@ -356,7 +357,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                   <ChevronRight size={15} aria-hidden="true" className="text-muted transition-transform group-open/quick-expense:rotate-90" />
                 </summary>
                 <div className="space-y-4 px-4 py-4 text-xs leading-relaxed text-muted">
-                  <p>Open a new expense directly from a saved link or phone shortcut. Review it before saving.</p>
+                  <QuickExpenseShortcutSetup globalData={globalData} />
+                  <p>Or open the web form directly from a saved link. Review it before saving.</p>
                   <div className="flex flex-wrap gap-2">
                     <a href={QUICK_EXPENSE_HASH} onClick={handleCancel} className="inline-flex min-h-11 items-center rounded-xl bg-fill px-3 font-semibold text-primary hover:bg-fill-strong">Open Quick Expense</a>
                     <button type="button" onClick={copyQuickExpenseLink} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 font-semibold text-primary hover:bg-fill-strong"><Copy size={14} aria-hidden="true" /> Copy link</button>
@@ -367,9 +369,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                   <div className="space-y-2">
                     <h5 className="font-semibold text-primary">iPhone Back Tap</h5>
                     <ol className="list-decimal space-y-2 pl-4">
-                      <li>In Shortcuts, create a shortcut named Quick Expense. Add a URL action with the link above, followed by Open URLs.</li>
+                      <li>Add the ready-made preset above for automatic saving. For the web form only, create a shortcut with a URL action using the link above, followed by Open URLs.</li>
                       <li>Open iPhone Settings → Accessibility → Touch → Back Tap. Choose Double Tap or Triple Tap, then select your Quick Expense shortcut.</li>
-                      <li>Run it once to check sign-in and the expense form. It may open in your browser.</li>
+                      <li>Run the preset once and check its confirmation. The web-form-only shortcut opens your browser instead.</li>
                     </ol>
                     <a className="inline-block text-primary underline underline-offset-2" href="https://support.apple.com/en-mide/guide/shortcuts/apd897693606/ios" target="_blank" rel="noopener noreferrer">Apple’s Back Tap guide</a>
                   </div>
