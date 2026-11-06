@@ -221,6 +221,12 @@ const {
   const [opsTab, setOpsTab] = useState<"bills" | "inflows" | "gigs">("bills");
   const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "sync">("general");
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startupToastTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  React.useEffect(() => () => {
+    startupToastTimersRef.current.forEach(clearTimeout);
+    startupToastTimersRef.current = [];
+    if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
+  }, []);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory>({ owner: null, undo: [], redo: [] });
   const [toastAction, setToastAction] = useState<PaymentHistoryAction | null>(null);
@@ -565,7 +571,7 @@ const { saveShootEdit } = useShootSaveActions({
     if (!isAccountHydrated) return;
     if (!globalData.settings?.hasMigratedBaseWallets) {
       syncedSetGlobalData(migrateBaseWallets);
-      setTimeout(() => showToast("✨ Migrated base wallets to fully customizable accounts"), 1000);
+      startupToastTimersRef.current.push(setTimeout(() => showToast("✨ Migrated base wallets to fully customizable accounts"), 1000));
     }
   }, [isAccountHydrated, globalData.settings?.hasMigratedBaseWallets]);
 
@@ -575,7 +581,7 @@ const { saveShootEdit } = useShootSaveActions({
     const needsMigration = globalData.library?.bills?.some(b => b && !b.wallet && typeof b.name === "string");
     if (needsMigration) {
       syncedSetGlobalData(migrateLegacyBills);
-      setTimeout(() => showToast("✨ Auto-migrated legacy bills to new wallet system"), 1000);
+      startupToastTimersRef.current.push(setTimeout(() => showToast("✨ Auto-migrated legacy bills to new wallet system"), 1000));
     }
   }, [isAccountHydrated, globalData.library?.bills]);
 

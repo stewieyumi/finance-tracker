@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import App from "./App";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { UnifiedFinanceData } from "./types/finance";
@@ -85,6 +85,28 @@ describe("App - Notifications Integration", () => {
       },
     };
     localStorage.setItem("ft_master_data_v1_user_123", JSON.stringify(testData));
+  });
+
+  it("cancels pending migration notifications when App unmounts", () => {
+    vi.useFakeTimers();
+    try {
+      const { unmount } = render(<App />);
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+      unmount();
+      expect(vi.getTimerCount()).toBe(0);
+      act(() => vi.advanceTimersByTime(2000));
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("still shows migration feedback after the migrated state rerenders, then clears its dismissal timer on unmount", () => {
+    vi.useFakeTimers();
+    try {
+      const { unmount } = render(<App />);
+      act(() => vi.advanceTimersByTime(1000));
+      expect(screen.getByText(/Auto-migrated legacy bills to new wallet system/)).toBeInTheDocument();
+      unmount();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
   });
 
   it("renders notification bell in header and opens notification modal", () => {
