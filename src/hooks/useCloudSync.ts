@@ -1699,6 +1699,12 @@ export function useCloudSync(
   );
 
   return {
+    // Check refs at click time: a just-committed edit may precede the next render.
+    canReloadSafely: () => Boolean(
+      activeSubRef.current && getGoogleSub() === activeSubRef.current &&
+      !isDirtyRef.current && !pendingRef.current && !isPushingRef.current &&
+      !isResolvingConflictRef.current && !conflictStateRef.current
+    ),
     commitDataChange,
     isSyncing,
     isOnline,

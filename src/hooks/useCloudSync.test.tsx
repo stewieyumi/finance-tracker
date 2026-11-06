@@ -79,6 +79,39 @@ describe('useCloudSync', () => {
     vi.restoreAllMocks();
   });
 
+  it("blocks reload immediately after a mutation, including storage failure, until the write is accepted", async () => {
+    const initial = { ...INITIAL_UNIFIED_DATA, updatedAt: 1000 };
+    const { result } = renderHook(() => useCloudSync(initial, vi.fn(), vi.fn()));
+    expect(result.current.canReloadSafely()).toBe(true);
+    const previousCheck = result.current.canReloadSafely;
+    mockStorage.setItem.mockImplementation(() => { throw new DOMException("Full", "QuotaExceededError"); });
+    let resolvePut!: (response: any) => void;
+    mockFetch.mockImplementationOnce(() => new Promise(resolve => { resolvePut = resolve; }));
+    act(() => {
+      result.current.commitDataChange({ ...initial, targetFund: 42000 });
+      expect(previousCheck()).toBe(false);
+    });
+    expect(result.current.canReloadSafely()).toBe(false);
+    mockStorage.setItem.mockImplementation((key: string, value: string) => { store[key] = value; });
+    await act(async () => {
+      resolvePut({ ok: true, status: 200, json: async () => ({ success: true, accepted: true, revision: 1 }) });
+    });
+    expect(result.current.canReloadSafely()).toBe(true);
+  });
+
+  it("keeps reload blocked after a rejected write and when a different account token appears", async () => {
+    const initial = { ...INITIAL_UNIFIED_DATA, updatedAt: 1000 };
+    const { result } = renderHook(() => useCloudSync(initial, vi.fn(), vi.fn()));
+    const check = result.current.canReloadSafely;
+    store.ft_google_token = 'header.eyJzdWIiOiJ1c2VyXzQ1NiJ9.sig';
+    expect(check()).toBe(false);
+    store.ft_google_token = 'header.eyJzdWIiOiJ1c2VyXzEyMyJ9.sig';
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 400 });
+    await act(async () => { result.current.commitDataChange({ ...initial, targetFund: 42000 }); });
+    expect(check()).toBe(false);
+    expect(result.current.canReloadSafely()).toBe(false);
+  });
+
   it("recovers an unaccepted edit with its original base revision after reload", async () => {
     const initial = { ...INITIAL_UNIFIED_DATA, updatedAt: 1000 };
     const setData = vi.fn();
@@ -91,6 +124,7 @@ describe('useCloudSync', () => {
     await act(async () => {
       first.result.current.commitDataChange({ ...initial, targetFund: 42000 });
     });
+    expect(first.result.current.canReloadSafely()).toBe(false);
     const key = Object.keys(store).find(key => key.startsWith("ft_sync_pending_writer:user_123:"))!;
     expect(JSON.parse(localStorage.getItem(key)!)).toMatchObject({
       version: 1, sub: "user_123", baseRevision: 10, snapshot: { targetFund: 42000 },
@@ -116,6 +150,19 @@ describe('useCloudSync', () => {
     expect(setData).toHaveBeenLastCalledWith(expect.objectContaining({ targetFund: 42000 }));
     expect(localStorage.getItem(key)).toBeNull();
     expect(localStorage.getItem("ft_sync_base_revision_user_123")).toBe("11");
+  });
+
+  it("blocks reload for a restored sync conflict and for a signed-out account", () => {
+    const initial = { ...INITIAL_UNIFIED_DATA, updatedAt: 1000 };
+    store.ft_sync_conflict_user_123 = JSON.stringify({
+      localSnapshot: initial, cloudSnapshot: { ...initial, targetFund: 50000 },
+      baseRevision: 1, cloudRevision: 2, detectedAt: 2000,
+    });
+    const { result } = renderHook(() => useCloudSync(initial, vi.fn(), vi.fn()));
+    expect(result.current.hasActiveConflict).toBe(true);
+    expect(result.current.canReloadSafely()).toBe(false);
+    delete store.ft_google_token;
+    expect(result.current.canReloadSafely()).toBe(false);
   });
 
   it("uploads a large full snapshot without the browser's keepalive limit", async () => {
