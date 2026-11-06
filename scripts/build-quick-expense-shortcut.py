@@ -15,21 +15,24 @@ def text(parts):
   else:value+=part
  return {'Value':{'string':value,'attachmentsByRange':attachments},'WFSerializationType':'WFTextTokenString'}
 def dictionary(items):
- return {'Value':{'WFDictionaryFieldValueItems':[{'WFItemType':0,'WFKey':text([k]),'WFValue':v if isinstance(v,dict) else text([v])} for k,v in items.items()]},'WFSerializationType':'WFDictionaryFieldValue'}
+ return {'Value':{'WFDictionaryFieldValueItems':[{'WFItemType':0,'WFKey':text([k]),'WFValue':v if isinstance(v,dict) and v.get('WFSerializationType')=='WFTextTokenString' else text([v])} for k,v in items.items()]},'WFSerializationType':'WFDictionaryFieldValue'}
 key=action('gettext',WFTextActionText='PASTE_YOUR_PRIVATE_CONNECTION_KEY')
 amount=action('ask',WFInputType='Number',WFAskActionPrompt='Expense amount (PHP)',WFAskActionAllowsDecimalNumbers=True,WFAskActionAllowsNegativeNumbers=False)
 items=action('list',WFItems=['Food & Dining','Transport','Utilities','Laundry & Home','Shopping','Other'])
 category=action('choosefromlist',WFInput=ref(items,'List'),WFChooseFromListActionPrompt='Expense category',WFChooseFromListActionSelectMultiple=False)
 merchant=action('ask',WFInputType='Text',WFAskActionPrompt='Merchant / purchase name')
 confirm=action('alert',WFAlertActionTitle='Save expense to Finance Tracker?',WFAlertActionMessage=text(['PHP ',ref(amount,'Ask for Input'),' · ',ref(category,'Chosen Item'),'\n',ref(merchant,'Ask for Input'),'\nUses the wallet you connected in Settings.']),WFAlertActionCancelButtonShown=True)
-request=action('generateuuid')
+random1=action('number.random',WFRandomNumberMinimum=10000000,WFRandomNumberMaximum=99999999)
+random2=action('number.random',WFRandomNumberMinimum=100000000000,WFRandomNumberMaximum=999999999999)
+seed=action('gettext',WFTextActionText=text([ref(random1,'Random Number'),'-',ref(random2,'Random Number')]))
+request=action('hash',WFInput=ref(seed,'Text'),WFHashType='SHA256')
 now=action('date',WFDateActionMode='Current Date')
 day=action('format.date',WFDate=ref(now,'Date'),WFDateFormatStyle='Custom',WFDateFormat='yyyy-MM-dd')
 url=action('url',WFURLActionURL='https://financetracker.wyndellgingoyon.com/api/quick-expense')
-result=action('downloadurl',WFInput=ref(url,'URL'),WFHTTPMethod='POST',WFHTTPBodyType='JSON',WFHTTPHeaders=dictionary({'Authorization':text(['Bearer ',ref(key,'Text')]),'Content-Type':'application/json'}),WFJSONValues=dictionary({'action':'expense','requestId':ref(request,'UUID'),'amount':ref(amount,'Ask for Input'),'category':ref(category,'Chosen Item'),'merchant':ref(merchant,'Ask for Input'),'date':ref(day,'Formatted Date')}))
+result=action('downloadurl',WFURL=text([ref(url,'URL')]),WFHTTPMethod='POST',WFHTTPBodyType='JSON',WFHTTPHeaders=dictionary({'Authorization':text(['Bearer ',ref(key,'Text')]),'Content-Type':'application/json'}),WFJSONValues=dictionary({'action':'expense','requestId':ref(request,'Hash'),'amount':ref(amount,'Ask for Input'),'category':ref(category,'Chosen Item'),'merchant':ref(merchant,'Ask for Input'),'date':ref(day,'Formatted Date')}))
 message=action('getvalueforkey',WFInput=ref(result,'Contents of URL'),WFDictionaryKey='message',WFGetDictionaryValueType='Value')
-action('showresult',Text=ref(message,'Dictionary Value'))
-workflow={'WFWorkflowName':'Finance Tracker Quick Expense','WFWorkflowActions':actions,'WFWorkflowClientVersion':'4046.0.2.2','WFWorkflowMinimumClientVersion':900,'WFWorkflowMinimumClientVersionString':'900','WFWorkflowIcon':{'WFWorkflowIconStartColor':4282601983,'WFWorkflowIconGlyphNumber':59511},'WFWorkflowTypes':[],'WFWorkflowInputContentItemClasses':[],'WFWorkflowImportQuestions':[{'ActionIndex':0,'Category':'Parameter','ParameterKey':'WFTextActionText','Text':'Paste the private connection key from Finance Tracker → Settings → General → Quick Expense. This key can add expenses to your connected wallet. Never share your configured shortcut.'}]}
+action('showresult',Text=text([ref(message,'Dictionary Value')]))
+workflow={'WFWorkflowName':'Finance Tracker Quick Expense','WFWorkflowActions':actions,'WFWorkflowClientVersion':'4046.0.2.2','WFWorkflowMinimumClientVersion':900,'WFWorkflowMinimumClientVersionString':'900','WFWorkflowIcon':{'WFWorkflowIconStartColor':4282601983,'WFWorkflowIconGlyphNumber':59511},'WFWorkflowTypes':[],'WFWorkflowInputContentItemClasses':[],'WFWorkflowImportQuestions':[{'ActionIndex':0,'Category':'Parameter','ParameterKey':'WFTextActionText','DefaultValue':'PASTE_YOUR_PRIVATE_CONNECTION_KEY','Text':'Paste the private connection key from Finance Tracker → Settings → General → Quick Expense. This key can add expenses to your connected wallet. Never share your configured shortcut.'}]}
 workflow.update({'WFWorkflowClientRelease':'3.0','WFWorkflowOutputContentItemClasses':[],'WFQuickActionSurfaces':[],'WFWorkflowHasOutput':False,'WFWorkflowNoInputBehavior':{'Name':'WFWorkflowNoInputBehaviorShowNothing','Parameters':{}}})
 out.write_bytes(plistlib.dumps(workflow,fmt=plistlib.FMT_XML))
 print(out)

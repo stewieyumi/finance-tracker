@@ -92,6 +92,16 @@ describe("expense-only Apple Shortcut connection", () => {
     const saved = cloud(); saved.data.library.expenses = []; saved.data.wallets.maya = 1000; records.set("finance_data_g_account-a", JSON.stringify(saved));
     expect((await save(token)).body.success).toBe(true); expect(cloud().data.wallets.maya).toBe(1000); // retry does not undo an owner reversal
   });
+  it("accepts a native SHA256 request ID and deduplicates the same save", async () => {
+    const token = await connect();
+    const native = { ...payload, requestId: "abcdef0123456789".repeat(4) };
+    const first = await save(token, native);
+    const retry = await save(token, { ...native, requestId: native.requestId.toUpperCase() });
+    expect(first.status).toBe(200); expect(retry.body).toEqual(first.body);
+    expect(cloud().data.wallets.maya).toBe(899.75);
+    expect(cloud().data.library.expenses).toHaveLength(1);
+    expect((await save(token, { ...native, merchant: "Different purchase" })).status).toBe(409);
+  });
   it("reports an unknown outcome after a lost acknowledgement and safely resolves a retry", async () => {
     const token = await connect(); const normal = evalMock.getMockImplementation()!;
     evalMock.mockImplementationOnce(async (script, keys, args) => { await normal(script, keys, args); throw new Error("connection lost after write"); });

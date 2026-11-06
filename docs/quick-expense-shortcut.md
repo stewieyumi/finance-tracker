@@ -6,7 +6,7 @@ The preset asks for amount, category, and merchant, then asks for confirmation. 
 
 Each account has one active connection, bound to its chosen wallet, expiring after 30 days. Replace or Disconnect revokes the old key. Keys are hashed at rest. Management requires the existing bound browser session and a same-origin custom header. A shortcut key cannot read transaction history, manage connections, select another account/wallet, or call cloud sync.
 
-A request's UUID identifies that save attempt. The expense, wallet debit, new OCC revision, and idempotency receipt are committed atomically with string CAS. A retry with the same UUID and details returns the original receipt; changed details using the UUID are rejected. Retries read the latest cloud snapshot, preserving other writers' changes. Stale browser sync writes use the existing conflict flow. Existing expense deletion/refund uses deductedAmount.
+A request's unique ID identifies that save attempt. The expense, wallet debit, new OCC revision, and idempotency receipt are committed atomically with string CAS. A retry with the same request ID and details returns the original receipt; changed details using that ID are rejected. Retries read the latest cloud snapshot, preserving other writers' changes. Stale browser sync writes use the existing conflict flow. Existing expense deletion/refund uses deductedAmount.
 
 A successful response says Saved. There is no offline queue or automatic claim of success. If a request is interrupted, check History before starting a NEW shortcut run; a fresh run creates a new request ID. Insufficient/missing/archived wallets do not deduct. A revoked or expired connection must be reconnected. No existing data migration or new environment secret is required.
 

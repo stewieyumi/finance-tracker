@@ -35,7 +35,7 @@ function label(data: Record<string, any>, id: string) {
 }
 function validExpense(body: Record<string, any>) {
   if (Object.keys(body).some(key => !["action", "requestId", "amount", "merchant", "category", "date"].includes(key))) return false;
-  if (typeof body.requestId !== "string" || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(body.requestId) ||
+  if (typeof body.requestId !== "string" || !/^(?:[a-f0-9]{64}|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/i.test(body.requestId) ||
       typeof body.merchant !== "string" || !body.merchant.trim() || body.merchant.trim().length > 120 ||
       !categories.includes(body.category) || typeof body.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(body.date)) return false;
   const date = new Date(body.date + "T12:00:00Z");
