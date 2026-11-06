@@ -75,6 +75,9 @@ const GoalSetupModal = lazy(() => import("./components/GoalSetupModal")
 const DateJumpModal = lazy(() => import("./components/DateJumpModal")
   .then(module => ({ default: module.DateJumpModal })));
 
+const AppUpdateBanner = lazy(() => import("./components/AppUpdateBanner")
+  .then(module => ({ default: module.AppUpdateBanner })));
+
 const deferredModalFallback = (
   <div role="status" className="fixed left-1/2 top-12 z-[100] -translate-x-1/2 rounded-xl border border-strong bg-surface-high px-4 py-2 text-sm text-primary shadow-lg">
     Loading…
@@ -512,6 +515,7 @@ const { saveShootEdit } = useShootSaveActions({
 });
 
   const {
+    canReloadSafely,
     isSyncing,
     isOnline,
     syncNeedsSignIn,
@@ -940,15 +944,14 @@ const copySummaryToClipboard = async () => {
   }
 
   return (
-    <div className={`min-h-screen bg-shell text-text-secondary px-4 sm:px-6 app-navigation-clearance pt-[max(2rem,env(safe-area-inset-top))] flex justify-center selection:bg-blue-600 selection:text-white ${isPrivacyMode ? "privacy-mode" : ""}`}>
+    <div style={updateAvailable ? { paddingTop: "calc(max(2rem, env(safe-area-inset-top)) + 3rem)" } : undefined} className={`min-h-screen bg-shell text-text-secondary px-4 sm:px-6 app-navigation-clearance pt-[max(2rem,env(safe-area-inset-top))] flex justify-center selection:bg-blue-600 selection:text-white ${isPrivacyMode ? "privacy-mode" : ""}`}>
       <div className="fixed top-0 left-0 right-0 z-[200] bg-shell/80 backdrop-blur-xl pointer-events-none" style={{ height: "env(safe-area-inset-top)" }} />
 
-      {updateAvailable && (
-        <div onClick={() => window.location.reload()} className="fixed top-[calc(env(safe-area-inset-top)+12px)] left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 py-2.5 rounded-full shadow-[0_0_30px_rgba(37,99,235,0.5)] transition-all cursor-pointer animate-in slide-in-from-top-8 duration-500">
-          <RefreshCw size={14} className="animate-spin shrink-0" />
-          <span className="font-semibold tracking-wide">New update available. Tap to refresh.</span>
-        </div>
-      )}
+      {updateAvailable && <ErrorBoundary><Suspense fallback={null}>
+        <AppUpdateBanner isEditing={isEditing} isSyncing={isSyncing} syncNeedsSignIn={syncNeedsSignIn}
+          hasActiveConflict={hasActiveConflict} hasInitialSyncCompleted={hasInitialSyncCompleted}
+          canReloadSafely={canReloadSafely} onBlocked={showToast} />
+      </Suspense></ErrorBoundary>}
 
       {toastMessage && (
         <div className="fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 flex items-center gap-2 bg-surface-high sm:inset-x-auto sm:bottom-auto sm:right-6 sm:top-12 text-strong text-xs px-4 py-2.5 rounded-xl border border-inverse/10 shadow-2xl animate-fade-in">

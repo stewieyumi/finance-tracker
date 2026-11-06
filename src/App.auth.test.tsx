@@ -1,7 +1,7 @@
 import { getGoogleSubFromToken } from "./utils/financeAuth";
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, act, screen } from "@testing-library/react";
+import { render, act, screen, fireEvent } from "@testing-library/react";
 
 // ---------------------------------------------------------------------------
 // Module mocks — must be declared before any imports that use them
@@ -21,6 +21,9 @@ vi.mock("@react-oauth/google", () => ({
 // All hooks that touch cloud sync, keyboard shortcuts, etc. — keep tests focused
 const mockCommitDataChange = vi.fn();
 let mockSyncNeedsSignIn = false;
+let mockUpdateAvailable = false;
+let mockCanReloadSafely = true;
+let mockIsSyncing = false;
 let reconnectWithGoogle: ((response: { credential: string }) => void) | undefined;
 let mockHasInitialSyncCompleted = true;
 let mockHasActiveConflict: boolean | undefined = undefined;
@@ -32,7 +35,8 @@ const mockNotifyAuthTokenChanged = vi.fn();
 vi.mock("./hooks/useCloudSync", () => ({
   useCloudSync: () => ({
     commitDataChange: mockCommitDataChange,
-    isSyncing: false,
+    canReloadSafely: () => mockCanReloadSafely,
+    isSyncing: mockIsSyncing,
     isOnline: true,
     syncNeedsSignIn: mockSyncNeedsSignIn,
     debugLog: "",
@@ -60,7 +64,7 @@ vi.mock("./hooks/usePullToRefresh", () => ({
 }));
 
 vi.mock("./hooks/useAppUpdate", () => ({
-  useAppUpdate: vi.fn(() => ({ updateAvailable: false })),
+  useAppUpdate: vi.fn(() => ({ updateAvailable: mockUpdateAvailable })),
 }));
 
 vi.mock("./hooks/useTheme", () => ({
@@ -231,6 +235,9 @@ describe("App — Google session recovery", () => {
     vi.clearAllMocks();
     seedAuthenticatedStorage();
     mockSyncNeedsSignIn = false;
+    mockUpdateAvailable = false;
+    mockCanReloadSafely = true;
+    mockIsSyncing = false;
     reconnectWithGoogle = undefined;
     mockHasInitialSyncCompleted = true;
     mockHasActiveConflict = undefined;
@@ -250,9 +257,55 @@ describe("App — Google session recovery", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.stubGlobal("localStorage", mockStorage);
     store = {};
+  });
+
+  it.each(['form', 'dialog'])("preserves an open %s when the update banner is pressed", async kind => {
+    mockUpdateAvailable = true;
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const draft = document.createElement(kind === "form" ? "form" : "div");
+    if (kind === "dialog") draft.setAttribute("aria-modal", "true");
+    draft.innerHTML = '<input value="Unsaved entry" />';
+    document.body.append(draft);
+    try {
+      render(<App />);
+      fireEvent.click(await screen.findByRole("button", { name: /new update available/i }));
+      expect(screen.getByText("Finish or cancel your open entry before updating the app.")).toBeInTheDocument();
+      expect(draft.querySelector("input")?.value).toBe("Unsaved entry");
+      expect(confirm).not.toHaveBeenCalled();
+    } finally {
+      draft.remove();
+    }
+  });
+
+  it.each(["pending", "syncing", "sign-in", "conflict", "hydrating"])("blocks update reload during %s", async state => {
+    mockUpdateAvailable = true;
+    mockCanReloadSafely = state !== "pending";
+    mockIsSyncing = state === "syncing";
+    mockSyncNeedsSignIn = state === "sign-in";
+    mockHasActiveConflict = state === "conflict";
+    mockHasInitialSyncCompleted = state !== "hydrating";
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /new update available/i }));
+    expect(confirm).not.toHaveBeenCalled();
+    expect(screen.getByText(state === "sign-in"
+      ? "Reconnect cloud sync before updating the app."
+      : state === "conflict"
+        ? "Resolve the sync conflict before updating the app."
+        : "Wait for your changes to finish syncing before updating the app.")).toBeInTheDocument();
+  });
+
+  it("asks before refreshing a clean app and respects Cancel", async () => {
+    mockUpdateAvailable = true;
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /new update available/i }));
+    expect(confirm).toHaveBeenCalledWith("Refresh Finance Tracker to install the update?");
+    expect(screen.getByRole("button", { name: /new update available/i })).toBeInTheDocument();
   });
 
   it("keeps the dashboard and account open while cloud sync needs sign-in", () => {

@@ -305,6 +305,79 @@ describe("deriveNotifications", () => {
     expect(notifs.find(n => n.type === "log_reminder")).toBeUndefined();
   });
 
+  it.each(["expense", "manual", "payday"] as const)("uses the actual logging time for a backdated %s", source => {
+    const data = createMockData();
+    const logged = new Date(2026, 9, 15, 14).toISOString();
+    if (source === "expense") data.library.expenses = [{
+      id: "e1", merchant: "Store", amount: 100, category: "Shopping", wallet: "main",
+      date: "2026-10-01", loggedAt: logged,
+    }];
+    if (source === "manual") data.library.manualTransactions = [{
+      id: "m1", title: "Entry", amount: 100, type: "expense", date: "2026-10-01",
+      createdAt: new Date(logged).getTime(),
+    }];
+    if (source === "payday") data.paydaySplitExecutions = [{
+      id: "p1", date: "2026-10-01", timestamp: new Date(logged).getTime(),
+      allocations: {}, billContributions: [],
+    }];
+    expect(deriveNotifications(data, fixedDate).find(n => n.type === "log_reminder")).toBeUndefined();
+  });
+
+  it("recognizes ISO collection dates and their local calendar day", () => {
+    const data = createMockData({ logs: {
+      "October 2026": { paymentDates: { r1: new Date(2026, 9, 12, 23, 30).toISOString() } },
+    } });
+    expect(deriveNotifications(data, fixedDate).find(n => n.type === "log_reminder")?.message).toContain("3 days");
+  });
+
+  it("recognizes settlement receipts even without a legacy payment-date marker", () => {
+    const data = createMockData({ logs: {
+      "October 2026": { receivableSettlements: { r1: [{
+        receivedAt: new Date(2026, 9, 10, 14).toISOString(), amount: 100, wallet: "main", walletCredit: 100,
+      }] } },
+    } });
+    expect(deriveNotifications(data, fixedDate).find(n => n.type === "log_reminder")?.message).toContain("5 days");
+  });
+
+  it("treats a recent settlement reversal as activity", () => {
+    const data = createMockData({ logs: {
+      "October 2026": { billSettlements: { b1: [{
+        id: "s1", paidAt: "2026-10-01", amount: 100, wallet: "main", walletDebit: 100,
+        reversedAt: new Date(2026, 9, 14, 12).toISOString(),
+      }] }, paymentDates: { legacy: "2026-10-01" } },
+    } });
+    expect(deriveNotifications(data, fixedDate).find(n => n.type === "log_reminder")).toBeUndefined();
+  });
+
+  it("ignores future and malformed activity dates instead of hiding an overdue reminder", () => {
+    const data = createMockData({ logs: {
+      "October 2026": { paymentDates: {
+        valid: "2026-10-10", future: "2099-01-01", invalid: "zzz", impossible: "2026-02-30",
+      } },
+    } });
+    expect(deriveNotifications(data, fixedDate).find(n => n.type === "log_reminder")?.message).toContain("5 days");
+  });
+
+  it("falls back to the transaction date when a legacy logging timestamp is invalid", () => {
+    const data = createMockData();
+    data.library.expenses = [{ id: "e1", merchant: "Store", amount: 100, category: "Shopping",
+      wallet: "main", date: "2026-10-10", loggedAt: "invalid" }];
+    expect(deriveNotifications(data, fixedDate).find(n => n.type === "log_reminder")?.message).toContain("5 days");
+  });
+
+  it("counts calendar days across the spring daylight-saving boundary", () => {
+    const data = createMockData({ logs: { "March 2026": { paymentDates: { b1: "2026-03-07" } } } });
+    expect(deriveNotifications(data, new Date(2026, 2, 10)).find(n => n.type === "log_reminder")?.message).toContain("3 days");
+  });
+
+  it("keeps a dismissed daily reminder hidden", () => {
+    const data = createMockData({
+      logs: { "October 2026": { paymentDates: { r1: new Date(2026, 9, 10).toISOString() } } },
+      settings: { dismissedNotifications: { "log_reminder_2026-10-15": 1 } },
+    });
+    expect(deriveNotifications(data, fixedDate).find(n => n.type === "log_reminder")).toBeUndefined();
+  });
+
   it("handles no-activity edge case intentionally without crashing or invalid dates", () => {
     const emptyData = createMockData({
       library: {
