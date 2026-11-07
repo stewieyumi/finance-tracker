@@ -844,9 +844,25 @@ describe("SettingsModal - Sync & Maintenance Actions", () => {
   });
 });
 
-it("opens the per-user Calendar connection from settings without saving financial settings", () => {
+it("opens the simple calendar export without connecting iCloud or saving settings", () => {
+  const onOpenCalendar = vi.fn();
+  const onOpenCalendarExport = vi.fn();
+  const { onClose, setGlobalData } = renderSettingsModal(createMockData(), { initialTab: "calendar", onOpenCalendar, onOpenCalendarExport });
+  const advanced = screen.getByText("Advanced", { exact: true }).closest("details");
+  expect(advanced).not.toHaveAttribute("open");
+  expect(screen.queryByRole("button", { name: "Save Settings" })).not.toBeInTheDocument();
+  expect(screen.getByText(/Later edits, completion, and status changes won’t sync automatically/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Add to Calendar" }));
+  expect(onClose).toHaveBeenCalledOnce();
+  expect(onOpenCalendarExport).toHaveBeenCalledOnce();
+  expect(onOpenCalendar).not.toHaveBeenCalled();
+  expect(setGlobalData).not.toHaveBeenCalled();
+});
+
+it("keeps the per-user iCloud connection under Advanced without saving financial settings", () => {
   const onOpenCalendar = vi.fn();
   const { onClose, setGlobalData } = renderSettingsModal(createMockData(), { initialTab: "calendar", onOpenCalendar });
+  fireEvent.click(screen.getByText("Advanced", { exact: true }));
   fireEvent.click(screen.getByRole("button", { name: "Manage Apple Calendar connection" }));
   expect(onClose).toHaveBeenCalledOnce();
   expect(onOpenCalendar).toHaveBeenCalledOnce();

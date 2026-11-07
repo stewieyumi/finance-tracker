@@ -1076,7 +1076,7 @@ const copySummaryToClipboard = async () => {
         {showSettingsModal && (
           <ErrorBoundary>
             <Suspense fallback={deferredModalFallback}>
-              <SettingsModal onOpenCalendar={() => setShowAppleCalendar(true)} onRestoreImportBackup={restorePreImportBackup} onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} onClose={() => setShowSettingsModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
+              <SettingsModal onOpenCalendarExport={() => { setActiveTab("operations"); setOpsTab("gigs"); }} onOpenCalendar={() => setShowAppleCalendar(true)} onRestoreImportBackup={restorePreImportBackup} onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} onClose={() => setShowSettingsModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
             </Suspense>
           </ErrorBoundary>
         )}
@@ -1189,7 +1189,7 @@ const copySummaryToClipboard = async () => {
             onAddReceivable={handleAddReceivable}
             onDeleteReceivable={deleteReceivable}
             onSaveReceivableEdit={saveReceivableEdit}
-            calendarSync={<button type="button" onClick={() => setShowAppleCalendar(true)} className="flex h-8 items-center gap-1.5 rounded-xl bg-fill px-2.5 text-xs font-medium text-primary hover:bg-fill-strong"><Calendar size={13} /> Apple Calendar</button>}
+            calendarSync={<button type="button" onClick={() => setShowAppleCalendar(true)} className="flex min-h-11 items-center gap-1.5 rounded-xl bg-fill px-3 text-xs font-medium text-primary hover:bg-fill-strong"><Calendar size={13} /> iCloud sync</button>}
             onChangeShootStatus={changeShootStatus}
             onToggleShootCompletion={toggleShootCompletion}
             onAddShoot={handleAddShoot}

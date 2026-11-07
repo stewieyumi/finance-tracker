@@ -174,31 +174,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
               {syncStatus.message}
             </span>
           )}
-          {calendarSync}
           <span className="text-[11px] text-faint font-mono hidden md:inline">{activeShoots.filter(s => s.completed).length}/{activeShoots.length} Done</span>
-          <button
-            type="button"
-            onClick={handleSyncToNotion}
-            disabled={isSyncingNotion}
-            aria-label="Sync to Notion"
-            className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${
-              isSyncingNotion
-                ? "bg-inverse/[0.04] border-inverse/[0.08] text-faint cursor-not-allowed opacity-75"
-                : "bg-inverse/[0.04] border-inverse/[0.08] text-muted hover:text-primary hover:border-inverse/[0.15]"
-            }`}
-          >
-            {isSyncingNotion ? (
-              <>
-                <RefreshCw size={11} className="animate-spin text-amber-400" />
-                <span className="text-[11px]">Syncing...</span>
-              </>
-            ) : (
-              <>
-                <Upload size={11} className="text-muted" />
-                <span className="text-[11px]">Notion</span>
-              </>
-            )}
-          </button>
           <div className="relative" ref={dropdownRef}>
             <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-amber-600/20 border-amber-500/50 text-amber-400" : "bg-inverse/[0.04] border-inverse/[0.08] text-muted hover:text-primary"}`}>
               <Filter size={11} className={selectedFilter !== "All" ? "text-amber-400" : "text-muted"} />
@@ -217,6 +193,37 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
           </div>
         </div>
       </div>
+
+      <details className="mb-3 rounded-xl bg-fill/50 px-3 py-1">
+        <summary className="min-h-11 cursor-pointer py-3 text-xs font-medium text-muted">Advanced integrations</summary>
+        <p className="pb-3 text-xs leading-relaxed text-muted">Optional connected services. To add a one-time copy instead, use Add to Calendar on a gig or task.</p>
+        <div className="flex flex-wrap items-center gap-2 pb-3">
+          {calendarSync}
+          <button
+            type="button"
+            onClick={handleSyncToNotion}
+            disabled={isSyncingNotion}
+            aria-label="Sync to Notion"
+            className={`min-h-11 px-3 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${
+              isSyncingNotion
+                ? "bg-inverse/[0.04] border-inverse/[0.08] text-faint cursor-not-allowed opacity-75"
+                : "bg-inverse/[0.04] border-inverse/[0.08] text-muted hover:text-primary hover:border-inverse/[0.15]"
+            }`}
+          >
+            {isSyncingNotion ? (
+              <>
+                <RefreshCw size={11} className="animate-spin text-amber-400" />
+                <span className="text-[11px]">Syncing...</span>
+              </>
+            ) : (
+              <>
+                <Upload size={11} className="text-muted" />
+                <span className="text-[11px]">Notion</span>
+              </>
+            )}
+          </button>
+        </div>
+      </details>
 
       {/* MOBILE LIST */}
       <div className="mb-3 block overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle lg:hidden">
@@ -262,11 +269,11 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                       e.stopPropagation();
                       handleAddToCalendar(shoot);
                     }}
-                    className="px-2 py-0.5 text-muted hover:text-blue-400 bg-fill-strong/70 rounded text-[10px] whitespace-nowrap flex items-center gap-1 transition shadow-sm"
+                    className="min-h-9 px-2 text-muted hover:text-primary bg-fill-strong/70 rounded-lg text-[10px] whitespace-nowrap flex items-center gap-1 transition"
                     title="Add to Calendar"
                     aria-label={`Export ${shoot.title} to calendar`}
                   >
-                    <CalendarPlus size={9} /> Calendar
+                    <CalendarPlus size={12} /> Add to Calendar
                   </button>
                   <button
                     type="button"
@@ -329,7 +336,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
                 </td>
                 <td className="py-3 px-4 text-right whitespace-nowrap">
                   <div className="inline-flex items-center gap-1 justify-end shrink-0">
-                    <button onClick={() => handleAddToCalendar(shoot)} className="whitespace-nowrap shrink-0 px-2 py-1 text-muted hover:text-blue-400 hover:bg-inverse/[0.05] rounded-md text-[11px] flex items-center transition" title="Add to Calendar"><CalendarPlus size={10} className="mr-1" /> Calendar</button>
+                    <button type="button" onClick={() => handleAddToCalendar(shoot)} className="min-h-9 whitespace-nowrap shrink-0 px-2 py-1 text-muted hover:text-primary hover:bg-fill rounded-md text-[11px] flex items-center transition" title="Add to Calendar"><CalendarPlus size={12} className="mr-1" /> Add to Calendar</button>
                     <button onClick={() => handleStartEdit(shoot)} className="whitespace-nowrap shrink-0 px-2 py-1 text-muted hover:text-amber-300 hover:bg-inverse/[0.05] rounded-md text-[11px] flex items-center transition"><Edit2 size={10} className="mr-1" /> Edit</button>
                   </div>
                 </td>
@@ -429,19 +436,21 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
         </div>
       )}
       {calendarGig && (
-        <Modal isOpen onClose={() => setCalendarGig(null)} ariaLabel="Add gig to calendar">
+        <Modal isOpen manageFocus onClose={() => setCalendarGig(null)} ariaLabel="Add gig to calendar">
           <div className="w-full max-w-sm space-y-3 rounded-2xl border border-subtle bg-surface p-4 shadow-xl">
             <h2 className="text-sm font-semibold text-primary">Add to Calendar</h2>
-            <p className="text-xs text-muted">Share to an available calendar app, or download the calendar file to import it.</p>
-            <button type="button" className="w-full rounded-lg bg-fill p-2 text-sm text-primary hover:bg-fill-strong"
+            <p className="break-words text-sm font-medium text-primary">{calendarGig.title}</p>
+            <p className="text-xs leading-relaxed text-muted">Share or download this event, then open it in your calendar app to add it. No Apple account setup needed.</p>
+            <p className="text-xs leading-relaxed text-muted">This is a one-time copy. Later edits, completion, and status changes won’t sync automatically in either direction.</p>
+            <button type="button" className="min-h-11 w-full rounded-xl bg-fill p-3 text-sm text-primary hover:bg-fill-strong"
               onClick={() => { exportGigToCalendar(calendarGig); setCalendarGig(null); }}>
               Share or open calendar file
             </button>
-            <button type="button" className="w-full rounded-lg bg-fill p-2 text-sm text-primary hover:bg-fill-strong"
+            <button type="button" className="min-h-11 w-full rounded-xl bg-fill p-3 text-sm text-primary hover:bg-fill-strong"
               onClick={() => { exportGigToCalendar(calendarGig, false); setCalendarGig(null); }}>
               Download calendar file (.ics)
             </button>
-            <button type="button" className="w-full rounded-lg p-2 text-sm text-muted hover:bg-fill"
+            <button type="button" className="min-h-11 w-full rounded-xl p-3 text-sm text-muted hover:bg-fill"
               onClick={() => setCalendarGig(null)}>
               Cancel
             </button>

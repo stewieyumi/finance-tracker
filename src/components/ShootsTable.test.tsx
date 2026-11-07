@@ -3,10 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ShootsTable } from "./ShootsTable";
 import { Shoot } from "../types/finance";
 import { syncShootsToNotion } from "../utils/notionSync";
+import { exportGigToCalendar } from "../utils/calendarExport";
 
 vi.mock("../utils/notionSync", () => ({
   syncShootsToNotion: vi.fn(),
 }));
+vi.mock("../utils/calendarExport", () => ({ exportGigToCalendar: vi.fn() }));
 
 const mockShoots: Shoot[] = [
   {
@@ -116,7 +118,7 @@ describe("ShootsTable - Mobile Card Interactions", () => {
     expect(setEditingId).toHaveBeenCalledWith("shoot-1");
   });
 
-  it("does not trigger edit when tapping the sync button", () => {
+  it("does not trigger edit when tapping Add to Calendar", () => {
     const setEditingId = vi.fn();
     const setEditForm = vi.fn();
 
@@ -164,7 +166,7 @@ describe("ShootsTable - Notion Sync Interactions", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the Notion sync button in the header", () => {
+  it("keeps the Notion sync button under the collapsed Advanced integrations", () => {
     render(
       <ShootsTable
         activeShoots={mockShoots}
@@ -180,6 +182,8 @@ describe("ShootsTable - Notion Sync Interactions", () => {
       />
     );
 
+    expect(screen.getByText("Advanced integrations").closest("details")).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("Advanced integrations"));
     const notionBtn = screen.getByRole("button", { name: "Sync to Notion" });
     expect(notionBtn).toBeInTheDocument();
     expect(notionBtn).toHaveTextContent("Notion");
@@ -209,6 +213,7 @@ describe("ShootsTable - Notion Sync Interactions", () => {
       />
     );
 
+    fireEvent.click(screen.getByText("Advanced integrations"));
     const notionBtn = screen.getByRole("button", { name: "Sync to Notion" });
     fireEvent.click(notionBtn);
 
@@ -241,6 +246,7 @@ describe("ShootsTable - Notion Sync Interactions", () => {
       />
     );
 
+    fireEvent.click(screen.getByText("Advanced integrations"));
     const notionBtn = screen.getByRole("button", { name: "Sync to Notion" });
     fireEvent.click(notionBtn);
 
@@ -291,6 +297,7 @@ describe("ShootsTable - Notion Sync Interactions", () => {
       />
     );
 
+    fireEvent.click(screen.getByText("Advanced integrations"));
     const notionBtn = screen.getByRole("button", { name: "Sync to Notion" });
     fireEvent.click(notionBtn);
 
@@ -323,6 +330,7 @@ describe("ShootsTable - Notion Sync Interactions", () => {
       />
     );
 
+    fireEvent.click(screen.getByText("Advanced integrations"));
     const notionBtn = screen.getByRole("button", { name: "Sync to Notion" });
     fireEvent.click(notionBtn);
 
@@ -343,4 +351,48 @@ it("changes the booking status from the badge without opening the edit form", ()
   fireEvent.change(select, { target: { value: "Moved" } });
   expect(onChangeStatus).toHaveBeenCalledExactlyOnceWith("shoot-1", "Moved");
   expect(setEditingId).not.toHaveBeenCalled();
+});
+
+
+describe("Simple Add to Calendar", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const setup = () => {
+    const onOpenICloud = vi.fn();
+    const onToggleCompletion = vi.fn();
+    const setEditingId = vi.fn();
+    render(<ShootsTable activeShoots={mockShoots} selectedMonth="October 2026"
+      calendarSync={<button onClick={onOpenICloud}>iCloud sync</button>}
+      onToggleCompletion={onToggleCompletion} onAddShoot={vi.fn()} onDeleteShoot={vi.fn()}
+      onSaveEdit={vi.fn()} editingId={null} setEditingId={setEditingId} editForm={{}} setEditForm={vi.fn()} />);
+    const button = screen.getByRole("button", { name: "Export Wedding Video Coverage to calendar" });
+    button.focus();
+    fireEvent.click(button);
+    return { button, onOpenICloud, onToggleCompletion, setEditingId };
+  };
+
+  it.each([
+    ["Share or open calendar file", true],
+    ["Download calendar file (.ics)", false],
+  ])("exports the chosen gig through %s without invoking connected services", (action, preferShare) => {
+    const { onOpenICloud, onToggleCompletion, setEditingId } = setup();
+    const dialog = screen.getByRole("dialog", { name: "Add gig to calendar" });
+    expect(dialog).toHaveFocus();
+    expect(within(dialog).getByText(/Later edits, completion, and status changes won’t sync automatically/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: action as string }));
+    expect(exportGigToCalendar).toHaveBeenCalledExactlyOnceWith(mockShoots[0], ...(preferShare ? [] : [false]));
+    expect(onOpenICloud).not.toHaveBeenCalled();
+    expect(syncShootsToNotion).not.toHaveBeenCalled();
+    expect(onToggleCompletion).not.toHaveBeenCalled();
+    expect(setEditingId).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog", { name: "Add gig to calendar" })).not.toBeInTheDocument();
+  });
+
+  it("cancels with Escape without exporting and restores focus to the gig action", () => {
+    const { button } = setup();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(exportGigToCalendar).not.toHaveBeenCalled();
+    expect(button).toHaveFocus();
+    expect(screen.queryByRole("dialog", { name: "Add gig to calendar" })).not.toBeInTheDocument();
+  });
 });

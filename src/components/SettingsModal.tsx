@@ -40,8 +40,8 @@ const SETTINGS_SECTIONS = {
   },
   calendar: {
     label: "Calendar", icon: CalendarPlus, color: "bg-blue-700",
-    description: "Connect your iCloud calendar and review gig changes.",
-    keywords: "apple icloud calendar connect disconnect gigs tasks",
+    description: "Add events to your calendar, with optional advanced sync.",
+    keywords: "apple icloud calendar add export connect disconnect gigs tasks advanced",
   },
 } as const;
 
@@ -66,6 +66,7 @@ interface SettingsModalProps {
   onImportClick: () => void;
   onRestoreImportBackup?: () => void;
   onOpenCalendar?: () => void;
+  onOpenCalendarExport?: () => void;
 }
 
 const PRESETS = {
@@ -90,7 +91,7 @@ const formatOrdinal = (n: number) => {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab = "general", onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull, onExport, onImportClick, onRestoreImportBackup, onOpenCalendar }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab = "general", onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull, onExport, onImportClick, onRestoreImportBackup, onOpenCalendar, onOpenCalendarExport }) => {
   const [activeTab, setActiveTab] = useState<SettingsSection>(initialTab);
   const [sectionSearch, setSectionSearch] = useState("");
   const [quickExpenseCopyStatus, setQuickExpenseCopyStatus] = useState("");
@@ -779,12 +780,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
             </div>
           )}
 
-          {activeTab === "calendar" && <section className={settingsGroup}>
-            <button type="button" aria-label="Manage Apple Calendar connection" disabled={!onOpenCalendar} onClick={() => { handleCancel(); onOpenCalendar?.(); }} className={settingsAction}>
-              <span className="min-w-0 flex-1"><span className="block">Apple Calendar</span><span className="mt-1 block text-xs font-normal text-muted">Connect, review changes, or disconnect your iCloud account.</span></span>
-              <ChevronRight size={16} className="shrink-0 text-muted" />
-            </button>
-          </section>}
+          {activeTab === "calendar" && <div className="space-y-4">
+            <section className={settingsGroup}>
+              <button type="button" aria-label="Add to Calendar" disabled={!onOpenCalendarExport} onClick={() => { handleCancel(); onOpenCalendarExport?.(); }} className={settingsAction}>
+                <span className="min-w-0 flex-1"><span className="block">Add to Calendar</span><span className="mt-1 block text-xs font-normal text-muted">Choose a gig or task, then share or download its calendar file. No Apple account setup needed.</span></span>
+                <ChevronRight size={16} className="shrink-0 text-muted" />
+              </button>
+              <p className="px-4 py-3 text-xs leading-relaxed text-muted">Adds a one-time copy. Later edits, completion, and status changes won’t sync automatically in either direction.</p>
+            </section>
+            <details className="rounded-2xl bg-surface px-4 py-1">
+              <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-primary">Advanced</summary>
+              <p className="pb-3 text-xs leading-relaxed text-muted">Optional direct iCloud sync requires a separate connection and an Apple app-specific password.</p>
+              <button type="button" aria-label="Manage Apple Calendar connection" disabled={!onOpenCalendar} onClick={() => { handleCancel(); onOpenCalendar?.(); }} className={`${settingsAction} mb-3 rounded-xl bg-fill`}>
+                <span className="min-w-0 flex-1"><span className="block">iCloud sync</span><span className="mt-1 block text-xs font-normal text-muted">Connect, review changes, or disconnect your iCloud account.</span></span>
+                <ChevronRight size={16} className="shrink-0 text-muted" />
+              </button>
+            </details>
+          </div>}
 
           {activeTab === "sync" && (
             <div className="space-y-4 animate-in fade-in duration-200 text-xs font-mono text-secondary">
@@ -864,7 +876,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
           )}
         </div>
 
-        {activeTab !== "sync" && (
+        {activeTab !== "sync" && activeTab !== "calendar" && (
           <div className="flex shrink-0 items-center gap-2 border-t border-subtle bg-surface-elevated p-4 sm:px-6">
             <button
               type="button"
