@@ -55,6 +55,94 @@ const applyUpdate = (
   return updater(data);
 };
 
+describe("Wallets Transfer entry", () => {
+  it("shows only Amount, From, and To, then records one transfer with the local date", () => {
+    vi.stubEnv("TZ", "Asia/Manila");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-06T16:30:00Z"));
+    try {
+      const data = makeData();
+      const setGlobalData = vi.fn();
+      const onClose = vi.fn();
+      render(<HistoricalLedgerModal isOpen initialType="transfer" onClose={onClose}
+        globalData={data} setGlobalData={setGlobalData} showToast={vi.fn()} />);
+      expect(screen.getByRole("dialog", { name: "Transfer" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Transfer" })).toBeInTheDocument();
+      expect(screen.getAllByRole("spinbutton")).toHaveLength(1);
+      expect(screen.getAllByRole("combobox")).toHaveLength(2);
+      expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+      expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Date")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("From")).toHaveValue("maya");
+      expect(screen.getByLabelText("To")).toHaveValue("");
+      expect(setGlobalData).not.toHaveBeenCalled();
+      fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "300" } });
+      fireEvent.change(screen.getByLabelText("To"), { target: { value: "gcash" } });
+      fireEvent.click(screen.getByRole("button", { name: "Transfer" }));
+      expect(onClose).toHaveBeenCalledOnce();
+      expect(setGlobalData).toHaveBeenCalledOnce();
+      const next: UnifiedFinanceData = applyUpdate(setGlobalData, data);
+      expect(next.wallets.maya).toBe(700);
+      expect(next.wallets.gcash).toBe(1300);
+      expect(Object.values(next.wallets).reduce((sum, amount) => sum + amount, 0)).toBe(2000);
+      expect(next.library.manualTransactions).toHaveLength(1);
+      expect(next.library.manualTransactions?.[0]).toMatchObject({
+        title: "Transfer", type: "transfer", wallet: "maya", destinationWallet: "gcash", amount: 300,
+        date: "2026-11-07", postingMode: "wallet", createdAt: Date.now(),
+      });
+      expect(next.library.expenses).toBe(data.library.expenses);
+      expect(next.logs).toBe(data.logs);
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("excludes the source from destinations and clears To if From changes to that wallet", () => {
+    const data = makeData();
+    data.settings = { ...data.settings, defaultWallet: "missing-wallet" };
+    render(<HistoricalLedgerModal isOpen initialType="transfer" onClose={vi.fn()}
+      globalData={data} setGlobalData={vi.fn()} showToast={vi.fn()} />);
+    expect(screen.getByLabelText("From")).toHaveValue("maya");
+    const to = screen.getByLabelText("To");
+    expect(to.querySelector('option[value="maya"]')).toBeNull();
+    fireEvent.change(to, { target: { value: "gcash" } });
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "gcash" } });
+    expect(to).toHaveValue("");
+    expect(to.querySelector('option[value="gcash"]')).toBeNull();
+  });
+
+  it("shows current balances below both selectors and updates them as wallets or data change", () => {
+    const data = makeData();
+    data.wallets.gcash = 450.25;
+    const setGlobalData = vi.fn();
+    const props = { isOpen: true, initialType: 'transfer' as const, onClose: vi.fn(),
+      globalData: data, setGlobalData, showToast: vi.fn() };
+    const { rerender } = render(<HistoricalLedgerModal {...props} />);
+    expect(screen.getByLabelText("From")).toHaveAccessibleDescription("Balance: ₱1,000.00");
+    expect(screen.getByLabelText("To")).toHaveAccessibleDescription("Balance: —");
+    fireEvent.change(screen.getByLabelText("To"), { target: { value: "gcash" } });
+    expect(screen.getByLabelText("To")).toHaveAccessibleDescription("Balance: ₱450.25");
+    rerender(<HistoricalLedgerModal {...props} globalData={{ ...data, wallets: { ...data.wallets, maya: 900 } }} />);
+    expect(screen.getByLabelText("From")).toHaveAccessibleDescription("Balance: ₱900.00");
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "gcash" } });
+    expect(screen.getByLabelText("From")).toHaveAccessibleDescription("Balance: ₱450.25");
+    expect(screen.getByLabelText("To")).toHaveAccessibleDescription("Balance: —");
+    expect(setGlobalData).not.toHaveBeenCalled();
+  });
+
+  it("cancels a transfer draft without changing financial data", () => {
+    const onClose = vi.fn();
+    const setGlobalData = vi.fn();
+    render(<HistoricalLedgerModal isOpen initialType="transfer" onClose={onClose}
+      globalData={makeData()} setGlobalData={setGlobalData} showToast={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "300" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(setGlobalData).not.toHaveBeenCalled();
+  });
+});
+
 describe("HistoricalLedgerModal wallet mutations", () => {
   beforeEach(() => {
     vi.restoreAllMocks();

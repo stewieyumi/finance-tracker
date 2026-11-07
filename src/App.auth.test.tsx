@@ -158,12 +158,12 @@ vi.mock("./components/DashboardTab", () => ({
   },
 }));
 vi.mock("./components/OperationsTab", () => ({ OperationsTab: () => <div data-testid="ops-tab" /> }));
-vi.mock("./components/WalletsTab", () => ({ WalletsTab: () => <div data-testid="wallets-tab" /> }));
+vi.mock("./components/WalletsTab", () => ({ WalletsTab: (props: any) => <div data-testid="wallets-tab"><button onClick={props.onTransfer}>Transfer</button></div> }));
 vi.mock("./components/ExpensesTab", () => ({ ExpensesTab: () => <div data-testid="expenses-tab" /> }));
 vi.mock("./components/AccountTab", () => ({
   AccountTab: (props: any) => {
     lastAccountOnGoogleLogout = props.onGoogleLogout;
-    return <div data-testid="account-tab" />;
+    return <div data-testid="account-tab"><button onClick={props.onOpenLedger}>Manage Ledger</button></div>;
   },
 }));
 vi.mock("./components/LandingPage", () => ({
@@ -176,6 +176,7 @@ vi.mock("./components/BottomNav", () => ({
   BottomNav: (props: any) => (
     <div data-testid="bottom-nav">
       <button data-testid="nav-account" onClick={() => props.onChange("account")} />
+      <button data-testid="nav-wallets" onClick={() => props.onChange("wallets")} />
     </div>
   ),
 }));
@@ -186,7 +187,7 @@ vi.mock("./components/DateJumpModal", () => ({ DateJumpModal: () => null }));
 vi.mock("./components/YearlyOverviewModal", () => ({ YearlyOverviewModal: () => null }));
 vi.mock("./components/FinancialAnalyticsModal", () => ({ FinancialAnalyticsModal: () => null }));
 vi.mock("./components/SettingsModal", () => ({ SettingsModal: () => null }));
-vi.mock("./components/HistoricalLedgerModal", () => ({ HistoricalLedgerModal: () => null }));
+vi.mock("./components/HistoricalLedgerModal", () => ({ HistoricalLedgerModal: (props: any) => <div data-testid="ledger-modal" data-initial-type={props.initialType ?? "list"}><button onClick={props.onClose}>Close ledger</button></div> }));
 vi.mock("./components/ErrorBoundary", () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -261,6 +262,20 @@ describe("App — Google session recovery", () => {
     vi.unstubAllGlobals();
     vi.stubGlobal("localStorage", mockStorage);
     store = {};
+  });
+
+  it("routes Wallets to a transfer form and keeps Manage Ledger opening the history list", async () => {
+    render(<App />);
+    const initialCommitCount = mockCommitDataChange.mock.calls.length;
+    fireEvent.click(screen.getByTestId("nav-wallets"));
+    fireEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    expect(await screen.findByTestId("ledger-modal")).toHaveAttribute("data-initial-type", "transfer");
+    expect(mockCommitDataChange).toHaveBeenCalledTimes(initialCommitCount);
+    fireEvent.click(screen.getByRole("button", { name: "Close ledger" }));
+    fireEvent.click(screen.getByTestId("nav-account"));
+    fireEvent.click(screen.getByRole("button", { name: "Manage Ledger" }));
+    expect(await screen.findByTestId("ledger-modal")).toHaveAttribute("data-initial-type", "list");
+    expect(mockCommitDataChange).toHaveBeenCalledTimes(initialCommitCount);
   });
 
   it.each(['form', 'dialog'])("preserves an open %s when the update banner is pressed", async kind => {

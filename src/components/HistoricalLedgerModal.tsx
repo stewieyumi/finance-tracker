@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { X, Plus, Trash2, Edit2, ArrowRight } from 'lucide-react';
+import React, { useId, useState } from 'react';
+import { X, Plus, Trash2, Edit2, ArrowRight, ArrowRightLeft } from 'lucide-react';
 import { UnifiedFinanceData, ManualTransaction } from '../types/finance';
 import { compareTransactionsNewestFirst, formatTransactionDateTime } from "../utils/transactionDates";
 import { generateId } from '../utils/idHelpers';
 import { Modal } from './ui/Modal';
+import { entryDialogStyles } from './ui/dialogStyles';
+import { formatPHP } from '../utils/currency';
 
 interface Props {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface Props {
   globalData: UnifiedFinanceData;
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
   showToast: (msg: string) => void;
+  initialType?: ManualTransaction['type'];
 }
 
 const applyManualTransactionWalletEffect = (
@@ -46,16 +49,22 @@ const applyManualTransactionWalletEffect = (
   return nextWallets;
 };
 
-export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, globalData, setGlobalData, showToast }) => {
-  const [view, setView] = useState<'list' | 'form'>('list');
+export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, globalData, setGlobalData, showToast, initialType }) => {
+  const formId = useId();
+  const isWalletTransfer = initialType === 'transfer';
+  const today = new Date();
+  const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const [view, setView] = useState<'list' | 'form'>(initialType ? 'form' : 'list');
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
-    title: '',
+    title: isWalletTransfer ? 'Transfer' : '',
     amount: '',
-    type: 'expense' as 'income' | 'expense' | 'transfer',
-    date: new Date().toISOString().split('T')[0],
-    wallet: globalData.settings?.defaultWallet || 'main',
+    type: initialType ?? ('expense' as ManualTransaction['type']),
+    date: isWalletTransfer ? localDate : today.toISOString().split('T')[0],
+    wallet: isWalletTransfer
+      ? (globalData.settings?.customWallets?.find(wallet => wallet.id === globalData.settings?.defaultWallet)?.id ?? globalData.settings?.customWallets?.[0]?.id ?? '')
+      : globalData.settings?.defaultWallet || 'main',
     destinationWallet: '',
     category: '',
     note: '',
@@ -69,6 +78,8 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
   const archivedWallets = globalData.settings?.archivedWallets ?? [];
   const walletLabel = (id?: string) => customWallets.find(wallet => wallet.id === id)?.label ??
     archivedWallets.find(wallet => wallet.id === id)?.label ?? id;
+  const walletBalance = (id: string) => typeof globalData.wallets[id] === 'number' && Number.isFinite(globalData.wallets[id])
+    ? formatPHP(globalData.wallets[id]) : '—';
   const usesArchivedWallet = (data: UnifiedFinanceData, tx: ManualTransaction) =>
     tx.postingMode !== "history-only" && data.settings?.archivedWallets?.some(wallet => wallet.id === tx.wallet || wallet.id === tx.destinationWallet);
 
@@ -130,7 +141,8 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
     });
 
     showToast(editingId ? "Transaction updated" : "Transaction recorded");
-    setView('list');
+    if (isWalletTransfer) onClose();
+    else setView('list');
   };
 
   const handleDelete = (tx: ManualTransaction) => {
@@ -195,16 +207,20 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      variant="sheet"
-      ariaLabel="Historical Ledger"
+      variant={isWalletTransfer ? 'floating' : 'sheet'}
+      ariaLabel={isWalletTransfer ? 'Transfer' : 'Historical Ledger'}
+      manageFocus
     >
-      <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-lg mx-auto shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
-        <div className="flex items-center justify-between p-5 border-b border-inverse/[0.05]">
-          <h2 className="text-sm font-bold text-strong uppercase tracking-wider">{view === 'form' ? (editingId ? 'Edit Transaction' : 'New Transaction') : 'Historical Ledger'}</h2>
-          <button onClick={onClose} className="text-faint hover:text-strong p-2 rounded-full hover:bg-inverse/[0.05] transition"><X size={18} /></button>
+      <div className={isWalletTransfer ? `${entryDialogStyles.card} max-w-sm` : 'bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-lg mx-auto shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4'}>
+        <div className={isWalletTransfer ? entryDialogStyles.header : 'flex items-center justify-between p-5 border-b border-inverse/[0.05]'}>
+          <div className="flex min-w-0 items-center gap-3">
+            {isWalletTransfer && <span className={entryDialogStyles.icon}><ArrowRightLeft size={18} aria-hidden="true" /></span>}
+            <h2 className={isWalletTransfer ? 'text-sm font-semibold text-strong' : 'text-sm font-bold text-strong uppercase tracking-wider'}>{isWalletTransfer ? 'Transfer' : view === 'form' ? (editingId ? 'Edit Transaction' : 'New Transaction') : 'Historical Ledger'}</h2>
+          </div>
+          <button type="button" aria-label={isWalletTransfer ? 'Close transfer' : 'Close ledger'} onClick={onClose} className={isWalletTransfer ? entryDialogStyles.close : 'text-faint hover:text-strong p-2 rounded-full hover:bg-inverse/[0.05] transition'}><X size={18} /></button>
         </div>
 
-        <div className="overflow-y-auto p-5">
+        <div className={isWalletTransfer ? '' : 'overflow-y-auto p-5'}>
           {view === 'list' ? (
             <div className="space-y-4">
               <button onClick={openAdd} className="w-full py-3.5 border border-dashed border-inverse/[0.15] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted hover:text-emerald-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">
@@ -244,52 +260,59 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
             </div>
           ) : (
             <form onSubmit={handleSave} className="space-y-4">
-              <div className="grid grid-cols-3 gap-2 bg-surface-lowest p-1.5 rounded-xl border border-inverse/[0.05]">
+              {!isWalletTransfer && <>
+                <div className="grid grid-cols-3 gap-2 bg-surface-lowest p-1.5 rounded-xl border border-inverse/[0.05]">
                 {['expense', 'income', 'transfer'].map(t => (
-                  <button key={t} type="button" onClick={() => setForm({...form, type: t as any})} className={`py-2 text-[10px] font-bold uppercase rounded-lg transition ${form.type === t ? (t === 'income' ? 'bg-emerald-500/20 text-emerald-400' : t === 'expense' ? 'bg-fill-strong text-white' : 'bg-blue-500/20 text-blue-400') : 'text-faint hover:bg-inverse/[0.02]'}`}>
+                  <button key={t} type="button" aria-pressed={form.type === t} onClick={() => setForm({...form, type: t as any})} className={`min-h-11 py-2 text-[10px] font-bold uppercase rounded-lg transition ${form.type === t ? (t === 'income' ? 'chip-emerald' : t === 'expense' ? 'bg-fill-strong text-primary' : 'chip-blue') : 'text-faint hover:bg-inverse/[0.02]'}`}>
                     {t}
                   </button>
                 ))}
               </div>
               <div>
-                <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Title / Description</label>
-                <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500" placeholder="e.g., Backdated Salary, Bank Transfer..." />
+                <label htmlFor={`${formId}-title`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Title / Description</label>
+                <input id={`${formId}-title`} type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500" placeholder="e.g., Backdated Salary, Bank Transfer..." />
+              </div>
+              </>}
+              <div className={isWalletTransfer ? '' : 'grid grid-cols-2 gap-3'}>
+                <div>
+                  <label htmlFor={`${formId}-amount`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Amount</label>
+                  <div className="relative">
+                    {isWalletTransfer && <span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-lg text-muted">₱</span>}
+                    <input id={`${formId}-amount`} type="number" inputMode="decimal" step="0.01" min={isWalletTransfer ? '0.01' : undefined} required value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} className={isWalletTransfer ? entryDialogStyles.amount : 'w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500 font-mono'} placeholder="0.00" />
+                  </div>
+                </div>
+                {!isWalletTransfer && <div>
+                  <label htmlFor={`${formId}-date`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Date</label>
+                  <input id={`${formId}-date`} type="date" required value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500" />
+                </div>}
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Amount</label>
-                  <input type="number" step="0.01" required value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500 font-mono" placeholder="0.00" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Date</label>
-                  <input type="date" required value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">{form.type === 'transfer' ? 'From Wallet' : 'Wallet'}</label>
-                  <select required value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500">
+                <div className="min-w-0">
+                  <label htmlFor={`${formId}-from`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">{isWalletTransfer ? 'From' : form.type === 'transfer' ? 'From Wallet' : 'Wallet'}</label>
+                  <select id={`${formId}-from`} aria-describedby={isWalletTransfer ? `${formId}-from-balance` : undefined} required value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value, destinationWallet: isWalletTransfer && e.target.value === form.destinationWallet ? '' : form.destinationWallet})} className="min-h-11 w-full min-w-0 bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500">
                     {customWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                   </select>
+                  {isWalletTransfer && <p id={`${formId}-from-balance`} className="mt-1.5 break-words text-[11px] text-muted">Balance: <span className="privacy-blur font-mono tabular-nums">{walletBalance(form.wallet)}</span></p>}
                 </div>
                 {form.type === 'transfer' && (
-                  <div>
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">To Wallet</label>
-                    <select required value={form.destinationWallet} onChange={e => setForm({...form, destinationWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500">
+                  <div className="min-w-0">
+                    <label htmlFor={`${formId}-to`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">{isWalletTransfer ? 'To' : 'To Wallet'}</label>
+                    <select id={`${formId}-to`} aria-describedby={isWalletTransfer ? `${formId}-to-balance` : undefined} required value={form.destinationWallet} onChange={e => setForm({...form, destinationWallet: e.target.value})} className="min-h-11 w-full min-w-0 bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500">
                       <option value="" disabled>Select...</option>
-                      {customWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
+                      {customWallets.filter(w => !isWalletTransfer || w.id !== form.wallet).map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                     </select>
+                    {isWalletTransfer && <p id={`${formId}-to-balance`} className="mt-1.5 break-words text-[11px] text-muted">Balance: <span className="privacy-blur font-mono tabular-nums">{form.destinationWallet ? walletBalance(form.destinationWallet) : '—'}</span></p>}
                   </div>
                 )}
               </div>
-              <label className="flex items-center gap-2 text-xs text-primary">
+              {!isWalletTransfer && <><label className="flex items-center gap-2 text-xs text-primary">
                 <input type="checkbox" checked={form.updateWallets} onChange={event => setForm({ ...form, updateWallets: event.target.checked })} />
                 Update wallet balances
               </label>
-              <p className="text-xs text-muted">Turn this off to record history without applying a wallet movement.</p>
+              <p className="text-xs text-muted">Turn this off to record history without applying a wallet movement.</p></>}
               <div className="flex gap-2 pt-3">
-                <button type="button" onClick={() => setView('list')} className="flex-1 py-3 bg-inverse/[0.05] hover:bg-inverse/[0.1] text-xs font-semibold rounded-xl transition">Cancel</button>
-                <button type="submit" className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl transition shadow-lg shadow-emerald-900/20">{editingId ? 'Update' : 'Save'}</button>
+                <button type="button" onClick={() => isWalletTransfer ? onClose() : setView('list')} className="flex-1 py-3 bg-inverse/[0.05] hover:bg-inverse/[0.1] text-xs font-semibold rounded-xl transition">Cancel</button>
+                <button type="submit" className={isWalletTransfer ? `${entryDialogStyles.primary} flex-1` : 'flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl transition shadow-lg shadow-emerald-900/20'}>{isWalletTransfer ? 'Transfer' : editingId ? 'Update' : 'Save'}</button>
               </div>
             </form>
           )}

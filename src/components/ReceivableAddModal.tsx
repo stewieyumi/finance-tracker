@@ -4,6 +4,7 @@ import { ReceivableCategory, ReceivableFrequency } from "../types/finance";
 import { formatOrdinal } from "../utils/displayHelpers";
 import { formatPHP, roundMoney } from "../utils/currency";
 import { Modal } from "./ui/Modal";
+import { entryDialogStyles } from "./ui/dialogStyles";
 
 export interface NewReceivableForm {
   name: string;
@@ -37,13 +38,13 @@ export default function ReceivableAddModal({
     <Modal
       isOpen={true}
       onClose={onClose}
-      variant="sheet"
+      variant="floating"
       ariaLabel="Add New Inflow"
     >
-      <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md mx-auto shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
+      <div className={`${entryDialogStyles.card} max-w-md mx-auto`}>
+        <div className={entryDialogStyles.header}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <div className={entryDialogStyles.icon}>
               <Plus size={18} />
             </div>
             <div>
@@ -53,7 +54,7 @@ export default function ReceivableAddModal({
           </div>
           <button
             onClick={onClose}
-            className="text-faint hover:text-strong p-2 bg-inverse/[0.03] hover:bg-inverse/[0.08] rounded-full transition"
+            className={entryDialogStyles.close}
           >
             <X size={16} />
           </button>
@@ -122,7 +123,7 @@ export default function ReceivableAddModal({
               <select
                 value={newReceivable.wallet}
                 onChange={(e) => onChange({ ...newReceivable, wallet: e.target.value })}
-                className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-emerald-500"
+                className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-primary uppercase font-semibold outline-none focus:border-emerald-500"
               >
                 {allWallets.map((w) => (
                   <option key={w.id} value={w.id}>

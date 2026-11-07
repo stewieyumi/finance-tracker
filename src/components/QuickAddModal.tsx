@@ -1,6 +1,7 @@
 import React from "react";
 import { X, Plus, Receipt, Calendar, ArrowDownLeft, Clapperboard, Wallet } from "lucide-react";
 import { Modal } from "./ui/Modal";
+import { entryDialogStyles } from "./ui/dialogStyles";
 
 export type QuickAddAction = "expense" | "bill" | "inflow" | "gig" | "wallet";
 
@@ -63,7 +64,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       variant="floating"
       ariaLabel="Quick Add Menu"
     >
-      <div className="bg-surface-modal border border-inverse/[0.1] rounded-3xl p-5 sm:p-6 w-full max-w-sm space-y-4 shadow-2xl animate-fade-in">
+      <div className={`${entryDialogStyles.card} max-w-sm space-y-4`}>
         <div className="flex items-center justify-between pb-2 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">

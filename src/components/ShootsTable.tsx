@@ -4,6 +4,7 @@ import { Shoot, ShootCategory, ShootStatus, EditFormData } from "../types/financ
 import { exportGigToCalendar } from "../utils/calendarExport";
 import { GIG_BOOKING_STATUSES, GIG_CALENDAR_GROUPS, getGigCalendarGroup } from "../utils/gigStatus";
 import { Modal } from "./ui/Modal";
+import { entryDialogStyles } from "./ui/dialogStyles";
 import { syncShootsToNotion } from "../utils/notionSync";
 
 const SHOOT_CATEGORIES: (ShootCategory | "All")[] = ["All", "Solo Shoot", "Assistant", "Video Edit", "Event", "Commercial", "Other"];
@@ -352,14 +353,14 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
 
       {/* EDIT MODAL */}
       {editingId && activeShoots.some(s => s.id === editingId) && (
-        <div className="fixed inset-0 z-[200] bg-[var(--bg-modal-scrim)] backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => { if(e.target === e.currentTarget) handleCancelEdit(); }}>
-          <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 z-[200] bg-[var(--bg-modal-scrim)] backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={(e) => { if(e.target === e.currentTarget) handleCancelEdit(); }}>
+          <div className={`${entryDialogStyles.card} max-w-md`}>
+            <div className={entryDialogStyles.header}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400"><Edit2 size={18} /></div>
+                <div className={entryDialogStyles.icon}><Edit2 size={18} /></div>
                 <div><h3 className="text-sm font-bold text-strong leading-tight">Edit Gig</h3><p className="text-[11px] text-muted font-medium">{editForm.title}</p></div>
               </div>
-              <button onClick={handleCancelEdit} className="text-faint hover:text-strong p-2 bg-inverse/[0.03] hover:bg-inverse/[0.08] rounded-full transition"><X size={16}/></button>
+              <button type="button" aria-label="Close gig editor" onClick={handleCancelEdit} className={entryDialogStyles.close}><X size={16}/></button>
             </div>
             <div className="space-y-4">
               <div>
@@ -395,14 +396,14 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
 
       {/* ADD MODAL */}
       {isAdding && (
-        <div className="fixed inset-0 z-[200] bg-[var(--bg-modal-scrim)] backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => { if(e.target === e.currentTarget) setIsAdding(false); }}>
-          <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 z-[200] bg-[var(--bg-modal-scrim)] backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={(e) => { if(e.target === e.currentTarget) setIsAdding(false); }}>
+          <div className={`${entryDialogStyles.card} max-w-md`}>
+            <div className={entryDialogStyles.header}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400"><Plus size={18} /></div>
+                <div className={entryDialogStyles.icon}><Plus size={18} /></div>
                 <div><h3 className="text-sm font-bold text-strong leading-tight">Add New Gig</h3><p className="text-[11px] text-muted font-medium">Log a new production gig or task</p></div>
               </div>
-              <button onClick={() => setIsAdding(false)} className="text-faint hover:text-strong p-2 bg-inverse/[0.03] hover:bg-inverse/[0.08] rounded-full transition"><X size={16}/></button>
+              <button type="button" aria-label="Close new gig" onClick={() => setIsAdding(false)} className={entryDialogStyles.close}><X size={16}/></button>
             </div>
 
             <form onSubmit={handleAddSubmit} className="space-y-4">

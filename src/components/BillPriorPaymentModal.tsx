@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { getMonthRange, parseMonthKey } from "../utils/dateHelpers";
 import { Bill, BillViewModel } from "../types/finance";
 import { Modal } from "./ui/Modal";
+import { entryDialogStyles } from "./ui/dialogStyles";
 
 type PendingPriorPayment = {
   bill: Bill;
@@ -34,7 +35,7 @@ export const BillPriorPaymentModal: React.FC<BillPriorPaymentModalProps> = ({
       closeOnBackdropClick={false}
       ariaLabel="Confirm Prior Payment"
     >
-      <div className="bg-surface-elevated border border-border-default rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+      <div className={`${entryDialogStyles.card} max-w-sm space-y-4`}>
         <div className="space-y-1">
           <h3 className="text-sm font-bold text-strong leading-tight">Was this payment already made?</h3>
           <p className="text-[11px] text-muted">

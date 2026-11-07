@@ -2,6 +2,7 @@ import React from "react";
 import { X, Calendar, AlertCircle, ArrowRight, CheckCircle2, Clock } from "lucide-react";
 import { BillViewModel } from "../types/finance";
 import { Modal } from "./ui/Modal";
+import { entryDialogStyles } from "./ui/dialogStyles";
 
 interface UpcomingModalProps {
   isOpen: boolean;
@@ -50,7 +51,7 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
       manageFocus
       ariaLabel="Upcoming Commitments Modal"
     >
-      <div className="bg-surface-modal border border-inverse/[0.1] rounded-3xl p-5 sm:p-6 w-full max-w-md space-y-4 shadow-2xl animate-fade-in">
+      <div className={`${entryDialogStyles.card} max-w-md space-y-4`}>
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-subtle">
           <div className="flex items-center gap-2">

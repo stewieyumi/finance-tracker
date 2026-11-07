@@ -3,6 +3,7 @@ import { Plus, X } from "lucide-react";
 import { ALL_MONTH_YEAR_OPTIONS } from "../constants/config";
 import { BillType, CustomWallet } from "../types/finance";
 import { Modal } from "./ui/Modal";
+import { entryDialogStyles } from "./ui/dialogStyles";
 
 interface NewBillForm {
   name: string;
@@ -32,13 +33,13 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
   <Modal
     isOpen={true}
     onClose={onCancel}
-    variant="sheet"
+    variant="floating"
     ariaLabel="Add New Commitment"
   >
-    <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md mx-auto shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className={`${entryDialogStyles.card} max-w-md mx-auto`}>
+      <div className={entryDialogStyles.header}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+          <div className={entryDialogStyles.icon}>
             <Plus size={18} />
           </div>
           <div>
@@ -52,7 +53,7 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
         </div>
         <button
           onClick={onCancel}
-          className="text-faint hover:text-strong p-2 bg-inverse/[0.03] hover:bg-inverse/[0.08] rounded-full transition"
+          className={entryDialogStyles.close}
         >
           <X size={16} />
         </button>
@@ -104,7 +105,7 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
               onChange={(e) =>
                 setNewBill({ ...newBill, wallet: e.target.value })
               }
-              className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-blue-500"
+              className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-primary uppercase font-semibold outline-none focus:border-blue-500"
             >
               {customWallets?.map((cw) => (
                 <option key={cw.id} value={cw.id}>

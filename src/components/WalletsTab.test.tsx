@@ -58,6 +58,33 @@ const makeData = (overrides: Partial<UnifiedFinanceData> = {}): UnifiedFinanceDa
   ...overrides,
 });
 
+it("opens Transfer from the wallet summary without changing balances", () => {
+  const onTransfer = vi.fn();
+  const setGlobalData = vi.fn();
+  const onCommit = vi.fn();
+  const onIncrement = vi.fn();
+  render(<WalletsTab globalData={makeData()} setGlobalData={setGlobalData}
+    onCommit={onCommit} onIncrement={onIncrement} onTransfer={onTransfer} />);
+  fireEvent.click(screen.getByRole("button", { name: "Transfer" }));
+  expect(onTransfer).toHaveBeenCalledOnce();
+  expect(setGlobalData).not.toHaveBeenCalled();
+  expect(onCommit).not.toHaveBeenCalled();
+  expect(onIncrement).not.toHaveBeenCalled();
+});
+
+it("explains why Transfer is unavailable with only one wallet", () => {
+  const data = makeData();
+  data.settings = { ...data.settings, customWallets: data.settings?.customWallets?.slice(0, 1) };
+  const onTransfer = vi.fn();
+  render(<WalletsTab globalData={data} setGlobalData={vi.fn()}
+    onCommit={vi.fn()} onIncrement={vi.fn()} onTransfer={onTransfer} />);
+  const button = screen.getByRole("button", { name: "Transfer" });
+  expect(button).toBeDisabled();
+  expect(screen.getByText("Add another wallet to enable transfers.")).toBeInTheDocument();
+  fireEvent.click(button);
+  expect(onTransfer).not.toHaveBeenCalled();
+});
+
 describe("WalletsTab archival", () => {
   beforeEach(() => vi.restoreAllMocks());
 

@@ -1,7 +1,7 @@
 import { compareTransactionsNewestFirst, formatTransactionDateTime } from "../utils/transactionDates";
 import { formatPHP, roundMoney } from "../utils/currency";
 import React, { useEffect, useId, useRef, useState } from "react";
-import { Camera, ScanLine, Plus, Receipt, Trash2, CheckCircle2, Upload } from "lucide-react";
+import { Camera, ScanLine, Plus, Receipt, Trash2, CheckCircle2, Upload, X } from "lucide-react";
 import { UnifiedFinanceData, Expense, ExpenseCategory } from "../types/finance";
 import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
 import { getMonthKey, parseMonthKey } from "../utils/dateHelpers";
@@ -10,6 +10,7 @@ import { useExpenseScanner } from "../hooks/useExpenseScanner";
 import { QUICK_EXPENSE_HASH } from "../constants/config";
 import { findPossibleDuplicateExpense, readReceiptDraft } from "../utils/receiptDraft";
 import { Modal } from "./ui/Modal";
+import { entryDialogStyles } from "./ui/dialogStyles";
 
 const EXPENSE_CATEGORIES: ExpenseCategory[] = ["Food & Dining", "Transport", "Utilities", "Laundry & Home", "Shopping", "Other"];
 
@@ -268,7 +269,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
         closeOnBackdropClick={false}
         manageFocus
       >
-        <div ref={expensePanelRef} className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-2xl border border-subtle bg-surface-modal p-4 shadow-xl sm:max-h-[calc(100dvh-3rem)] sm:p-5">
+        <div ref={expensePanelRef} className={`${entryDialogStyles.card} max-w-md`}>
           {showPaste ? (
             <form onSubmit={createTextDraft} className="space-y-4">
               <h2 id="paste-expense-title" className="text-base font-semibold text-primary">Paste receipt text</h2>
@@ -282,9 +283,12 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
             </form>
           ) : (
             <form aria-labelledby="expense-form-title" onChange={() => { hasDraft.current = true; setSaveError(""); }} onSubmit={handleSave} className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <h2 id="expense-form-title" className="flex items-center gap-2 text-base font-semibold text-primary"><Receipt size={16} className="text-positive" aria-hidden="true" /> Log Expense</h2>
-                <button type="button" onClick={closeExpense} className="min-h-11 rounded-lg px-2 text-xs font-semibold text-muted hover:bg-fill hover:text-primary">Cancel</button>
+              <div className={entryDialogStyles.header}>
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className={entryDialogStyles.icon}><Receipt size={18} aria-hidden="true" /></span>
+                  <h2 id="expense-form-title" className="text-sm font-semibold text-strong">Log Expense</h2>
+                </div>
+                <button type="button" aria-label="Cancel" onClick={closeExpense} className={entryDialogStyles.close}><X size={18} aria-hidden="true" /></button>
               </div>
 
               {saveError && <p role="alert" className="mb-3 rounded-lg bg-fill px-3 py-2 text-sm text-primary">{saveError}</p>}
@@ -314,21 +318,21 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
               )}
 
               <fieldset disabled={isScanning} className="space-y-3">
-                <button type="button" aria-haspopup="dialog" onClick={() => setShowPaste(true)} className="min-h-11 rounded-lg px-2 text-xs font-medium text-muted hover:bg-fill hover:text-primary">
-                  Paste receipt text
-                </button>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="col-span-1 sm:col-span-2 min-w-0">
-                    <label htmlFor={`${expenseFormId}-merchant`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Merchant / Name</label>
-                    <input id={`${expenseFormId}-merchant`} type="text" value={form.merchant} onChange={e => setForm({...form, merchant: e.target.value})} placeholder="e.g. Starbucks, Laundry..." className="w-full min-w-0 bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs text-strong box-border" required />
-                  </div>
-                  <div className="min-w-0">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2 min-w-0">
                     <label htmlFor={`${expenseFormId}-amount`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Amount (₱)</label>
-                    <input id={`${expenseFormId}-amount`} type="number" inputMode="decimal" min="0.01" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="0.00" className="w-full min-w-0 bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-positive box-border" required />
+                    <div className="relative">
+                      <span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-lg text-muted">₱</span>
+                      <input id={`${expenseFormId}-amount`} type="number" inputMode="decimal" min="0.01" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="0.00" className={entryDialogStyles.amount} required />
+                    </div>
+                  </div>
+                  <div className="col-span-2 min-w-0">
+                    <label htmlFor={`${expenseFormId}-merchant`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Merchant / Name</label>
+                    <input id={`${expenseFormId}-merchant`} type="text" value={form.merchant} onChange={e => setForm({...form, merchant: e.target.value})} placeholder="e.g. Starbucks, Laundry..." className="min-h-11 w-full min-w-0 bg-surface-input border border-strong focus:border-blue-500 rounded-xl px-3 py-2.5 text-xs text-strong box-border" required />
                   </div>
                   <div className="min-w-0">
                     <label htmlFor={`${expenseFormId}-date`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Date</label>
-                    <input id={`${expenseFormId}-date`} type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full min-w-0 appearance-none bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-2 sm:px-3 py-2.5 text-[11px] text-strong min-h-[38px] box-border" required />
+                    <input id={`${expenseFormId}-date`} type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full min-w-0 appearance-none bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-2 sm:px-3 py-2.5 text-[11px] text-strong min-h-11 box-border" required />
                   </div>
                   <div className="min-w-0">
                     <label htmlFor={`${expenseFormId}-category`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Category</label>
@@ -342,20 +346,23 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
                           wallet: getDefaultExpenseWalletId(category, globalData.settings, globalData.wallets)
                         }));
                       }}
-                      className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-strong min-h-[38px] box-border"
+                      className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-strong min-h-11 box-border"
                     >
                       {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
-                  <div className="min-w-0">
+                  <div className="col-span-2 min-w-0">
                     <label htmlFor={`${expenseFormId}-wallet`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Deduct From</label>
-                    <select id={`${expenseFormId}-wallet`} value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-primary font-semibold uppercase min-h-[38px] box-border">
+                    <select id={`${expenseFormId}-wallet`} value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-primary font-semibold uppercase min-h-11 box-border">
                       {allWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                     </select>
                   </div>
                 </div>
 
-                <button type="submit" disabled={isScanning} className="w-full mt-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-900/20">
+                <button type="button" aria-haspopup="dialog" onClick={() => setShowPaste(true)} className="min-h-11 rounded-lg px-2 text-xs font-medium text-muted hover:bg-fill hover:text-primary">
+                  Paste receipt text
+                </button>
+                <button type="submit" disabled={isScanning} className={`${entryDialogStyles.primary} w-full`}>
                   <CheckCircle2 size={14} /> Save & Deduct
                 </button>
               </fieldset>

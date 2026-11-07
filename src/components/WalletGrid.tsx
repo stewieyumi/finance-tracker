@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, CreditCard, CheckCircle2 } from 'lucide-react';
+import { entryDialogStyles } from './ui/dialogStyles';
 import { WalletState, CustomWallet } from '../types/finance';
 
 interface WalletGridProps { wallets: WalletState; customWallets?: CustomWallet[]; milestoneWallet?: string; savingsWallet?: string; onCommit: (key: string, value: number) => void; onIncrement: (key: string, addAmount: number) => void; }
@@ -70,27 +71,27 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
       </div>
 
       {editingWallet && (
-        <div className="fixed inset-0 z-[200] bg-[var(--bg-modal-scrim)] backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={(e) => { if (e.target === e.currentTarget) setEditingWallet(null); }}>
-          <div className="bg-surface-elevated border border-subtle rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300">
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 z-[200] bg-[var(--bg-modal-scrim)] backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={(e) => { if (e.target === e.currentTarget) setEditingWallet(null); }}>
+          <div className={`${entryDialogStyles.card} max-w-sm`}>
+            <div className={entryDialogStyles.header}>
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full bg-inverse/[0.05] border border-subtle flex items-center justify-center ${editingWallet.color}`}><CreditCard size={18} /></div>
+                <div className={entryDialogStyles.icon}><CreditCard size={18} /></div>
                 <div><h3 className="text-sm font-bold text-strong leading-tight">Edit Balance</h3><p className="text-[11px] text-muted font-medium">{editingWallet.label}</p></div>
               </div>
-              <button onClick={() => setEditingWallet(null)} className="text-faint hover:text-strong p-2 bg-inverse/[0.03] hover:bg-inverse/[0.08] rounded-full transition"><X size={16}/></button>
+              <button type="button" aria-label="Close balance editor" onClick={() => setEditingWallet(null)} className={entryDialogStyles.close}><X size={16}/></button>
             </div>
             <form onSubmit={handleSave} className="space-y-6">
               <div className="relative flex items-center justify-center bg-surface-lowest border border-strong rounded-2xl p-5 focus-within:border-blue-500/50 transition-colors shadow-inner">
                 <span className="absolute left-5 text-faint font-mono text-xl">₱</span>
-                <input type="number" inputMode="decimal" step="0.01" autoFocus value={editValue} onChange={e => setEditValue(e.target.value)} className={`bg-transparent text-center text-3xl font-bold font-mono outline-none w-full ${editingWallet.color}`} placeholder="0.00" />
+                <input type="number" inputMode="decimal" step="0.01" autoFocus value={editValue} onChange={e => setEditValue(e.target.value)} className="bg-transparent text-center text-3xl font-bold font-mono outline-none w-full text-strong" placeholder="0.00" />
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-wider font-semibold text-faint mb-2.5 text-center">Quick Add Income</div>
                 <div className="grid grid-cols-3 gap-2">
-                  {[100, 500, 1000].map(amt => <button key={amt} type="button" onClick={() => { onIncrement(editingWallet.id, amt); setEditingWallet(null); }} className="py-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 rounded-xl text-xs font-mono font-bold transition active:scale-95 flex items-center justify-center gap-1 shadow-sm"><Plus size={12} />{amt}</button>)}
+                  {[100, 500, 1000].map(amt => <button key={amt} type="button" onClick={() => { onIncrement(editingWallet.id, amt); setEditingWallet(null); }} className="min-h-11 py-3 chip-blue rounded-xl text-xs font-mono font-bold transition active:scale-95 flex items-center justify-center gap-1 shadow-sm"><Plus size={12} />{amt}</button>)}
                 </div>
               </div>
-              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 transition active:scale-[0.98]"><CheckCircle2 size={16} /> Save Balance</button>
+              <button type="submit" className={`${entryDialogStyles.primary} w-full`}><CheckCircle2 size={16} /> Save Balance</button>
             </form>
           </div>
         </div>

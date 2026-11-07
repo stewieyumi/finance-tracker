@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Calendar } from "lucide-react";
 import { MONTH_LIST, YEAR_LIST } from "../constants/config";
 import { Modal } from "./ui/Modal";
+import { entryDialogStyles } from "./ui/dialogStyles";
 
 interface DateJumpModalProps {
   isOpen: boolean;
@@ -38,7 +39,7 @@ export const DateJumpModal: React.FC<DateJumpModalProps> = ({ isOpen, onClose, o
       ariaLabel="Jump to Specific Date"
       closeOnBackdropClick={false}
     >
-      <div className="bg-surface border border-inverse/[0.08] rounded-2xl p-5 w-full max-w-sm space-y-4 shadow-2xl">
+      <div className={`${entryDialogStyles.card} max-w-sm space-y-4`}>
         <div className="flex items-center justify-between pb-2 border-b border-inverse/[0.05]">
           <div className="flex items-center gap-2">
             <Calendar size={16} className="text-blue-400" />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Archive, Edit2, CreditCard, Info } from 'lucide-react';
+import { Plus, Archive, Edit2, CreditCard, Info, ArrowRightLeft } from 'lucide-react';
 import { UnifiedFinanceData, CustomWallet } from '../types/finance';
 import { formatPHP } from '../utils/currency';
 import { getWalletForBill } from '../utils/financeHelpers';
@@ -11,6 +11,7 @@ interface WalletsTabProps {
   onCommit: (key: string, val: number) => void;
   onIncrement: (key: string, val: number) => void;
   onOpenSettings?: () => void;
+  onTransfer?: () => void;
 }
 
 const COLORS = [
@@ -25,7 +26,7 @@ const WALLET_NAME_SUGGESTIONS = [
   "CIMB", "Tonik", "Cash On-Hand"
 ];
 
-export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalData, onCommit, onIncrement }) => {
+export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalData, onCommit, onIncrement, onTransfer }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [walletName, setWalletName] = useState("");
@@ -125,9 +126,16 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
   return (
     <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
       <section aria-labelledby="wallets-total" className="rounded-2xl border border-subtle bg-surface-elevated p-4 shadow-sm sm:p-5">
-        <h2 id="wallets-total" className="text-sm font-semibold text-muted">Total Wallet Balance</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="wallets-total" className="text-sm font-semibold text-muted">Total Wallet Balance</h2>
+          {onTransfer && <button type="button" onClick={onTransfer} disabled={customWallets.length < 2}
+            className="flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 text-sm font-medium text-primary transition hover:bg-fill-strong disabled:cursor-not-allowed disabled:opacity-50">
+            <ArrowRightLeft size={16} aria-hidden="true" /> Transfer
+          </button>}
+        </div>
         <p className="privacy-blur mt-1 break-words font-mono text-2xl font-bold text-strong">{formatPHP(totalWalletBalance)}</p>
         <p className="mt-1 text-xs text-muted">Across {customWallets.length} active {customWallets.length === 1 ? "wallet" : "wallets"}</p>
+        {onTransfer && customWallets.length < 2 && <p className="mt-2 text-xs text-muted">Add another wallet to enable transfers.</p>}
       </section>
       <WalletGrid wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} savingsWallet={globalData.settings?.savingsWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
       <div className="rounded-2xl bg-surface p-3 sm:p-4">

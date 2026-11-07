@@ -3,6 +3,7 @@ import { X, Banknote, Settings, CheckCircle2, ArrowRight, CalendarPlus } from "l
 import { PaydayExecution, CustomWallet } from "../types/finance";
 import { exportPaydaysToCalendar } from "../utils/calendarExport";
 import { Modal } from "./ui/Modal";
+import { entryDialogStyles } from "./ui/dialogStyles";
 
 interface PaydayModalProps {
   isOpen: boolean;
@@ -54,7 +55,7 @@ export const PaydayModal: React.FC<PaydayModalProps> = ({
       manageFocus
       ariaLabel="Payday Distribution Modal"
     >
-      <div className="bg-surface-modal border border-inverse/[0.1] rounded-3xl p-5 sm:p-6 w-full max-w-md space-y-4 shadow-2xl animate-fade-in">
+      <div className={`${entryDialogStyles.card} max-w-md space-y-4`}>
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-2">
             <Banknote size={16} className="text-emerald-400" />

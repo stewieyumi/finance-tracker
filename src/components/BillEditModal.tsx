@@ -3,6 +3,7 @@ import { Edit2, Save, Trash2, RotateCcw, X } from "lucide-react";
 import { ALL_MONTH_YEAR_OPTIONS } from "../constants/config";
 import { BillType, BillViewModel, CustomWallet, EditFormData } from "../types/finance";
 import { Modal } from "./ui/Modal";
+import { entryDialogStyles } from "./ui/dialogStyles";
 
 interface BillEditModalProps {
   editingId: string;
@@ -40,21 +41,21 @@ export const BillEditModal: React.FC<BillEditModalProps> = ({
   <Modal
     isOpen={true}
     onClose={onCancel}
-    variant="sheet"
+    variant="floating"
     ariaLabel="Edit Commitment"
   >
-    <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md mx-auto shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
+    <div className={`${entryDialogStyles.card} max-w-md mx-auto`}>
+            <div className={entryDialogStyles.header}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400"><Edit2 size={18} /></div>
+                <div className={entryDialogStyles.icon}><Edit2 size={18} /></div>
                 <div><h3 className="text-sm font-bold text-strong leading-tight">Edit Commitment</h3><p className="text-[11px] text-muted font-medium">{editForm.name}</p></div>
               </div>
-              <button onClick={onCancel} className="text-faint hover:text-strong p-2 bg-inverse/[0.03] hover:bg-inverse/[0.08] rounded-full transition"><X size={16}/></button>
+              <button onClick={onCancel} className={entryDialogStyles.close}><X size={16}/></button>
             </div>
             <div className="space-y-4">
               <div className="flex bg-surface-lowest border border-strong rounded-xl p-1 shadow-inner">
                 <button type="button" onClick={() => onScopeChange("monthOnly")} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${editScope === "monthOnly" ? "chip-amber shadow-sm" : "text-faint hover:text-secondary"}`}>{selectedMonth.split(" ")[0]} Only</button>
-                <button type="button" onClick={() => onScopeChange("default")} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${editScope === "default" ? "bg-blue-500/20 text-blue-300 shadow-sm border border-blue-500/30" : "text-faint hover:text-secondary"}`}>Default Base</button>
+                <button type="button" onClick={() => onScopeChange("default")} className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${editScope === "default" ? "chip-blue shadow-sm" : "text-faint hover:text-secondary"}`}>Default Base</button>
               </div>
               <div>
                 <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">Commitment Name</label>
@@ -67,7 +68,7 @@ export const BillEditModal: React.FC<BillEditModalProps> = ({
                 </div>
                 <div>
                   <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">Wallet Route</label>
-                  <select value={editForm.wallet || defaultWallet} onChange={(e) => setEditForm({ ...editForm, wallet: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-blue-500 disabled:opacity-50">
+                  <select value={editForm.wallet || defaultWallet} onChange={(e) => setEditForm({ ...editForm, wallet: e.target.value })} disabled={editScope === "monthOnly"} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-primary uppercase font-semibold outline-none focus:border-blue-500 disabled:opacity-50">
                     {customWallets?.map(cw => <option key={cw.id} value={cw.id}>{cw.label}</option>)}
                   </select>
                 </div>

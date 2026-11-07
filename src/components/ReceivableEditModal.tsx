@@ -14,6 +14,7 @@ import {
   calculateNetSalary,
 } from "../utils/financeHelpers";
 import { Modal } from "./ui/Modal";
+import { entryDialogStyles } from "./ui/dialogStyles";
 
 interface ReceivableEditModalProps {
   editingId: string;
@@ -122,13 +123,13 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
     <Modal
       isOpen={true}
       onClose={onCancel}
-      variant="sheet"
+      variant="floating"
       ariaLabel="Edit Inflow"
     >
-      <div className="bg-surface-elevated border border-border-default rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md mx-auto shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4 duration-300 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
+      <div className={`${entryDialogStyles.card} max-w-md mx-auto`}>
+        <div className={entryDialogStyles.header}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <div className={entryDialogStyles.icon}>
               <Edit2 size={18} />
             </div>
             <div>
@@ -138,7 +139,7 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
           </div>
           <button
             onClick={onCancel}
-            className="text-faint hover:text-strong p-2 bg-inverse/[0.03] hover:bg-inverse/[0.08] rounded-full transition"
+            className={entryDialogStyles.close}
           >
             <X size={16} />
           </button>
@@ -188,7 +189,7 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                 <button
                   type="button"
                   onClick={handleAddDeduction}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 transition"
+                  className="flex items-center gap-1 text-[11px] font-semibold text-positive hover:text-strong transition"
                 >
                   <Plus size={12} /> Add Deduction
                 </button>
@@ -285,7 +286,7 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                   </div>
                   <div
                     data-testid="receivable-deductions-display"
-                    className="text-xs font-mono font-bold text-rose-400 mt-0.5"
+                    className="text-xs font-mono font-bold text-negative mt-0.5"
                   >
                     -₱{totalDeductions.toLocaleString("en-US", {
                       minimumFractionDigits: 2,
@@ -294,12 +295,12 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-emerald-500 uppercase font-bold">
+                  <div className="text-[10px] text-positive uppercase font-bold">
                     Net Expected / Usable
                   </div>
                   <div
                     data-testid="receivable-net-display"
-                    className="text-xs font-mono font-bold text-emerald-400 mt-0.5"
+                    className="text-xs font-mono font-bold text-positive mt-0.5"
                   >
                     ₱{netAmount.toLocaleString("en-US", {
                       minimumFractionDigits: 2,
@@ -345,7 +346,7 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                 onChange={(e) =>
                   onChange({ ...editForm, wallet: e.target.value })
                 }
-                className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-blue-300 uppercase font-semibold outline-none focus:border-emerald-500"
+                className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-primary uppercase font-semibold outline-none focus:border-emerald-500"
               >
                 {allWallets.map((w) => (
                   <option key={w.id} value={w.id}>

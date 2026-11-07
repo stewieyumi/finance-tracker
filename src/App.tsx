@@ -237,6 +237,11 @@ const {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormData>({});
   const [showLedgerModal, setShowLedgerModal] = useState(false);
+  const [ledgerInitialType, setLedgerInitialType] = useState<'transfer' | undefined>();
+  const openLedger = (initialType?: 'transfer') => {
+    setLedgerInitialType(initialType);
+    setShowLedgerModal(true);
+  };
   const [showTransactionHistoryModal, setShowTransactionHistoryModal] = useState(false);
   const [isPrivacyMode, setIsPrivacyMode] = useState<boolean>(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -1093,7 +1098,7 @@ const copySummaryToClipboard = async () => {
         {showLedgerModal && (
           <ErrorBoundary>
             <Suspense fallback={deferredModalFallback}>
-              <HistoricalLedgerModal isOpen={showLedgerModal} onClose={() => setShowLedgerModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />
+              <HistoricalLedgerModal isOpen={showLedgerModal} initialType={ledgerInitialType} onClose={() => setShowLedgerModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />
             </Suspense>
           </ErrorBoundary>
         )}
@@ -1108,7 +1113,7 @@ const copySummaryToClipboard = async () => {
                 formatDateTime={formatDateTime}
                 onOpenManualLedger={() => {
                   setShowTransactionHistoryModal(false);
-                  setShowLedgerModal(true);
+                  openLedger();
                 }}
               />
             </Suspense>
@@ -1209,7 +1214,7 @@ const copySummaryToClipboard = async () => {
           />
         )}
 
-        {activeTab === "wallets" && <WalletsTab globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} />}
+        {activeTab === "wallets" && <WalletsTab onTransfer={() => openLedger('transfer')} globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} />}
         {activeTab === "expenses" && (
           <ErrorBoundary>
             <Suspense fallback={<p role="status" className="p-4 text-sm text-muted">Loading expenses…</p>}>
@@ -1228,7 +1233,7 @@ const copySummaryToClipboard = async () => {
             importInputRef={importInputRef}
             onImportFile={handleImportFile}
             allTransactions={allTransactions}
-            onOpenLedger={() => setShowLedgerModal(true)}
+            onOpenLedger={() => openLedger()}
             onOpenTransactionHistory={() => setShowTransactionHistoryModal(true)}
             walletLabels={walletDisplayLabels}
             formatDateTime={formatDateTime}
