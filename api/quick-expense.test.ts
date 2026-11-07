@@ -186,9 +186,20 @@ describe("per-run wallet picker", () => {
     records.set("finance_data_g_account-a", JSON.stringify(current));
     records.set("finance_data_g_account-b", JSON.stringify({ data: { ...base(), wallets: { privateWallet: 999 } }, revision: 1 }));
     const choices = await save(token, { action: "wallets" });
-    expect(choices.body).toEqual({ success: true, walletChoices: { "Maya (maya) · Preferred": "maya", "cash (cash)": "cash" } });
+    expect(choices.body).toEqual({ success: true, walletChoices: { Maya: "maya", cash: "cash" } });
     expect(cloud().revision).toBe(4);
     expect((await save(token, { action: "wallets", sub: "account-b" })).status).toBe(400);
+  });
+  it("keeps identically named wallets selectable without exposing internal IDs", async () => {
+    const token = await picker();
+    const current = cloud();
+    current.data.settings.customWallets = [{ id: "maya", label: "Cash" }, { id: "cash", label: "Cash" }];
+    records.set("finance_data_g_account-a", JSON.stringify(current));
+    const choices = await save(token, { action: "wallets" });
+    expect(choices.body.walletChoices).toEqual({ Cash: "maya", "Cash · 2": "cash" });
+    const saved = await save(token, { ...payload, walletId: choices.body.walletChoices["Cash · 2"] });
+    expect(saved.status).toBe(200);
+    expect(cloud().data.wallets).toEqual({ maya: 1000, cash: 399.75 });
   });
   it("debits the explicitly chosen wallet, records its provenance, and rejects a changed-wallet replay", async () => {
     const token = await picker(); const selected = { ...payload, walletId: "cash" };

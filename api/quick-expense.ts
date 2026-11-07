@@ -122,10 +122,15 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
       if (!record) return fail(409, "Sync your app before choosing a wallet.");
       const ids = [connection.walletId, ...allowedWallets.filter(id => id !== connection.walletId)].filter(id => allowedWallets.includes(id) && usableWallet(record.data, id));
       if (!ids.length) return fail(409, "No connected wallets are available. Replace the connection in Settings.");
-      const walletChoices = Object.fromEntries(ids.map(id => [
-        `${label(record.data, id)} (${id})${id === connection.walletId ? " · Preferred" : ""}`, id,
-      ]));
-      return res.status(200).json({ success: true, walletChoices });
+      const walletChoices = new Map<string, string>();
+      for (const id of ids) {
+        const name = label(record.data, id).trim() || "Wallet";
+        let choice = name;
+        let suffix = 2;
+        while (walletChoices.has(choice)) choice = `${name} · ${suffix++}`;
+        walletChoices.set(choice, id);
+      }
+      return res.status(200).json({ success: true, walletChoices: Object.fromEntries(walletChoices) });
     }
     const selectedWallet = body.walletId ?? (connection.walletIds ? undefined : connection.walletId);
     if (typeof selectedWallet !== "string" || !allowedWallets.includes(selectedWallet)) return fail(400, "Choose a wallet authorized by this connection. Replace the connection in Settings to include new wallets.");

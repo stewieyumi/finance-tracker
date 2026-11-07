@@ -40,10 +40,10 @@ export function QuickExpenseShortcutSetup({ globalData }: { globalData: UnifiedF
   const walletLabel = (id: string) => globalData.settings?.customWallets?.find(wallet => wallet.id === id)?.label ?? globalData.settings?.walletLabels?.[id] ?? id;
   return <div className="space-y-3">
     <a href="/shortcuts/Finance%20Tracker%20Quick%20Expense.shortcut" download="Finance Tracker Quick Expense.shortcut" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 font-semibold text-primary hover:bg-fill-strong"><Download size={15} /> Add to Apple Shortcuts</a>
-    <p>Download the preset, then open it and tap Add Shortcut. Connect automatic saving below and paste your private key when the preset asks for it.</p>
+    <p>Download the latest preset, then open it and tap Add Shortcut. Reinstall it to update an older shortcut. Connect automatic saving below and paste your private key when the preset asks for it.</p>
     <button type="button" aria-expanded={open} onClick={() => { setOpen(value => !value); if (!open) void request(); }} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 font-semibold text-primary hover:bg-fill-strong"><Link2 size={14} /> Automatic saving</button>
     {open && <div className="space-y-3 rounded-xl border border-subtle p-3">
-      <p>Save from Apple’s prompts without opening the web form. Choose a payment wallet on every run and check it before confirming. This connection can deduct from your currently active, synced wallets. It expires after 30 days; replace it to renew or include newly added wallets.</p>
+      <p>Enter the amount, category, and name, then choose a payment wallet. Selecting the wallet saves immediately, with no confirmation or success popup; failures still show a message. This connection can deduct from your currently active, synced wallets. It expires after 30 days; replace it to renew or include newly added wallets.</p>
       {connection?.connected && <p className="font-medium text-primary">{connection.walletSelection === "each-run" ? "Wallet picker connected" : `Fixed wallet: ${connection.walletLabel}. Replace the connection to enable wallet choices`}. Expires {new Date(connection.expiresAt!).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}.</p>}
       <label className="block space-y-1 font-medium text-primary">Preferred shortcut wallet
         <select aria-label="Preferred shortcut wallet" value={walletId} onChange={e => setWalletId(e.target.value)} disabled={busy} className="block w-full rounded-lg border border-subtle bg-surface-input px-3 py-2 text-primary">{wallets.map(id => <option key={id} value={id}>{walletLabel(id)}</option>)}</select>
@@ -57,7 +57,7 @@ export function QuickExpenseShortcutSetup({ globalData }: { globalData: UnifiedF
         <label className="block font-medium text-primary">Private shortcut key<input aria-label="Private shortcut key" readOnly type="password" value={token} onFocus={e => e.currentTarget.select()} className="mt-1 block w-full min-w-0 rounded-lg border border-subtle bg-surface-input px-3 py-2" /></label>
         <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(token); setStatus("Private key copied. Paste it into the shortcut’s setup question."); } catch { setStatus("Select and copy the private key above."); } }} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 font-semibold text-primary"><Copy size={14} /> Copy private key</button>
       </div>}
-      <p>Assign Finance Tracker Quick Expense in iPhone Settings → Accessibility → Touch → Back Tap. A successful save shows “Saved”; if the request is interrupted, check History before entering it again.</p>
+      <p>Assign Finance Tracker Quick Expense in iPhone Settings → Accessibility → Touch → Back Tap. A successful save finishes quietly; if the request is interrupted, check History before entering it again.</p>
     </div>}
     {status && <p role="status">{status}</p>}
   </div>;
