@@ -51,6 +51,22 @@ describe("TransactionHistoryModal", () => {
     expect(container.firstChild).toBeNull();
   });
 
+  it("moves keyboard focus into history and restores the opener on close", () => {
+    const opener = document.createElement("button");
+    opener.textContent = "View history";
+    document.body.append(opener);
+    opener.focus();
+    const view = render(<TransactionHistoryModal {...defaultProps} />);
+    try {
+      expect(screen.getByRole("dialog", { name: "Transaction History" })).toHaveFocus();
+      view.rerender(<TransactionHistoryModal {...defaultProps} isOpen={false} />);
+      expect(opener).toHaveFocus();
+    } finally {
+      view.unmount();
+      opener.remove();
+    }
+  });
+
   it("renders transactions and summary when isOpen is true", () => {
     render(<TransactionHistoryModal {...defaultProps} />);
 

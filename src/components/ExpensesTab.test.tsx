@@ -22,6 +22,17 @@ const createTestData = (): UnifiedFinanceData => ({
 });
 
 describe("ExpensesTab - wallet balance protection", () => {
+  it("exposes each expense field through its visible label", () => {
+    render(<ExpensesTab globalData={createTestData()} setGlobalData={vi.fn()} showToast={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /^Manual/ }));
+    const form = screen.getByRole("form", { name: "Log Expense" });
+    expect(within(form).getByRole("textbox", { name: "Merchant / Name" })).toBeRequired();
+    expect(within(form).getByRole("spinbutton", { name: "Amount (₱)" })).toBeRequired();
+    expect(within(form).getByLabelText("Date")).toHaveAttribute("type", "date");
+    expect(within(form).getByRole("combobox", { name: "Category" })).toBeEnabled();
+    expect(within(form).getByRole("combobox", { name: "Deduct From" })).toBeEnabled();
+  });
+
   it("opens a shortcut as an unsaved expense and preserves the draft when used again", () => {
     const initialData = createTestData();
     initialData.settings = { ...initialData.settings, customWallets: [{ id: "maya", label: "Maya", color: "text-blue-400" }] };

@@ -154,6 +154,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
       onClose={onClose}
       variant="sheet"
       ariaLabel="Transaction History"
+      manageFocus
     >
       <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-2xl mx-auto shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
         {/* Header */}

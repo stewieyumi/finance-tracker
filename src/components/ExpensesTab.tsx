@@ -1,6 +1,6 @@
 import { compareTransactionsNewestFirst, formatTransactionDateTime } from "../utils/transactionDates";
 import { formatPHP, roundMoney } from "../utils/currency";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { Camera, ScanLine, Plus, Receipt, Trash2, CheckCircle2, Upload } from "lucide-react";
 import { UnifiedFinanceData, Expense, ExpenseCategory } from "../types/finance";
 import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
@@ -29,6 +29,7 @@ const getLocalToday = () => {
 };
 
 export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalData, showToast, selectedMonth = getMonthKey(new Date()) }) => {
+  const expenseFormId = useId();
   const [showForm, setShowForm] = useState(false);
   const [showScanOptions, setShowScanOptions] = useState(false);
   const [showPaste, setShowPaste] = useState(false);
@@ -318,20 +319,20 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
                 </button>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="col-span-1 sm:col-span-2 min-w-0">
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Merchant / Name</label>
-                    <input type="text" value={form.merchant} onChange={e => setForm({...form, merchant: e.target.value})} placeholder="e.g. Starbucks, Laundry..." className="w-full min-w-0 bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs text-strong outline-none box-border" required />
+                    <label htmlFor={`${expenseFormId}-merchant`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Merchant / Name</label>
+                    <input id={`${expenseFormId}-merchant`} type="text" value={form.merchant} onChange={e => setForm({...form, merchant: e.target.value})} placeholder="e.g. Starbucks, Laundry..." className="w-full min-w-0 bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs text-strong box-border" required />
                   </div>
                   <div className="min-w-0">
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Amount (₱)</label>
-                    <input type="number" inputMode="decimal" min="0.01" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="0.00" className="w-full min-w-0 bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-emerald-400 outline-none box-border" required />
+                    <label htmlFor={`${expenseFormId}-amount`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Amount (₱)</label>
+                    <input id={`${expenseFormId}-amount`} type="number" inputMode="decimal" min="0.01" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="0.00" className="w-full min-w-0 bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-positive box-border" required />
                   </div>
                   <div className="min-w-0">
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Date</label>
-                    <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full min-w-0 appearance-none bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-2 sm:px-3 py-2.5 text-[11px] text-strong outline-none min-h-[38px] box-border" required />
+                    <label htmlFor={`${expenseFormId}-date`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Date</label>
+                    <input id={`${expenseFormId}-date`} type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full min-w-0 appearance-none bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-2 sm:px-3 py-2.5 text-[11px] text-strong min-h-[38px] box-border" required />
                   </div>
                   <div className="min-w-0">
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Category</label>
-                    <select
+                    <label htmlFor={`${expenseFormId}-category`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Category</label>
+                    <select id={`${expenseFormId}-category`}
                       value={form.category}
                       onChange={e => {
                         const category = e.target.value;
@@ -341,20 +342,20 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
                           wallet: getDefaultExpenseWalletId(category, globalData.settings, globalData.wallets)
                         }));
                       }}
-                      className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-strong outline-none min-h-[38px] box-border"
+                      className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-strong min-h-[38px] box-border"
                     >
                       {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                   <div className="min-w-0">
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Deduct From</label>
-                    <select value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-blue-300 font-semibold uppercase outline-none min-h-[38px] box-border">
+                    <label htmlFor={`${expenseFormId}-wallet`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Deduct From</label>
+                    <select id={`${expenseFormId}-wallet`} value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-primary font-semibold uppercase min-h-[38px] box-border">
                       {allWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                     </select>
                   </div>
                 </div>
 
-                <button type="submit" disabled={isScanning} className="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-900/20">
+                <button type="submit" disabled={isScanning} className="w-full mt-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-900/20">
                   <CheckCircle2 size={14} /> Save & Deduct
                 </button>
               </fieldset>
