@@ -164,6 +164,8 @@ export interface AppSettings {
   savingsWallet?: string;
   transitWallet?: string;
   defaultWallet?: string;
+  transferFromWallet?: string;
+  transferToWallet?: string;
   expenseWallets?: Record<string, string>;
   walletLabels?: Record<string, string>;
   hasMigratedBaseWallets?: boolean;

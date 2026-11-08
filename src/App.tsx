@@ -3,6 +3,7 @@ import { PaymentHistoryMenu } from "./components/PaymentHistoryMenu";
 import { recordPaymentAction, type PaymentHistory, type PaymentHistoryAction } from "./utils/paymentHistory";
 import React, { useState, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { AppUpdateBanner } from "./components/AppUpdateBanner";
 import { GoogleLogin, googleLogout } from "@react-oauth/google";
 import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff, Bell } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
@@ -74,9 +75,6 @@ const GoalSetupModal = lazy(() => import("./components/GoalSetupModal")
   .then(module => ({ default: module.GoalSetupModal })));
 const DateJumpModal = lazy(() => import("./components/DateJumpModal")
   .then(module => ({ default: module.DateJumpModal })));
-
-const AppUpdateBanner = lazy(() => import("./components/AppUpdateBanner")
-  .then(module => ({ default: module.AppUpdateBanner })));
 
 const deferredModalFallback = (
   <div role="status" className="fixed left-1/2 top-12 z-[100] -translate-x-1/2 rounded-xl border border-strong bg-surface-high px-4 py-2 text-sm text-primary shadow-lg">
@@ -949,14 +947,18 @@ const copySummaryToClipboard = async () => {
   }
 
   return (
-    <div style={updateAvailable ? { paddingTop: "calc(max(2rem, env(safe-area-inset-top)) + 3rem)" } : undefined} className={`min-h-screen bg-shell text-text-secondary px-4 sm:px-6 app-navigation-clearance pt-[max(2rem,env(safe-area-inset-top))] flex justify-center selection:bg-blue-600 selection:text-white ${isPrivacyMode ? "privacy-mode" : ""}`}>
+    <div style={updateAvailable ? { paddingTop: "calc(max(2rem, env(safe-area-inset-top)) + 5rem)" } : undefined} className={`min-h-screen bg-shell text-text-secondary px-4 sm:px-6 app-navigation-clearance pt-[max(2rem,env(safe-area-inset-top))] flex justify-center selection:bg-blue-600 selection:text-white ${isPrivacyMode ? "privacy-mode" : ""}`}>
       <div className="fixed top-0 left-0 right-0 z-[200] bg-shell/80 backdrop-blur-xl pointer-events-none" style={{ height: "env(safe-area-inset-top)" }} />
 
-      {updateAvailable && <ErrorBoundary><Suspense fallback={null}>
-        <AppUpdateBanner isEditing={isEditing} isSyncing={isSyncing} syncNeedsSignIn={syncNeedsSignIn}
-          hasActiveConflict={hasActiveConflict} hasInitialSyncCompleted={hasInitialSyncCompleted}
-          canReloadSafely={canReloadSafely} onBlocked={showToast} />
-      </Suspense></ErrorBoundary>}
+      {updateAvailable && (
+        <section aria-label="App update notice" className="fixed inset-x-4 top-[calc(env(safe-area-inset-top)+12px)] z-[9999] mx-auto flex max-w-lg justify-center">
+          <ErrorBoundary message="The update notice couldn't load. You can keep using the app.">
+            <AppUpdateBanner isEditing={isEditing} isSyncing={isSyncing} syncNeedsSignIn={syncNeedsSignIn}
+              hasActiveConflict={hasActiveConflict} hasInitialSyncCompleted={hasInitialSyncCompleted}
+              canReloadSafely={canReloadSafely} onBlocked={showToast} />
+          </ErrorBoundary>
+        </section>
+      )}
 
       {toastMessage && (
         <div className="fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 flex items-center gap-2 bg-surface-high sm:inset-x-auto sm:bottom-auto sm:right-6 sm:top-12 text-strong text-xs px-4 py-2.5 rounded-xl border border-inverse/10 shadow-2xl animate-fade-in">

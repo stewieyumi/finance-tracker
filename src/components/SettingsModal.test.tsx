@@ -105,6 +105,54 @@ const extractSavedSettings = (setGlobalData: ReturnType<typeof vi.fn>, initialDa
   return updatedData.settings;
 };
 
+it("saves independent transfer defaults without changing balances, history, or bill defaults", () => {
+  const data = createMockData();
+  const { setGlobalData } = renderSettingsModal(data, { initialTab: "wallets" });
+  fireEvent.change(screen.getByRole("combobox", { name: "Default transfer From" }), { target: { value: "maya" } });
+  const to = screen.getByRole("combobox", { name: "Default transfer To" });
+  expect(to.querySelector('option[value="maya"]')).toBeNull();
+  fireEvent.change(to, { target: { value: "gcash" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Settings" }));
+  const updated = setGlobalData.mock.calls[0][0](data);
+  expect(updated.settings).toMatchObject({ defaultWallet: "main", transferFromWallet: "maya", transferToWallet: "gcash" });
+  expect(updated.wallets).toBe(data.wallets);
+  expect(updated.library).toBe(data.library);
+  expect(updated.logs).toBe(data.logs);
+});
+
+it("clears the destination when the transfer source changes to it, including fallback", () => {
+  const data = createMockData();
+  data.settings = { ...data.settings, transferFromWallet: "maya", transferToWallet: "main" };
+  renderSettingsModal(data, { initialTab: "wallets" });
+  const from = screen.getByRole("combobox", { name: "Default transfer From" });
+  const to = screen.getByRole("combobox", { name: "Default transfer To" });
+  expect(to).toHaveValue("main");
+  fireEvent.change(from, { target: { value: "" } });
+  expect(to).toHaveValue("");
+  expect(to.querySelector('option[value="main"]')).toBeNull();
+});
+
+it("shows Choose each time if an inherited source changes to the destination", () => {
+  const data = createMockData();
+  data.settings = { ...data.settings, transferToWallet: "maya" };
+  const { setGlobalData } = renderSettingsModal(data, { initialTab: "wallets" });
+  const billDefault = screen.getByText("Default Wallet for New Bills").parentElement!.querySelector("select")!;
+  fireEvent.change(billDefault, { target: { value: "maya" } });
+  expect(screen.getByRole("combobox", { name: "Default transfer To" })).toHaveValue("");
+  fireEvent.click(screen.getByRole("button", { name: "Save Settings" }));
+  expect(extractSavedSettings(setGlobalData, data).transferToWallet).toBeUndefined();
+});
+
+it("discards transfer-default edits on Cancel", () => {
+  const data = createMockData();
+  const { setGlobalData, onClose } = renderSettingsModal(data, { initialTab: "wallets" });
+  fireEvent.change(screen.getByRole("combobox", { name: "Default transfer From" }), { target: { value: "maya" } });
+  fireEvent.change(screen.getByRole("combobox", { name: "Default transfer To" }), { target: { value: "gcash" } });
+  fireEvent.click(screen.getByRole("button", { name: /^Cancel$/ }));
+  expect(onClose).toHaveBeenCalledOnce();
+  expect(setGlobalData).not.toHaveBeenCalled();
+});
+
 it("groups wallet defaults separately and keeps payday edits when switching sections", () => {
   const data = createMockData();
   const { setGlobalData } = renderSettingsModal(data);

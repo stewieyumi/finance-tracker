@@ -64,6 +64,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
     const routes = [
       settings?.milestoneWallet, settings?.livingWallet, settings?.savingsWallet,
       settings?.transitWallet, settings?.defaultWallet,
+      settings?.transferFromWallet, settings?.transferToWallet,
       ...Object.values(settings?.expenseWallets ?? {}),
     ];
     if (routes.includes(id) || data.library.bills.some(bill => (bill.wallet || getWalletForBill(bill.name)) === id) ||

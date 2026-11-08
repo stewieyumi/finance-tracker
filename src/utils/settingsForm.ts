@@ -2,6 +2,7 @@ import { AppSettings, Deduction, WalletState } from "../types/finance";
 import {
   calculateNetSalary,
   getDefaultExpenseWalletId,
+  getDefaultTransferWallets,
 } from "./financeHelpers";
 
 export const EXPENSE_CATEGORIES = [
@@ -28,6 +29,8 @@ export interface SettingsForm {
   defaultTransitAllocation: number;
   transitWallet: string;
   defaultWallet: string;
+  transferFromWallet: string;
+  transferToWallet: string;
   expenseWallets: Record<string, string>;
   inflowsLabel: string;
   gigsLabel: string;
@@ -80,6 +83,8 @@ export function createSettingsForm(
     defaultTransitAllocation: settings?.defaultTransitAllocation ?? 1500,
     transitWallet: settings?.transitWallet || "gotyme",
     defaultWallet: settings?.defaultWallet || "main",
+    transferFromWallet: settings?.customWallets?.find(wallet => wallet.id === settings.transferFromWallet)?.id || "",
+    transferToWallet: getDefaultTransferWallets(settings).destinationWallet,
     expenseWallets: Object.fromEntries(
       EXPENSE_CATEGORIES.map(category => [
         category,
@@ -130,6 +135,8 @@ export function applySettingsForm(
     defaultTransitAllocation: Number(form.defaultTransitAllocation),
     transitWallet: form.transitWallet,
     defaultWallet: form.defaultWallet,
+    transferFromWallet: settings?.customWallets?.find(wallet => wallet.id === form.transferFromWallet)?.id || undefined,
+    transferToWallet: getDefaultTransferWallets({ ...settings, ...form }).destinationWallet || undefined,
     expenseWallets: form.expenseWallets,
     inflowsLabel: form.inflowsLabel,
     gigsLabel: form.gigsLabel,

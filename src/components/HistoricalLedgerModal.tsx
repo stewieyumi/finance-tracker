@@ -6,6 +6,7 @@ import { generateId } from '../utils/idHelpers';
 import { Modal } from './ui/Modal';
 import { entryDialogStyles } from './ui/dialogStyles';
 import { formatPHP } from '../utils/currency';
+import { getDefaultTransferWallets } from '../utils/financeHelpers';
 
 interface Props {
   isOpen: boolean;
@@ -52,6 +53,7 @@ const applyManualTransactionWalletEffect = (
 export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, globalData, setGlobalData, showToast, initialType }) => {
   const formId = useId();
   const isWalletTransfer = initialType === 'transfer';
+  const transferDefaults = getDefaultTransferWallets(globalData.settings);
   const today = new Date();
   const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const [view, setView] = useState<'list' | 'form'>(initialType ? 'form' : 'list');
@@ -63,9 +65,9 @@ export const HistoricalLedgerModal: React.FC<Props> = ({ isOpen, onClose, global
     type: initialType ?? ('expense' as ManualTransaction['type']),
     date: isWalletTransfer ? localDate : today.toISOString().split('T')[0],
     wallet: isWalletTransfer
-      ? (globalData.settings?.customWallets?.find(wallet => wallet.id === globalData.settings?.defaultWallet)?.id ?? globalData.settings?.customWallets?.[0]?.id ?? '')
+      ? transferDefaults.wallet
       : globalData.settings?.defaultWallet || 'main',
-    destinationWallet: '',
+    destinationWallet: isWalletTransfer ? transferDefaults.destinationWallet : '',
     category: '',
     note: '',
     updateWallets: true,

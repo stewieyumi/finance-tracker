@@ -113,6 +113,35 @@ describe("createSettingsForm", () => {
 });
 
 describe("applySettingsForm", () => {
+  it("leaves old settings opt-in and drops unavailable or identical transfer choices", () => {
+    const legacy = { defaultWallet: "maya", customWallets: [{ id: "maya", label: "Maya" }] };
+    const oldForm = createSettingsForm(legacy);
+    expect(oldForm.transferFromWallet).toBe("");
+    expect(oldForm.transferToWallet).toBe("");
+    const form = createSettingsForm({ ...legacy, transferFromWallet: "removed", transferToWallet: "maya" });
+    expect(form.transferFromWallet).toBe("");
+    expect(form.transferToWallet).toBe("");
+    form.transferFromWallet = "maya";
+    form.transferToWallet = "maya";
+    expect(applySettingsForm(legacy, form).transferToWallet).toBeUndefined();
+  });
+
+  it("round-trips transfer preferences separately from existing wallet routing", () => {
+    const existing: AppSettings = { defaultWallet: "maya", transferFromWallet: "gcash", transferToWallet: "maya",
+      customWallets: [{ id: "maya", label: "Maya" }, { id: "gcash", label: "GCash" }] };
+    const form = createSettingsForm(existing);
+    expect(form.transferFromWallet).toBe("gcash");
+    expect(form.transferToWallet).toBe("maya");
+    const result = applySettingsForm(existing, form);
+    expect(result).toMatchObject({ defaultWallet: "maya", transferFromWallet: "gcash", transferToWallet: "maya" });
+    form.transferFromWallet = "";
+    form.transferToWallet = "";
+    const cleared = applySettingsForm(existing, form);
+    expect(cleared.transferFromWallet).toBeUndefined();
+    expect(cleared.transferToWallet).toBeUndefined();
+    expect(existing.transferFromWallet).toBe("gcash");
+  });
+
   it("updates editable settings while preserving unrelated settings", () => {
     const existing: AppSettings = {
       goalName: "Old Goal",

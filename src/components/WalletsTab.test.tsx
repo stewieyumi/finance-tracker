@@ -110,6 +110,19 @@ describe("WalletsTab archival", () => {
     expect(next.setGlobalData).not.toHaveBeenCalled();
   });
 
+  it.each(["transferFromWallet", "transferToWallet"] as const)("keeps a wallet used by %s active", preference => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const data = makeData();
+    data.wallets.w_del = 0;
+    data.library.bills = [];
+    data.library.receivables = [];
+    data.settings = { customWallets: data.settings?.customWallets, [preference]: "w_del" };
+    const { setGlobalData } = renderWallets(data);
+    fireEvent.click(screen.getAllByRole("button", { name: "Archive account" })[0]);
+    expect(alert).toHaveBeenCalledWith("Change the wallet used by settings, commitments, or inflows before archiving.");
+    expect(setGlobalData).not.toHaveBeenCalled();
+  });
+
   it("archives and restores without rewriting historical records or changing total cash", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     const data = makeData();

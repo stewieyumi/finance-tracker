@@ -264,6 +264,15 @@ describe("App — Google session recovery", () => {
     store = {};
   });
 
+  it("renders the update notice immediately inside its own overlay", () => {
+    mockUpdateAvailable = true;
+    render(<App />);
+    const notice = screen.getByRole("region", { name: "App update notice" });
+    expect(notice).toHaveClass("fixed");
+    expect(notice).toContainElement(screen.getByRole("button", { name: /new update available/i }));
+    expect(screen.getByTestId("dashboard-tab")).toBeInTheDocument();
+  });
+
   it("routes Wallets to a transfer form and keeps Manage Ledger opening the history list", async () => {
     render(<App />);
     const initialCommitCount = mockCommitDataChange.mock.calls.length;

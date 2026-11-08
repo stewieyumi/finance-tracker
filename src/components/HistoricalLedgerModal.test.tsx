@@ -56,6 +56,41 @@ const applyUpdate = (
 };
 
 describe("Wallets Transfer entry", () => {
+  it.each([
+    ["configured pair", { transferFromWallet: "gcash", transferToWallet: "maya" }, "gcash", "maya"],
+    ["missing source", { transferFromWallet: "removed", transferToWallet: "gcash" }, "maya", "gcash"],
+    ["missing destination", { transferFromWallet: "gcash", transferToWallet: "removed" }, "gcash", ""],
+    ["same wallet", { transferFromWallet: "gcash", transferToWallet: "gcash" }, "gcash", ""],
+    ["destination matches fallback source", { transferFromWallet: "removed", transferToWallet: "maya" }, "maya", ""],
+  ])("prefills %s without moving money", (_name, defaults, from, to) => {
+    const data = makeData();
+    data.settings = { ...data.settings, ...defaults };
+    const setGlobalData = vi.fn();
+    render(<HistoricalLedgerModal isOpen initialType="transfer" onClose={vi.fn()}
+      globalData={data} setGlobalData={setGlobalData} showToast={vi.fn()} />);
+    expect(screen.getByLabelText("From")).toHaveValue(from);
+    expect(screen.getByLabelText("To")).toHaveValue(to);
+    expect(setGlobalData).not.toHaveBeenCalled();
+  });
+
+  it("lets a transfer override both defaults without changing the saved preferences", () => {
+    const data = makeData();
+    data.settings = { ...data.settings, transferFromWallet: "gcash", transferToWallet: "maya" };
+    const setGlobalData = vi.fn();
+    render(<HistoricalLedgerModal isOpen initialType="transfer" onClose={vi.fn()}
+      globalData={data} setGlobalData={setGlobalData} showToast={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("From"), { target: { value: "maya" } });
+    expect(screen.getByLabelText("To")).toHaveValue("");
+    fireEvent.change(screen.getByLabelText("To"), { target: { value: "gcash" } });
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "125.25" } });
+    fireEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    const next = applyUpdate(setGlobalData, data);
+    expect(next.wallets.maya).toBe(874.75);
+    expect(next.wallets.gcash).toBe(1125.25);
+    expect(next.library.manualTransactions).toHaveLength(1);
+    expect(next.settings).toBe(data.settings);
+  });
+
   it("shows only Amount, From, and To, then records one transfer with the local date", () => {
     vi.stubEnv("TZ", "Asia/Manila");
     vi.useFakeTimers();

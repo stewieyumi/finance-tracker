@@ -217,6 +217,16 @@ export function getReceivableStatus(
   return { isCollected, remaining };
 }
 
+export function getDefaultTransferWallets(settings?: AppSettings): { wallet: string; destinationWallet: string } {
+  const activeWallets = settings?.customWallets || [];
+  const wallet = [settings?.transferFromWallet, settings?.defaultWallet]
+    .find(id => id && activeWallets.some(active => active.id === id))
+    ?? activeWallets[0]?.id ?? "";
+  const destinationWallet = activeWallets.find(active =>
+    active.id === settings?.transferToWallet && active.id !== wallet)?.id ?? "";
+  return { wallet, destinationWallet };
+}
+
 export function getDefaultWalletId(
   settings?: {
     defaultWallet?: string;

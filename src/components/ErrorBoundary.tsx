@@ -3,6 +3,7 @@ import { AlertTriangle } from "lucide-react";
 
 interface Props {
   children?: ReactNode;
+  message?: string;
 }
 
 interface State {
@@ -27,10 +28,10 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="chip-rose rounded-2xl p-4 text-xs flex items-center justify-between my-2">
+        <div role="alert" className="chip-rose rounded-2xl p-4 text-xs flex items-center justify-between my-2">
           <div className="flex items-center gap-2">
             <AlertTriangle size={15} className="text-rose-400 shrink-0" />
-            <span>Something broke in this card. Other features remain operational.</span>
+            <span>{this.props.message ?? "Something broke in this card. Other features remain operational."}</span>
           </div>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}

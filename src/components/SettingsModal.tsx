@@ -11,6 +11,7 @@ import {
 import {
   calculateDeductionAmount,
   calculateNetSalary,
+  getDefaultTransferWallets,
 } from "../utils/financeHelpers";
 import { QUICK_EXPENSE_HASH } from "../constants/config";
 import { generateId } from "../utils/idHelpers";
@@ -31,7 +32,7 @@ const SETTINGS_SECTIONS = {
   wallets: {
     label: "Wallet Defaults", icon: Wallet, color: "bg-blue-700",
     description: "Choose which wallets handle payments and allocations.",
-    keywords: "bill payments expenses routing savings transit living allowance",
+    keywords: "bill payments expenses routing savings transit living allowance transfer from to destination",
   },
   sync: {
     label: "Cloud Sync", icon: Cloud, color: "bg-violet-700",
@@ -254,6 +255,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
       {globalData.settings?.customWallets?.map(cw => <option key={cw.id} value={cw.id}>{cw.label}</option>)}
     </>
   );
+
+  const transferDefaults = getDefaultTransferWallets({ ...globalData.settings, ...form });
 
   return (
     <Modal
@@ -747,6 +750,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                     </select>
                   </div>
                 </div>
+
+                <section aria-labelledby="transfer-defaults-heading" className={settingsGroup}>
+                  <div className="px-4 py-3">
+                    <h3 id="transfer-defaults-heading" className="text-sm font-semibold text-primary">Transfer Defaults</h3>
+                    <p className="mt-1 text-xs text-muted">Preselect wallets for new transfers. You can change them each time.</p>
+                  </div>
+                  <label className={settingsRow}>
+                    <span className="text-sm font-medium text-primary">From</span>
+                    <select aria-label="Default transfer From" value={form.transferFromWallet}
+                      onChange={event => {
+                        const transferFromWallet = event.target.value;
+                        const { destinationWallet } = getDefaultTransferWallets({ ...globalData.settings, ...form, transferFromWallet });
+                        setForm({ ...form, transferFromWallet, transferToWallet: destinationWallet });
+                      }}
+                      className="min-h-11 w-full sm:w-auto sm:max-w-[60%] rounded-xl border border-strong bg-surface-input px-3 py-2 text-sm text-primary focus:border-blue-500">
+                      <option value="">Use default wallet</option>
+                      <WalletSelectOptions />
+                    </select>
+                  </label>
+                  <label className={settingsRow}>
+                    <span className="text-sm font-medium text-primary">To</span>
+                    <select aria-label="Default transfer To" value={transferDefaults.destinationWallet}
+                      onChange={event => setForm({ ...form, transferToWallet: event.target.value })}
+                      className="min-h-11 w-full sm:w-auto sm:max-w-[60%] rounded-xl border border-strong bg-surface-input px-3 py-2 text-sm text-primary focus:border-blue-500">
+                      <option value="">Choose each time</option>
+                      {globalData.settings?.customWallets?.filter(wallet => wallet.id !== transferDefaults.wallet)
+                        .map(wallet => <option key={wallet.id} value={wallet.id}>{wallet.label}</option>)}
+                    </select>
+                  </label>
+                </section>
 
                 <div className="bg-surface-sunken border border-subtle rounded-2xl p-4">
                   <div className="mb-3">
