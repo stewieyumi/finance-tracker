@@ -4,7 +4,7 @@ import { notifyAuthTokenRejected } from "./useCloudSync";
 import { getFinanceAuth } from "../utils/financeAuth";
 import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
 
-function recordScannerStatus(status: number | "invalid-response" | "network-error", atCapacity = false) {
+function recordScannerStatus(status: number | "invalid-response" | "network-error" | "timeout", atCapacity = false) {
   try {
     localStorage.removeItem("scanner_debug_log");
     localStorage.setItem("scanner_status", JSON.stringify({ status, atCapacity }));
@@ -66,6 +66,9 @@ async function prepareReceipt(file: File, signal: AbortSignal) {
 }
 
 const GENERIC_FAILURE = "Unable to scan this receipt. Try again or enter the details manually.";
+const TIMEOUT_FAILURE = "Scanning took too long. Retry this photo or enter the details manually.";
+// Covers image preparation, upload, and response reading, with room for the server's AI deadline.
+const SCAN_TIMEOUT_MS = 35_000;
 
 export function useExpenseScanner({
   showToast,
@@ -113,12 +116,29 @@ export function useExpenseScanner({
 
     const isCurrent = () => {
       const auth = getFinanceAuth();
-      return !controller.signal.aborted && auth.key === token && auth.sub === subject;
+      return activeScan.current === controller && !controller.signal.aborted && auth.key === token && auth.sub === subject;
     };
     const fail = (message: string, canRetry = true) => {
       if (!canRetry) retryPhoto.current = null;
       setFailure({ message, canRetry });
     };
+
+    const timeout = window.setTimeout(() => {
+      if (activeScan.current !== controller) return;
+      activeScan.current = null;
+      controller.abort();
+      setIsScanning(false);
+      const auth = getFinanceAuth();
+      if (auth.sub !== subject) {
+        fail("Choose the receipt again for this account.", false);
+      } else if (auth.key !== token) {
+        fail("Your sign-in changed during the scan. Retry this photo or enter the details manually.");
+      } else {
+        recordScannerStatus("timeout");
+        fail(TIMEOUT_FAILURE);
+      }
+    }, SCAN_TIMEOUT_MS);
+    controller.signal.addEventListener("abort", () => window.clearTimeout(timeout), { once: true });
 
     try {
       const image = await prepareReceipt(file, controller.signal);
@@ -129,6 +149,7 @@ export function useExpenseScanner({
         body: JSON.stringify({ image }),
         signal: controller.signal,
       });
+      if (!isCurrent()) return;
       const body = await res.text();
       if (!isCurrent()) return;
 
@@ -156,7 +177,7 @@ export function useExpenseScanner({
         return;
       }
       if (data?.code === "AI_TIMEOUT") {
-        fail("Scanning took too long. Retry this photo or enter the details manually.");
+        fail(TIMEOUT_FAILURE);
         return;
       }
       if (atCapacity) {
@@ -199,6 +220,7 @@ export function useExpenseScanner({
         fail(GENERIC_FAILURE);
       }
     } finally {
+      window.clearTimeout(timeout);
       if (activeScan.current === controller) {
         activeScan.current = null;
         if (!controller.signal.aborted) {

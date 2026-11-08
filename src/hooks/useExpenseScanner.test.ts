@@ -449,3 +449,169 @@ describe("scanner availability and draft validation", () => {
     expect(onScanComplete).toHaveBeenCalledWith(expect.objectContaining({ date: today }));
   });
 });
+
+
+describe("scanner browser deadline", () => {
+  const file = new File(["synthetic receipt"], "receipt.jpg", { type: "image/jpeg" });
+  const success = () => ({ ok: true, status: 200, text: async () => JSON.stringify({ parsed: { merchant: "Sample Cafe", amount: 25.50 } }) });
+  const capture = (handle: (event: React.ChangeEvent<HTMLInputElement>) => void) =>
+    handle({ currentTarget: { files: [file], value: "" } } as unknown as React.ChangeEvent<HTMLInputElement>);
+  let decodeImmediately: boolean;
+  let completeImage: (() => void) | undefined;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.useFakeTimers();
+    decodeImmediately = true;
+    completeImage = undefined;
+    vi.spyOn(financeAuth, "getFinanceAuth").mockReturnValue({ sub: "deadline-user", key: "deadline-session", headers: { "X-Finance-Session": "deadline-session" } });
+    class ImageFixture {
+      width = 200; height = 100; onload: (() => void) | null = null;
+      set src(_value: string) {
+        completeImage = () => this.onload?.();
+        if (decodeImmediately) completeImage();
+      }
+    }
+    vi.stubGlobal("Image", ImageFixture);
+    vi.stubGlobal("URL", { ...URL, createObjectURL: vi.fn(() => "blob:deadline-fixture"), revokeObjectURL: vi.fn() });
+    const create = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => tag === "canvas"
+      ? { getContext: () => ({ drawImage: vi.fn() }), toDataURL: () => "data:image/jpeg;base64,Zml4dHVyZQ==" } as unknown as HTMLCanvasElement : create(tag));
+    vi.stubGlobal("localStorage", { setItem: vi.fn(), removeItem: vi.fn(), getItem: vi.fn() });
+  });
+  afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+  const setup = () => {
+    const onScanComplete = vi.fn();
+    const showToast = vi.fn();
+    return { ...renderHook(() => useExpenseScanner({ showToast, globalData: baseGlobalData, onScanStart: vi.fn(), onScanComplete })), onScanComplete, showToast };
+  };
+
+  it.each(["image", "request", "response body"])("recovers from a stalled %s and retries the same photo", async phase => {
+    decodeImmediately = phase !== "image";
+    const fetch = vi.fn().mockImplementationOnce(() => phase === "response body"
+      ? Promise.resolve({ ok: true, status: 200, text: () => new Promise(() => {}) })
+      : new Promise(() => {}));
+    vi.stubGlobal("fetch", fetch);
+    const { result, onScanComplete } = setup();
+    await act(async () => capture(result.current.handleCapture));
+    await act(async () => { await vi.advanceTimersByTimeAsync(34_999); });
+    expect(result.current.isScanning).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(result.current.isScanning).toBe(false);
+    expect(result.current.failure).toEqual({ message: expect.stringContaining("Scanning took too long"), canRetry: true });
+    expect(onScanComplete).not.toHaveBeenCalled();
+    if (phase !== "image") expect(fetch.mock.calls[0][1].signal.aborted).toBe(true);
+    else { expect(fetch).not.toHaveBeenCalled(); expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:deadline-fixture"); }
+    decodeImmediately = true;
+    fetch.mockReset().mockResolvedValue(success());
+    await act(async () => result.current.retryScan());
+    expect(URL.createObjectURL).toHaveBeenLastCalledWith(file);
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(onScanComplete).toHaveBeenCalledOnce();
+    expect(result.current.failure).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("uses one deadline across image loading and the subsequent request", async () => {
+    decodeImmediately = false;
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    const { result } = setup();
+    await act(async () => capture(result.current.handleCapture));
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); completeImage?.(); });
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(result.current.isScanning).toBe(true);
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    expect(result.current.isScanning).toBe(false);
+    expect(result.current.failure?.message).toContain("Scanning took too long");
+  });
+
+  it("keeps the same account's retry after session refresh without expiring its login", async () => {
+    const rejected = vi.fn();
+    window.addEventListener("auth-expired", rejected);
+    try {
+      const fetch = vi.fn().mockReturnValueOnce(new Promise(() => {})).mockResolvedValueOnce(success());
+      vi.stubGlobal("fetch", fetch);
+      const { result, onScanComplete } = setup();
+      await act(async () => capture(result.current.handleCapture));
+      vi.mocked(financeAuth.getFinanceAuth).mockReturnValue({ sub: "deadline-user", key: "fresh-session", headers: { "X-Finance-Session": "fresh-session" } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(35_000); });
+      expect(result.current.failure).toEqual({ message: expect.stringContaining("sign-in changed"), canRetry: true });
+      await act(async () => result.current.retryScan());
+      expect(fetch.mock.calls[1][1].headers).toMatchObject({ "X-Finance-Session": "fresh-session" });
+      expect(onScanComplete).toHaveBeenCalledOnce();
+      expect(rejected).not.toHaveBeenCalled();
+    } finally { window.removeEventListener("auth-expired", rejected); }
+  });
+
+  it("ignores a timed-out request finishing while a fresh retry is still active", async () => {
+    let finishOld!: (value: unknown) => void;
+    let finishNew!: (value: unknown) => void;
+    vi.stubGlobal("fetch", vi.fn().mockReturnValueOnce(new Promise(resolve => { finishOld = resolve; }))
+      .mockReturnValueOnce(new Promise(resolve => { finishNew = resolve; })));
+    const { result, onScanComplete } = setup();
+    await act(async () => capture(result.current.handleCapture));
+    await act(async () => { await vi.advanceTimersByTimeAsync(35_000); });
+    await act(async () => result.current.retryScan());
+    await act(async () => finishOld(success()));
+    expect(onScanComplete).not.toHaveBeenCalled();
+    expect(result.current.isScanning).toBe(true);
+    expect(result.current.failure).toBeNull();
+    await act(async () => finishNew(success()));
+    expect(onScanComplete).toHaveBeenCalledOnce();
+    expect(result.current.isScanning).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("cleans the deadline on manual entry and ignores the cancelled response", async () => {
+    let finish!: (value: unknown) => void;
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(resolve => { finish = resolve; })));
+    const { result, onScanComplete } = setup();
+    await act(async () => capture(result.current.handleCapture));
+    act(() => result.current.stopScanning());
+    expect(vi.getTimerCount()).toBe(0);
+    await act(async () => { await vi.advanceTimersByTimeAsync(35_000); finish(success()); });
+    expect(result.current.isScanning).toBe(false);
+    expect(result.current.failure).toBeNull();
+    expect(onScanComplete).not.toHaveBeenCalled();
+    await act(async () => result.current.retryScan());
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("cleans the deadline and object URL when unmounted during image loading", async () => {
+    decodeImmediately = false;
+    vi.stubGlobal("fetch", vi.fn());
+    const { result, unmount, onScanComplete } = setup();
+    await act(async () => capture(result.current.handleCapture));
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+    await act(async () => { await vi.advanceTimersByTimeAsync(35_000); completeImage?.(); });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:deadline-fixture");
+    expect(onScanComplete).not.toHaveBeenCalled();
+  });
+
+  it("clears the deadline after a successful scan", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(success()));
+    const { result, onScanComplete, showToast } = setup();
+    await act(async () => capture(result.current.handleCapture));
+    expect(vi.getTimerCount()).toBe(0);
+    await act(async () => { await vi.advanceTimersByTimeAsync(35_000); });
+    expect(result.current.failure).toBeNull();
+    expect(onScanComplete).toHaveBeenCalledOnce();
+    expect(showToast).toHaveBeenCalledOnce();
+  });
+
+  it("does not retain or retry another account's photo after a stalled scan", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    const { result, onScanComplete } = setup();
+    await act(async () => capture(result.current.handleCapture));
+    vi.mocked(financeAuth.getFinanceAuth).mockReturnValue({ sub: "other-user", key: "other-session", headers: {} });
+    await act(async () => { await vi.advanceTimersByTimeAsync(35_000); });
+    expect(result.current.isScanning).toBe(false);
+    expect(result.current.failure?.canRetry).toBe(false);
+    await act(async () => result.current.retryScan());
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(onScanComplete).not.toHaveBeenCalled();
+  });
+});
