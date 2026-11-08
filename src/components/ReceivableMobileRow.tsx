@@ -1,5 +1,5 @@
 import React from "react";
-import { Check, Hourglass, X } from "lucide-react";
+import { AlertCircle, Check, Hourglass, X } from "lucide-react";
 import { ReceivableViewModel } from "../types/finance";
 import { formatOrdinal, formatShortDate } from "../utils/displayHelpers";
 import { ReceivablePaymentActions } from "./ReceivablePaymentActions";
@@ -128,8 +128,14 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
               <span>Day {rec.monthlyDay || 15}</span>
             )}
 
-            {rec.frequency === "By Date" && rec.date && (
-              <span>{formatShortDate(rec.date)}</span>
+            {rec.frequency === "By Date" && (
+              rec.needsDate || !rec.date ? (
+                <span className="chip-amber text-[10px] font-semibold px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                  <AlertCircle size={10} /> Needs Date
+                </span>
+              ) : (
+                <span>{formatShortDate(rec.date)}</span>
+              )
             )}
           </div>
 

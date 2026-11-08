@@ -13,7 +13,8 @@ import {
   getMonthKey,
   getMonthRange,
   getDaysUntil,
-  countPaydaysUntil
+  countPaydaysUntil,
+  isValidDateKey
 } from "../utils/dateHelpers";
 export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedMonth: string) {
 const currentMonthDate = parseMonthKey(selectedMonth);
@@ -102,18 +103,94 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
         return true;
       }
       if (r.frequency === "By Date") {
-        if (!r.date) return true;
-        const exactMonth = getMonthKey(parseDateKey(r.date));
-        if (selectedMonth !== exactMonth && globalData.logs?.[exactMonth]?.recsCollected?.[r.id]?.collected) {
+        const hasValidDate = isValidDateKey(r.date);
+        if (!hasValidDate) {
+          // Undated legacy record: check if settled in an existing log month
+          const settledMonth = Object.keys(globalData.logs || {}).find(m => {
+            const log = globalData.logs?.[m]?.recsCollected?.[r.id];
+            if (!log) return false;
+            const parsedAmt = parseFloat(String(r.amount)) || 0;
+            const parsedRec = parseFloat(String(log.amountReceived)) || 0;
+            return getReceivableStatus(parsedAmt, parsedRec, !!log.collected).isCollected;
+          });
+
+          if (settledMonth) {
+            const settledDate = parseMonthKey(settledMonth);
+            if (currentMonthDate > settledDate) {
+              return false;
+            }
+          }
+          return true;
+        }
+
+        const scheduledMonth = getMonthKey(parseDateKey(r.date!));
+        const scheduledMonthDate = parseMonthKey(scheduledMonth);
+
+        // Future month does not show before scheduled month
+        if (currentMonthDate < scheduledMonthDate) {
           return false;
         }
+
+        // Scheduled month always shows
+        if (currentMonthDate.getTime() === scheduledMonthDate.getTime()) {
+          return true;
+        }
+
+        // Past month (overdue): check if already settled
+        const log = globalData.logs?.[scheduledMonth]?.recsCollected?.[r.id];
+        const parsedAmount = parseFloat(String(r.amount)) || 0;
+        const parsedReceived = parseFloat(String(log?.amountReceived)) || 0;
+        let { isCollected } = getReceivableStatus(parsedAmount, parsedReceived, !!log?.collected);
+
+        if (!isCollected) {
+          const anyCollected = Object.keys(globalData.logs || {}).some(m => {
+            const mLog = globalData.logs?.[m]?.recsCollected?.[r.id];
+            if (!mLog) return false;
+            return getReceivableStatus(parsedAmount, parseFloat(String(mLog.amountReceived)) || 0, !!mLog.collected).isCollected;
+          });
+          if (anyCollected) {
+            isCollected = true;
+          }
+        }
+
+        // Once fully collected, do not appear in subsequent months
+        if (isCollected) {
+          return false;
+        }
+
+        // Uncollected overdue carries forward
+        return true;
       }
       return true;
     }).map(r => {
       let targetMonthForDue = selectedMonth;
       let oldestUncollected: string | null = null;
-      if (r.frequency === "By Date") {
-        targetMonthForDue = r.date ? getMonthKey(parseDateKey(r.date)) : selectedMonth;
+      const isByDate = r.frequency === "By Date";
+      const hasValidDate = isByDate && isValidDateKey(r.date);
+
+      if (isByDate) {
+        if (hasValidDate) {
+          const scheduledMonth = getMonthKey(parseDateKey(r.date!));
+          let targetMonth = scheduledMonth;
+          if (!globalData.logs?.[targetMonth]?.recsCollected?.[r.id] && !globalData.logs?.[targetMonth]?.receivableSettlements?.[r.id]) {
+            const existingLogMonth = Object.keys(globalData.logs || {}).find(m =>
+              globalData.logs?.[m]?.recsCollected?.[r.id] || globalData.logs?.[m]?.receivableSettlements?.[r.id]
+            );
+            if (existingLogMonth) {
+              targetMonth = existingLogMonth;
+            }
+          }
+          targetMonthForDue = targetMonth;
+        } else {
+          const settledMonth = Object.keys(globalData.logs || {}).find(m => {
+            const log = globalData.logs?.[m]?.recsCollected?.[r.id];
+            if (!log) return false;
+            const parsedAmt = parseFloat(String(r.amount)) || 0;
+            const parsedRec = parseFloat(String(log.amountReceived)) || 0;
+            return getReceivableStatus(parsedAmt, parsedRec, !!log.collected).isCollected;
+          });
+          targetMonthForDue = settledMonth || selectedMonth;
+        }
       } else {
         const startMonth = r.startMonth || fallbackStartMonth;
         const monthsToCheck = getMonthRange(
@@ -128,7 +205,8 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
           ) || null;
         targetMonthForDue = oldestUncollected || selectedMonth;
       }
-            const log = globalData.logs?.[targetMonthForDue]?.recsCollected?.[r.id] || {
+
+      const log = globalData.logs?.[targetMonthForDue]?.recsCollected?.[r.id] || {
         amountReceived: 0,
         collected: false
       };
@@ -139,7 +217,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
       const { isCollected } = getReceivableStatus(parsedAmount, parsedReceived, log.collected);
       const amountReceived = Math.max(0, parsedReceived);
 
-  return {
+      return {
         ...r,
         paydayReceived: (globalData.logs?.[targetMonthForDue]?.receivableSettlements?.[r.id] ?? [])
           .reduce<Record<number, number>>((totals, receipt) => {
@@ -150,13 +228,17 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
           }, {}),
         amountReceived,
         collected: isCollected,
-        targetMonthForDue
+        targetMonthForDue,
+        needsDate: isByDate && !hasValidDate
       };
     }).sort((a, b) => {
       if (a.collected !== b.collected) return a.collected ? 1 : -1;
       const fw = (f: string) => (f === "Bi-monthly" ? 1 : f === "Monthly" ? 2 : 3);
-      if (!a.date && b.date) return 1; if (a.date && !b.date) return -1;
-      if (a.date && b.date) {
+      const aValid = a.date && isValidDateKey(a.date);
+      const bValid = b.date && isValidDateKey(b.date);
+      if (!aValid && bValid) return 1;
+      if (aValid && !bValid) return -1;
+      if (aValid && bValid && a.date && b.date) {
         const dDiff = parseDateKey(a.date).getTime() - parseDateKey(b.date).getTime();
         if (dDiff !== 0) return dDiff;
       }

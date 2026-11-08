@@ -32,7 +32,7 @@ import { useReceivableActions } from "./hooks/useReceivableActions";
 import { useShootActions } from "./hooks/useShootActions";
 import { useBillEditActions } from "./hooks/useBillEditActions";
 import { useBillSaveActions } from "./hooks/useBillSaveActions";
-import { useReceivableSaveActions } from "./hooks/useReceivableSaveActions";
+import { useReceivableSaveActions, ReceivableTransitionCommitter } from "./hooks/useReceivableSaveActions";
 import { useShootSaveActions } from "./hooks/useShootSaveActions";
 import { usePaydayActions } from "./hooks/usePaydayActions";
 
@@ -193,6 +193,26 @@ export default function App() {
       commitDataChangeRef.current(action);
     },
     []
+  );
+
+  const commitDataTransitionRef = useRef<
+    <T extends { ok: boolean; data: UnifiedFinanceData }>(
+      transition: (prev: UnifiedFinanceData) => T
+    ) => T
+  >(null as any);
+
+  const syncedCommitReceivableTransition: ReceivableTransitionCommitter = useCallback(
+    (transition) => {
+      if (commitDataTransitionRef.current) {
+        return commitDataTransitionRef.current(transition);
+      }
+      return {
+        ok: false,
+        error: "Authoritative sync transition committer is not ready.",
+        data: globalData,
+      };
+    },
+    [globalData]
   );
   const [selectedMonth, setSelectedMonth] = useState<string>(() => getMonthKey(new Date()));
 const {
@@ -502,7 +522,7 @@ const { saveBillEdit } = useBillSaveActions({
 });
 
 const { saveReceivableEdit } = useReceivableSaveActions({
-  setGlobalData: syncedSetGlobalData,
+  commitReceivableTransition: syncedCommitReceivableTransition,
   editingId,
   editForm,
   setEditingId,
@@ -536,6 +556,7 @@ const { saveShootEdit } = useShootSaveActions({
   } = useCloudSync(globalData, handleSetGlobalData, showToast);
 
   commitDataChangeRef.current = commitDataChange;
+  commitDataTransitionRef.current = commitDataTransition;
 
   const activeTokenSub = getFinanceSubject();
   const isAuth = Boolean(activeTokenSub);

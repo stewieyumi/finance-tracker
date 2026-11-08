@@ -1,5 +1,5 @@
 import type { PaymentHistoryAction } from "../utils/paymentHistory";
-import { normalizePaydayDays } from "../utils/dateHelpers";
+import { normalizePaydayDays, isValidDateKey } from "../utils/dateHelpers";
 import { MonthLog, Receivable, ReceivableCategory, ReceivableFrequency, ReceivableViewModel, ReceivableSettlement, UnifiedFinanceData, WalletState } from "../types/finance";
 import { generateId } from "../utils/idHelpers";
 import { roundMoney } from "../utils/currency";
@@ -148,6 +148,10 @@ export function useReceivableActions({ globalData, setGlobalData, selectedMonth,
   };
 
   const addReceivable = (receivable: { name: string; amount: number; category: ReceivableCategory; frequency: ReceivableFrequency; biMonthlyDays?: number[]; monthlyDay?: number; date?: string; wallet?: string; }) => {
+    if (receivable.frequency === "By Date" && !isValidDateKey(receivable.date)) {
+      showToast("Please enter a valid date for this inflow.");
+      return;
+    }
     setGlobalData(prev => {
       const newReceivable: Receivable = {
         id: generateId("r"),
