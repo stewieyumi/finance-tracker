@@ -463,4 +463,35 @@ describe("useReceivableActions - payment mutations", () => {
     expect(record?.collected).toBe(false);
     expect(record?.amountReceived).toBe(0);
   });
+
+  it("rejects adding a By Date inflow when date is missing or invalid", () => {
+    const harness = createStateHarness(createTestData());
+    const mockShowToast = vi.fn();
+
+    const { result } = renderHook(() =>
+      useReceivableActions({
+        globalData: harness.state,
+        setGlobalData: harness.setGlobalData,
+        selectedMonth: "September 2026",
+        showToast: mockShowToast,
+      })
+    );
+
+    act(() => {
+      result.current.addReceivable({
+        name: "Missing Date Inflow",
+        amount: 5000,
+        category: "Shoot",
+        frequency: "By Date",
+        date: "",
+      });
+    });
+
+    expect(mockShowToast).toHaveBeenCalledWith(
+      "Please enter a valid date for this inflow."
+    );
+    expect(
+      harness.state.library.receivables.find(r => r.name === "Missing Date Inflow")
+    ).toBeUndefined();
+  });
 });

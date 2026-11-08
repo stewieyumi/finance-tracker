@@ -327,4 +327,353 @@ describe("Finance Calculations", () => {
     expect(loan?.totalLoanPaid).toBe(3000);
   });
 
+  describe("By Date inflow lifecycle and recurrence prevention", () => {
+    it("excludes future scheduled By Date inflows from prior months", () => {
+      const data: UnifiedFinanceData = {
+        ...baseData,
+        library: {
+          ...baseData.library,
+          receivables: [
+            {
+              id: "rec-future",
+              name: "Future Project",
+              amount: 5000,
+              frequency: "By Date",
+              date: "2026-10-15",
+              wallet: "main",
+            },
+          ],
+        },
+      };
+
+      const { result } = renderHook(() =>
+        useFinanceCalculations(data, "September 2026")
+      );
+
+      const found = result.current.activeReceivables.find(
+        r => r.id === "rec-future"
+      );
+      expect(found).toBeUndefined();
+    });
+
+    it("includes By Date inflow in its scheduled month", () => {
+      const data: UnifiedFinanceData = {
+        ...baseData,
+        library: {
+          ...baseData.library,
+          receivables: [
+            {
+              id: "rec-current",
+              name: "Current Project",
+              amount: 5000,
+              frequency: "By Date",
+              date: "2026-09-15",
+              wallet: "main",
+            },
+          ],
+        },
+      };
+
+      const { result } = renderHook(() =>
+        useFinanceCalculations(data, "September 2026")
+      );
+
+      const found = result.current.activeReceivables.find(
+        r => r.id === "rec-current"
+      );
+      expect(found).toBeDefined();
+      expect(found?.targetMonthForDue).toBe("September 2026");
+      expect(found?.collected).toBe(false);
+      expect(found?.amountReceived).toBe(0);
+    });
+
+    it("carries forward an unpaid overdue By Date inflow as the same occurrence", () => {
+      const data: UnifiedFinanceData = {
+        ...baseData,
+        library: {
+          ...baseData.library,
+          receivables: [
+            {
+              id: "rec-overdue",
+              name: "Overdue Project",
+              amount: 5000,
+              frequency: "By Date",
+              date: "2026-08-15",
+              wallet: "main",
+            },
+          ],
+        },
+        logs: {
+          "August 2026": {
+            recsCollected: {
+              "rec-overdue": {
+                amountReceived: 2000,
+                collected: false,
+              },
+            },
+          },
+        },
+      };
+
+      const { result } = renderHook(() =>
+        useFinanceCalculations(data, "September 2026")
+      );
+
+      const found = result.current.activeReceivables.find(
+        r => r.id === "rec-overdue"
+      );
+      expect(found).toBeDefined();
+      expect(found?.targetMonthForDue).toBe("August 2026");
+      expect(found?.amountReceived).toBe(2000);
+      expect(found?.collected).toBe(false);
+    });
+
+    it("hides a fully settled By Date inflow from subsequent months", () => {
+      const data: UnifiedFinanceData = {
+        ...baseData,
+        library: {
+          ...baseData.library,
+          receivables: [
+            {
+              id: "rec-settled",
+              name: "Settled Project",
+              amount: 5000,
+              frequency: "By Date",
+              date: "2026-08-15",
+              wallet: "main",
+            },
+          ],
+        },
+        logs: {
+          "August 2026": {
+            recsCollected: {
+              "rec-settled": {
+                amountReceived: 5000,
+                collected: true,
+              },
+            },
+          },
+        },
+      };
+
+      const { result } = renderHook(() =>
+        useFinanceCalculations(data, "September 2026")
+      );
+
+      const found = result.current.activeReceivables.find(
+        r => r.id === "rec-settled"
+      );
+      expect(found).toBeUndefined();
+    });
+
+    it("keeps a settled By Date inflow visible as collected when viewing its original month", () => {
+      const data: UnifiedFinanceData = {
+        ...baseData,
+        library: {
+          ...baseData.library,
+          receivables: [
+            {
+              id: "rec-settled",
+              name: "Settled Project",
+              amount: 5000,
+              frequency: "By Date",
+              date: "2026-08-15",
+              wallet: "main",
+            },
+          ],
+        },
+        logs: {
+          "August 2026": {
+            recsCollected: {
+              "rec-settled": {
+                amountReceived: 5000,
+                collected: true,
+              },
+            },
+          },
+        },
+      };
+
+      const { result } = renderHook(() =>
+        useFinanceCalculations(data, "August 2026")
+      );
+
+      const found = result.current.activeReceivables.find(
+        r => r.id === "rec-settled"
+      );
+      expect(found).toBeDefined();
+      expect(found?.collected).toBe(true);
+      expect(found?.amountReceived).toBe(5000);
+    });
+
+    it("preserves authoritative historical reporting and receipt breakdown when viewing the original month", () => {
+      const data: UnifiedFinanceData = {
+        ...baseData,
+        library: {
+          ...baseData.library,
+          receivables: [
+            {
+              id: "rec-aug-settled",
+              name: "August Shoot",
+              amount: 10000,
+              frequency: "By Date",
+              date: "2026-08-20",
+              wallet: "main",
+            },
+          ],
+        },
+        logs: {
+          "August 2026": {
+            recsCollected: {
+              "rec-aug-settled": {
+                amountReceived: 10000,
+                collected: true,
+              },
+            },
+            receivableSettlements: {
+              "rec-aug-settled": [
+                {
+                  id: "rcpt-aug-1",
+                  amount: 10000,
+                  wallet: "main",
+                  walletCredit: 10000,
+                  receivedAt: "2026-08-20T10:00:00.000Z",
+                  paydayDay: 15,
+                },
+              ],
+            },
+          },
+        },
+      };
+
+      const { result } = renderHook(() =>
+        useFinanceCalculations(data, "August 2026")
+      );
+
+      const found = result.current.activeReceivables.find(
+        r => r.id === "rec-aug-settled"
+      );
+      expect(found).toBeDefined();
+      expect(found?.collected).toBe(true);
+      expect(found?.amountReceived).toBe(10000);
+      expect(found?.targetMonthForDue).toBe("August 2026");
+      expect(found?.paydayReceived?.[15]).toBe(10000);
+    });
+
+    it("handles undated legacy By Date inflows without recurring monthly occurrences, keeping them accessible with needsDate flag", () => {
+      const uncollectedData: UnifiedFinanceData = {
+        ...baseData,
+        library: {
+          ...baseData.library,
+          receivables: [
+            {
+              id: "rec-legacy-undated",
+              name: "Legacy Undated Inflow",
+              amount: 3000,
+              frequency: "By Date",
+              date: "",
+              wallet: "main",
+            },
+          ],
+        },
+      };
+
+      const { result: uncollectedResult } = renderHook(() =>
+        useFinanceCalculations(uncollectedData, "September 2026")
+      );
+
+      const uncollectedFound = uncollectedResult.current.activeReceivables.find(
+        r => r.id === "rec-legacy-undated"
+      );
+      expect(uncollectedFound).toBeDefined();
+      expect(uncollectedFound?.needsDate).toBe(true);
+      expect(uncollectedFound?.collected).toBe(false);
+
+      // Once collected in September 2026, it must NOT reappear in October 2026
+      const collectedData: UnifiedFinanceData = {
+        ...uncollectedData,
+        logs: {
+          "September 2026": {
+            recsCollected: {
+              "rec-legacy-undated": {
+                amountReceived: 3000,
+                collected: true,
+              },
+            },
+          },
+        },
+      };
+
+      const { result: octResult } = renderHook(() =>
+        useFinanceCalculations(collectedData, "October 2026")
+      );
+      const octFound = octResult.current.activeReceivables.find(
+        r => r.id === "rec-legacy-undated"
+      );
+      expect(octFound).toBeUndefined();
+
+      // But still visible in September 2026 as collected
+      const { result: sepResult } = renderHook(() =>
+        useFinanceCalculations(collectedData, "September 2026")
+      );
+      const sepFound = sepResult.current.activeReceivables.find(
+        r => r.id === "rec-legacy-undated"
+      );
+      expect(sepFound).toBeDefined();
+      expect(sepFound?.collected).toBe(true);
+    });
+
+    it("preserves independent monthly recurring occurrences for Monthly and Bi-monthly receivables", () => {
+      const data: UnifiedFinanceData = {
+        ...baseData,
+        library: {
+          ...baseData.library,
+          receivables: [
+            {
+              id: "rec-monthly",
+              name: "Monthly Retainer",
+              amount: 15000,
+              frequency: "Monthly",
+              monthlyDay: 15,
+              startMonth: "August 2026",
+              wallet: "main",
+            },
+          ],
+        },
+        logs: {
+          "August 2026": {
+            recsCollected: {
+              "rec-monthly": {
+                amountReceived: 15000,
+                collected: true,
+              },
+            },
+          },
+        },
+      };
+
+      // In August 2026, it is collected
+      const { result: augResult } = renderHook(() =>
+        useFinanceCalculations(data, "August 2026")
+      );
+      const augFound = augResult.current.activeReceivables.find(
+        r => r.id === "rec-monthly"
+      );
+      expect(augFound).toBeDefined();
+      expect(augFound?.collected).toBe(true);
+
+      // In September 2026, it recurs as an active uncollected monthly obligation
+      const { result: sepResult } = renderHook(() =>
+        useFinanceCalculations(data, "September 2026")
+      );
+      const sepFound = sepResult.current.activeReceivables.find(
+        r => r.id === "rec-monthly"
+      );
+      expect(sepFound).toBeDefined();
+      expect(sepFound?.collected).toBe(false);
+      expect(sepFound?.amountReceived).toBe(0);
+      expect(sepFound?.targetMonthForDue).toBe("September 2026");
+    });
+  });
+
 });

@@ -34,6 +34,37 @@ export function parseDateKey(str: string): Date {
   return new Date(year, month - 1, day);
 }
 
+export function isValidDateKey(str?: string | null): boolean {
+  if (!str || typeof str !== "string") return false;
+  const parts = str.split("-");
+  if (parts.length !== 3) return false;
+  if (parts[0].length !== 4 || parts[1].length !== 2 || parts[2].length !== 2) return false;
+
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return false;
+  }
+
+  const d = new Date(year, month - 1, day);
+  return (
+    !isNaN(d.getTime()) &&
+    d.getFullYear() === year &&
+    d.getMonth() === month - 1 &&
+    d.getDate() === day
+  );
+}
+
 export function getMonthKey(date: Date): string {
   return `${MONTH_LIST[date.getMonth()]} ${date.getFullYear()}`;
 }

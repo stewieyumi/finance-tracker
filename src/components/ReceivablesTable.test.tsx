@@ -277,4 +277,39 @@ describe("ReceivablesTable - list, filtering, and interaction wiring", () => {
     fireEvent.click(screen.getByTestId("receivable-mobile-row-rec-collected-test"));
     expect(onToggleStatus).not.toHaveBeenCalled();
   });
+
+  it("visibly flags an undated By Date receivable with Needs Date", () => {
+    const undatedRec = createReceivable({
+      id: "rec-undated-row",
+      name: "Undated Gig",
+      frequency: "By Date",
+      date: "",
+      needsDate: true,
+    });
+
+    renderReceivablesTable([undatedRec]);
+
+    expect(screen.getAllByText("Needs Date").length).toBeGreaterThan(0);
+  });
+
+  it("validates date in the submit handler when adding a By Date inflow", () => {
+    const onAddReceivable = vi.fn();
+    const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
+
+    renderReceivablesTable([], { onAddReceivable });
+
+    fireEvent.click(screen.getByRole("button", { name: /add new inflow/i }));
+
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. Salary, Client Payment/i), {
+      target: { value: "New By Date Inflow" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("0.00"), {
+      target: { value: "5000" },
+    });
+    // Frequency is "By Date" by default in newReceivable state, but date is empty
+    fireEvent.click(screen.getByRole("button", { name: /add inflow/i }));
+
+    expect(onAddReceivable).not.toHaveBeenCalled();
+    alertMock.mockRestore();
+  });
 });

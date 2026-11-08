@@ -6,7 +6,8 @@ import {
   getMonthRange,
   getDaysUntil,
   getMonthKey,
-  isValidMonthRange
+  isValidMonthRange,
+  isValidDateKey
 } from './dateHelpers';
 
 describe('Date Helpers & Month Math', () => {
@@ -89,5 +90,31 @@ describe('Date Helpers & Month Math', () => {
     expect(
       isValidMonthRange('August 2026', '')
     ).toBe(false);
+  });
+
+  describe('isValidDateKey', () => {
+    it('accepts valid YYYY-MM-DD date strings', () => {
+      expect(isValidDateKey('2026-08-20')).toBe(true);
+      expect(isValidDateKey('2026-02-28')).toBe(true);
+      expect(isValidDateKey('2024-02-29')).toBe(true); // leap year
+    });
+
+    it('rejects invalid or non-existent dates', () => {
+      expect(isValidDateKey('2026-02-29')).toBe(false); // non-leap year
+      expect(isValidDateKey('2026-04-31')).toBe(false); // April has 30 days
+      expect(isValidDateKey('2026-13-01')).toBe(false);
+      expect(isValidDateKey('2026-00-10')).toBe(false);
+      expect(isValidDateKey('2026-05-32')).toBe(false);
+    });
+
+    it('rejects malformed or empty strings', () => {
+      expect(isValidDateKey('')).toBe(false);
+      expect(isValidDateKey(undefined)).toBe(false);
+      expect(isValidDateKey(null as any)).toBe(false);
+      expect(isValidDateKey('2026-8-20')).toBe(false);
+      expect(isValidDateKey('2026-08-2')).toBe(false);
+      expect(isValidDateKey('August 2026')).toBe(false);
+      expect(isValidDateKey('not-a-date')).toBe(false);
+    });
   });
 });

@@ -467,6 +467,7 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                     onChange({ ...editForm, date: e.target.value })
                   }
                   className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
+                  required
                 />
               </div>
             )}

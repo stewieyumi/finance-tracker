@@ -1,5 +1,5 @@
 import React from "react";
-import { Calendar, Check, CreditCard, Hourglass, X } from "lucide-react";
+import { AlertCircle, Calendar, Check, CreditCard, Hourglass, X } from "lucide-react";
 import { ReceivableViewModel } from "../types/finance";
 import { formatOrdinal, formatShortDate } from "../utils/displayHelpers";
 import { ReceivablePaymentActions } from "./ReceivablePaymentActions";
@@ -152,13 +152,15 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
             </span>
           )}
           {rec.frequency === "By Date" &&
-            (rec.date ? (
+            (rec.needsDate || !rec.date ? (
+              <span className="chip-amber text-[10px] font-semibold px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                <AlertCircle size={10} /> Needs Date
+              </span>
+            ) : (
               <span className="inline-flex items-center gap-1 text-secondary font-mono text-[11px]">
                 <Calendar size={10} className="text-faint" />
                 {formatShortDate(rec.date)}
               </span>
-            ) : (
-              <span className="text-disabled">—</span>
             ))}
         </div>
       </td>

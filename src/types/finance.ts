@@ -83,6 +83,7 @@ export interface ReceivableViewModel extends Receivable {
   amountReceived: number;
   collected: boolean;
   targetMonthForDue: string;
+  needsDate?: boolean;
 }
 
 export interface Shoot {

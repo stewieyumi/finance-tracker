@@ -1,5 +1,5 @@
 import { roundMoney } from "../utils/currency";
-import { isValidTwiceMonthlySchedule, normalizePaydayDays } from "../utils/dateHelpers";
+import { isValidTwiceMonthlySchedule, normalizePaydayDays, isValidDateKey } from "../utils/dateHelpers";
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Check, Hourglass, Plus, ArrowDownLeft, Filter, ChevronDown, X, Eye, EyeOff } from "lucide-react";
 import { Receivable, ReceivableViewModel, ReceivableCategory, ReceivableFrequency, EditFormData, CustomWallet } from "../types/finance";
@@ -79,6 +79,10 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
     if (!newReceivable.name.trim() || !Number.isFinite(monthlyAmount) || monthlyAmount <= 0) return;
     if (newReceivable.frequency === "Bi-monthly" && !isValidTwiceMonthlySchedule(newReceivable.biMonthlyDays)) {
       alert("Choose two different days for a twice-monthly inflow.");
+      return;
+    }
+    if (newReceivable.frequency === "By Date" && !isValidDateKey(newReceivable.date)) {
+      alert("Please enter a valid date for this inflow.");
       return;
     }
     onAddReceivable({
