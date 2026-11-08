@@ -527,6 +527,7 @@ const { saveShootEdit } = useShootSaveActions({
     forceManualSync,
     pullLatestData,
     commitDataChange,
+    commitDataTransition,
     hasInitialSyncCompleted,
     hasActiveConflict,
     conflictState,
@@ -1100,7 +1101,7 @@ const copySummaryToClipboard = async () => {
         {showLedgerModal && (
           <ErrorBoundary>
             <Suspense fallback={deferredModalFallback}>
-              <HistoricalLedgerModal isOpen={showLedgerModal} initialType={ledgerInitialType} onClose={() => setShowLedgerModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />
+              <HistoricalLedgerModal isOpen={showLedgerModal} initialType={ledgerInitialType} onClose={() => setShowLedgerModal(false)} globalData={globalData} commitLedgerTransition={commitDataTransition} showToast={showToast} />
             </Suspense>
           </ErrorBoundary>
         )}

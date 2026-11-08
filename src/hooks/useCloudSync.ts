@@ -1048,24 +1048,13 @@ export function useCloudSync(
    *
    * This intentionally does NOT run for form typing or arbitrary renders.
    */
-  const commitDataChange = useCallback(
-    (action: React.SetStateAction<UnifiedFinanceData>) => {
-      const current = latestDataRef.current;
-
-      const nextRaw =
-        typeof action === "function"
-          ? (action as (prev: UnifiedFinanceData) => UnifiedFinanceData)(current)
-          : action;
-
-      if (!nextRaw || nextRaw === current) {
-        return;
-      }
-
+  const commitSnapshot = useCallback(
+    (nextRaw: UnifiedFinanceData, updatedAt: number): UnifiedFinanceData => {
       cancelPushRetry();
 
       const nextData: UnifiedFinanceData = {
         ...nextRaw,
-        updatedAt: Date.now()
+        updatedAt
       };
 
       latestDataRef.current = nextData;
@@ -1085,8 +1074,47 @@ export function useCloudSync(
       // instead of waiting for a globalData debounce effect.
       setGlobalData(nextData);
       void pushToCloud(nextData);
+      return nextData;
     },
     [cancelPushRetry, persistPendingSync, pushToCloud, setGlobalData]
+  );
+
+  const commitDataChange = useCallback(
+    (action: React.SetStateAction<UnifiedFinanceData>) => {
+      const current = latestDataRef.current;
+
+      const nextRaw =
+        typeof action === "function"
+          ? (action as (prev: UnifiedFinanceData) => UnifiedFinanceData)(current)
+          : action;
+
+      if (!nextRaw || nextRaw === current) {
+        return;
+      }
+
+      commitSnapshot(nextRaw, Date.now());
+    },
+    [commitSnapshot]
+  );
+
+  const commitDataTransition = useCallback(
+    <T extends { ok: boolean; data: UnifiedFinanceData }>(
+      transition: (prev: UnifiedFinanceData) => T
+    ): T => {
+      const current = latestDataRef.current;
+      const result = transition(current);
+      if (result.ok && result.data && result.data !== current) {
+        const monotonicUpdatedAt = Math.max(
+          Date.now(),
+          getUpdatedAt(result.data),
+          getUpdatedAt(current)
+        );
+        const nextData = commitSnapshot(result.data, monotonicUpdatedAt);
+        return { ...result, data: nextData };
+      }
+      return result;
+    },
+    [commitSnapshot]
   );
 
   const pullLatestData = async (
@@ -1706,6 +1734,7 @@ export function useCloudSync(
       !isResolvingConflictRef.current && !conflictStateRef.current
     ),
     commitDataChange,
+    commitDataTransition,
     isSyncing,
     isOnline,
     syncNeedsSignIn,
