@@ -107,4 +107,69 @@ describe("OnboardingWizard", () => {
     expect(onSkip).toHaveBeenCalledOnce();
     expect(onComplete).not.toHaveBeenCalled();
   });
+
+  it("lets a beginner type custom payday dates without rewriting the draft and saves the chosen schedule", () => {
+    const data = structuredClone(INITIAL_UNIFIED_DATA);
+    data.wallets.main = 1234.56;
+    const original = structuredClone(data);
+    const onComplete = vi.fn();
+    render(<OnboardingWizard globalData={data} onComplete={onComplete} onSkip={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /get started/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Custom Days" }));
+    const days = screen.getByLabelText("Custom Payday Days") as HTMLInputElement;
+    fireEvent.change(days, { target: { value: "" } });
+    expect(days).toHaveValue("");
+    for (const character of "5, 20") {
+      fireEvent.change(days, { target: { value: days.value + character } });
+    }
+    expect(days).toHaveValue("5, 20");
+    fireEvent.click(screen.getByRole("button", { name: /next: wallets/i }));
+    expect(screen.getByRole("heading", { name: /accounts & wallets/i })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: /back/i }));
+    expect(screen.getByLabelText("Custom Payday Days")).toHaveValue("5, 20");
+    fireEvent.click(screen.getByRole("button", { name: /next: wallets/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next: milestone goal/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next: appearance/i }));
+    expect(onComplete).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /finish setup & launch/i }));
+    expect(onComplete).toHaveBeenCalledOnce();
+    expect(onComplete.mock.calls[0][0].settings.paydayDays).toEqual([5, 20]);
+    expect(onComplete.mock.calls[0][0].wallets).toEqual(original.wallets);
+    expect(onComplete.mock.calls[0][0].library).toEqual(original.library);
+    expect(data).toEqual(original);
+  });
+
+  it.each(["", "0, 20", "5, 32", "5.5, 20", "5, 20days", "5,"])("explains invalid custom dates (%s) without silently using another schedule", value => {
+    const onComplete = vi.fn();
+    render(<OnboardingWizard globalData={INITIAL_UNIFIED_DATA} onComplete={onComplete} onSkip={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /get started/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Custom Days" }));
+    fireEvent.change(screen.getByLabelText("Custom Payday Days"), { target: { value } });
+    fireEvent.click(screen.getByRole("button", { name: /next: wallets/i }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/whole days from 1 to 31/i);
+    expect(screen.getByLabelText("Custom Payday Days")).toHaveAttribute("aria-invalid", "true");
+    expect(onComplete).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /15th & 30th/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next: wallets/i }));
+    expect(screen.getByRole("heading", { name: /accounts & wallets/i })).toBeInTheDocument();
+  });
+
+  it("names deduction and wallet controls and announces selected preferences", () => {
+    render(<OnboardingWizard globalData={INITIAL_UNIFIED_DATA} onComplete={vi.fn()} onSkip={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /get started/i }));
+    expect(screen.getByRole("button", { name: /15th & 30th/i })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: /add deduction/i }));
+    expect(screen.getByRole("textbox", { name: "Deduction 1 name" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Deduction 1 type" })).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Deduction 1 value" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Remove deduction 1" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /next: wallets/i }));
+    expect(screen.getByRole("textbox", { name: "New wallet name" })).toBeInTheDocument();
+    expect(screen.getAllByRole("textbox", { name: /^Wallet \d+ name$/ }).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: /next: milestone goal/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next: appearance/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Light" }));
+    expect(screen.getByRole("button", { name: "Light" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Dark" })).toHaveAttribute("aria-pressed", "false");
+  });
 });

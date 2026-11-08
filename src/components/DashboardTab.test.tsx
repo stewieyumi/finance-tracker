@@ -297,6 +297,41 @@ describe("DashboardTab", () => {
     expect(defaultProps.onNavigateToExpenses).toHaveBeenCalled();
   });
 
+  it.each([
+    ["Add a wallet", "wallets"],
+    ["Record an expense", "expenses"],
+    ["Set up a commitment", "bills"],
+  ])("Getting Started routes %s without executing financial actions", (title, destination) => {
+    render(<DashboardTab {...defaultProps} />);
+    fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
+    const dialog = screen.getByRole("dialog", { name: "Getting Started" });
+    expect(dialog).toHaveFocus();
+    fireEvent.click(within(dialog).getByRole("button", { name: new RegExp(`^${title}`) }));
+    expect(screen.queryByRole("dialog", { name: "Getting Started" })).not.toBeInTheDocument();
+    expect(defaultProps.onNavigateToWallets).toHaveBeenCalledTimes(destination === "wallets" ? 1 : 0);
+    expect(defaultProps.onNavigateToExpenses).toHaveBeenCalledTimes(destination === "expenses" ? 1 : 0);
+    if (destination === "bills") expect(defaultProps.onNavigateToOps).toHaveBeenCalledExactlyOnceWith("bills");
+    else expect(defaultProps.onNavigateToOps).not.toHaveBeenCalled();
+    expect(defaultProps.onCommitWallet).not.toHaveBeenCalled();
+    expect(defaultProps.onIncrementWallet).not.toHaveBeenCalled();
+    expect(defaultProps.onExecutePaydaySplit).not.toHaveBeenCalled();
+  });
+
+  it("lets beginners dismiss and reopen the guide without saving data", () => {
+    render(<DashboardTab {...defaultProps} />);
+    const opener = screen.getByRole("button", { name: "Getting Started" });
+    opener.focus();
+    fireEvent.click(opener);
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(opener).toHaveFocus();
+    fireEvent.click(opener);
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.queryByRole("dialog", { name: "Getting Started" })).not.toBeInTheDocument();
+    expect(defaultProps.onNavigateToWallets).not.toHaveBeenCalled();
+    expect(defaultProps.onNavigateToExpenses).not.toHaveBeenCalled();
+    expect(defaultProps.onNavigateToOps).not.toHaveBeenCalled();
+  });
+
   it("calls onOpenLedger when View Ledger is clicked in Recent Activity", () => {
     render(<DashboardTab {...defaultProps} />);
     fireEvent.click(screen.getByText("View Ledger"));

@@ -2,6 +2,7 @@ import React from "react";
 import { AlertOctagon } from "lucide-react";
 import { UnifiedFinanceData } from "../types/finance";
 import { Modal } from "./ui/Modal";
+import { entryDialogStyles } from "./ui/dialogStyles";
 
 interface SyncConflictModalProps {
   isOpen: boolean;
@@ -29,8 +30,11 @@ export const SyncConflictModal: React.FC<SyncConflictModalProps> = ({
       onClose={() => {}} // Cannot close without resolving
       variant="floating"
       ariaLabel="Sync Conflict"
+      manageFocus
+      closeOnBackdropClick={false}
+      closeOnEscape={false}
     >
-      <div className="bg-surface-elevated border border-amber-500/30 rounded-3xl p-6 w-full max-w-lg space-y-4 shadow-2xl text-xs font-mono">
+      <div className={`${entryDialogStyles.card} max-w-lg space-y-4 text-xs font-mono`}>
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-2 text-amber-500">
             <AlertOctagon size={18} />
@@ -62,7 +66,7 @@ export const SyncConflictModal: React.FC<SyncConflictModalProps> = ({
               <div className="text-faint font-semibold text-[10px] uppercase tracking-wider">
                 Other Device (Cloud)
               </div>
-              <div className="text-blue-400 font-bold">
+              <div className="text-primary font-bold">
                 {cloudSnapshot.updatedAt
                   ? new Date(cloudSnapshot.updatedAt).toLocaleString()
                   : "Unknown"}
@@ -74,8 +78,8 @@ export const SyncConflictModal: React.FC<SyncConflictModalProps> = ({
           </div>
         </div>
 
-        <div className="pt-2 text-[10px] text-amber-500/80">
-          * Warning: Choosing either side will permanently overwrite the other. A backup of the losing side will be saved locally.
+        <div className="pt-2 text-xs leading-relaxed text-warning">
+          The version you choose replaces the other. Recovery copies of both versions are saved in this browser before your choice is applied.
         </div>
 
         <div className="grid grid-cols-2 gap-2 pt-2">
@@ -85,7 +89,7 @@ export const SyncConflictModal: React.FC<SyncConflictModalProps> = ({
                 onKeepLocal();
               }
             }}
-            className="bg-surface-lowest border border-inverse/10 hover:bg-surface text-strong font-semibold py-2.5 rounded-xl text-xs transition shadow-sm"
+            className="min-h-11 bg-surface-lowest border border-inverse/10 hover:bg-surface text-strong font-semibold px-2 py-2.5 rounded-xl text-xs transition shadow-sm"
           >
             Keep This Device Data
           </button>
@@ -96,7 +100,7 @@ export const SyncConflictModal: React.FC<SyncConflictModalProps> = ({
                 onKeepCloud();
               }
             }}
-            className="bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-md"
+            className="min-h-11 bg-amber-700 hover:bg-amber-800 text-white font-semibold px-2 py-2.5 rounded-xl text-xs transition shadow-md"
           >
             Use Cloud Data
           </button>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import {
   CheckCircle2,
   ArrowRight,
@@ -21,6 +21,7 @@ import {
   DeductionType,
 } from "../types/finance";
 import { calculateNetSalary } from "../utils/financeHelpers";
+import { normalizePaydayDays } from "../utils/dateHelpers";
 
 interface OnboardingWizardProps {
   globalData: UnifiedFinanceData;
@@ -42,6 +43,9 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   userName,
 }) => {
   const [step, setStep] = useState<number>(1);
+  const formId = useId();
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { headingRef.current?.focus(); }, [step]);
 
   // Step 2: Salary & Paydays
   const [grossSalary, setGrossSalary] = useState<number>(
@@ -62,11 +66,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       ? "custom"
       : "15_30"
   );
-  const [customPaydayDays, setCustomPaydayDays] = useState<number[]>(
+  const [customPaydayInput, setCustomPaydayInput] = useState<string>(
     globalData.settings?.paydayDays?.length
-      ? [...globalData.settings.paydayDays]
-      : [15, 30]
+      ? globalData.settings.paydayDays.join(", ")
+      : "15, 30"
   );
+  const [showPaydayError, setShowPaydayError] = useState(false);
+  const paydayParts = customPaydayInput.split(",").map(value => value.trim());
+  const validCustomPaydays = paydayParts.every(value => /^\d{1,2}$/.test(value) && Number(value) >= 1 && Number(value) <= 31);
+  const customPaydayDays = normalizePaydayDays(paydayParts.map(Number));
 
   // Step 3: Wallets
   const [wallets, setWallets] = useState<CustomWallet[]>(
@@ -205,7 +213,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-3 shadow-[0_0_24px_rgba(59,130,246,0.15)]">
                 <Sparkles size={28} />
               </div>
-              <h1 className="text-xl font-bold text-strong tracking-tight">
+              <h1 ref={headingRef} tabIndex={-1} className="text-xl font-bold text-strong tracking-tight">
                 {userName ? `Welcome, ${userName}!` : "Welcome to Finance Tracker"}
               </h1>
               <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed">
@@ -242,7 +250,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {step === 2 && (
           <div className="space-y-5 animate-fade-in">
             <div>
-              <h2 className="text-base font-bold text-strong flex items-center gap-2">
+              <h2 ref={headingRef} tabIndex={-1} className="text-base font-bold text-strong flex items-center gap-2">
                 <Banknote size={16} className="text-purple-400" /> Payday Salary & Schedule
               </h2>
               <p className="text-xs text-muted mt-1">
@@ -252,17 +260,18 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">
+                <label htmlFor={`${formId}-salary`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">
                   Gross Salary / Pay Period (₱)
                 </label>
                 <input
+                  id={`${formId}-salary`}
                   type="number"
                   min="0"
                   step="100"
                   aria-label="Gross Salary"
                   value={grossSalary}
                   onChange={e => setGrossSalary(Math.max(0, Number(e.target.value) || 0))}
-                  className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong font-mono outline-none focus:border-purple-500"
+                  className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong font-mono focus:border-purple-500"
                 />
               </div>
 
@@ -274,10 +283,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setPaydayPreset("15_30")}
+                    aria-pressed={paydayPreset === "15_30"}
+                    onClick={() => { setPaydayPreset("15_30"); setShowPaydayError(false); }}
                     className={`py-2 px-3 rounded-xl text-xs font-semibold border transition text-center ${
                       paydayPreset === "15_30"
-                        ? "bg-purple-600/20 border-purple-500 text-purple-300"
+                        ? "chip-purple"
                         : "bg-surface-input border-strong text-muted"
                     }`}
                   >
@@ -285,10 +295,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPaydayPreset("custom")}
+                    aria-pressed={paydayPreset === "custom"}
+                    onClick={() => { setPaydayPreset("custom"); setShowPaydayError(false); }}
                     className={`py-2 px-3 rounded-xl text-xs font-semibold border transition text-center ${
                       paydayPreset === "custom"
-                        ? "bg-purple-600/20 border-purple-500 text-purple-300"
+                        ? "chip-purple"
                         : "bg-surface-input border-strong text-muted"
                     }`}
                   >
@@ -297,22 +308,23 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 </div>
 
                 {paydayPreset === "custom" && (
-                  <div className="mt-2.5 flex items-center gap-2">
-                    <span className="text-[11px] text-muted">Days of month (comma-separated):</span>
+                  <div className="mt-2.5 space-y-1.5">
+                    <label htmlFor={`${formId}-paydays`} className="block text-[11px] text-muted">Days of month (comma-separated):</label>
                     <input
+                      id={`${formId}-paydays`}
                       type="text"
                       aria-label="Custom Payday Days"
-                      value={customPaydayDays.join(", ")}
+                      aria-invalid={showPaydayError || undefined}
+                      aria-describedby={showPaydayError ? `${formId}-payday-error` : undefined}
+                      value={customPaydayInput}
                       onChange={e => {
-                        const parsed = e.target.value
-                          .split(",")
-                          .map(v => parseInt(v.trim(), 10))
-                          .filter(n => !isNaN(n) && n >= 1 && n <= 31);
-                        setCustomPaydayDays(parsed.length ? parsed : [15, 30]);
+                        setCustomPaydayInput(e.target.value);
+                        setShowPaydayError(false);
                       }}
                       placeholder="e.g. 10, 25"
-                      className="flex-1 bg-surface-input border border-strong rounded-xl px-3 py-1.5 text-xs text-strong font-mono outline-none focus:border-purple-500"
+                      className="min-h-11 w-full min-w-0 bg-surface-input border border-strong rounded-xl px-3 py-1.5 text-xs text-strong font-mono focus:border-purple-500"
                     />
+                    {showPaydayError && <p id={`${formId}-payday-error`} role="alert" className="text-xs text-negative">Enter whole days from 1 to 31, separated by commas, like 5, 20.</p>}
                   </div>
                 )}
               </div>
@@ -326,7 +338,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   <button
                     type="button"
                     onClick={handleAddDeduction}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-purple-400 hover:text-purple-300 transition"
+                    className="flex items-center gap-1 text-[11px] font-semibold text-violet-accent hover:text-primary transition"
                   >
                     <Plus size={12} /> Add Deduction
                   </button>
@@ -338,29 +350,32 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-36 overflow-y-auto">
-                    {deductions.map(d => (
+                    {deductions.map((d, index) => (
                       <div
                         key={d.id}
-                        className="flex items-center gap-2 bg-surface-sunken p-2 rounded-xl border border-inverse/[0.05]"
+                        className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.75rem] items-center gap-2 bg-surface-sunken p-2 rounded-xl border border-inverse/[0.05] sm:flex"
                       >
                         <input
                           type="text"
+                          aria-label={`Deduction ${index + 1} name`}
                           value={d.name}
                           onChange={e => handleUpdateDeduction(d.id, { name: e.target.value })}
-                          className="flex-1 min-w-0 bg-surface-input border border-strong rounded-lg px-2.5 py-1.5 text-xs text-strong outline-none"
+                          className="col-span-2 min-h-11 min-w-0 flex-1 bg-surface-input border border-strong rounded-lg px-2.5 py-1.5 text-xs text-strong"
                         />
                         <select
+                          aria-label={`Deduction ${index + 1} type`}
                           value={d.type}
                           onChange={e =>
                             handleUpdateDeduction(d.id, { type: e.target.value as DeductionType })
                           }
-                          className="w-20 bg-surface-input border border-strong rounded-lg px-1.5 py-1.5 text-xs text-strong outline-none"
+                          className="col-start-1 row-start-2 min-h-11 w-full min-w-0 bg-surface-input border border-strong rounded-lg px-1.5 py-1.5 text-xs text-strong sm:w-20"
                         >
                           <option value="fixed">Fixed ₱</option>
                           <option value="percentage">%</option>
                         </select>
                         <input
                           type="number"
+                          aria-label={`Deduction ${index + 1} value`}
                           min="0"
                           value={d.value}
                           onChange={e =>
@@ -368,12 +383,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                               value: Math.max(0, Number(e.target.value) || 0),
                             })
                           }
-                          className="w-20 bg-surface-input border border-strong rounded-lg px-2 py-1.5 text-xs text-strong font-mono outline-none"
+                          className="col-start-2 row-start-2 min-h-11 w-full min-w-0 bg-surface-input border border-strong rounded-lg px-2 py-1.5 text-xs text-strong font-mono sm:w-20"
                         />
                         <button
                           type="button"
+                          aria-label={`Remove deduction ${index + 1}`}
                           onClick={() => handleRemoveDeduction(d.id)}
-                          className="text-faint hover:text-rose-400 p-1 rounded-lg"
+                          className="col-start-3 row-start-1 row-span-2 grid size-11 shrink-0 place-items-center text-faint hover:text-rose-400 rounded-lg"
                         >
                           <Trash2 size={13} />
                         </button>
@@ -385,7 +401,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 {/* Net Summary Preview */}
                 <div className="bg-surface-sunken border border-inverse/[0.05] rounded-xl p-3 flex justify-between items-center text-xs">
                   <span className="text-muted">Net Usable Salary:</span>
-                  <span className="font-mono font-bold text-emerald-400 text-sm">
+                  <span className="font-mono font-bold text-positive text-sm">
                     ₱{netSalary.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -402,7 +418,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setStep(3)}
+                onClick={() => {
+                  if (paydayPreset === "custom" && !validCustomPaydays) {
+                    setShowPaydayError(true);
+                    return;
+                  }
+                  setStep(3);
+                }}
                 className="w-2/3 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition shadow-lg shadow-blue-900/20"
               >
                 Next: Wallets <ArrowRight size={14} />
@@ -415,7 +437,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {step === 3 && (
           <div className="space-y-5 animate-fade-in">
             <div>
-              <h2 className="text-base font-bold text-strong flex items-center gap-2">
+              <h2 ref={headingRef} tabIndex={-1} className="text-base font-bold text-strong flex items-center gap-2">
                 <Wallet size={16} className="text-amber-400" /> Accounts & Wallets
               </h2>
               <p className="text-xs text-muted mt-1">
@@ -425,7 +447,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
             <div className="space-y-3">
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {wallets.map(w => (
+                {wallets.map((w, index) => (
                   <div
                     key={w.id}
                     className="flex items-center gap-2 p-2.5 rounded-xl bg-surface-sunken border border-inverse/[0.05]"
@@ -433,7 +455,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                     <span className={`w-2.5 h-2.5 rounded-full ${w.color || "text-blue-400"} bg-current shrink-0`} />
                     <input
                       type="text"
-                      aria-label="Wallet Label"
+                      aria-label={`Wallet ${index + 1} name`}
                       value={w.label}
                       onChange={e => {
                         const val = e.target.value;
@@ -441,13 +463,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                           prev.map(item => (item.id === w.id ? { ...item, label: val } : item))
                         );
                       }}
-                      className="flex-1 bg-surface-input border border-strong rounded-lg px-2.5 py-1.5 text-xs text-strong outline-none"
+                      className="min-h-11 min-w-0 flex-1 bg-surface-input border border-strong rounded-lg px-2.5 py-1.5 text-xs text-strong"
                     />
                     {wallets.length > 1 && (
                       <button
                         type="button"
+                        aria-label={`Remove wallet ${index + 1}`}
                         onClick={() => handleRemoveWallet(w.id)}
-                        className="text-faint hover:text-rose-400 p-1 rounded-lg"
+                        className="grid size-11 shrink-0 place-items-center text-faint hover:text-rose-400 rounded-lg"
                         title="Delete wallet"
                       >
                         <Trash2 size={14} />
@@ -461,6 +484,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <div className="flex gap-2 pt-1">
                 <input
                   type="text"
+                  aria-label="New wallet name"
                   placeholder="New wallet name (e.g. Maya, GCash)..."
                   value={newWalletLabel}
                   onChange={e => setNewWalletLabel(e.target.value)}
@@ -470,7 +494,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                       handleAddWallet();
                     }
                   }}
-                  className="flex-1 bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-amber-500"
+                  className="min-h-11 min-w-0 flex-1 bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong focus:border-amber-500"
                 />
                 <button
                   type="button"
@@ -505,7 +529,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {step === 4 && (
           <div className="space-y-5 animate-fade-in">
             <div>
-              <h2 className="text-base font-bold text-strong flex items-center gap-2">
+              <h2 ref={headingRef} tabIndex={-1} className="text-base font-bold text-strong flex items-center gap-2">
                 <Target size={16} className="text-blue-400" /> Milestone Goal
               </h2>
               <p className="text-xs text-muted mt-1">
@@ -524,7 +548,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   placeholder="e.g. Emergency Fund, Japan Trip, Laptop"
                   value={goalName}
                   onChange={e => setGoalName(e.target.value)}
-                  className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500"
+                  className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong focus:border-blue-500"
                 />
               </div>
 
@@ -539,7 +563,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   aria-label="Target Amount"
                   value={targetFund}
                   onChange={e => setTargetFund(Math.max(0, Number(e.target.value) || 0))}
-                  className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong font-mono outline-none focus:border-blue-500"
+                  className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong font-mono focus:border-blue-500"
                 />
               </div>
 
@@ -551,7 +575,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   aria-label="Linked Wallet"
                   value={milestoneWallet}
                   onChange={e => setMilestoneWallet(e.target.value)}
-                  className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500 cursor-pointer"
+                  className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong focus:border-blue-500 cursor-pointer"
                 >
                   {wallets.map(w => (
                     <option key={w.id} value={w.id}>
@@ -585,7 +609,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {step === 5 && (
           <div className="space-y-5 animate-fade-in">
             <div>
-              <h2 className="text-base font-bold text-strong flex items-center gap-2">
+              <h2 ref={headingRef} tabIndex={-1} className="text-base font-bold text-strong flex items-center gap-2">
                 <CheckCircle2 size={16} className="text-emerald-400" /> Appearance & Launch
               </h2>
               <p className="text-xs text-muted mt-1">
@@ -602,6 +626,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
+                    aria-pressed={theme === "dark"}
                     onClick={() => setTheme("dark")}
                     className={`py-3 rounded-xl text-xs font-semibold flex flex-col items-center gap-1.5 border transition ${
                       theme === "dark"
@@ -613,6 +638,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   </button>
                   <button
                     type="button"
+                    aria-pressed={theme === "light"}
                     onClick={() => setTheme("light")}
                     className={`py-3 rounded-xl text-xs font-semibold flex flex-col items-center gap-1.5 border transition ${
                       theme === "light"
@@ -624,6 +650,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   </button>
                   <button
                     type="button"
+                    aria-pressed={theme === "system"}
                     onClick={() => setTheme("system")}
                     className={`py-3 rounded-xl text-xs font-semibold flex flex-col items-center gap-1.5 border transition ${
                       theme === "system"
