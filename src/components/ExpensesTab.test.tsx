@@ -13,7 +13,11 @@ const createTestData = (): UnifiedFinanceData => ({
   },
   settings: {
     ...INITIAL_UNIFIED_DATA.settings,
-    defaultWallet: "maya"
+    defaultWallet: "maya",
+    customWallets: [
+      ...(INITIAL_UNIFIED_DATA.settings?.customWallets || []),
+      { id: "maya", label: "maya", color: "text-blue-400" },
+    ],
   },
   library: {
     ...INITIAL_UNIFIED_DATA.library,

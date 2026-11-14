@@ -137,7 +137,7 @@ describe("WalletsTab archival", () => {
     const archive = setGlobalData.mock.calls[0][0];
     const archived = archive(data) as UnifiedFinanceData;
     expect(archive({ ...data, wallets: { ...data.wallets, w_del: 1 } }).wallets.w_del).toBe(1);
-    expect(archived.wallets).toEqual({ w_fallback: 2500, w_other: 500 });
+    expect(archived.wallets).toEqual({ w_del: 0, w_fallback: 2500, w_other: 500 });
     expect(archived.library).toBe(data.library);
     expect(archived.logs).toBe(data.logs);
     expect(archived.paydaySplitExecutions).toBe(data.paydaySplitExecutions);
@@ -151,5 +151,55 @@ describe("WalletsTab archival", () => {
     expect(restored.wallets).toEqual(data.wallets);
     expect(restored.settings?.customWallets).toContainEqual(data.settings.customWallets?.[0]);
     expect(restored.settings?.archivedWallets).toEqual([]);
+  });
+
+  it("rejects archiving a wallet with invalid balance (null, NaN, malformed string)", () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const data = makeData();
+    data.library.bills = [];
+    data.library.receivables = [];
+    data.settings = { customWallets: data.settings?.customWallets };
+
+    // null balance
+    (data.wallets as any).w_del = null;
+    const { setGlobalData: set1, unmount: u1 } = renderWallets(data);
+    fireEvent.click(screen.getAllByRole("button", { name: "Archive account" })[0]);
+    expect(alert).toHaveBeenCalledWith("Cannot archive wallet with an invalid or corrupted balance. Repair the balance first.");
+    expect(set1).not.toHaveBeenCalled();
+    u1();
+
+    // NaN balance
+    (data.wallets as any).w_del = NaN;
+    const { setGlobalData: set2, unmount: u2 } = renderWallets(data);
+    fireEvent.click(screen.getAllByRole("button", { name: "Archive account" })[0]);
+    expect(alert).toHaveBeenCalledWith("Cannot archive wallet with an invalid or corrupted balance. Repair the balance first.");
+    expect(set2).not.toHaveBeenCalled();
+    u2();
+
+    // malformed string balance
+    (data.wallets as any).w_del = "corrupted";
+    const { setGlobalData: set3, unmount: u3 } = renderWallets(data);
+    fireEvent.click(screen.getAllByRole("button", { name: "Archive account" })[0]);
+    expect(alert).toHaveBeenCalledWith("Cannot archive wallet with an invalid or corrupted balance. Repair the balance first.");
+    expect(set3).not.toHaveBeenCalled();
+    u3();
+  });
+
+  it("permits archiving a wallet with absent balance or valid numeric zero string", () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const data = makeData();
+    delete (data.wallets as any).w_del; // absent balance
+    data.library.bills = [];
+    data.library.receivables = [];
+    data.settings = { customWallets: data.settings?.customWallets };
+    const { setGlobalData } = renderWallets(data);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Archive account" })[0]);
+    expect(confirm).toHaveBeenCalled();
+    const updater = setGlobalData.mock.calls[0][0];
+    const archived = updater(data);
+    expect(archived.settings?.archivedWallets?.[0]?.id).toBe("w_del");
+    // Absent balance is not modified
+    expect(archived.wallets.w_del).toBeUndefined();
   });
 });

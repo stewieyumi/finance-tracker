@@ -4,6 +4,7 @@ import {
   UnifiedFinanceData
 } from "../types/finance";
 import { parseDateKey } from "./dateHelpers";
+import { reconcileWalletBalances } from "./financeHelpers";
 
 interface BuildSummaryParams {
   activeBills: BillViewModel[];
@@ -60,10 +61,14 @@ export function buildFinancialSummary({
     totalPendingAmount -
     totalUnpaidCommitments;
 
-  const walletLines = (globalData?.settings?.customWallets || []).map(cw => {
-    return `  • ${cw.label}: ₱${fmt(globalData?.wallets?.[cw.id] || 0)}`;
+  const reconciled = reconcileWalletBalances(globalData);
+  const walletLines = reconciled.activeWallets.map(cw => {
+    return `  • ${cw.label}: ₱${fmt(cw.balance)}`;
   });
-  const finalWalletLines = walletLines.length ? walletLines.join("\n") : "  • No accounts configured";
+  let finalWalletLines = walletLines.length ? walletLines.join("\n") : "  • No accounts configured";
+  if (!reconciled.isComplete) {
+    finalWalletLines += `\n  ⚠️ Note: ${reconciled.invalidWalletIds.length} corrupted balance(s) detected (${reconciled.invalidWalletIds.join(", ")})`;
+  }
 
   const billLines =
     unpaid

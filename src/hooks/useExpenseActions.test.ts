@@ -13,6 +13,10 @@ const createTestData = (): UnifiedFinanceData => ({
   settings: {
     ...INITIAL_UNIFIED_DATA.settings,
     defaultWallet: "maya",
+    customWallets: [
+      ...(INITIAL_UNIFIED_DATA.settings?.customWallets || []),
+      { id: "maya", label: "Maya", color: "text-emerald-400" },
+    ],
   },
   library: {
     ...INITIAL_UNIFIED_DATA.library,
@@ -213,5 +217,91 @@ describe("useExpenseActions", () => {
     expect(setGlobalData).not.toHaveBeenCalled();
     expect(showToast).not.toHaveBeenCalled();
     expect(initialData.library.expenses).toHaveLength(1);
+  });
+
+  it("rejects saving an expense when wallet is archived and commits nothing", () => {
+    const data = createTestData();
+    data.settings = {
+      ...data.settings,
+      archivedWallets: [{ id: "archived_maya", label: "Archived Maya", color: "text-gray-400" }],
+    };
+    data.wallets.archived_maya = 5000;
+
+    const mockCommitter = vi.fn(transition => transition(data));
+    const showToast = vi.fn();
+    const onError = vi.fn();
+
+    const { result } = renderHook(() =>
+      useExpenseActions({
+        globalData: data,
+        commitExpenseTransition: mockCommitter,
+        showToast,
+      })
+    );
+
+    act(() => {
+      result.current.handleSaveExpense(
+        {
+          merchant: "Test",
+          amount: "100",
+          category: "Other",
+          wallet: "archived_maya",
+          date: "2026-09-20",
+        },
+        vi.fn(),
+        vi.fn(),
+        onError
+      );
+    });
+
+    expect(mockCommitter).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith(
+      expect.stringContaining("is archived")
+    );
+    expect(data.wallets.archived_maya).toBe(5000);
+  });
+
+  it("refunds to archived wallet when deleting an expense", () => {
+    let state = createTestData();
+    state.settings = {
+      ...state.settings,
+      archivedWallets: [{ id: "old_wallet", label: "Old Wallet", color: "text-gray-400" }],
+    };
+    state.wallets.old_wallet = 200;
+
+    const expense: Expense = {
+      id: "exp-archived-refund",
+      merchant: "Old Shop",
+      amount: 300,
+      deductedAmount: 300,
+      category: "Shopping",
+      wallet: "old_wallet",
+      date: "2026-09-01",
+    };
+    state.library.expenses = [expense];
+
+    vi.stubGlobal("confirm", vi.fn(() => true));
+
+    const commitExpenseTransition = vi.fn(transition => {
+      const res = transition(state);
+      if (res.ok) state = res.data;
+      return res;
+    });
+
+    const { result } = renderHook(() =>
+      useExpenseActions({
+        globalData: state,
+        commitExpenseTransition,
+        showToast: vi.fn(),
+      })
+    );
+
+    act(() => {
+      result.current.handleDeleteExpense(expense);
+    });
+
+    expect(commitExpenseTransition).toHaveBeenCalledTimes(1);
+    expect(state.wallets.old_wallet).toBe(500);
+    expect(state.library.expenses).toHaveLength(0);
   });
 });

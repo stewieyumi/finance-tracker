@@ -204,6 +204,7 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
             <ReceivablesTable
               inflowsLabel={inflowsLabel}
               inflowCategories={inflowCategories}
+              defaultWallet={defaultWallet}
               customWallets={customWallets}
               activeReceivables={activeReceivables}
               selectedMonth={selectedMonth}

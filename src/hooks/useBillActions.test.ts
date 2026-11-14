@@ -6,11 +6,20 @@ import { UnifiedFinanceData, BillViewModel } from "../types/finance";
 
 const createTestData = (): UnifiedFinanceData => ({
   ...INITIAL_UNIFIED_DATA,
+  settings: {
+    ...INITIAL_UNIFIED_DATA.settings,
+    customWallets: [
+      ...(INITIAL_UNIFIED_DATA.settings?.customWallets || []),
+      { id: "maya", label: "maya", color: "text-emerald-400" },
+      { id: "gcash", label: "gcash", color: "text-blue-400" },
+    ],
+  },
   wallets: {
     ...INITIAL_UNIFIED_DATA.wallets,
     maya: 5000,
     gcash: 5000
   },
+  library: { ...INITIAL_UNIFIED_DATA.library, bills: [createBill()] },
   logs: {}
 });
 
@@ -23,7 +32,7 @@ const createBill = (
   dueDay: "15",
   type: "Loan / Installment",
   wallet: "maya",
-  startMonth: "August 2026",
+  startMonth: "September 2026",
   endMonth: "October 2026",
   paid: false,
   targetMonthForDue: "September 2026",
@@ -300,13 +309,12 @@ describe("useBillActions - payment mutations", () => {
     const mockShowToast = vi.fn();
     const initialData = createTestData();
 
-    const bill = createBill({
-      targetMonthForDue: "August 2026"
-    });
+    const bill = createBill({ startMonth: "August 2026", targetMonthForDue: "August 2026" });
+    initialData.library = { ...initialData.library, bills: [bill] };
 
     const { result } = renderHook(() =>
       useBillActions({
-        globalData: createTestData(),
+        globalData: initialData,
         setGlobalData: mockSetGlobalData,
         selectedMonth: "September 2026",
         showToast: mockShowToast
@@ -405,9 +413,11 @@ describe("useBillActions - payment mutations", () => {
       wallet: undefined
     });
 
+    initialData.library = { ...initialData.library, bills: [bill] };
+
     const { result } = renderHook(() =>
       useBillActions({
-        globalData: createTestData(),
+        globalData: initialData,
         setGlobalData: mockSetGlobalData,
         selectedMonth: "September 2026",
         showToast: mockShowToast
@@ -427,5 +437,87 @@ describe("useBillActions - payment mutations", () => {
     expect(nextData.logs["September 2026"].billsPaid).toContain(
       "unobank-test"
     );
+  });
+
+  it("rejects paying a bill when explicit wallet is archived and commits nothing", () => {
+    const data = createTestData();
+    data.settings = {
+      ...data.settings,
+      archivedWallets: [{ id: "archived_maya", label: "Archived Maya", color: "text-gray-400" }],
+    };
+    data.wallets.archived_maya = 5000;
+    const bill = createBill({ wallet: "archived_maya" });
+
+    const mockCommitter = vi.fn();
+    const mockShowToast = vi.fn();
+
+    const { result } = renderHook(() =>
+      useBillActions({
+        globalData: data,
+        commitBillTransition: mockCommitter,
+        selectedMonth: "September 2026",
+        showToast: mockShowToast,
+      })
+    );
+
+    act(() => {
+      result.current.toggleBillStatus(bill);
+    });
+
+    expect(mockCommitter).not.toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.stringContaining("is archived")
+    );
+    expect(data.wallets.archived_maya).toBe(5000);
+  });
+
+  it("refunds to exact original wallet on unpay even if that wallet was archived and absent in wallets", () => {
+    let state = createTestData();
+    state.settings = {
+      ...state.settings,
+      archivedWallets: [{ id: "old_wallet", label: "Old Wallet", color: "text-gray-400" }],
+    };
+    // old_wallet is absent from wallets
+    delete state.wallets.old_wallet;
+
+    const bill = createBill({ id: "bill-unpay-archived", wallet: "old_wallet", paid: true });
+    state.logs["September 2026"] = {
+      billsPaid: ["bill-unpay-archived"],
+      billSettlements: {
+        "bill-unpay-archived": [
+          {
+            id: "settle-1",
+            paidAt: "2026-09-01T00:00:00.000Z",
+            amount: 1000,
+            wallet: "old_wallet",
+            walletDebit: 1000,
+          },
+        ],
+      },
+    };
+
+    const commitBillTransition = vi.fn((transition) => {
+      const res = transition(state);
+      if (res.ok) state = res.data;
+      return res;
+    });
+
+    const { result } = renderHook(() =>
+      useBillActions({
+        globalData: state,
+        commitBillTransition,
+        selectedMonth: "September 2026",
+        showToast: vi.fn(),
+      })
+    );
+
+    act(() => {
+      result.current.toggleBillStatus(bill, false, false, "settle-1");
+    });
+
+    expect(commitBillTransition).toHaveBeenCalledTimes(1);
+    expect(state.wallets.old_wallet).toBe(1000);
+    expect(state.logs["September 2026"].billsPaid).not.toContain("bill-unpay-archived");
+    expect(state.logs["September 2026"].billSettlements?.["bill-unpay-archived"]?.[0]?.reversedAt).toBeDefined();
   });
 });

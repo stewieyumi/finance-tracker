@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { Plus, Archive, Edit2, CreditCard, Info, ArrowRightLeft } from 'lucide-react';
-import { UnifiedFinanceData, CustomWallet } from '../types/finance';
+import { UnifiedFinanceData, CustomWallet, WalletMutationHandler } from '../types/finance';
 import { formatPHP } from '../utils/currency';
-import { getWalletForBill } from '../utils/financeHelpers';
+import { getWalletForBill, reconcileWalletBalances, parseWalletBalance } from '../utils/financeHelpers';
 import { WalletGrid } from './WalletGrid';
 
 interface WalletsTabProps {
   globalData: UnifiedFinanceData;
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
-  onCommit: (key: string, val: number) => void;
-  onIncrement: (key: string, val: number) => void;
+  onCommit: WalletMutationHandler;
+  onIncrement: WalletMutationHandler;
   onOpenSettings?: () => void;
   onTransfer?: () => void;
 }
@@ -44,7 +44,14 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
       if (editingId) {
         updatedWallets = updatedWallets.map(w => w.id === editingId ? { ...w, label: name, color: walletColor } : w);
       } else {
-        const newId = "cw_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+        let newId = "cw_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+        while (
+          updatedWallets.some(w => w.id === newId) ||
+          prev.settings?.archivedWallets?.some(w => w.id === newId) ||
+          Object.prototype.hasOwnProperty.call(nextWallets, newId)
+        ) {
+          newId = "cw_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+        }
         updatedWallets.push({ id: newId, label: name, color: walletColor });
         nextWallets[newId] = 0;
       }
@@ -59,7 +66,14 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
   };
 
   const archiveBlock = (data: UnifiedFinanceData, id: string) => {
-    if ((data.wallets[id] ?? 0) !== 0) return "Bring this wallet to zero before archiving it.";
+    const rawBalance = data.wallets[id];
+    const parsed = parseWalletBalance(rawBalance);
+    if (!parsed.isValid) {
+      return "Cannot archive wallet with an invalid or corrupted balance. Repair the balance first.";
+    }
+    if (parsed.balance !== 0) {
+      return "Bring this wallet to zero before archiving it.";
+    }
     const settings = data.settings;
     const routes = [
       settings?.milestoneWallet, settings?.livingWallet, settings?.savingsWallet,
@@ -88,7 +102,6 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
       reason = archiveBlock(prev, id);
       if (reason) return prev;
       const wallets = { ...prev.wallets };
-      delete wallets[id];
       return {
         ...prev,
         wallets,
@@ -110,7 +123,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
       if (!wallet || settings?.customWallets?.some(entry => entry.id === id)) return prev;
       return {
         ...prev,
-        wallets: { ...prev.wallets, [id]: prev.wallets[id] ?? 0 },
+        wallets: { ...prev.wallets, [id]: Object.prototype.hasOwnProperty.call(prev.wallets, id) ? prev.wallets[id] : 0 },
         settings: {
           ...settings,
           customWallets: [...(settings?.customWallets ?? []), wallet],
@@ -121,8 +134,9 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
     });
   };
 
+  const reconciled = reconcileWalletBalances(globalData);
   const customWallets = globalData.settings?.customWallets || [];
-  const totalWalletBalance = customWallets.reduce((total, wallet) => total + (Number(globalData.wallets[wallet.id]) || 0), 0);
+  const totalWalletBalance = reconciled.totalLiquid;
 
   return (
     <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
@@ -138,6 +152,72 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
         <p className="mt-1 text-xs text-muted">Across {customWallets.length} active {customWallets.length === 1 ? "wallet" : "wallets"}</p>
         {onTransfer && customWallets.length < 2 && <p className="mt-2 text-xs text-muted">Add another wallet to enable transfers.</p>}
       </section>
+      {!reconciled.isComplete && (
+        <div role="alert" className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-negative">
+          <div className="flex items-center gap-2 font-semibold">
+            <Info size={14} /> Corrupted balance detected in account(s): {reconciled.invalidWalletIds.join(", ")}
+          </div>
+          <p className="mt-1 text-muted">Balances must be valid numbers to ensure financial accuracy.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {reconciled.invalidWalletIds.map(id => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onCommit(id, 0)}
+                className="rounded-lg bg-rose-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-rose-500"
+              >
+                Repair {id} to ₱0
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {reconciled.unlistedWallets.some(w => w.balance !== 0) && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-warning">
+          <div className="flex items-center gap-2 font-semibold">
+            <Info size={14} /> Unlisted Accounts with Balances ({formatPHP(reconciled.unlistedTotal)})
+          </div>
+          <p className="mt-1 text-muted">The following accounts hold funds but are not in your active account list:</p>
+          <div className="mt-2 divide-y divide-subtle">
+            {reconciled.unlistedWallets.filter(w => w.balance !== 0).map(w => (
+              <div key={w.id} className="flex items-center justify-between py-1.5 text-xs">
+                <span>{w.label}</span>
+                <span className="font-mono font-medium">{formatPHP(w.balance)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {reconciled.archivedWallets.some(w => w.balance !== 0) && (
+        <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 text-xs text-info">
+          <div className="flex items-center gap-2 font-semibold">
+            <Info size={14} /> Archived Accounts with Balances ({formatPHP(reconciled.archivedTotal)})
+          </div>
+          <div className="mt-2 divide-y divide-subtle">
+            {reconciled.archivedWallets.filter(w => w.balance !== 0).map(w => (
+              <div key={w.id} className="flex items-center justify-between py-1.5 text-xs">
+                <span>{w.label}</span>
+                <span className="font-mono font-medium">{formatPHP(w.balance)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {reconciled.anomalies.hasMetadataAnomalies && (
+        <details className="rounded-2xl border border-subtle bg-surface p-4 text-xs">
+          <summary className="cursor-pointer font-semibold text-muted hover:text-primary">
+            Account Metadata Diagnostics ({reconciled.anomalies.duplicateActiveWallets.length + reconciled.anomalies.conflictingActiveAndArchived.length} issues)
+          </summary>
+          <div className="mt-2 space-y-2 text-muted">
+            {reconciled.anomalies.duplicateActiveWallets.map(dup => (
+              <p key={dup.id}>Duplicate active account ID "{dup.id}" found across labels: {dup.labels.join(", ")}.</p>
+            ))}
+            {reconciled.anomalies.conflictingActiveAndArchived.map(conf => (
+              <p key={conf.id}>Account ID "{conf.id}" is listed as both active ("{conf.activeLabel}") and archived ("{conf.archivedLabel}"). Active status takes precedence.</p>
+            ))}
+          </div>
+        </details>
+      )}
       <WalletGrid wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} savingsWallet={globalData.settings?.savingsWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
       <div className="rounded-2xl bg-surface p-3 sm:p-4">
         <div className="flex items-center justify-between mb-4"><h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><CreditCard size={14} className="text-emerald-400" /> Account Management</h2></div>

@@ -6,7 +6,7 @@ import { generateId } from '../utils/idHelpers';
 import { Modal } from './ui/Modal';
 import { entryDialogStyles } from './ui/dialogStyles';
 import { formatPHP } from '../utils/currency';
-import { getDefaultTransferWallets } from '../utils/financeHelpers';
+import { getDefaultTransferWallets, parseWalletBalance, validateActiveWalletAssignment } from '../utils/financeHelpers';
 
 export type LedgerTransitionResult =
   | { ok: true; data: UnifiedFinanceData; transaction?: ManualTransaction }
@@ -79,11 +79,11 @@ const walletBalanceCents = (
   wallets: Record<string, number> | undefined,
   walletId?: string,
 ): number | null => {
-  if (!wallets || !walletId || !Object.prototype.hasOwnProperty.call(wallets, walletId)) {
-    return null;
-  }
-  const balance = wallets[walletId];
-  if (typeof balance !== 'number' || !Number.isFinite(balance)) return null;
+  if (!walletId) return null;
+  const raw = wallets?.[walletId];
+  const parsed = parseWalletBalance(raw);
+  if (!parsed.isValid) return null;
+  const balance = parsed.balance;
   const cents = Math.round(balance * 100);
   if (!Number.isSafeInteger(cents) || Math.abs(balance * 100 - cents) > 1e-6) {
     return null;
@@ -95,13 +95,11 @@ const isArchivedWallet = (data: UnifiedFinanceData, id?: string): boolean =>
   Boolean(id && data.settings?.archivedWallets?.some(wallet => wallet.id === id));
 
 const hasReversibleWallet = (data: UnifiedFinanceData, id?: string): id is string =>
-  Boolean(id && !isArchivedWallet(data, id) && walletBalanceCents(data.wallets, id) !== null);
+  Boolean(id && walletBalanceCents(data.wallets, id) !== null);
 
 const hasActiveWallet = (data: UnifiedFinanceData, id?: string): id is string =>
   Boolean(
-    hasReversibleWallet(data, id) &&
-      (!data.settings?.customWallets?.length ||
-        data.settings.customWallets.some(wallet => wallet.id === id)),
+    id && validateActiveWalletAssignment(id, data.settings, data.wallets).ok,
   );
 
 const resolveWalletLabel = (data: UnifiedFinanceData, id?: string): string =>
@@ -201,16 +199,6 @@ export const applyLedgerSave = (
   };
 
   if (oldTx && oldTx.postingMode !== 'history-only') {
-    if (
-      isArchivedWallet(data, oldTx.wallet) ||
-      (oldTx.type === 'transfer' && isArchivedWallet(data, oldTx.destinationWallet))
-    ) {
-      return {
-        ok: false,
-        data,
-        error: 'Restore the archived wallet before editing this transaction.',
-      };
-    }
     const oldCents = toValidCents(oldTx.amount);
     if (oldCents === null) {
       return { ok: false, data, error: 'The existing transaction amount is invalid.' };
@@ -326,16 +314,6 @@ export const applyLedgerDelete = (
 
   const nextWallets = { ...data.wallets };
   if (currentTx.postingMode !== 'history-only') {
-    if (
-      isArchivedWallet(data, currentTx.wallet) ||
-      (currentTx.type === 'transfer' && isArchivedWallet(data, currentTx.destinationWallet))
-    ) {
-      return {
-        ok: false,
-        data,
-        error: 'Restore the archived wallet before reversing this transaction.',
-      };
-    }
     const cents = toValidCents(currentTx.amount);
     if (cents === null) {
       return { ok: false, data, error: 'The transaction amount is invalid.' };

@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, CreditCard, CheckCircle2 } from 'lucide-react';
 import { entryDialogStyles } from './ui/dialogStyles';
-import { WalletState, CustomWallet } from '../types/finance';
+import { WalletState, CustomWallet, WalletMutationHandler, WalletMutationOutcome } from '../types/finance';
+import { parseWalletBalance } from '../utils/financeHelpers';
 
-interface WalletGridProps { wallets: WalletState; customWallets?: CustomWallet[]; milestoneWallet?: string; savingsWallet?: string; onCommit: (key: string, value: number) => void; onIncrement: (key: string, addAmount: number) => void; }
+interface WalletGridProps { wallets: WalletState; customWallets?: CustomWallet[]; milestoneWallet?: string; savingsWallet?: string; onCommit: WalletMutationHandler; onIncrement: WalletMutationHandler; }
 
 export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, milestoneWallet, savingsWallet, customWallets, onCommit, onIncrement }) => {
-  const [editingWallet, setEditingWallet] = useState<{ id: string; label: string; color: string; balance: number } | null>(null);
+  const [editingWallet, setEditingWallet] = useState<(CustomWallet & { balance: number | null }) | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") setEditingWallet(null); };
@@ -15,19 +17,31 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
     return () => { window.removeEventListener("keydown", handleKeyDown); document.body.style.overflow = "unset"; };
   }, [editingWallet]);
 
-  const openEdit = (wallet: any, currentBalance: number) => {
+  const openEdit = (wallet: CustomWallet, currentBalance: number | null) => {
+    setError("");
     setEditingWallet({ ...wallet, balance: currentBalance });
-    setEditValue(currentBalance === 0 ? "" : String(Math.round(currentBalance * 100) / 100));
+    setEditValue(currentBalance === null || currentBalance === 0 ? "" : String(currentBalance));
+  };
+
+  const finishChange = (outcome: WalletMutationOutcome | void) => {
+    if (!outcome?.ok) {
+      setError(outcome && !outcome.ok ? outcome.error : "The change could not be confirmed. Check your balance before trying again.");
+      return;
+    }
+    setError("");
+    setEditingWallet(null);
   };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingWallet) return;
     const cleaned = editValue.replace(/,/g, "").trim();
-    const parsed = cleaned === "" ? 0 : parseFloat(cleaned);
-    const validAmount = isNaN(parsed) ? editingWallet.balance : Math.round(parsed * 100) / 100;
-    onCommit(editingWallet.id, validAmount);
-    setEditingWallet(null);
+    const parsed = parseWalletBalance(cleaned === "" && editingWallet.balance !== null ? 0 : cleaned);
+    if (!parsed.isValid) {
+      setError("Enter the correct balance before saving.");
+      return;
+    }
+    finishChange(onCommit(editingWallet.id, parsed.balance));
   };
 
   return (
@@ -36,7 +50,8 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
         <div className="mb-2 px-1 text-sm font-semibold text-primary">Liquid Cash Wallets</div>
         <div className="overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle">
           {(customWallets || []).map(w => {
-            const currentBalance = wallets[w.id] ?? 0;
+            const parsed = parseWalletBalance(wallets[w.id]);
+            const currentBalance = parsed.isValid ? parsed.balance : null;
             const isMilestoneWallet = w.id === milestoneWallet;
             const isSavingsWallet = w.id === savingsWallet;
 
@@ -61,7 +76,7 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
                 </span>
                 <span className="privacy-blur flex shrink-0 items-baseline gap-0.5">
                   <span className="text-[10px] text-faint font-mono">₱</span>
-                  <span className="text-sm font-semibold tabular-nums text-strong">{currentBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-sm font-semibold tabular-nums text-strong">{currentBalance === null ? "Invalid balance" : currentBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </span>
               </button>
             );
@@ -83,12 +98,13 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
             <form onSubmit={handleSave} className="space-y-6">
               <div className="relative flex items-center justify-center bg-surface-lowest border border-strong rounded-2xl p-5 focus-within:border-blue-500/50 transition-colors shadow-inner">
                 <span className="absolute left-5 text-faint font-mono text-xl">₱</span>
-                <input type="number" inputMode="decimal" step="0.01" autoFocus value={editValue} onChange={e => setEditValue(e.target.value)} className="bg-transparent text-center text-3xl font-bold font-mono outline-none w-full text-strong" placeholder="0.00" />
+                <input aria-label="Balance" aria-invalid={Boolean(error)} type="number" inputMode="decimal" step="0.01" autoFocus value={editValue} onChange={e => { setEditValue(e.target.value); setError(""); }} className="bg-transparent text-center text-3xl font-bold font-mono outline-none w-full text-strong" placeholder="0.00" />
               </div>
+              {error && <p role="alert" className="text-sm text-primary">{error}</p>}
               <div>
                 <div className="text-[10px] uppercase tracking-wider font-semibold text-faint mb-2.5 text-center">Quick Add Income</div>
                 <div className="grid grid-cols-3 gap-2">
-                  {[100, 500, 1000].map(amt => <button key={amt} type="button" onClick={() => { onIncrement(editingWallet.id, amt); setEditingWallet(null); }} className="min-h-11 py-3 chip-blue rounded-xl text-xs font-mono font-bold transition active:scale-95 flex items-center justify-center gap-1 shadow-sm"><Plus size={12} />{amt}</button>)}
+                  {[100, 500, 1000].map(amt => <button key={amt} type="button" onClick={() => finishChange(onIncrement(editingWallet.id, amt))} className="min-h-11 py-3 chip-blue rounded-xl text-xs font-mono font-bold transition active:scale-95 flex items-center justify-center gap-1 shadow-sm"><Plus size={12} />{amt}</button>)}
                 </div>
               </div>
               <button type="submit" className={`${entryDialogStyles.primary} w-full`}><CheckCircle2 size={16} /> Save Balance</button>

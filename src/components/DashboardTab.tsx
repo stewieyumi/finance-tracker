@@ -30,6 +30,7 @@ import {
 } from "../types/finance";
 import { calculateSafeToSpend, calculateDebtRunway } from "../utils/financialAnalytics";
 import { getPaydayDatesInRange, normalizePaydayDays, parseMonthKey } from "../utils/dateHelpers";
+import { reconcileWalletBalances } from "../utils/financeHelpers";
 
 const carouselSlideClass = "flex w-full shrink-0 snap-center";
 
@@ -124,6 +125,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
   const selectedYear = selectedMonth.split(" ")[1] || "2026";
   const safeToSpend = calculateSafeToSpend(totalLiquid, totalUnpaidCommitments);
+  const reconciled = useMemo(() => reconcileWalletBalances(globalData), [globalData]);
 
   const debtLoans = useMemo(
     () => calculateDebtRunway(globalData, selectedMonth),
@@ -560,6 +562,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         </span>
         <span className="mt-2 block text-xs text-muted">
           Liquid cash across {Object.keys(globalData.wallets || {}).length} wallets
+          {!reconciled.isComplete && " • ⚠️ Corrupted balances detected"}
         </span>
       </button>
 

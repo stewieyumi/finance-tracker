@@ -20,7 +20,7 @@ import {
   Deduction,
   DeductionType,
 } from "../types/finance";
-import { calculateNetSalary } from "../utils/financeHelpers";
+import { calculateNetSalary, parseWalletBalance } from "../utils/financeHelpers";
 import { normalizePaydayDays } from "../utils/dateHelpers";
 
 interface OnboardingWizardProps {
@@ -133,6 +133,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
   const handleRemoveWallet = (id: string) => {
     if (wallets.length <= 1) return; // Keep at least one wallet
+    const existingBal = globalData.wallets?.[id];
+    if (existingBal !== undefined) {
+      const parsed = parseWalletBalance(existingBal);
+      if (!parsed.isValid || parsed.balance !== 0) {
+        return; // Do not delete wallet with non-zero or corrupted balance
+      }
+    }
     setWallets(prev => prev.filter(w => w.id !== id));
     if (milestoneWallet === id) {
       const remaining = wallets.filter(w => w.id !== id);
@@ -151,6 +158,10 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
       }
     });
 
+    const defaultActive = wallets[0]?.id || "main";
+    const alignRoute = (currentRoute?: string) =>
+      wallets.some(w => w.id === currentRoute) ? currentRoute! : defaultActive;
+
     const completedData: UnifiedFinanceData = {
       ...globalData,
       settings: {
@@ -161,9 +172,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         paydayDays: finalPaydays,
         goalName,
         targetFund,
-        milestoneWallet: wallets.some(w => w.id === milestoneWallet)
-          ? milestoneWallet
-          : wallets[0]?.id || "main",
+        defaultWallet: alignRoute(globalData.settings?.defaultWallet),
+        milestoneWallet: alignRoute(milestoneWallet),
+        livingWallet: alignRoute(globalData.settings?.livingWallet),
+        savingsWallet: alignRoute(globalData.settings?.savingsWallet),
+        transitWallet: alignRoute(globalData.settings?.transitWallet),
         theme,
         customWallets: wallets,
         hasCompletedOnboarding: true,

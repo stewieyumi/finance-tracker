@@ -15,7 +15,7 @@ interface ReceivablesTableProps {
   inflowsLabel?: string;
   inflowCategories?: string[];
   walletLabels?: Record<string, string>;
-  
+  defaultWallet?: string;
   customWallets?: CustomWallet[];
   activeReceivables: ReceivableViewModel[];
   selectedMonth: string;
@@ -32,15 +32,19 @@ interface ReceivablesTableProps {
 
 
 export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
-  inflowsLabel, inflowCategories, walletLabels, customWallets, activeReceivables, selectedMonth,
+  inflowsLabel, inflowCategories, walletLabels, defaultWallet, customWallets, activeReceivables, selectedMonth,
   onToggleStatus, onAddPayment, onAddReceivable, onDeleteReceivable, onSaveEdit, editingId, setEditingId, editForm, setEditForm
 }) => {
   const categoriesList = inflowCategories?.length ? inflowCategories : ["Salary", "Shoot", "Edit", "Payment", "Other"];
   const filterList = ["All", ...categoriesList];
   const allWallets = useMemo(() => customWallets || [], [customWallets]);
+  const initialWallet = useMemo(() => {
+    if (defaultWallet && customWallets?.some(w => w.id === defaultWallet)) return defaultWallet;
+    return customWallets?.[0]?.id || "main";
+  }, [defaultWallet, customWallets]);
 
   const [isAdding, setIsAdding] = useState(false);
-  const [newReceivable, setNewReceivable] = useState<NewReceivableForm>({ name: "", amount: "", category: "Shoot", frequency: "By Date", biMonthlyDays: [15, 30], monthlyDay: 15, date: "", wallet: customWallets?.[0]?.id || "main" });
+  const [newReceivable, setNewReceivable] = useState<NewReceivableForm>({ name: "", amount: "", category: "Shoot", frequency: "By Date", biMonthlyDays: [15, 30], monthlyDay: 15, date: "", wallet: initialWallet });
   const [selectedFilter, setSelectedFilter] = useState<"All" | ReceivableCategory>("All");
   const [hideSettled, setHideSettled] = useState(false);
   const [payPeriod, setPayPeriod] = useState<"all" | "firstHalf" | "secondHalf">("all");
@@ -90,7 +94,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
       biMonthlyDays: newReceivable.frequency === "Bi-monthly" ? newReceivable.biMonthlyDays : undefined, monthlyDay: newReceivable.frequency === "Monthly" ? newReceivable.monthlyDay : undefined,
       date: newReceivable.frequency === "By Date" ? newReceivable.date : undefined, wallet: newReceivable.wallet
     });
-    setNewReceivable({ name: "", amount: "", category: "Shoot", frequency: "By Date", biMonthlyDays: [15, 30], monthlyDay: 15, date: "", wallet: customWallets?.[0]?.id || "main" });
+    setNewReceivable({ name: "", amount: "", category: "Shoot", frequency: "By Date", biMonthlyDays: [15, 30], monthlyDay: 15, date: "", wallet: initialWallet });
     setIsAdding(false);
   };
 
