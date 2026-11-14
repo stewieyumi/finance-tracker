@@ -9,7 +9,7 @@ import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, Histo
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { QUICK_EXPENSE_HASH } from "./constants/config";
 import { getMonthKey, getAdjacentMonth, getDaysUntil, parseMonthKey } from "./utils/dateHelpers";
-import { UnifiedFinanceData, WalletState, EditFormData, TransactionHistoryItem, PaydayExecution } from "./types/finance";
+import { UnifiedFinanceData, WalletState, EditFormData, TransactionHistoryItem, PaydayExecution, FinanceTransitionCommitter } from "./types/finance";
 import { buildFinancialSummary } from "./utils/summaryHelpers";
 import {
   getWalletForBill,
@@ -201,8 +201,10 @@ export default function App() {
     ) => T
   >(null as any);
 
-  const syncedCommitReceivableTransition: ReceivableTransitionCommitter = useCallback(
-    (transition) => {
+  const syncedCommitTransition: FinanceTransitionCommitter = useCallback(
+    <T extends { ok: boolean; data: UnifiedFinanceData }>(
+      transition: (prev: UnifiedFinanceData) => T
+    ): T => {
       if (commitDataTransitionRef.current) {
         return commitDataTransitionRef.current(transition);
       }
@@ -210,16 +212,18 @@ export default function App() {
         ok: false,
         error: "Authoritative sync transition committer is not ready.",
         data: globalData,
-      };
+      } as unknown as T;
     },
     [globalData]
   );
+  const syncedCommitReceivableTransition: ReceivableTransitionCommitter = syncedCommitTransition;
   const [selectedMonth, setSelectedMonth] = useState<string>(() => getMonthKey(new Date()));
 const {
   commitWallet,
   incrementWallet
 } = useWalletActions({
-  setGlobalData: syncedSetGlobalData
+  setGlobalData: syncedSetGlobalData,
+  commitTransition: syncedCommitTransition
 });
   const [showDatePickerModal, setShowDatePickerModal] = useState(false);
   const [showYearlyModal, setShowYearlyModal] = useState(false);
@@ -481,6 +485,7 @@ const {
 } = useBillActions({
   globalData,
   setGlobalData: syncedSetGlobalData,
+  commitBillTransition: syncedCommitTransition,
   selectedMonth,
   showToast,
   onPaymentsReversed: removeReversedPayments,
@@ -492,7 +497,11 @@ const {
   addPayment,
   deleteReceivable
 } = useReceivableActions({
-  globalData, setGlobalData: syncedSetGlobalData, selectedMonth, showToast,
+  globalData,
+  setGlobalData: syncedSetGlobalData,
+  commitReceivableTransition: syncedCommitTransition,
+  selectedMonth,
+  showToast,
   onPaymentsReversed: removeReversedPayments,
 });
 
@@ -746,6 +755,7 @@ const { saveShootEdit } = useShootSaveActions({
  } = usePaydayActions({
    globalData,
    setGlobalData: syncedSetGlobalData,
+   commitPaydayTransition: syncedCommitTransition,
    paydayAllocations,
    billPaydayAllocations,
    remainingBuffer,
@@ -1242,7 +1252,13 @@ const copySummaryToClipboard = async () => {
         {activeTab === "expenses" && (
           <ErrorBoundary>
             <Suspense fallback={<p role="status" className="p-4 text-sm text-muted">Loading expenses…</p>}>
-              <ExpensesTab selectedMonth={selectedMonth} globalData={globalData} setGlobalData={syncedSetGlobalData} showToast={showToast} />
+              <ExpensesTab
+                selectedMonth={selectedMonth}
+                globalData={globalData}
+                setGlobalData={syncedSetGlobalData}
+                commitExpenseTransition={syncedCommitTransition}
+                showToast={showToast}
+              />
             </Suspense>
           </ErrorBoundary>
         )}

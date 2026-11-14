@@ -280,3 +280,14 @@ export interface LastResolvedConflict {
   resolution: "local" | "cloud";
   cloudRevision: number;
 }
+
+export type FinanceTransitionResult<TExtra = Record<string, unknown>> =
+  | ({ ok: true; data: UnifiedFinanceData } & TExtra)
+  | ({ ok: false; error: string; data: UnifiedFinanceData } & Partial<TExtra>);
+
+export type FinanceTransitionCommitter = <T extends { ok: boolean; data: UnifiedFinanceData }>(
+  transition: (prev: UnifiedFinanceData) => T
+) => T;
+
+export type WalletMutationOutcome = { ok: true } | { ok: false; error: string };
+export type WalletMutationHandler = (walletId: string, amount: number) => WalletMutationOutcome | void;

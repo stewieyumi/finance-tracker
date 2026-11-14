@@ -10,6 +10,12 @@ import {
   hasPaydayExecutionOnDate,
   getReceivableStatus,
   applyWalletTransaction,
+  hasSufficientWalletBalance,
+  parseWalletBalance,
+  resolveActiveWalletDefault,
+  validateActiveWalletAssignment,
+  resolveWalletRoutingOrReject,
+  reconcileWalletBalances,
   getDefaultWalletId,
   getDefaultExpenseWalletId
 } from "./financeHelpers";
@@ -58,7 +64,6 @@ describe("getWalletForBill", () => {
     expect(getWalletForBill("SHARED JAPAN TRIP 2")).toBe("bpi");
   });
 });
-
 describe("countPaydaysUntil", () => {
   it("counts today itself as a payday when today is the 15th or 30th", () => {
     const today = new Date(2026, 8, 15); // Sep 15, 2026
@@ -89,7 +94,6 @@ describe("countPaydaysUntil", () => {
     expect(countPaydaysUntil(today, due)).toBe(2);
   });
 });
-
 describe("computeBillPerPaydayAmount — prevents double-funding", () => {
   it("funds the full amount when only one payday remains", () => {
     expect(computeBillPerPaydayAmount(1750, 0, 1)).toBe(1750);
@@ -115,7 +119,6 @@ describe("computeBillPerPaydayAmount — prevents double-funding", () => {
     expect(computeBillPerPaydayAmount(500, 0, 0)).toBe(500);
   });
 });
-
 describe("computeScaledBaselineAllocations — keeps buffer from going negative", () => {
   it("never lets rounded baselines exceed the room left after bills", () => {
     const allocations = computeScaledBaselineAllocations(
@@ -153,7 +156,6 @@ describe("computeScaledBaselineAllocations — keeps buffer from going negative"
     expect(allocations.transit).toBe(0);
   });
 });
-
 describe("computeBaselineScale — keeps buffer from going negative", () => {
   it("returns full scale (1) when bills leave enough room for baselines", () => {
     expect(computeBaselineScale(10000, 15000, 5000)).toBe(1);
@@ -172,7 +174,6 @@ describe("computeBaselineScale — keeps buffer from going negative", () => {
     expect(computeBaselineScale(5000, 15000, 0)).toBe(0);
   });
 });
-
 describe("getEffectiveBillAmount (existing helper, sanity check)", () => {
   it("uses the override when present", () => {
     expect(getEffectiveBillAmount(599, 699)).toBe(699);
@@ -182,7 +183,6 @@ describe("getEffectiveBillAmount (existing helper, sanity check)", () => {
     expect(getEffectiveBillAmount(599, undefined)).toBe(599);
   });
 });
-
 describe("Receivable State Transitions", () => {
   it("Pending: 0 received means uncollected and full amount remaining", () => {
     const { isCollected, remaining } = getReceivableStatus(1000, 0, false);
@@ -220,7 +220,6 @@ describe("Receivable State Transitions", () => {
     expect(remaining).toBe(0);
   });
 });
-
 describe("getDefaultWalletId", () => {
   it("uses the configured default wallet when it exists", () => {
     expect(
@@ -255,7 +254,6 @@ describe("getDefaultWalletId", () => {
     ).toBe("");
   });
 });
-
 describe("getDefaultExpenseWalletId", () => {
   const settings = {
     defaultWallet: "maribank",
@@ -306,7 +304,6 @@ describe("getDefaultExpenseWalletId", () => {
     expect(getDefaultExpenseWalletId("Shopping", invalidSettings, wallets)).toBe("maribank");
   });
 });
-
 describe("Expense & Wallet Tracking Logic", () => {
   it("Wallet deduction: correctly subtracts expense amount from balance", () => {
     expect(applyWalletTransaction(5000, -1500)).toBe(3500);
@@ -316,15 +313,14 @@ describe("Expense & Wallet Tracking Logic", () => {
     expect(applyWalletTransaction(3500, 1500)).toBe(5000);
   });
 
-  it("Insufficient funds: prevents wallet balance from going negative during deduction", () => {
-    expect(applyWalletTransaction(1000, -2500)).toBe(0);
+  it("computes exact signed arithmetic and preserves negative balances", () => {
+    expect(applyWalletTransaction(1000, -2500)).toBe(-1500);
   });
 
   it("Decimal precision: handles JS floating point safely during deductions", () => {
     expect(applyWalletTransaction(100.55, -50.10)).toBe(50.45);
   });
 });
-
 describe("hasPaydayExecutionOnDate — prevents duplicate payday funding", () => {
   it("recognizes legacy string execution records", () => {
     expect(hasPaydayExecutionOnDate(["2026-09-15"], "2026-09-15")).toBe(true);
@@ -348,7 +344,6 @@ describe("hasPaydayExecutionOnDate — prevents duplicate payday funding", () =>
     ).toBe(false);
   });
 });
-
 describe("computeBillPerPaydayAmount — cent-safe payday allocation", () => {
   it("prevents floating-point reallocation across three paydays", () => {
     const first = computeBillPerPaydayAmount(100, 0, 3);
@@ -385,7 +380,6 @@ describe("computeBillPerPaydayAmount — cent-safe payday allocation", () => {
     ).toBe(450);
   });
 });
-
 describe("P4-C salary compatibility", () => {
   it("preserves existing NET payout semantics for payday baseline scaling", () => {
     expect(computeBaselineScale(0, 15000, 5000)).toBe(1);
@@ -393,7 +387,6 @@ describe("P4-C salary compatibility", () => {
     expect(computeBaselineScale(15000, 15000, 5000)).toBe(0);
   });
 });
-
 describe("P4-C deduction calculations", () => {
   it("calculates a fixed deduction from gross salary", () => {
     const deduction = {
@@ -494,5 +487,147 @@ describe("P4-C deduction calculations", () => {
   it("normalizes invalid gross salary values safely", () => {
     expect(calculateNetSalary(-5000)).toBe(0);
     expect(calculateNetSalary(0)).toBe(0);
+  });
+});
+describe("Phase B1 Characterization: Overdraft Protections & Cent Arithmetic", () => {
+  it("hasSufficientWalletBalance blocks debits when balance is negative or insufficient", () => {
+    expect(hasSufficientWalletBalance(100, 50)).toBe(true);
+    expect(hasSufficientWalletBalance(100, 100)).toBe(true);
+    expect(hasSufficientWalletBalance(100, 100.01)).toBe(false);
+    expect(hasSufficientWalletBalance(0, 0)).toBe(true);
+    expect(hasSufficientWalletBalance(0, 0.01)).toBe(false);
+    expect(hasSufficientWalletBalance(-20, 10)).toBe(false);
+    expect(hasSufficientWalletBalance(-20, 0)).toBe(false);
+  });
+});
+describe("Phase B1 Failing-First: parseWalletBalance", () => {
+  it("handles absent and defined zero balances", () => {
+    expect(parseWalletBalance(undefined)).toEqual({ isValid: true, isPresent: false, balance: 0 });
+    expect(parseWalletBalance(0)).toEqual({ isValid: true, isPresent: true, balance: 0 });
+    expect(parseWalletBalance(-0)).toEqual({ isValid: true, isPresent: true, balance: 0 });
+  });
+
+  it("handles finite positive and negative balances without clamping", () => {
+    expect(parseWalletBalance(1500.5)).toEqual({ isValid: true, isPresent: true, balance: 1500.5 });
+    expect(parseWalletBalance(-70.25)).toEqual({ isValid: true, isPresent: true, balance: -70.25 });
+  });
+
+  it("normalizes strict numeric strings to numbers", () => {
+    expect(parseWalletBalance("1500.50")).toEqual({ isValid: true, isPresent: true, balance: 1500.5 });
+    expect(parseWalletBalance("-70")).toEqual({ isValid: true, isPresent: true, balance: -70 });
+    expect(parseWalletBalance("  42.50  ")).toEqual({ isValid: true, isPresent: true, balance: 42.5 });
+  });
+
+  it("rejects NaN, Infinity, null, empty strings, and malformed strings without coercing to zero", () => {
+    expect(parseWalletBalance(NaN)).toEqual({ isValid: false, isPresent: true, raw: NaN, reason: "nan" });
+    expect(parseWalletBalance(Infinity)).toEqual({ isValid: false, isPresent: true, raw: Infinity, reason: "infinity" });
+    expect(parseWalletBalance(null)).toEqual({ isValid: false, isPresent: true, raw: null, reason: "null" });
+    expect(parseWalletBalance("")).toEqual({ isValid: false, isPresent: true, raw: "", reason: "empty_string" });
+    expect(parseWalletBalance("   ")).toEqual({ isValid: false, isPresent: true, raw: "   ", reason: "empty_string" });
+    expect(parseWalletBalance("abc")).toEqual({ isValid: false, isPresent: true, raw: "abc", reason: "malformed_string" });
+    expect(parseWalletBalance("$50")).toEqual({ isValid: false, isPresent: true, raw: "$50", reason: "malformed_string" });
+  });
+});
+describe("Phase B1 Failing-First: resolveActiveWalletDefault", () => {
+  it("returns configured active default wallet when eligible", () => {
+    const settings = {
+      defaultWallet: "w2",
+      customWallets: [{ id: "w1", label: "W1" }, { id: "w2", label: "W2" }]
+    };
+    expect(resolveActiveWalletDefault(settings, { w1: 100, w2: 200 })).toBe("w2");
+  });
+
+  it("skips archived default wallet and selects first eligible active wallet", () => {
+    const settings = {
+      defaultWallet: "w1",
+      customWallets: [{ id: "w1", label: "W1" }, { id: "w2", label: "W2" }],
+      archivedWallets: [{ id: "w1", label: "W1" }]
+    };
+    expect(resolveActiveWalletDefault(settings, { w1: 100, w2: 200 })).toBe("w2");
+  });
+
+  it("skips active wallets with invalid balances and fails safely if none eligible", () => {
+    const settings = {
+      defaultWallet: "w1",
+      customWallets: [{ id: "w1", label: "W1" }, { id: "w2", label: "W2" }]
+    };
+    expect(resolveActiveWalletDefault(settings, { w1: NaN, w2: 200 })).toBe("w2");
+    expect(resolveActiveWalletDefault(settings, { w1: NaN, w2: Infinity })).toBe("");
+  });
+});
+describe("Phase B1 Failing-First: validateActiveWalletAssignment & resolveWalletRoutingOrReject", () => {
+  const settings = {
+    defaultWallet: "w1",
+    customWallets: [{ id: "w1", label: "Active 1" }, { id: "w2", label: "Active 2" }],
+    archivedWallets: [{ id: "w_archived", label: "Old Wallet" }]
+  };
+
+  it("validateActiveWalletAssignment rejects archived, unconfigured, or invalid wallets", () => {
+    expect(validateActiveWalletAssignment("w_archived", settings, { w_archived: 0 })).toMatchObject({
+      ok: false,
+      error: "archived"
+    });
+    expect(validateActiveWalletAssignment("ghost", settings, { ghost: 0 })).toMatchObject({
+      ok: false,
+      error: "unconfigured"
+    });
+    expect(validateActiveWalletAssignment("w1", settings, { w1: NaN })).toMatchObject({
+      ok: false,
+      error: "invalid_balance"
+    });
+    expect(validateActiveWalletAssignment("w1", settings, { w1: 100 })).toEqual({
+      ok: true,
+      walletId: "w1"
+    });
+  });
+
+  it("resolveWalletRoutingOrReject falls back safely for missing assignments but fails for invalid explicit assignments", () => {
+    expect(resolveWalletRoutingOrReject(undefined, settings, { w1: 100 })).toEqual({
+      ok: true,
+      walletId: "w1"
+    });
+    expect(resolveWalletRoutingOrReject("", settings, { w1: 100 })).toEqual({
+      ok: true,
+      walletId: "w1"
+    });
+    expect(resolveWalletRoutingOrReject("w_archived", settings, { w_archived: 0 })).toMatchObject({
+      ok: false,
+      error: "archived"
+    });
+  });
+});
+describe("Phase B1 Failing-First: reconcileWalletBalances", () => {
+  it("partitions active, archived, and unlisted wallets with mutual exclusivity and anomaly detection", () => {
+    const data = {
+      settings: {
+        customWallets: [
+          { id: "w1", label: "Main" },
+          { id: "w1", label: "Duplicate Main" },
+          { id: "w2", label: "Savings" }
+        ],
+        archivedWallets: [
+          { id: "w2", label: "Conflicting Savings" },
+          { id: "w_archived", label: "Archived" }
+        ]
+      },
+      wallets: {
+        w1: 1000,
+        w2: -50,
+        w_archived: 200,
+        legacy_maya: 500,
+        corrupted: NaN
+      }
+    };
+
+    const result = reconcileWalletBalances(data);
+
+    expect(result.activeTotal).toBe(950); // 1000 + (-50)
+    expect(result.archivedTotal).toBe(200);
+    expect(result.unlistedTotal).toBe(500); // legacy_maya
+    expect(result.totalLiquid).toBe(1650); // 950 + 200 + 500
+    expect(result.isComplete).toBe(false);
+    expect(result.invalidWalletIds).toContain("corrupted");
+    expect(result.anomalies.duplicateActiveWallets).toHaveLength(1);
+    expect(result.anomalies.conflictingActiveAndArchived).toHaveLength(1);
   });
 });

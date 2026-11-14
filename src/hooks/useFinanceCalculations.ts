@@ -6,7 +6,16 @@ import {
 } from "../types/finance";
 import { buildTransactionHistory } from "../utils/transactionHistory";
 import { DEFAULT_TARGET_FUND } from "../constants/config";
-import { getEffectiveBillAmount, getWalletForBill, computeBillPerPaydayAmount, computeBaselineScale, getReceivableStatus } from "../utils/financeHelpers";
+import {
+  getEffectiveBillAmount,
+  getWalletForBill,
+  computeBillPerPaydayAmount,
+  computeBaselineScale,
+  getReceivableStatus,
+  reconcileWalletBalances,
+  resolveActiveWalletDefault,
+  getSafeWalletBalance
+} from "../utils/financeHelpers";
 import {
   parseMonthKey,
   parseDateKey,
@@ -266,15 +275,15 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
     });
   }, [globalData, currentMonthDate]);
 
-  const totalLiquid = useMemo(() => Object.values(globalData?.wallets || {}).reduce((a, c) => a + (parseFloat(String(c)) || 0), 0), [globalData?.wallets]);
+  const reconciledBalances = useMemo(() => reconcileWalletBalances(globalData), [globalData]);
+  const totalLiquid = reconciledBalances.totalLiquid;
   const targetMilestoneFund = globalData?.settings?.targetFund ?? globalData?.targetFund ?? DEFAULT_TARGET_FUND;
-const fundProgressPercent = useMemo(() => {
-  if (targetMilestoneFund <= 0) return "0.0";
-
-  return (
-    ((globalData?.wallets?.[globalData?.settings?.milestoneWallet || 'maribank'] || 0) / targetMilestoneFund) * 100
-  ).toFixed(1);
-}, [globalData?.wallets, globalData?.settings?.milestoneWallet, targetMilestoneFund]);
+  const fundProgressPercent = useMemo(() => {
+    if (targetMilestoneFund <= 0) return "0.0";
+    const milestoneKey = globalData?.settings?.milestoneWallet || resolveActiveWalletDefault(globalData?.settings, globalData?.wallets);
+    const balance = getSafeWalletBalance(globalData?.wallets?.[milestoneKey], 0);
+    return ((balance / targetMilestoneFund) * 100).toFixed(1);
+  }, [globalData?.wallets, globalData?.settings, targetMilestoneFund]);
   const totalPendingReceivables = useMemo(() => activeReceivables.filter(r => !r.collected).reduce((a, c) => a + Math.max(0, (parseFloat(String(c.amount)) || 0) - (parseFloat(String(c.amountReceived)) || 0)), 0), [activeReceivables]);
   const monthIncomeCollected = useMemo(() => activeReceivables.reduce((a, c) => a + (parseFloat(String(c.amountReceived)) || 0), 0), [activeReceivables]);
   const totalUnpaidCommitments = useMemo(() => activeBills.filter(b => !b.paid).reduce((a, c) => a + (parseFloat(String(c.amount)) || 0), 0), [activeBills]);
@@ -289,9 +298,10 @@ const fundProgressPercent = useMemo(() => {
   const baseSavingsTarget = globalData?.settings?.baseSavingsTarget ?? 1000;
   const defaultTransit = globalData?.settings?.defaultTransitAllocation ?? 1500;
 
-  const livingWallet = globalData?.settings?.livingWallet || "gcash";
-  const savingsWallet = globalData?.settings?.savingsWallet || "bpi";
-  const transitWallet = globalData?.settings?.transitWallet || "gotyme";
+  const defaultActiveWallet = useMemo(() => resolveActiveWalletDefault(globalData?.settings, globalData?.wallets), [globalData?.settings, globalData?.wallets]);
+  const livingWallet = globalData?.settings?.livingWallet || defaultActiveWallet;
+  const savingsWallet = globalData?.settings?.savingsWallet || defaultActiveWallet;
+  const transitWallet = globalData?.settings?.transitWallet || defaultActiveWallet;
   
   const today = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
   const walletSplitTotals: Record<string, number> = {};
@@ -376,6 +386,7 @@ const fundProgressPercent = useMemo(() => {
 const recentTransactions = useMemo(() => allTransactions.slice(0, 5), [allTransactions]);
 
   return {
+    reconciledBalances,
     allTransactions,
     recentTransactions,
     billPaydayAllocations,

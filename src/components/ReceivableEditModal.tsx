@@ -353,6 +353,11 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                     {w.label}
                   </option>
                 ))}
+                {editForm.wallet && !allWallets.some(w => w.id === editForm.wallet) && (
+                  <option key={editForm.wallet} value={editForm.wallet} disabled>
+                    {editForm.wallet} (Archived / Inactive)
+                  </option>
+                )}
               </select>
             </div>
 

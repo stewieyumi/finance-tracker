@@ -24,6 +24,7 @@
   --warning-tint: rgba(255, 187, 64, .055);
   --text-positive: #6ee7b7;
   --text-negative: #fda4af;
+  --text-info: #93c5fd;
   --text-violet-accent: #d8b4fe;
   --wallet-goal: #86baff;
   --wallet-savings: #75ddbb;
@@ -76,6 +77,7 @@
   --warning-tint: rgba(222, 143, 22, .07);
   --text-positive: #047857;
   --text-negative: #be123c;
+  --text-info: #1d4ed8;
   --text-violet-accent: #7040ae;
   --wallet-goal: #005bc4;
   --wallet-savings: #047857;
@@ -112,6 +114,7 @@
   .text-warning { color: var(--text-warning); }
   .text-positive { color: var(--text-positive); }
   .text-negative { color: var(--text-negative); }
+  .text-info { color: var(--text-info); }
   .text-violet-accent { color: var(--text-violet-accent); }
 
   .dashboard-material {

@@ -1,4 +1,404 @@
-import type { AppSettings, Deduction } from "../types/finance";
+import type { AppSettings, CustomWallet, Deduction, UnifiedFinanceData, WalletState } from "../types/finance";
+import { roundMoney } from "./currency";
+
+export type BalanceParseResult =
+  | { isValid: true; isPresent: true; balance: number }
+  | { isValid: true; isPresent: false; balance: 0 }
+  | {
+      isValid: false;
+      isPresent: boolean;
+      raw: unknown;
+      reason: "nan" | "infinity" | "null" | "empty_string" | "malformed_string" | "invalid_type" | "out_of_range";
+    };
+
+const normalizeWalletBalance = (value: number, raw: unknown): BalanceParseResult => {
+  const cents = Math.round(value * 100);
+  if (!Number.isSafeInteger(cents)) {
+    return { isValid: false, isPresent: true, raw, reason: "out_of_range" };
+  }
+  return { isValid: true, isPresent: true, balance: cents === 0 ? 0 : cents / 100 };
+};
+
+export function parseWalletBalance(val: unknown): BalanceParseResult {
+  if (val === undefined) {
+    return { isValid: true, isPresent: false, balance: 0 };
+  }
+  if (val === null) {
+    return { isValid: false, isPresent: true, raw: null, reason: "null" };
+  }
+  if (typeof val === "number") {
+    if (Number.isNaN(val)) {
+      return { isValid: false, isPresent: true, raw: NaN, reason: "nan" };
+    }
+    if (!Number.isFinite(val)) {
+      return { isValid: false, isPresent: true, raw: val, reason: "infinity" };
+    }
+    return normalizeWalletBalance(val, val);
+  }
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (trimmed === "") {
+      return { isValid: false, isPresent: true, raw: val, reason: "empty_string" };
+    }
+    if (!/^-?\d+(\.\d+)?$/.test(trimmed)) {
+      return { isValid: false, isPresent: true, raw: val, reason: "malformed_string" };
+    }
+    const num = Number(trimmed);
+    if (!Number.isFinite(num)) {
+      return { isValid: false, isPresent: true, raw: val, reason: "infinity" };
+    }
+    return normalizeWalletBalance(num, val);
+  }
+  return { isValid: false, isPresent: true, raw: val, reason: "invalid_type" };
+}
+
+export type WalletValidationResult =
+  | { ok: true; walletId: string }
+  | {
+      ok: false;
+      error: "missing" | "archived" | "unconfigured" | "duplicate" | "invalid_balance" | "no_active_wallets";
+      message: string;
+    };
+
+export function resolveActiveWalletDefault(
+  settings?: AppSettings,
+  wallets?: WalletState
+): string {
+  const activeWallets = settings?.customWallets || [];
+  const archivedIds = new Set((settings?.archivedWallets || []).map(w => w.id));
+  const idCounts = new Map<string, number>();
+  for (const wallet of activeWallets) {
+    idCounts.set(wallet.id, (idCounts.get(wallet.id) ?? 0) + 1);
+  }
+  const eligibleWallets: CustomWallet[] = [];
+
+  for (const wallet of activeWallets) {
+    if (!wallet.id || idCounts.get(wallet.id) !== 1 || archivedIds.has(wallet.id)) {
+      continue;
+    }
+
+    if (wallets && Object.prototype.hasOwnProperty.call(wallets, wallet.id)) {
+      const parsed = parseWalletBalance(wallets[wallet.id]);
+      if (!parsed.isValid) {
+        continue;
+      }
+    }
+    eligibleWallets.push(wallet);
+  }
+
+  if (eligibleWallets.length === 0) {
+    return "";
+  }
+
+  const configuredDefault = settings?.defaultWallet;
+  if (configuredDefault && eligibleWallets.some(w => w.id === configuredDefault)) {
+    return configuredDefault;
+  }
+
+  return eligibleWallets[0].id;
+}
+
+export function validateActiveWalletAssignment(
+  explicitWalletId: string | undefined,
+  settings?: AppSettings,
+  wallets?: WalletState
+): WalletValidationResult {
+  if (!explicitWalletId || explicitWalletId.trim() === "") {
+    return { ok: false, error: "missing", message: "No wallet specified." };
+  }
+
+  const activeWallets = settings?.customWallets || [];
+  const archivedWallets = settings?.archivedWallets || [];
+
+  if (archivedWallets.some(w => w.id === explicitWalletId)) {
+    const label = archivedWallets.find(w => w.id === explicitWalletId)?.label || explicitWalletId;
+    return {
+      ok: false,
+      error: "archived",
+      message: `Selected account "${label}" is archived. Please select an active account.`,
+    };
+  }
+
+  const assignments = activeWallets.filter(w => w.id === explicitWalletId);
+  if (assignments.length > 1) {
+    return {
+      ok: false,
+      error: "duplicate",
+      message: `Selected account "${explicitWalletId}" has a duplicate account ID. Resolve it before transacting.`,
+    };
+  }
+  if (assignments.length === 0) {
+    return {
+      ok: false,
+      error: "unconfigured",
+      message: `Selected account "${explicitWalletId}" is not configured. Please select an active account.`,
+    };
+  }
+
+  if (wallets && Object.prototype.hasOwnProperty.call(wallets, explicitWalletId)) {
+    const parsed = parseWalletBalance(wallets[explicitWalletId]);
+    if (!parsed.isValid) {
+      return {
+        ok: false,
+        error: "invalid_balance",
+        message: `Selected account "${explicitWalletId}" has an invalid balance. Please repair it before transacting.`,
+      };
+    }
+  }
+
+  return { ok: true, walletId: explicitWalletId };
+}
+
+export function resolveWalletRoutingOrReject(
+  walletProp: string | undefined,
+  settings?: AppSettings,
+  wallets?: WalletState
+): WalletValidationResult {
+  if (!walletProp || walletProp.trim() === "") {
+    const defaultId = resolveActiveWalletDefault(settings, wallets);
+    if (!defaultId) {
+      return { ok: false, error: "no_active_wallets", message: "No active accounts are configured." };
+    }
+    return { ok: true, walletId: defaultId };
+  }
+
+  return validateActiveWalletAssignment(walletProp, settings, wallets);
+}
+
+export interface ReconciledWalletEntry {
+  id: string;
+  label: string;
+  color?: string;
+  balance: number;
+  isValid: boolean;
+  rawBalance: unknown;
+  status: "active" | "archived" | "unlisted";
+}
+
+export interface WalletMetadataAnomalies {
+  duplicateActiveWallets: Array<{ id: string; labels: string[]; count: number }>;
+  conflictingActiveAndArchived: Array<{ id: string; activeLabel: string; archivedLabel: string }>;
+  duplicateArchivedWallets: Array<{ id: string; labels: string[]; count: number }>;
+  unlistedWallets: Array<{ id: string; balance: number; isValid: boolean }>;
+  invalidWallets: Array<{ id: string; raw: unknown; reason: string }>;
+  hasMetadataAnomalies: boolean;
+}
+
+export interface WalletReconciliationResult {
+  activeWallets: ReconciledWalletEntry[];
+  archivedWallets: ReconciledWalletEntry[];
+  unlistedWallets: ReconciledWalletEntry[];
+
+  activeTotal: number;
+  archivedTotal: number;
+  unlistedTotal: number;
+  totalLiquid: number;
+
+  invalidWalletIds: string[];
+  invalidWalletCount: number;
+  isComplete: boolean;
+
+  anomalies: WalletMetadataAnomalies;
+  hasMetadataAnomalies: boolean;
+}
+
+export function reconcileWalletBalances(
+  data: Partial<UnifiedFinanceData> | undefined
+): WalletReconciliationResult {
+  const settings = data?.settings;
+  const rawWallets = data?.wallets || {};
+
+  const rawActive = settings?.customWallets || [];
+  const rawArchived = settings?.archivedWallets || [];
+
+  // Deduplicate active
+  const seenActive = new Map<string, CustomWallet[]>();
+  rawActive.forEach(w => {
+    if (!w.id) return;
+    const list = seenActive.get(w.id) || [];
+    list.push(w);
+    seenActive.set(w.id, list);
+  });
+
+  const duplicateActiveWallets: WalletMetadataAnomalies["duplicateActiveWallets"] = [];
+  const uniqueActiveWallets: CustomWallet[] = [];
+  seenActive.forEach((entries, id) => {
+    uniqueActiveWallets.push(entries[0]);
+    if (entries.length > 1) {
+      duplicateActiveWallets.push({
+        id,
+        labels: entries.map(e => e.label),
+        count: entries.length,
+      });
+    }
+  });
+
+  // Deduplicate archived and resolve collisions (active wins)
+  const activeIdSet = new Set(uniqueActiveWallets.map(w => w.id));
+  const conflictingActiveAndArchived: WalletMetadataAnomalies["conflictingActiveAndArchived"] = [];
+  const seenArchived = new Map<string, CustomWallet[]>();
+
+  rawArchived.forEach(w => {
+    if (!w.id) return;
+    if (activeIdSet.has(w.id)) {
+      const activeMatch = uniqueActiveWallets.find(a => a.id === w.id);
+      conflictingActiveAndArchived.push({
+        id: w.id,
+        activeLabel: activeMatch?.label || w.id,
+        archivedLabel: w.label || w.id,
+      });
+      return;
+    }
+    const list = seenArchived.get(w.id) || [];
+    list.push(w);
+    seenArchived.set(w.id, list);
+  });
+
+  const duplicateArchivedWallets: WalletMetadataAnomalies["duplicateArchivedWallets"] = [];
+  const uniqueArchivedWallets: CustomWallet[] = [];
+  seenArchived.forEach((entries, id) => {
+    uniqueArchivedWallets.push(entries[0]);
+    if (entries.length > 1) {
+      duplicateArchivedWallets.push({
+        id,
+        labels: entries.map(e => e.label),
+        count: entries.length,
+      });
+    }
+  });
+
+  const archivedIdSet = new Set(uniqueArchivedWallets.map(w => w.id));
+  const invalidWalletIds: string[] = [];
+  const invalidWallets: WalletMetadataAnomalies["invalidWallets"] = [];
+
+  let activeTotal = 0;
+  const activeWallets: ReconciledWalletEntry[] = uniqueActiveWallets.map(w => {
+    const rawVal = Object.prototype.hasOwnProperty.call(rawWallets, w.id) ? rawWallets[w.id] : undefined;
+    const parsed = parseWalletBalance(rawVal);
+    if (!parsed.isValid) {
+      invalidWalletIds.push(w.id);
+      invalidWallets.push({ id: w.id, raw: parsed.raw, reason: parsed.reason });
+      return {
+        id: w.id,
+        label: w.label,
+        color: w.color,
+        balance: 0,
+        isValid: false,
+        rawBalance: rawVal,
+        status: "active",
+      };
+    }
+    activeTotal = roundMoney(activeTotal + parsed.balance);
+    return {
+      id: w.id,
+      label: w.label,
+      color: w.color,
+      balance: parsed.balance,
+      isValid: true,
+      rawBalance: rawVal,
+      status: "active",
+    };
+  });
+
+  let archivedTotal = 0;
+  const archivedWallets: ReconciledWalletEntry[] = uniqueArchivedWallets.map(w => {
+    const rawVal = Object.prototype.hasOwnProperty.call(rawWallets, w.id) ? rawWallets[w.id] : undefined;
+    const parsed = parseWalletBalance(rawVal);
+    if (!parsed.isValid) {
+      invalidWalletIds.push(w.id);
+      invalidWallets.push({ id: w.id, raw: parsed.raw, reason: parsed.reason });
+      return {
+        id: w.id,
+        label: w.label,
+        color: w.color,
+        balance: 0,
+        isValid: false,
+        rawBalance: rawVal,
+        status: "archived",
+      };
+    }
+    archivedTotal = roundMoney(archivedTotal + parsed.balance);
+    return {
+      id: w.id,
+      label: w.label,
+      color: w.color,
+      balance: parsed.balance,
+      isValid: true,
+      rawBalance: rawVal,
+      status: "archived",
+    };
+  });
+
+  // Find unlisted keys in rawWallets
+  let unlistedTotal = 0;
+  const unlistedWalletsList: WalletMetadataAnomalies["unlistedWallets"] = [];
+  const unlistedWallets: ReconciledWalletEntry[] = [];
+
+  Object.keys(rawWallets).forEach(key => {
+    if (activeIdSet.has(key) || archivedIdSet.has(key)) return;
+    const rawVal = rawWallets[key];
+    const parsed = parseWalletBalance(rawVal);
+    const label = settings?.walletLabels?.[key] || key;
+
+    if (!parsed.isValid) {
+      invalidWalletIds.push(key);
+      invalidWallets.push({ id: key, raw: parsed.raw, reason: parsed.reason });
+      unlistedWallets.push({
+        id: key,
+        label,
+        balance: 0,
+        isValid: false,
+        rawBalance: rawVal,
+        status: "unlisted",
+      });
+      unlistedWalletsList.push({ id: key, balance: 0, isValid: false });
+      return;
+    }
+
+    unlistedTotal = roundMoney(unlistedTotal + parsed.balance);
+    unlistedWallets.push({
+      id: key,
+      label,
+      balance: parsed.balance,
+      isValid: true,
+      rawBalance: rawVal,
+      status: "unlisted",
+    });
+    unlistedWalletsList.push({ id: key, balance: parsed.balance, isValid: true });
+  });
+
+  const totalLiquid = roundMoney(activeTotal + archivedTotal + unlistedTotal);
+  const hasMetadataAnomalies =
+    duplicateActiveWallets.length > 0 ||
+    conflictingActiveAndArchived.length > 0 ||
+    duplicateArchivedWallets.length > 0 ||
+    unlistedWalletsList.length > 0 ||
+    invalidWallets.length > 0;
+
+  const anomalies: WalletMetadataAnomalies = {
+    duplicateActiveWallets,
+    conflictingActiveAndArchived,
+    duplicateArchivedWallets,
+    unlistedWallets: unlistedWalletsList,
+    invalidWallets,
+    hasMetadataAnomalies,
+  };
+
+  return {
+    activeWallets,
+    archivedWallets,
+    unlistedWallets,
+    activeTotal,
+    archivedTotal,
+    unlistedTotal,
+    totalLiquid,
+    invalidWalletIds,
+    invalidWalletCount: invalidWalletIds.length,
+    isComplete: invalidWalletIds.length === 0,
+    anomalies,
+    hasMetadataAnomalies,
+  };
+}
 
 export function getEffectiveBillAmount(
   baseAmount: number,
@@ -274,14 +674,18 @@ export function getDefaultExpenseWalletId(
   return getDefaultWalletId(settings, wallets);
 }
 
+export function getSafeWalletBalance(val: unknown, fallback: number = 0): number {
+  const parsed = parseWalletBalance(val);
+  return parsed.isValid ? parsed.balance : fallback;
+}
+
 export function applyWalletTransaction(
   currentBalance: number,
   delta: number
 ): number {
-  const safeBalance = currentBalance || 0;
-  return Math.round(
-    Math.max(0, safeBalance + delta) * 100
-  ) / 100;
+  const safeBalance = getSafeWalletBalance(currentBalance, 0);
+  const safeDelta = Number(delta) || 0;
+  return roundMoney(safeBalance + safeDelta);
 }
 
 export function hasSufficientWalletBalance(

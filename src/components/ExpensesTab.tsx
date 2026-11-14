@@ -2,7 +2,7 @@ import { compareTransactionsNewestFirst, formatTransactionDateTime } from "../ut
 import { formatPHP, roundMoney } from "../utils/currency";
 import React, { useEffect, useId, useRef, useState } from "react";
 import { Camera, ScanLine, Plus, Receipt, Trash2, CheckCircle2, Upload, X } from "lucide-react";
-import { UnifiedFinanceData, Expense, ExpenseCategory } from "../types/finance";
+import { UnifiedFinanceData, Expense, ExpenseCategory, FinanceTransitionCommitter } from "../types/finance";
 import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
 import { getMonthKey, parseMonthKey } from "../utils/dateHelpers";
 import { useExpenseActions } from "../hooks/useExpenseActions";
@@ -20,6 +20,7 @@ interface ExpensesTabProps {
   globalData: UnifiedFinanceData;
   selectedMonth?: string;
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
+  commitExpenseTransition?: FinanceTransitionCommitter;
   showToast: (msg: string) => void;
   walletLabels?: Record<string, string>;
 }
@@ -29,7 +30,13 @@ const getLocalToday = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalData, showToast, selectedMonth = getMonthKey(new Date()) }) => {
+export const ExpensesTab: React.FC<ExpensesTabProps> = ({
+  globalData,
+  setGlobalData,
+  commitExpenseTransition,
+  showToast,
+  selectedMonth = getMonthKey(new Date())
+}) => {
   const expenseFormId = useId();
   const [showForm, setShowForm] = useState(false);
   const [showScanOptions, setShowScanOptions] = useState(false);
@@ -91,6 +98,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({ globalData, setGlobalD
   } = useExpenseActions({
     globalData,
     setGlobalData,
+    commitExpenseTransition,
     showToast,
   });
 

@@ -6,11 +6,20 @@ import { UnifiedFinanceData, ReceivableViewModel } from "../types/finance";
 
 const createTestData = (): UnifiedFinanceData => ({
   ...INITIAL_UNIFIED_DATA,
+  settings: {
+    ...INITIAL_UNIFIED_DATA.settings,
+    customWallets: [
+      ...(INITIAL_UNIFIED_DATA.settings?.customWallets || []),
+      { id: "maya", label: "maya", color: "text-emerald-400" },
+      { id: "gcash", label: "gcash", color: "text-blue-400" },
+    ],
+  },
   wallets: {
     ...INITIAL_UNIFIED_DATA.wallets,
     maya: 5000,
     gcash: 5000
   },
+  library: { ...INITIAL_UNIFIED_DATA.library, receivables: [createReceivable()] },
   logs: {}
 });
 
@@ -23,7 +32,7 @@ const createReceivable = (
   category: "Other",
   frequency: "Monthly",
   wallet: "maya",
-  startMonth: "August 2026",
+  startMonth: "September 2026",
   amountReceived: 0,
   collected: false,
   targetMonthForDue: "September 2026",
@@ -241,6 +250,9 @@ describe("useReceivableActions - payment mutations", () => {
 
     act(() => {
       result.current.addPayment(receivable, 400);
+      harness.setGlobalData(prev => ({
+        ...prev, library: { ...prev.library, receivables: [{ ...receivable, wallet: "gcash" }] },
+      }));
       result.current.addPayment({ ...receivable, wallet: "gcash", amountReceived: 400 }, 100);
     });
 
@@ -493,5 +505,95 @@ describe("useReceivableActions - payment mutations", () => {
     expect(
       harness.state.library.receivables.find(r => r.name === "Missing Date Inflow")
     ).toBeUndefined();
+  });
+
+  it("rejects collecting a receivable when target wallet is archived and commits nothing", () => {
+    const data = createTestData();
+    data.settings = {
+      ...data.settings,
+      archivedWallets: [{ id: "archived_maya", label: "Archived Maya", color: "text-gray-400" }],
+    };
+    const rec = createReceivable({ wallet: "archived_maya" });
+    data.library = { ...data.library, receivables: [rec] };
+    const mockCommitter = vi.fn((transition) => {
+      const res = transition(data);
+      return res;
+    });
+    const mockShowToast = vi.fn();
+
+    const { result } = renderHook(() =>
+      useReceivableActions({
+        globalData: data,
+        commitReceivableTransition: mockCommitter,
+        selectedMonth: "September 2026",
+        showToast: mockShowToast,
+      })
+    );
+
+    act(() => {
+      result.current.toggleReceivableStatus(rec);
+    });
+
+    expect(mockCommitter).toHaveBeenCalledTimes(1);
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.stringContaining("is archived")
+    );
+    expect(data.wallets.archived_maya).toBeUndefined();
+  });
+
+  it("reverses a receipt originally credited to an archived wallet as long as funds are sufficient", () => {
+    let state = createTestData();
+    state.settings = {
+      ...state.settings,
+      archivedWallets: [{ id: "old_wallet", label: "Old Wallet", color: "text-gray-400" }],
+    };
+    state.wallets.old_wallet = 1500;
+
+    const rec = createReceivable({
+      id: "rec-archived-rev",
+      wallet: "old_wallet",
+      amountReceived: 1000,
+      collected: true,
+    });
+    state.logs["September 2026"] = {
+      recsCollected: {
+        "rec-archived-rev": { amountReceived: 1000, collected: true },
+      },
+      receivableSettlements: {
+        "rec-archived-rev": [
+          {
+            id: "settle-rec-1",
+            receivedAt: "2026-09-01T00:00:00.000Z",
+            amount: 1000,
+            wallet: "old_wallet",
+            walletCredit: 1000,
+          },
+        ],
+      },
+    };
+
+    const commitReceivableTransition = vi.fn((transition) => {
+      const res = transition(state);
+      if (res.ok) state = res.data;
+      return res;
+    });
+
+    const { result } = renderHook(() =>
+      useReceivableActions({
+        globalData: state,
+        commitReceivableTransition,
+        selectedMonth: "September 2026",
+        showToast: vi.fn(),
+      })
+    );
+
+    act(() => {
+      result.current.toggleReceivableStatus(rec);
+    });
+
+    expect(commitReceivableTransition).toHaveBeenCalledTimes(1);
+    expect(state.wallets.old_wallet).toBe(500);
+    expect(state.logs["September 2026"].recsCollected?.["rec-archived-rev"]?.amountReceived).toBe(0);
+    expect(state.logs["September 2026"].recsCollected?.["rec-archived-rev"]?.collected).toBe(false);
   });
 });

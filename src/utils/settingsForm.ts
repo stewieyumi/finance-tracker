@@ -3,6 +3,8 @@ import {
   calculateNetSalary,
   getDefaultExpenseWalletId,
   getDefaultTransferWallets,
+  resolveActiveWalletDefault,
+  validateActiveWalletAssignment,
 } from "./financeHelpers";
 
 export const EXPENSE_CATEGORIES = [
@@ -68,6 +70,17 @@ export function createSettingsForm(
     value: Number(d.value) || 0,
   }));
 
+  const activeWallets = settings?.customWallets || [];
+  const activeDefault = resolveActiveWalletDefault(settings, wallets);
+  const resolveSettingWallet = (id: string | undefined, legacyFallback: string) => {
+    if (!id || id.trim() === "") return activeDefault || legacyFallback;
+    // If active customWallets is not configured (e.g. unmigrated settings), retain existing/fallback
+    if (activeWallets.length === 0) return id || legacyFallback;
+    const validation = validateActiveWalletAssignment(id, settings, wallets);
+    if (validation.ok) return validation.walletId;
+    return id || activeDefault || legacyFallback;
+  };
+
   return {
     goalName: settings?.goalName || "",
     targetFund: settings?.targetFund || 0,
@@ -75,14 +88,14 @@ export function createSettingsForm(
     grossPerPayoutSalary,
     salaryDeductions,
     theme: settings?.theme || "dark",
-    milestoneWallet: settings?.milestoneWallet || "bpi",
+    milestoneWallet: resolveSettingWallet(settings?.milestoneWallet, "bpi"),
     baseLivingAllowance: settings?.baseLivingAllowance ?? 2500,
-    livingWallet: settings?.livingWallet || "gcash",
+    livingWallet: resolveSettingWallet(settings?.livingWallet, "gcash"),
     baseSavingsTarget: settings?.baseSavingsTarget ?? 1000,
-    savingsWallet: settings?.savingsWallet || "bpi",
+    savingsWallet: resolveSettingWallet(settings?.savingsWallet, "bpi"),
     defaultTransitAllocation: settings?.defaultTransitAllocation ?? 1500,
-    transitWallet: settings?.transitWallet || "gotyme",
-    defaultWallet: settings?.defaultWallet || "main",
+    transitWallet: resolveSettingWallet(settings?.transitWallet, "gotyme"),
+    defaultWallet: resolveSettingWallet(settings?.defaultWallet, "main"),
     transferFromWallet: settings?.customWallets?.find(wallet => wallet.id === settings.transferFromWallet)?.id || "",
     transferToWallet: getDefaultTransferWallets(settings).destinationWallet,
     expenseWallets: Object.fromEntries(

@@ -2071,4 +2071,301 @@ describe("Phase A — Ledger financial guardrails, stale-state safety, and local
       vi.unstubAllGlobals();
     }
   });
+
+  describe("Phase B1 — Historical Ledger Reversal Integrity for Archived Wallets", () => {
+    it("deleting an expense refunds to the original wallet even when archived or absent from wallets", () => {
+      const data = makeData({
+        wallets: { active: 500 },
+        settings: {
+          customWallets: [{ id: "active", label: "Active" }],
+          archivedWallets: [{ id: "old_wallet", label: "Old Wallet" }],
+        } as any,
+        library: {
+          bills: [],
+          receivables: [],
+          shoots: [],
+          manualTransactions: [
+            {
+              id: "tx-arch-exp",
+              title: "Old Expense",
+              amount: 100,
+              type: "expense",
+              date: "2026-08-01",
+              wallet: "old_wallet",
+              createdAt: 1754000000000,
+              postingMode: "wallet",
+            },
+          ],
+        },
+      });
+
+      const outcome = applyLedgerDelete(data, { id: "tx-arch-exp" });
+      expect(outcome.ok).toBe(true);
+      if (!outcome.ok) return;
+      expect(outcome.data.wallets.old_wallet).toBe(100);
+      expect(outcome.data.library.manualTransactions).toHaveLength(0);
+    });
+
+    it("deleting an income debits the original wallet even when archived, blocking if insufficient balance", () => {
+      const data = makeData({
+        wallets: { old_wallet: 50 },
+        settings: {
+          archivedWallets: [{ id: "old_wallet", label: "Old Wallet" }],
+        } as any,
+        library: {
+          bills: [],
+          receivables: [],
+          shoots: [],
+          manualTransactions: [
+            {
+              id: "tx-arch-inc",
+              title: "Old Income",
+              amount: 100,
+              type: "income",
+              date: "2026-08-01",
+              wallet: "old_wallet",
+              createdAt: 1754000000000,
+              postingMode: "wallet",
+            },
+          ],
+        },
+      });
+
+      const blockedOutcome = applyLedgerDelete(data, { id: "tx-arch-inc" });
+      expect(blockedOutcome.ok).toBe(false);
+      if (blockedOutcome.ok) return;
+      expect(blockedOutcome.error).toContain("Insufficient balance in Old Wallet");
+
+      const fundedData = { ...data, wallets: { old_wallet: 150 } };
+      const successOutcome = applyLedgerDelete(fundedData, { id: "tx-arch-inc" });
+      expect(successOutcome.ok).toBe(true);
+      if (!successOutcome.ok) return;
+      expect(successOutcome.data.wallets.old_wallet).toBe(50);
+      expect(successOutcome.data.library.manualTransactions).toHaveLength(0);
+    });
+
+    it("deleting a transfer between archived wallets reverses both wallets atomically", () => {
+      const data = makeData({
+        wallets: { src_arch: 100, dst_arch: 200 },
+        settings: {
+          archivedWallets: [
+            { id: "src_arch", label: "Source Archived" },
+            { id: "dst_arch", label: "Dest Archived" },
+          ],
+        } as any,
+        library: {
+          bills: [],
+          receivables: [],
+          shoots: [],
+          manualTransactions: [
+            {
+              id: "tx-arch-xfer",
+              title: "Old Transfer",
+              amount: 50,
+              type: "transfer",
+              date: "2026-08-01",
+              wallet: "src_arch",
+              destinationWallet: "dst_arch",
+              createdAt: 1754000000000,
+              postingMode: "wallet",
+            },
+          ],
+        },
+      });
+
+      const outcome = applyLedgerDelete(data, { id: "tx-arch-xfer" });
+      expect(outcome.ok).toBe(true);
+      if (!outcome.ok) return;
+      expect(outcome.data.wallets.src_arch).toBe(150);
+      expect(outcome.data.wallets.dst_arch).toBe(150);
+      expect(outcome.data.library.manualTransactions).toHaveLength(0);
+    });
+
+    it("editing a transaction with an archived original wallet reverses the archived wallet and credits the new active wallet", () => {
+      const data = makeData({
+        wallets: { arch_wallet: 100, active_wallet: 200 },
+        settings: {
+          customWallets: [{ id: "active_wallet", label: "Active" }],
+          archivedWallets: [{ id: "arch_wallet", label: "Archived" }],
+        } as any,
+        library: {
+          bills: [],
+          receivables: [],
+          shoots: [],
+          manualTransactions: [
+            {
+              id: "tx-edit-arch",
+              title: "Prior Income",
+              amount: 100,
+              type: "income",
+              date: "2026-08-01",
+              wallet: "arch_wallet",
+              createdAt: 1754000000000,
+              postingMode: "wallet",
+            },
+          ],
+        },
+      });
+
+      const outcome = applyLedgerSave(data, {
+        id: "tx-edit-arch",
+        editingId: "tx-edit-arch",
+        title: "Moved Income",
+        amount: "100",
+        type: "income",
+        date: "2026-08-01",
+        wallet: "active_wallet",
+        updateWallets: true,
+      });
+
+      expect(outcome.ok).toBe(true);
+      if (!outcome.ok) return;
+      expect(outcome.data.wallets.arch_wallet).toBe(0);
+      expect(outcome.data.wallets.active_wallet).toBe(300);
+      expect(outcome.data.library?.manualTransactions?.[0]?.wallet).toBe("active_wallet");
+    });
+
+    it("rejects deleting an expense when original archived wallet has NaN balance, preserving record and balances", () => {
+      const data = makeData({
+        wallets: { old_wallet: NaN as any },
+        settings: {
+          archivedWallets: [{ id: "old_wallet", label: "Old Wallet" }],
+        } as any,
+        library: {
+          bills: [],
+          receivables: [],
+          shoots: [],
+          manualTransactions: [
+            {
+              id: "tx-arch-exp-nan",
+              title: "Old Expense",
+              amount: 100,
+              type: "expense",
+              date: "2026-08-01",
+              wallet: "old_wallet",
+              createdAt: 1754000000000,
+              postingMode: "wallet",
+            },
+          ],
+        },
+      });
+
+      const outcome = applyLedgerDelete(data, { id: "tx-arch-exp-nan" });
+      expect(outcome.ok).toBe(false);
+      if (outcome.ok) return;
+      expect(outcome.error).toContain("unavailable");
+      expect(outcome.data.library.manualTransactions).toHaveLength(1);
+      expect(Number.isNaN(outcome.data.wallets.old_wallet)).toBe(true);
+    });
+
+    it("rejects deleting an income when original archived wallet has null or malformed balance, preserving record and balances", () => {
+      const data = makeData({
+        wallets: { old_wallet: null as any },
+        settings: {
+          archivedWallets: [{ id: "old_wallet", label: "Old Wallet" }],
+        } as any,
+        library: {
+          bills: [],
+          receivables: [],
+          shoots: [],
+          manualTransactions: [
+            {
+              id: "tx-arch-inc-null",
+              title: "Old Income",
+              amount: 100,
+              type: "income",
+              date: "2026-08-01",
+              wallet: "old_wallet",
+              createdAt: 1754000000000,
+              postingMode: "wallet",
+            },
+          ],
+        },
+      });
+
+      const outcome = applyLedgerDelete(data, { id: "tx-arch-inc-null" });
+      expect(outcome.ok).toBe(false);
+      if (outcome.ok) return;
+      expect(outcome.error).toContain("unavailable");
+      expect(outcome.data.library.manualTransactions).toHaveLength(1);
+      expect(outcome.data.wallets.old_wallet).toBeNull();
+    });
+
+    it("rejects deleting a transfer when an archived endpoint has an invalid balance, preserving all balances and records", () => {
+      const data = makeData({
+        wallets: { src_arch: 200, dst_arch: NaN as any },
+        settings: {
+          archivedWallets: [
+            { id: "src_arch", label: "Source Archived" },
+            { id: "dst_arch", label: "Dest Archived" },
+          ],
+        } as any,
+        library: {
+          bills: [],
+          receivables: [],
+          shoots: [],
+          manualTransactions: [
+            {
+              id: "tx-arch-xfer-nan",
+              title: "Old Transfer",
+              amount: 50,
+              type: "transfer",
+              date: "2026-08-01",
+              wallet: "src_arch",
+              destinationWallet: "dst_arch",
+              createdAt: 1754000000000,
+              postingMode: "wallet",
+            },
+          ],
+        },
+      });
+
+      const outcome = applyLedgerDelete(data, { id: "tx-arch-xfer-nan" });
+      expect(outcome.ok).toBe(false);
+      if (outcome.ok) return;
+      expect(outcome.error).toContain("unavailable");
+      expect(outcome.data.library.manualTransactions).toHaveLength(1);
+      expect(outcome.data.wallets.src_arch).toBe(200);
+      expect(Number.isNaN(outcome.data.wallets.dst_arch)).toBe(true);
+    });
+
+    it("rejects deleting a transfer atomically when destination debit fails insufficient balance, leaving source untouched", () => {
+      const data = makeData({
+        wallets: { src_arch: 200, dst_arch: 40 }, // dst_arch has only 40, transfer is 50
+        settings: {
+          archivedWallets: [
+            { id: "src_arch", label: "Source Archived" },
+            { id: "dst_arch", label: "Dest Archived" },
+          ],
+        } as any,
+        library: {
+          bills: [],
+          receivables: [],
+          shoots: [],
+          manualTransactions: [
+            {
+              id: "tx-arch-xfer-overdraft",
+              title: "Old Transfer",
+              amount: 50,
+              type: "transfer",
+              date: "2026-08-01",
+              wallet: "src_arch",
+              destinationWallet: "dst_arch",
+              createdAt: 1754000000000,
+              postingMode: "wallet",
+            },
+          ],
+        },
+      });
+
+      const outcome = applyLedgerDelete(data, { id: "tx-arch-xfer-overdraft" });
+      expect(outcome.ok).toBe(false);
+      if (outcome.ok) return;
+      expect(outcome.error).toContain("Insufficient balance in Dest Archived to reverse this transaction");
+      // Atomic verification: src_arch must NOT have been credited +50 (stays at 200)
+      expect(outcome.data.wallets.src_arch).toBe(200);
+      expect(outcome.data.wallets.dst_arch).toBe(40);
+      expect(outcome.data.library.manualTransactions).toHaveLength(1);
+    });
+  });
 });
