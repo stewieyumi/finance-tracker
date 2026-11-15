@@ -1,3 +1,4 @@
+import { isInflowMonth, isInflowMoney, noDateInflowState } from "../utils/noDateInflows";
 import type { PaymentHistoryAction } from "../utils/paymentHistory";
 import { normalizePaydayDays, isValidDateKey, getMonthKey, getMonthRange, parseDateKey } from "../utils/dateHelpers";
 import {
@@ -169,6 +170,10 @@ function isCurrentReceivable(
   ) return false;
 
   let occurrence: string;
+  if (current.frequency === "No Specific Date") {
+    const state = noDateInflowState(prev, current, selectedMonth);
+    return state.valid && state.visible && !state.collected && state.month === receivable.targetMonthForDue;
+  }
   if (current.frequency === "By Date") {
     if (!isValidDateKey(current.date)) return false;
     occurrence = getMonthKey(parseDateKey(current.date!));
@@ -507,6 +512,16 @@ export function useReceivableActions({
   }) => {
     if (receivable.frequency === "By Date" && !isValidDateKey(receivable.date)) {
       showToast("Please enter a valid date for this inflow.");
+      return;
+    }
+
+    if (receivable.frequency === "No Specific Date" && (!isInflowMoney(receivable.amount) || receivable.amount <= 0)) {
+      showToast("Enter a valid amount greater than zero.");
+      return;
+    }
+
+    if (receivable.frequency === "No Specific Date" && !isInflowMonth(selectedMonth)) {
+      showToast("Choose a valid starting month for this inflow.");
       return;
     }
 

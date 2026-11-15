@@ -8,6 +8,8 @@ import {
   Deduction,
   DeductionType,
 } from "../types/finance";
+import { ALL_MONTH_YEAR_OPTIONS } from "../constants/config";
+import { getMonthKey } from "../utils/dateHelpers";
 import { formatOrdinal } from "../utils/displayHelpers";
 import {
   calculateDeductionAmount,
@@ -25,6 +27,7 @@ interface ReceivableEditModalProps {
   onCancel: () => void;
   onDelete: (id: string) => void;
   onSave: () => void;
+  selectedMonth?: string;
 }
 
 export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
@@ -36,6 +39,7 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
   onCancel,
   onDelete,
   onSave,
+  selectedMonth,
 }) => {
   const currentGross =
     editForm.grossAmount !== undefined
@@ -372,15 +376,29 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                   onChange({
                     ...editForm,
                     frequency: e.target.value as ReceivableFrequency,
+                    ...(e.target.value === "No Specific Date" ? { startMonth: editForm.startMonth || selectedMonth || getMonthKey(new Date()) } : {}),
                   })
                 }
                 className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
               >
                 <option value="By Date">Specific Date</option>
+                <option value="No Specific Date">One-time — No Specific Date</option>
                 <option value="Monthly">Monthly</option>
                 <option value="Bi-monthly">Bi-Monthly</option>
               </select>
             </div>
+
+            {editForm.frequency === "No Specific Date" && (
+              <div>
+                <label className="text-xs text-muted" htmlFor="inflow-start-month">Start month</label>
+                <select id="inflow-start-month" value={editForm.startMonth || ""} onChange={e => onChange({ ...editForm, startMonth: e.target.value })} className="mt-1 w-full rounded-xl border border-strong bg-surface-input px-3 py-2.5 text-xs text-primary">
+                  <option value="">Choose a start month</option>
+                  {editForm.startMonth && !ALL_MONTH_YEAR_OPTIONS.includes(editForm.startMonth) && <option value={editForm.startMonth}>{editForm.startMonth}</option>}
+                  {ALL_MONTH_YEAR_OPTIONS.map(month => <option key={month} value={month}>{month}</option>)}
+                </select>
+                <p className="mt-1 text-xs text-muted">One payment, no due date. The start month is locked after receipt history is recorded.</p>
+              </div>
+            )}
 
             {editForm.frequency === "Bi-monthly" && (
               <div className="flex gap-2 mb-3">

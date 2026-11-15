@@ -160,6 +160,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
               </span>
             </div>
 
+            {globalData.library.receivables.some(r => r.frequency === "No Specific Date") && <p className="text-xs text-muted">No-date inflows are excluded from dated projections. Their unpaid balances remain in Pending Inflows.</p>}
             <div className="grid grid-cols-6 gap-1.5 pt-2 items-end h-28">
               {sparklineData.map((d, i) => {
                 const maxVal = Math.max(...sparklineData.map(x => Math.max(x.inflow, x.bills)), 60000);

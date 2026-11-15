@@ -228,6 +228,10 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
         </button>
       </div>
 
+      {payPeriod !== "all" && filteredByCategory.some(r => r.frequency === "No Specific Date") && (
+        <p className="mb-3 text-xs text-muted">No-date inflows appear under <button type="button" className="font-medium text-primary underline" onClick={() => setPayPeriod("all")}>Show all inflows</button>.</p>
+      )}
+
       {/* MOBILE LIST */}
       <div className="mb-3 block overflow-hidden rounded-2xl bg-surface divide-y divide-subtle lg:hidden">
         {filteredReceivables.length === 0 ? (
@@ -293,6 +297,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
       {/* EDIT MODAL */}
   {editingId && activeReceivables.some(r => r.id === editingId) && (
     <ReceivableEditModal
+      selectedMonth={selectedMonth}
       editingId={editingId}
       editForm={editForm}
       categoriesList={categoriesList}
@@ -307,6 +312,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
   {/* ADD MODAL */}
       {isAdding && (
         <ReceivableAddModal
+          startMonth={selectedMonth}
           newReceivable={newReceivable}
           categoriesList={categoriesList}
           allWallets={allWallets}

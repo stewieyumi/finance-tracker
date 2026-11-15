@@ -100,7 +100,9 @@ export function buildFinancialSummary({
         const cat = r.category || "Income";
 
         const freqInfo =
-          r.frequency === "By Date"
+          r.frequency === "No Specific Date"
+            ? `No specific date · Since ${r.startMonth || "month needs review"}`
+            : r.frequency === "By Date"
             ? r.date
               ? parseDateKey(r.date).toLocaleDateString("en-US", {
                   month: "short",

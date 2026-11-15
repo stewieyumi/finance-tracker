@@ -24,6 +24,7 @@ interface ReceivableAddModalProps {
   onChange: React.Dispatch<React.SetStateAction<NewReceivableForm>>;
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
+  startMonth?: string;
 }
 
 export default function ReceivableAddModal({
@@ -33,6 +34,7 @@ export default function ReceivableAddModal({
   onChange,
   onClose,
   onSubmit,
+  startMonth,
 }: ReceivableAddModalProps) {
   return (
     <Modal
@@ -138,6 +140,7 @@ export default function ReceivableAddModal({
                 Frequency
               </label>
               <select
+                aria-label="Frequency"
                 value={newReceivable.frequency}
                 onChange={(e) =>
                   onChange({
@@ -148,10 +151,15 @@ export default function ReceivableAddModal({
                 className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
               >
                 <option value="By Date">Specific Date</option>
+                <option value="No Specific Date">One-time — No Specific Date</option>
                 <option value="Monthly">Monthly</option>
                 <option value="Bi-monthly">Bi-Monthly</option>
               </select>
             </div>
+
+            {newReceivable.frequency === "No Specific Date" && (
+              <p className="col-span-1 sm:col-span-2 text-xs text-muted">Starts {startMonth || "in the selected month"}. No due date. The unpaid balance stays pending; this inflow does not repeat.</p>
+            )}
 
             {newReceivable.frequency === "Bi-monthly" && (
               <div className="col-span-1 sm:col-span-2">

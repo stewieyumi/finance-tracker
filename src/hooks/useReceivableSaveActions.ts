@@ -1,3 +1,4 @@
+import { isInflowMonth, isInflowMoney } from "../utils/noDateInflows";
 import { isValidTwiceMonthlySchedule, isValidDateKey } from "../utils/dateHelpers";
 import {
   EditFormData,
@@ -51,16 +52,27 @@ export function applyReceivableEdit(
 
   const dateChanged = (currentFrequency === "By Date" || newFrequency === "By Date") && newDate !== currentDate;
   const frequencyChanged = newFrequency !== currentFrequency;
+  const newStartMonth = String(editForm.startMonth ?? existingItem.startMonth ?? "");
+  if (newFrequency === "No Specific Date" && (!isInflowMoney(inputAmount) || inputAmount <= 0)) {
+    return { ok: false, error: "Enter a valid amount greater than zero.", data: prev };
+  }
+  if (newFrequency === "No Specific Date" && !isInflowMonth(newStartMonth)) {
+    return { ok: false, error: "Choose a valid starting month for this inflow.", data: prev };
+  }
+  const noDateAnchorChanged = (currentFrequency === "No Specific Date" || newFrequency === "No Specific Date") &&
+    newStartMonth !== (existingItem.startMonth || "");
 
   const touchesScheduleOrFrequency =
     (currentFrequency === "By Date" && (dateChanged || frequencyChanged)) ||
     (currentFrequency !== "By Date" && newFrequency === "By Date") ||
-    frequencyChanged;
+    frequencyChanged || noDateAnchorChanged;
 
   if (touchesScheduleOrFrequency && hasReceivablePaymentHistory(prev.logs, editingId)) {
     return {
       ok: false,
-      error: "This inflow has recorded receipt history. Its scheduled date or frequency cannot be changed.",
+      error: noDateAnchorChanged
+        ? "This inflow has recorded receipt history. Its starting month cannot be changed."
+        : "This inflow has recorded receipt history. Its scheduled date or frequency cannot be changed.",
       data: prev
     };
   }
