@@ -8,6 +8,9 @@ interface LoanProgressBadgeProps {
   monthlyAmount: number;
   totalPaid?: number;
   paidInstallments?: number;
+  remainingScheduled?: number | null;
+  historyApproximate?: boolean;
+  historyIncomplete?: boolean;
 }
 
 const MONTH_NAMES = [
@@ -32,7 +35,10 @@ export const LoanProgressBadge: React.FC<LoanProgressBadgeProps> = ({
   isPaid,
   monthlyAmount,
   totalPaid,
-  paidInstallments
+  paidInstallments,
+  remainingScheduled,
+  historyApproximate,
+  historyIncomplete
 }) => {
   const startNum = monthToNumber(startMonth);
   const endNum = monthToNumber(endMonth);
@@ -63,7 +69,7 @@ export const LoanProgressBadge: React.FC<LoanProgressBadgeProps> = ({
 
   const remainingMonths = Math.max(0, totalMonths - elapsedMonths);
   const totalPrincipal = totalMonths * (parseFloat(String(monthlyAmount)) || 0);
-  const remainingBalance = totalPaid !== undefined
+  const remainingBalance = remainingScheduled !== undefined ? remainingScheduled : totalPaid !== undefined
     ? Math.max(0, totalPrincipal - totalPaid)
     : remainingMonths * (parseFloat(String(monthlyAmount)) || 0);
 
@@ -72,14 +78,14 @@ export const LoanProgressBadge: React.FC<LoanProgressBadgeProps> = ({
     Math.round((elapsedMonths / totalMonths) * 100)
   );
 
-  const isCompleted = remainingMonths === 0;
+  const isCompleted = !historyIncomplete && remainingMonths === 0;
 
   return (
     <div className="mt-2 pt-2 border-t border-inverse/[0.06] flex flex-col gap-1.5 text-[11px]">
       <div className="flex items-center justify-between text-muted">
         <span>
           {isCompleted ? (
-            <span className="text-emerald-400 font-medium">✓ Completed</span>
+            <span className="text-positive font-medium">✓ Completed</span>
           ) : (
             <>
               Month <strong className="text-primary">{elapsedMonths}</strong> of {totalMonths}
@@ -88,9 +94,13 @@ export const LoanProgressBadge: React.FC<LoanProgressBadgeProps> = ({
           )}
         </span>
         <span className="font-mono text-secondary">
-          ₱{remainingBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })} remaining
+          {remainingBalance === null ? "Review needed" : `₱${remainingBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })} remaining`}
         </span>
       </div>
+
+      {(historyApproximate || historyIncomplete) && (
+        <span className="text-faint">{historyIncomplete ? "Loan history needs review" : "Estimated from older records"}</span>
+      )}
 
       <div className="w-full bg-fill-strong/80 h-1.5 rounded-full overflow-hidden">
         <div

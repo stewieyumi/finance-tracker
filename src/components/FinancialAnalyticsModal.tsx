@@ -5,10 +5,11 @@ import { UnifiedFinanceData } from "../types/finance";
 import { DEFAULT_TARGET_FUND } from "../constants/config";
 import {
   calculateCashflowMomentum,
-  calculateDebtRunway,
   calculateSafeToSpend,
   calculateMonthlyDepositNeeded
 } from "../utils/financialAnalytics";
+import { reconcileDebt } from "../utils/debtReconciliation";
+import { formatPHP } from "../utils/currency";
 import { Modal } from "./ui/Modal";
 
 type AnalyticsTab = "overview" | "cashflow" | "debt" | "goals";
@@ -47,10 +48,8 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
     || globalData.settings?.walletLabels?.[milestoneWalletKey] || milestoneWalletKey;
   const monthlyDepositNeeded = calculateMonthlyDepositNeeded(targetFund, goalBalance, goalMonths);
 
-  const debtLoans = useMemo(
-    () => calculateDebtRunway(globalData, selectedMonth),
-    [globalData, selectedMonth]
-  );
+  const debt = useMemo(() => reconcileDebt(globalData, selectedMonth), [globalData, selectedMonth]);
+  const debtLoans = debt.activeLoans;
 
   const sparklineData = useMemo(
     () => calculateCashflowMomentum(globalData, selectedMonth),
@@ -193,19 +192,28 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
 
         {activeTab === "debt" && (
           <div className="space-y-2.5">
+            <dl className="grid grid-cols-2 gap-3 rounded-xl bg-surface-sunken p-3 text-xs">
+              <div><dt className="text-muted">{debt.isComplete ? "Recorded paid" : "Known paid"}</dt><dd className="mt-1 font-mono text-primary">{formatPHP(debt.totalPaid)}</dd></div>
+              <div><dt className="text-muted">Remaining scheduled payments</dt><dd className="mt-1 font-mono text-primary">{debt.isComplete ? formatPHP(debt.remainingScheduled) : "Review needed"}</dd></div>
+            </dl>
+            <p className="text-xs text-muted">
+              {debt.approximate && "Includes legacy timing estimates. "}
+              Estimates use your current installment schedule; older payment dates and past schedule edits may be incomplete.
+              {debt.upcomingLoans.length > 0 && ` ${debt.upcomingLoans.length} upcoming ${debt.upcomingLoans.length === 1 ? "loan" : "loans"} excluded from active debt.`}
+            </p>
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-secondary flex items-center gap-1.5">
-                <CreditCard size={13} className="text-purple-400" />
+                <CreditCard size={13} className="text-violet-accent" />
                 Active Debt Freedom Runway
               </span>
               <span className="text-[10px] text-faint font-mono">
-                {debtLoans.length} Active Installments
+                {debt.isComplete ? `${debtLoans.length} Active ${debtLoans.length === 1 ? "Installment" : "Installments"}` : "Review loan history"}
               </span>
             </div>
 
             {debtLoans.length === 0 ? (
               <div className="bg-surface-sunken border border-subtle rounded-xl p-4 text-center text-xs text-faint">
-                No active loans or installments for this period.
+                {debt.isComplete ? "No active loans or installments for this period." : "Debt history needs review before confirming the balance."}
               </div>
             ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -213,17 +221,17 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
                   <div key={loan.id} className="bg-surface-sunken border border-subtle rounded-xl p-3 space-y-2">
                     <div className="flex justify-between items-center text-xs">
                       <div>
-                        <span className="privacy-blur font-semibold text-strong">{loan.name}</span>
+                        <span className="privacy-blur font-semibold text-strong">{loan.name}{loan.archived && " · Archived"}</span>
                         <span className="text-[10px] text-faint block font-mono">
-                          ₱{loan.monthlyAmount.toLocaleString("en-US")}/mo • Ends {loan.endMonth}
+                          {loan.monthlyAmount === null ? "Scheduled amount needs review" : `${formatPHP(loan.monthlyAmount)}/mo`} • Ends {loan.endMonth}
                         </span>
                       </div>
                       <div className="text-right font-mono">
-                        <span className="text-xs text-purple-300 font-semibold">
-                          Month {loan.elapsedMonths} of {loan.totalMonths}
+                        <span className="text-xs text-violet-accent font-semibold">
+                          {loan.status === "incomplete" ? "History needs review" : `Month ${loan.paidInstallments} of ${loan.totalMonths}`}
                         </span>
                         <span className="text-[10px] text-faint block">
-                          ₱{loan.remainingPrincipal.toLocaleString("en-US")} left
+                          {loan.remainingScheduled === null ? "Review needed" : `${formatPHP(loan.remainingScheduled)} left`}
                         </span>
                       </div>
                     </div>
@@ -237,6 +245,14 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
                   </div>
                 ))}
               </div>
+            )}
+            {debt.completedLoans.length > 0 && (
+              <details className="rounded-xl bg-surface-sunken p-3 text-xs">
+                <summary className="cursor-pointer text-secondary">Completed loans ({debt.completedLoans.length})</summary>
+                <ul className="mt-2 space-y-2 text-muted">
+                  {debt.completedLoans.map(loan => <li key={loan.id} className="flex flex-wrap justify-between gap-2"><span>{loan.name}{loan.archived && " · Archived"}</span><span className="font-mono">{formatPHP(loan.totalPaid)} recorded paid</span></li>)}
+                </ul>
+              </details>
             )}
           </div>
         )}

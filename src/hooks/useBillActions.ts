@@ -1,5 +1,6 @@
 import type { PaymentHistoryAction } from "../utils/paymentHistory";
 import { roundMoney } from "../utils/currency";
+import { recordBillSettlementStatus } from "../utils/billSettlementHistory";
 import {
   Bill,
   BillType,
@@ -172,7 +173,7 @@ export function applyBillStatusToggle(
       }
       nextWallets[wallet] = roundMoney(nextWallets[wallet] - walletDebit);
     }
-    nextSettlements = [...settlements.slice(0, -1), { ...activeSettlement, reversedAt: undefined }];
+    nextSettlements = [...settlements.slice(0, -1), { ...recordBillSettlementStatus(activeSettlement, true, todayStr), reversedAt: undefined }];
   } else if (willBePaid && settlementId) {
     const walletDebit = skipWalletMutation ? 0 : amount;
     if (walletDebit > 0) {
@@ -186,7 +187,9 @@ export function applyBillStatusToggle(
         paidAt: todayStr,
         amount,
         wallet: skipWalletMutation ? null : walletKey,
-        walletDebit
+        walletDebit,
+        statusHistory: [{ paid: true, at: todayStr }],
+        historyComplete: true
       }
     ];
   } else if (activeSettlement && !activeSettlement.reversedAt) {
@@ -206,7 +209,17 @@ export function applyBillStatusToggle(
     }
     reversedAt = todayStr;
     reversedPaymentId = activeSettlement.id;
-    nextSettlements = [...settlements.slice(0, -1), { ...activeSettlement, reversedAt }];
+    nextSettlements = [...settlements.slice(0, -1), { ...recordBillSettlementStatus(activeSettlement, false, reversedAt), reversedAt }];
+  } else if (settlements.length === 0) {
+    // Retain a legacy paid marker as approximate history when removing its status.
+    // No original debit is known, so this record must never manufacture a refund.
+    const legacyPaidAt = monthLog.paymentDates?.[bill.id] ?? todayStr;
+    nextSettlements = [{
+      id: generateId("bill-payment"), paidAt: legacyPaidAt, amount: bill.amount,
+      wallet: null, walletDebit: 0, priorConfirmation: !monthLog.paymentDates?.[bill.id],
+      reversedAt: todayStr, historyComplete: false,
+      statusHistory: [{ paid: true, at: legacyPaidAt }, { paid: false, at: todayStr }]
+    }];
   }
 
   const nextMonthLog = {
@@ -281,7 +294,9 @@ export function applyConfirmPriorBillPayments(
             amount,
             wallet: null,
             walletDebit: 0,
-            priorConfirmation: true
+            priorConfirmation: true,
+            statusHistory: [{ paid: true, at: confirmedAt }],
+            historyComplete: true
           }
         ]
       }

@@ -35,7 +35,7 @@ describe("DashboardTab", () => {
     fundProgressPercent: "50.0",
     totalPendingReceivables: 3200,
     monthIncomeCollected: 12500,
-    selectedMonth: "Sep 2026",
+    selectedMonth: "September 2026",
     priorityUnpaidSum: 1500,
     totalUnpaidCommitments: 4000,
     overdueBills: [] as BillViewModel[],

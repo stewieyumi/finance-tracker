@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { reconcileDebt } from "../utils/debtReconciliation";
 import {
   UnifiedFinanceData,
   BillViewModel,
@@ -28,6 +29,7 @@ import {
 export function useFinanceCalculations(globalData: UnifiedFinanceData, selectedMonth: string) {
 const currentMonthDate = parseMonthKey(selectedMonth);
 const fallbackStartMonth = getMonthKey(new Date());
+const debt = useMemo(() => reconcileDebt(globalData, selectedMonth), [globalData, selectedMonth]);
 
 const activeBills = useMemo<BillViewModel[]>(() => {
       if (!globalData?.library?.bills) return [];
@@ -38,8 +40,7 @@ const activeBills = useMemo<BillViewModel[]>(() => {
       return true;
     }).map(b => {
       let oldestUnpaid: string | null = null;
-      let totalLoanPaid = 0;
-      let paidLoanInstallments = 0;
+      const loan = debt.loans.find(item => item.id === b.id);
 
       const startMonth = b.startMonth || fallbackStartMonth;
       const endMonth = b.type === "Loan / Installment" ? b.endMonth : undefined;
@@ -59,14 +60,6 @@ const activeBills = useMemo<BillViewModel[]>(() => {
 
         if (!isPaid) {
           if (!oldestUnpaid) oldestUnpaid = monthKey;
-        } else if (b.type === "Loan / Installment") {
-          const settlements = globalData.logs?.[monthKey]?.billSettlements?.[b.id];
-          const settlement = settlements?.[settlements.length - 1];
-          const override = globalData.logs?.[monthKey]?.billOverrides?.[b.id];
-          totalLoanPaid +=
-            settlement && !settlement.reversedAt ? settlement.amount :
-              override !== undefined && Number.isFinite(override) ? override : b.amount;
-          paidLoanInstallments += 1;
         }
       }
       const isPaidThisMonth = !oldestUnpaid;
@@ -89,8 +82,11 @@ const effectiveAmount = getEffectiveBillAmount(
         paid: isPaidThisMonth,
         targetMonthForDue,
         daysLeft,
-        totalLoanPaid,
-        paidLoanInstallments
+        totalLoanPaid: loan?.totalPaid,
+        paidLoanInstallments: loan?.paidInstallments,
+        remainingLoanScheduled: loan?.remainingScheduled,
+        loanHistoryApproximate: loan?.approximate,
+        loanHistoryIncomplete: loan?.status === "incomplete"
       };
     }).filter(b => !(b.paid && b.type === "Loan / Installment" && b.endMonth &&
       currentMonthDate > parseMonthKey(b.endMonth))).sort((a, b) => {
@@ -101,7 +97,7 @@ const effectiveAmount = getEffectiveBillAmount(
       if (dayA !== dayB) return dayA - dayB;
       return String(a.name || "").localeCompare(String(b.name || ""));
     });
-  }, [globalData, selectedMonth, currentMonthDate]);
+  }, [globalData, selectedMonth, currentMonthDate, debt]);
 
 const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
       if (!globalData?.library?.receivables) return [];

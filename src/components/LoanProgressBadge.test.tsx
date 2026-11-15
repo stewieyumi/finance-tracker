@@ -90,3 +90,16 @@ describe("LoanProgressBadge", () => {
     expect(c2.firstChild).toBeNull();
   });
 });
+
+
+it("uses reconciled scheduled remaining rather than nominal principal after a reduced settlement", () => {
+  render(<LoanProgressBadge startMonth="January 2026" endMonth="January 2026" targetMonthForDue="January 2026" isPaid monthlyAmount={100} totalPaid={80} paidInstallments={1} remainingScheduled={0} />);
+  expect(screen.getByText("✓ Completed")).toBeInTheDocument();
+  expect(screen.getByText("₱0.00 remaining")).toBeInTheDocument();
+});
+
+it("discloses incomplete history without showing a completed loan or exact zero", () => {
+  render(<LoanProgressBadge startMonth="January 2026" endMonth="January 2026" targetMonthForDue="January 2026" isPaid monthlyAmount={100} totalPaid={0} paidInstallments={1} remainingScheduled={null} historyIncomplete />);
+  expect(screen.getByText("Review needed")).toBeInTheDocument();
+  expect(screen.queryByText("✓ Completed")).not.toBeInTheDocument();
+});

@@ -28,9 +28,11 @@ import {
   BillViewModel,
   PaydayExecution
 } from "../types/finance";
-import { calculateSafeToSpend, calculateDebtRunway } from "../utils/financialAnalytics";
+import { calculateSafeToSpend } from "../utils/financialAnalytics";
 import { getPaydayDatesInRange, normalizePaydayDays, parseMonthKey } from "../utils/dateHelpers";
 import { reconcileWalletBalances } from "../utils/financeHelpers";
+
+import { reconcileDebt } from "../utils/debtReconciliation";
 
 const carouselSlideClass = "flex w-full shrink-0 snap-center";
 
@@ -127,14 +129,9 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   const safeToSpend = calculateSafeToSpend(totalLiquid, totalUnpaidCommitments);
   const reconciled = useMemo(() => reconcileWalletBalances(globalData), [globalData]);
 
-  const debtLoans = useMemo(
-    () => calculateDebtRunway(globalData, selectedMonth),
-    [globalData, selectedMonth]
-  );
-  const totalDebtPrincipal = useMemo(
-    () => debtLoans.reduce((sum, loan) => sum + loan.remainingPrincipal, 0),
-    [debtLoans]
-  );
+  const debt = useMemo(() => reconcileDebt(globalData, selectedMonth), [globalData, selectedMonth]);
+  const debtLoans = debt.activeLoans;
+  const totalDebtPrincipal = debt.remainingScheduled;
 
   const pdDays = normalizePaydayDays(globalData.settings?.paydayDays);
   const monthStart = parseMonthKey(selectedMonth);
@@ -432,26 +429,26 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                       </h2>
                     </div>
                     <span className="text-[10px] text-faint font-mono">
-                      {debtLoans.length} {debtLoans.length === 1 ? "Active Loan" : "Active Loans"}
+                      {debt.isComplete ? `${debtLoans.length} ${debtLoans.length === 1 ? "Active Loan" : "Active Loans"}` : "Review loan history"}
                     </span>
                   </div>
 
                   <div className="my-auto">
                     <div className="text-2xl sm:text-3xl font-bold font-mono text-strong tracking-tight">
-                      {debtLoans.length > 0
+                      {!debt.isComplete ? "Review needed" : debtLoans.length > 0
                         ? `₱${totalDebtPrincipal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
                         : "100% Debt-Free"}
                     </div>
                     <p className="text-xs text-muted mt-0.5 sm:mt-1 font-medium">
-                      {debtLoans.length > 0
-                        ? "Total remaining principal across all active installments"
+                      {!debt.isComplete ? "Some records need review before calculating debt" : debtLoans.length > 0
+                        ? "Remaining scheduled payments, including archived debt"
                         : "No active installment debt obligations"}
                     </p>
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-2 border-t border-inverse/[0.04] text-[11px]">
                     <span className="text-faint font-mono">
-                      {debtLoans.length > 0 ? `${debtLoans.length} installment plan${debtLoans.length === 1 ? "" : "s"}` : "Zero balance"}
+                      {debt.completedLoans.length} completed • {debt.totalPaid.toLocaleString("en-PH", { style: "currency", currency: "PHP" })} {!debt.isComplete ? "known paid" : debt.approximate ? "estimated paid" : "recorded paid"}
                     </span>
                     {onOpenAnalytics && (
                       <span className="font-medium text-violet-accent flex items-center gap-1 group-hover:text-violet-accent transition">
