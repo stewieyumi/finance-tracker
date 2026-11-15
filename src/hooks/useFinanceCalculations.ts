@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { noDateInflowState, noDateIncomeReceived } from "../utils/noDateInflows";
 import { reconcileDebt } from "../utils/debtReconciliation";
 import {
   UnifiedFinanceData,
@@ -102,6 +103,7 @@ const effectiveAmount = getEffectiveBillAmount(
 const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
       if (!globalData?.library?.receivables) return [];
     return globalData.library.receivables.filter(r => {
+      if (r.frequency === "No Specific Date") return noDateInflowState(globalData, r, selectedMonth).visible;
       if (r.frequency === "Monthly" || r.frequency === "Bi-monthly") {
         const start = parseMonthKey(r.startMonth || fallbackStartMonth);
         if (currentMonthDate < start) return false;
@@ -172,6 +174,12 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
       let oldestUncollected: string | null = null;
       const isByDate = r.frequency === "By Date";
       const hasValidDate = isByDate && isValidDateKey(r.date);
+
+      if (r.frequency === "No Specific Date") {
+        const state = noDateInflowState(globalData, r, selectedMonth);
+        return { ...r, amountReceived: state.amountReceived, collected: state.collected,
+          targetMonthForDue: state.month, needsScheduleReview: !state.valid };
+      }
 
       if (isByDate) {
         if (hasValidDate) {
@@ -281,7 +289,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
     return ((balance / targetMilestoneFund) * 100).toFixed(1);
   }, [globalData?.wallets, globalData?.settings, targetMilestoneFund]);
   const totalPendingReceivables = useMemo(() => activeReceivables.filter(r => !r.collected).reduce((a, c) => a + Math.max(0, (parseFloat(String(c.amount)) || 0) - (parseFloat(String(c.amountReceived)) || 0)), 0), [activeReceivables]);
-  const monthIncomeCollected = useMemo(() => activeReceivables.reduce((a, c) => a + (parseFloat(String(c.amountReceived)) || 0), 0), [activeReceivables]);
+  const monthIncomeCollected = useMemo(() => activeReceivables.filter(r => r.frequency !== "No Specific Date").reduce((a, c) => a + (parseFloat(String(c.amountReceived)) || 0), 0) + noDateIncomeReceived(globalData, selectedMonth), [activeReceivables, globalData, selectedMonth]);
   const totalUnpaidCommitments = useMemo(() => activeBills.filter(b => !b.paid).reduce((a, c) => a + (parseFloat(String(c.amount)) || 0), 0), [activeBills]);
   const priorityUnpaidBills = useMemo(() => activeBills.filter(b => !b.paid).slice(0, 3), [activeBills]);
   const priorityUnpaidSum = useMemo(() => priorityUnpaidBills.reduce((a, c) => a + (parseFloat(String(c.amount)) || 0), 0), [priorityUnpaidBills]);

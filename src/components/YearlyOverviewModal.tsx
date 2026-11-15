@@ -1,3 +1,4 @@
+import { noDateIncomeReceived } from "../utils/noDateInflows";
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { X, Calendar, ChevronDown, Check } from "lucide-react";
 import { MONTH_LIST, YEAR_LIST } from "../constants/config";
@@ -45,7 +46,7 @@ const fallbackStartMonth = getMonthKey(new Date());
     let totalYearCommitments = 0;
     let totalYearPaid = 0;
     let totalYearProjectedIncome = 0;
-    let totalYearCollected = 0;
+    let totalYearCollected = noDateIncomeReceived(globalData, activeYear);
 
     MONTH_LIST.forEach(month => {
       const monthKey = `${month} ${activeYear}`;
@@ -87,7 +88,7 @@ const fallbackStartMonth = getMonthKey(new Date());
         }
 
         const recLog = mLog.recsCollected?.[r.id];
-        if (recLog?.amountReceived) {
+        if (r.frequency !== "No Specific Date" && recLog?.amountReceived) {
           totalYearCollected += parseFloat(String(recLog.amountReceived)) || 0;
         }
       });
@@ -175,6 +176,7 @@ const fallbackStartMonth = getMonthKey(new Date());
             <div className="text-[10px] uppercase font-semibold text-faint tracking-wider">
               {activeYear} Projected Inflows
             </div>
+            {globalData.library.receivables.some(r => r.frequency === "No Specific Date") && <p className="mt-1 text-xs text-muted">No-date expectations excluded; actual receipts included below.</p>}
             <div className="text-base font-bold font-mono text-emerald-400 mt-1">
               ₱{yearlyStats.totalYearProjectedIncome.toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </div>

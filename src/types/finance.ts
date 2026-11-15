@@ -1,5 +1,5 @@
 export type BillType = "Bill" | "Subscription" | "Loan / Installment";
-export type ReceivableFrequency = "By Date" | "Monthly" | "Bi-monthly";
+export type ReceivableFrequency = "By Date" | "Monthly" | "Bi-monthly" | "No Specific Date";
 export type ReceivableCategory = string;
 
 export type DeductionType = "fixed" | "percentage";
@@ -87,6 +87,7 @@ export interface ReceivableViewModel extends Receivable {
   collected: boolean;
   targetMonthForDue: string;
   needsDate?: boolean;
+  needsScheduleReview?: boolean;
 }
 
 export interface Shoot {

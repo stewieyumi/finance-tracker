@@ -39,8 +39,8 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
     <div
       key={rec.id}
       data-testid={`receivable-mobile-row-${rec.id}`}
-      onClick={rec.collected ? undefined : () => onToggleStatus(rec)}
-      className={`${rec.collected ? "" : "cursor-pointer"} px-3 py-2.5 transition-colors hover:bg-surface-high ${rec.collected ? "bg-surface-low" : ""}`}
+      onClick={rec.collected || rec.needsScheduleReview ? undefined : () => onToggleStatus(rec)}
+      className={`${rec.collected || rec.needsScheduleReview ? "" : "cursor-pointer"} px-3 py-2.5 transition-colors hover:bg-surface-high ${rec.collected ? "bg-surface-low" : ""}`}
     >
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-2">
@@ -51,6 +51,7 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
                 e.stopPropagation();
                 onToggleStatus(rec);
               }}
+              disabled={rec.needsScheduleReview}
               aria-label={
                 rec.collected
                   ? `Undo received payment for ${rec.name}`
@@ -124,6 +125,9 @@ export const ReceivableMobileRow: React.FC<ReceivableMobileRowProps> = ({
               </span>
             )}
 
+            {rec.frequency === "No Specific Date" && (
+              <span className={rec.needsScheduleReview ? "chip-amber rounded px-1.5 py-0.5 text-xs" : "text-muted"}>{rec.needsScheduleReview ? "Inflow history needs review" : `No specific date · Since ${rec.startMonth}`}</span>
+            )}
             {rec.frequency === "Monthly" && (
               <span>Day {rec.monthlyDay || 15}</span>
             )}

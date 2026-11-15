@@ -313,3 +313,50 @@ describe("ReceivablesTable - list, filtering, and interaction wiring", () => {
     alertMock.mockRestore();
   });
 });
+
+describe("one-time no-date inflow controls", () => {
+  const noDate = () => createReceivable({ name: "Undated client", frequency: "No Specific Date", startMonth: "September 2026" });
+
+  it("adds an explicit no-date inflow without requiring a date", () => {
+    const add = vi.fn();
+    renderReceivablesTable([], { onAddReceivable: add });
+    fireEvent.click(screen.getByRole("button", { name: /Add New Inflow/i }));
+    const dialog = screen.getByRole("dialog", { name: "Add New Inflow" });
+    fireEvent.change(within(dialog).getByRole("combobox", { name: "Frequency" }), { target: { value: "No Specific Date" } });
+    expect(within(dialog).getByText(/Starts September 2026/)).toBeInTheDocument();
+    expect(dialog.querySelector('input[type="date"]')).toBeNull();
+    fireEvent.change(within(dialog).getByPlaceholderText("e.g. Salary, Client Payment"), { target: { value: "Undated client" } });
+    fireEvent.change(within(dialog).getByPlaceholderText("0.00"), { target: { value: "5000" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add Inflow" }));
+    expect(add).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ name: "Undated client", frequency: "No Specific Date", amount: 5000, date: undefined }));
+  });
+
+  it("shows the anchor on both layouts and explains how to leave half-month filtering", () => {
+    renderReceivablesTable([noDate()]);
+    for (const layout of ["mobile", "desktop"]) {
+      expect(within(screen.getByTestId(`receivable-${layout}-row-rec-test-1`)).getByText(/No specific date · Since September 2026/)).toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole("button", { name: "1–15" }));
+    expect(screen.queryByText("Undated client")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Show all inflows" }));
+    expect(screen.getAllByText("Undated client")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "16–31" }));
+    expect(screen.queryByText("Undated client")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show all inflows" })).toBeInTheDocument();
+  });
+
+  it("blocks invalid-history payments in both layouts while keeping Edit available", () => {
+    const handlers = renderReceivablesTable([{ ...noDate(), needsScheduleReview: true }]);
+    for (const layout of ["mobile", "desktop"]) {
+      const row = screen.getByTestId(`receivable-${layout}-row-rec-test-1`);
+      expect(within(row).getByText("Inflow history needs review")).toBeInTheDocument();
+      expect(within(row).getByRole("button", { name: "Mark Undated client as received" })).toBeDisabled();
+      expect(within(row).queryByRole("button", { name: /Add partial payment/ })).not.toBeInTheDocument();
+      fireEvent.click(row);
+      fireEvent.click(within(row).getByRole("button", { name: "Edit" }));
+    }
+    expect(handlers.onToggleStatus).not.toHaveBeenCalled();
+    expect(handlers.onAddPayment).not.toHaveBeenCalled();
+    expect(handlers.setEditingId).toHaveBeenCalledTimes(2);
+  });
+});
