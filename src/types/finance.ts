@@ -61,6 +61,9 @@ export interface BillViewModel extends Bill {
   isOverridden: boolean;
   totalLoanPaid?: number;
   paidLoanInstallments?: number;
+  remainingLoanScheduled?: number | null;
+  loanHistoryApproximate?: boolean;
+  loanHistoryIncomplete?: boolean;
 }
 
 export interface Receivable {
@@ -106,6 +109,9 @@ export interface BillSettlement {
   wallet: string | null;
   walletDebit: number;
   priorConfirmation?: boolean;
+  /** Append-only payment state changes; old records may have incomplete timing. */
+  statusHistory?: { paid: boolean; at: string }[];
+  historyComplete?: boolean;
   reversedAt?: string;
 }
 

@@ -205,3 +205,44 @@ describe("FinancialAnalyticsModal", () => {
     expect(onClose).toHaveBeenCalledTimes(3);
   });
 });
+
+
+it("retains completed archived loans in cumulative paid totals but excludes them from active debt", () => {
+  const data = createMockData();
+  const loan = { ...data.library.bills[0], endMonth: "January 2026" };
+  data.library.bills = []; data.library.archivedBills = [loan];
+  data.logs = { "January 2026": { billsPaid: [loan.id] } };
+  render(<FinancialAnalyticsModal isOpen={true} onClose={vi.fn()} globalData={data} selectedMonth="March 2026" totalLiquid={0} totalUnpaidCommitments={0} />);
+  fireEvent.click(screen.getByRole("button", { name: "Debt" }));
+  expect(screen.getByText("0 Active Installments")).toBeInTheDocument();
+  expect(screen.getByText("Completed loans (1)")).toBeInTheDocument();
+  expect(screen.getByText(/Includes legacy timing estimates/)).toBeInTheDocument();
+  expect(screen.getByText(/MacBook Pro · Archived/)).toBeInTheDocument();
+});
+
+it("shows review-needed debt rather than claiming debt-free for a corrupt schedule", () => {
+  const data = createMockData(); data.library.bills[0].startMonth = "broken";
+  render(<FinancialAnalyticsModal isOpen={true} onClose={vi.fn()} globalData={data} selectedMonth="March 2026" totalLiquid={0} totalUnpaidCommitments={0} />);
+  fireEvent.click(screen.getByRole("button", { name: "Debt" }));
+  expect(screen.getByText("Review loan history")).toBeInTheDocument();
+  expect(screen.getAllByText("Review needed")).toHaveLength(2);
+});
+
+it("does not display an invalid scheduled amount as a zero-price installment", () => {
+  const data = createMockData(); data.library.bills[0].amount = NaN;
+  render(<FinancialAnalyticsModal isOpen={true} onClose={vi.fn()} globalData={data} selectedMonth="March 2026" totalLiquid={0} totalUnpaidCommitments={0} />);
+  fireEvent.click(screen.getByRole("button", { name: "Debt" }));
+  expect(screen.getByText(/Scheduled amount needs review/)).toBeInTheDocument();
+  expect(screen.queryByText(/₱0.00\/mo/)).not.toBeInTheDocument();
+});
+
+
+it("renders a review state for an unreadable month log even when no loans are listed", () => {
+  const data = createMockData(); data.library.bills = [];
+  data.logs["January 2026"] = null as unknown as UnifiedFinanceData["logs"][string];
+  render(<FinancialAnalyticsModal isOpen={true} onClose={vi.fn()} globalData={data} selectedMonth="March 2026" totalLiquid={0} totalUnpaidCommitments={0} />);
+  fireEvent.click(screen.getByRole("button", { name: "Debt" }));
+  expect(screen.getByText("Debt history needs review before confirming the balance.")).toBeInTheDocument();
+  expect(screen.getByText("Review needed")).toBeInTheDocument();
+  expect(screen.queryByText("No active loans or installments for this period.")).not.toBeInTheDocument();
+});

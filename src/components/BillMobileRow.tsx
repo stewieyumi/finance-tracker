@@ -139,6 +139,9 @@ export const BillMobileRow: React.FC<BillMobileRowProps> = ({
                 monthlyAmount={bill.baseAmount}
                 totalPaid={bill.totalLoanPaid}
                 paidInstallments={bill.paidLoanInstallments}
+                remainingScheduled={bill.remainingLoanScheduled}
+                historyApproximate={bill.loanHistoryApproximate}
+                historyIncomplete={bill.loanHistoryIncomplete}
               />
             </div>
           )}

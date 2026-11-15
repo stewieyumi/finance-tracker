@@ -5,6 +5,7 @@ import {
   calculateSafeToSpend,
   calculateMonthlyDepositNeeded
 } from "./financialAnalytics";
+import { reconcileDebt } from "./debtReconciliation";
 import { UnifiedFinanceData } from "../types/finance";
 
 const baseData = (): UnifiedFinanceData =>
@@ -22,7 +23,7 @@ const baseData = (): UnifiedFinanceData =>
   }) as UnifiedFinanceData;
 
 describe("financial analytics", () => {
-  it("calculates loan runway using paid installments and overrides", () => {
+  it("keeps recorded installment amounts separate from remaining scheduled obligations", () => {
     const data = baseData();
 
     data.library.bills = [
@@ -59,9 +60,9 @@ describe("financial analytics", () => {
         endMonth: "March 2026",
         totalMonths: 3,
         elapsedMonths: 2,
-        totalPrincipal: 3000,
+        totalPrincipal: 3200,
         totalPaid: 2200,
-        remainingPrincipal: 800,
+        remainingPrincipal: 1000,
         progressPercent: (2 / 3) * 100
       }
     ]);
@@ -88,12 +89,12 @@ describe("financial analytics", () => {
       "March 2026": { billsPaid: ["loan-2"] }
     };
 
-    const result = calculateDebtRunway(data, "May 2026");
-
-    expect(result[0].elapsedMonths).toBe(3);
-    expect(result[0].totalPaid).toBe(1500);
-    expect(result[0].remainingPrincipal).toBe(0);
-    expect(result[0].progressPercent).toBe(100);
+    expect(calculateDebtRunway(data, "May 2026")).toEqual([]);
+    const result = reconcileDebt(data, "May 2026").completedLoans[0];
+    expect(result.paidInstallments).toBe(3);
+    expect(result.totalPaid).toBe(1500);
+    expect(result.remainingScheduled).toBe(0);
+    expect(result.progressPercent).toBe(100);
   });
 
   it("calculates six months of cashflow momentum around the selected month", () => {

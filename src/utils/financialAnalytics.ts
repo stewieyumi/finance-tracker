@@ -1,24 +1,25 @@
 import {
   getAdjacentMonth,
   getMonthKey,
-  getMonthRange,
   parseDateKey,
   parseMonthKey
 } from "./dateHelpers";
 import { UnifiedFinanceData } from "../types/finance";
+import { reconcileDebt } from "./debtReconciliation";
 import { getEffectiveBillAmount } from "./financeHelpers";
 
 export interface DebtRunwayItem {
   id: string;
   name: string;
-  monthlyAmount: number;
+  monthlyAmount: number | null;
   startMonth?: string;
   endMonth?: string;
   totalMonths: number;
   elapsedMonths: number;
-  totalPrincipal: number;
+  /** Scheduled total, retained under the legacy field name; not bank principal. */
+  totalPrincipal: number | null;
   totalPaid: number;
-  remainingPrincipal: number;
+  remainingPrincipal: number | null;
   progressPercent: number;
 }
 
@@ -51,76 +52,15 @@ export function calculateDebtRunway(
   globalData: UnifiedFinanceData,
   selectedMonth: string
 ): DebtRunwayItem[] {
-  const bills = globalData?.library?.bills || [];
-  const logs = globalData?.logs || {};
-  const currentMonthDate = parseMonthKey(selectedMonth);
-
-  return bills
-    .filter(
-      b =>
-        b.type === "Loan / Installment" &&
-        b.startMonth &&
-        b.endMonth
-    )
-    .map(loan => {
-      const start = parseMonthKey(loan.startMonth!);
-      const end = parseMonthKey(loan.endMonth!);
-      const totalMonths = Math.max(
-        1,
-        (end.getFullYear() - start.getFullYear()) * 12 +
-          (end.getMonth() - start.getMonth()) +
-          1
-      );
-
-      let elapsedMonths = 0;
-      let totalPaid = 0;
-
-      const scanEndMonth =
-        currentMonthDate <= end
-          ? selectedMonth
-          : loan.endMonth!;
-
-      const monthsToCheck = getMonthRange(
-        loan.startMonth!,
-        scanEndMonth
-      );
-
-      for (const monthKey of monthsToCheck) {
-        if (logs[monthKey]?.billsPaid?.includes(loan.id)) {
-          elapsedMonths++;
-          const override = logs[monthKey]?.billOverrides?.[loan.id];
-          totalPaid +=
-            override !== undefined && Number.isFinite(override)
-              ? override
-              : parseFloat(String(loan.amount)) || 0;
-        }
-      }
-
-      const totalPrincipal =
-        (parseFloat(String(loan.amount)) || 0) * totalMonths;
-      const remainingPrincipal = Math.max(
-        0,
-        totalPrincipal - totalPaid
-      );
-      const progressPercent = Math.min(
-        100,
-        (elapsedMonths / totalMonths) * 100
-      );
-
-      return {
-        id: loan.id,
-        name: loan.name,
-        monthlyAmount: parseFloat(String(loan.amount)) || 0,
-        startMonth: loan.startMonth,
-        endMonth: loan.endMonth,
-        totalMonths,
-        elapsedMonths,
-        totalPrincipal,
-        totalPaid,
-        remainingPrincipal,
-        progressPercent
-      };
-    });
+  return reconcileDebt(globalData, selectedMonth).activeLoans.map(loan => ({
+    id: loan.id, name: loan.name, monthlyAmount: loan.monthlyAmount,
+    startMonth: loan.startMonth, endMonth: loan.endMonth,
+    totalMonths: loan.totalMonths, elapsedMonths: loan.paidInstallments,
+    totalPrincipal: loan.remainingScheduled === null ? null : loan.totalPaid + loan.remainingScheduled,
+    totalPaid: loan.totalPaid,
+    remainingPrincipal: loan.remainingScheduled,
+    progressPercent: loan.progressPercent
+  }));
 }
 
 export function calculateCashflowMomentum(

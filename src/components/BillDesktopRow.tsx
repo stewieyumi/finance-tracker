@@ -55,7 +55,7 @@ export const BillDesktopRow: React.FC<BillDesktopRowProps> = ({
               <span className={`px-2 py-0.5 rounded text-[11px] font-semibold tracking-wide ${formatDaysRemaining(bill.daysLeft).tone === "urgent" ? "chip-rose animate-pulse" : formatDaysRemaining(bill.daysLeft).tone === "overdue" ? "chip-rose" : formatDaysRemaining(bill.daysLeft).tone === "warning" ? "chip-amber" : "chip-neutral"}`}>{formatDaysRemaining(bill.daysLeft).text}</span>
             )}
           </div>
-          {bill.type === "Loan / Installment" && <div className="mt-1"><LoanProgressBadge startMonth={bill.startMonth} endMonth={bill.endMonth} targetMonthForDue={bill.targetMonthForDue} isPaid={bill.paid} monthlyAmount={bill.baseAmount} totalPaid={bill.totalLoanPaid} paidInstallments={bill.paidLoanInstallments} /></div>}
+          {bill.type === "Loan / Installment" && <div className="mt-1"><LoanProgressBadge startMonth={bill.startMonth} endMonth={bill.endMonth} targetMonthForDue={bill.targetMonthForDue} isPaid={bill.paid} monthlyAmount={bill.baseAmount} totalPaid={bill.totalLoanPaid} paidInstallments={bill.paidLoanInstallments} remainingScheduled={bill.remainingLoanScheduled} historyApproximate={bill.loanHistoryApproximate} historyIncomplete={bill.loanHistoryIncomplete} /></div>}
         </div>
       </td>
       <td className="py-2.5 px-2 align-top text-center whitespace-nowrap pt-2">
