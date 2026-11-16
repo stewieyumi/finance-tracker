@@ -632,6 +632,7 @@ const { saveShootEdit } = useShootSaveActions({
     fundProgressPercent,
     totalPendingReceivables,
     monthIncomeCollected,
+    incomeReport,
     totalUnpaidCommitments,
     priorityUnpaidSum,
     overdueBills,
@@ -776,7 +777,7 @@ const copySummaryToClipboard = async () => {
     overdueBills,
     targetMilestoneFund,
     fundProgressPercent,
-    monthIncomeCollected
+    incomeReport
   });
 
   try {
@@ -1177,6 +1178,7 @@ const copySummaryToClipboard = async () => {
             fundProgressPercent={fundProgressPercent}
             totalPendingReceivables={totalPendingReceivables}
             monthIncomeCollected={monthIncomeCollected}
+            incomeReport={incomeReport}
             selectedMonth={selectedMonth}
             priorityUnpaidSum={priorityUnpaidSum}
             totalUnpaidCommitments={totalUnpaidCommitments}

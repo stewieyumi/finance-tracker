@@ -1,3 +1,4 @@
+import { readInflowIncome, type InflowIncomeReport } from "./inflowIncome";
 import {
   BillViewModel,
   ReceivableViewModel,
@@ -16,7 +17,7 @@ interface BuildSummaryParams {
   overdueBills: BillViewModel[];
   targetMilestoneFund: number;
   fundProgressPercent: string;
-  monthIncomeCollected: number;
+  incomeReport?: InflowIncomeReport;
 }
 
 
@@ -37,7 +38,7 @@ export function buildFinancialSummary({
   overdueBills,
   targetMilestoneFund,
   fundProgressPercent,
-  monthIncomeCollected
+  incomeReport = readInflowIncome(globalData, selectedMonth)
 }: BuildSummaryParams): string {
   const unpaid = activeBills.filter(b => !b.paid);
   const pending = activeReceivables.filter(r => !r.collected);
@@ -143,7 +144,8 @@ TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}
 • ${targetMilestoneFund > 0
     ? `${globalData.settings?.goalName?.trim() || "Savings goal"}: ₱${fmt(globalData.wallets[globalData.settings?.milestoneWallet || "main"])} / ₱${fmt(targetMilestoneFund)} (${fundProgressPercent}%)`
     : "No savings goal set"}
-• Month Income Collected: ₱${fmt(monthIncomeCollected)}
+• Month Income Collected: ₱${fmt(incomeReport.actual)} (actual Inflows receipts)${incomeReport.historicalDateUnverified > 0 ? `
+• Historical income — date unverified: ₱${fmt(incomeReport.historicalDateUnverified)} (saved under this period; excluded from actual income)` : ""}${incomeReport.needsReview ? "\n• Income history needs review. Some entries could not be included." : ""}
 • Net Projected Position: ₱${fmt(netPosition)} ${netPosition >= 0 ? "(Surplus)" : "(Shortfall)"}
 ========================================`;
 }

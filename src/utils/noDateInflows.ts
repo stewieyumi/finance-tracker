@@ -1,16 +1,8 @@
 import type { Receivable, UnifiedFinanceData } from "../types/finance";
 import { MONTH_LIST } from "../constants/config";
-import { getMonthKey, isValidDateKey } from "./dateHelpers";
-import { roundMoney } from "./currency";
-
-export function isInflowMonth(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  const match = /^([A-Za-z]+) ([1-9]\d{3})$/.exec(value);
-  return !!match && MONTH_LIST.includes(match[1]);
-}
-
-export const isInflowMoney = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0 &&
-  Number.isSafeInteger(Math.round(value * 100)) && value === roundMoney(value);
+import { isValidDateKey } from "./dateHelpers";
+import { isInflowMonth, isInflowMoney, readInflowIncome } from "./inflowIncome";
+export { isInflowMonth, isInflowMoney } from "./inflowIncome";
 
 const receiptDate = (value: unknown): Date | null => {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/.test(value) || !isValidDateKey(value.slice(0, 10))) return null;
@@ -54,28 +46,7 @@ export function noDateInflowState(data: UnifiedFinanceData, rec: Receivable, sel
   };
 }
 
-/** Actual receipts for this new type use their timestamps, not the occurrence bucket. */
+/** Compatibility entry point for the shipped no-date reader. */
 export function noDateIncomeReceived(data: UnifiedFinanceData, period: string): number {
-  const ids = new Set([
-    ...(data.library?.receivables || []), ...(data.library?.archivedReceivables || [])
-  ].filter(rec => rec.frequency === "No Specific Date").map(rec => rec.id));
-  const seen = new Set<string>();
-  let cents = 0;
-  for (const log of Object.values(data.logs || {})) {
-    for (const id of ids) {
-      const rows = log?.receivableSettlements?.[id];
-      if (!Array.isArray(rows)) continue;
-      for (const receipt of rows) {
-        if (!receipt || receipt.reversedAt || !receipt.id || seen.has(receipt.id)) continue;
-        seen.add(receipt.id);
-        const date = receiptDate(receipt.receivedAt);
-        if (!date || !isInflowMoney(receipt.amount)) continue;
-        if ((isInflowMonth(period) && getMonthKey(date) === period) ||
-          (/^[1-9]\d{3}$/.test(period) && String(date.getFullYear()) === period)) {
-          cents += Math.round(receipt.amount * 100);
-        }
-      }
-    }
-  }
-  return Number.isSafeInteger(cents) ? cents / 100 : 0;
+  return readInflowIncome(data, period, "No Specific Date").actual;
 }

@@ -1,5 +1,6 @@
+import { readInflowIncome } from "../utils/inflowIncome";
 import { useMemo } from "react";
-import { noDateInflowState, noDateIncomeReceived } from "../utils/noDateInflows";
+import { noDateInflowState } from "../utils/noDateInflows";
 import { reconcileDebt } from "../utils/debtReconciliation";
 import {
   UnifiedFinanceData,
@@ -289,7 +290,8 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
     return ((balance / targetMilestoneFund) * 100).toFixed(1);
   }, [globalData?.wallets, globalData?.settings, targetMilestoneFund]);
   const totalPendingReceivables = useMemo(() => activeReceivables.filter(r => !r.collected).reduce((a, c) => a + Math.max(0, (parseFloat(String(c.amount)) || 0) - (parseFloat(String(c.amountReceived)) || 0)), 0), [activeReceivables]);
-  const monthIncomeCollected = useMemo(() => activeReceivables.filter(r => r.frequency !== "No Specific Date").reduce((a, c) => a + (parseFloat(String(c.amountReceived)) || 0), 0) + noDateIncomeReceived(globalData, selectedMonth), [activeReceivables, globalData, selectedMonth]);
+  const incomeReport = useMemo(() => readInflowIncome(globalData, selectedMonth), [globalData, selectedMonth]);
+  const monthIncomeCollected = incomeReport.actual;
   const totalUnpaidCommitments = useMemo(() => activeBills.filter(b => !b.paid).reduce((a, c) => a + (parseFloat(String(c.amount)) || 0), 0), [activeBills]);
   const priorityUnpaidBills = useMemo(() => activeBills.filter(b => !b.paid).slice(0, 3), [activeBills]);
   const priorityUnpaidSum = useMemo(() => priorityUnpaidBills.reduce((a, c) => a + (parseFloat(String(c.amount)) || 0), 0), [priorityUnpaidBills]);
@@ -402,6 +404,7 @@ const recentTransactions = useMemo(() => allTransactions.slice(0, 5), [allTransa
     fundProgressPercent,
     totalPendingReceivables,
     monthIncomeCollected,
+    incomeReport,
     totalUnpaidCommitments,
     priorityUnpaidBills,
     priorityUnpaidSum,

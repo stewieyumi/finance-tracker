@@ -59,7 +59,7 @@ describe("no-date inflow forms and reports", () => {
     fireEvent.click(screen.getByRole("button", { name: /Cashflow/i }));
     expect(screen.getByText(/No-date inflows are excluded from dated projections/)).toBeInTheDocument();
     expect(deriveNotifications(data, new Date(2027, 0, 15)).filter(n => n.type === "pending_receivable")).toEqual([]);
-    const text = buildFinancialSummary({ globalData: data, activeBills: [], activeReceivables: [{ ...rec, targetMonthForDue: "November 2026", amountReceived: 2000, collected: false }], selectedMonth: "January 2027", totalLiquid: 1000, totalUnpaidCommitments: 0, overdueBills: [], targetMilestoneFund: 0, fundProgressPercent: "0", monthIncomeCollected: 0 });
+    const text = buildFinancialSummary({ globalData: data, activeBills: [], activeReceivables: [{ ...rec, targetMonthForDue: "November 2026", amountReceived: 2000, collected: false }], selectedMonth: "January 2027", totalLiquid: 1000, totalUnpaidCommitments: 0, overdueBills: [], targetMilestoneFund: 0, fundProgressPercent: "0" });
     expect(text).toContain("No specific date · Since November 2026");
     expect(text).toContain("3,000.00");
     expect(text).not.toContain("Invalid Date");

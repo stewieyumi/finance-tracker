@@ -1,4 +1,5 @@
-import { noDateIncomeReceived } from "../utils/noDateInflows";
+import { readInflowIncome } from "../utils/inflowIncome";
+import { InflowIncomeNotes } from "./InflowIncomeNotes";
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { X, Calendar, ChevronDown, Check } from "lucide-react";
 import { MONTH_LIST, YEAR_LIST } from "../constants/config";
@@ -46,7 +47,8 @@ const fallbackStartMonth = getMonthKey(new Date());
     let totalYearCommitments = 0;
     let totalYearPaid = 0;
     let totalYearProjectedIncome = 0;
-    let totalYearCollected = noDateIncomeReceived(globalData, activeYear);
+    const incomeReport = readInflowIncome(globalData, activeYear);
+    const totalYearCollected = incomeReport.actual;
 
     MONTH_LIST.forEach(month => {
       const monthKey = `${month} ${activeYear}`;
@@ -86,11 +88,6 @@ const fallbackStartMonth = getMonthKey(new Date());
             totalYearProjectedIncome += amt;
           }
         }
-
-        const recLog = mLog.recsCollected?.[r.id];
-        if (r.frequency !== "No Specific Date" && recLog?.amountReceived) {
-          totalYearCollected += parseFloat(String(recLog.amountReceived)) || 0;
-        }
       });
     });
 
@@ -99,6 +96,7 @@ const fallbackStartMonth = getMonthKey(new Date());
       totalYearPaid,
       totalYearProjectedIncome,
       totalYearCollected,
+      incomeReport,
       netYearBalance: totalYearProjectedIncome - totalYearCommitments
     };
   }, [globalData, activeYear]);
@@ -183,6 +181,7 @@ const fallbackStartMonth = getMonthKey(new Date());
             <div className="text-[10px] text-faint mt-1 font-mono">
               Collected: ₱{yearlyStats.totalYearCollected.toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </div>
+            <InflowIncomeNotes report={yearlyStats.incomeReport} />
           </div>
         </div>
 
