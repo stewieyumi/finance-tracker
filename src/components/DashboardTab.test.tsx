@@ -395,4 +395,13 @@ describe("DashboardTab", () => {
     render(<DashboardTab {...props} />);
     expect(screen.getByText("Production Vault")).toBeInTheDocument();
   });
+  it("shows actual income separately from unverified historical amounts and review notices", () => {
+    render(<DashboardTab {...defaultProps} monthIncomeCollected={800} incomeReport={{ actual: 800, historicalDateUnverified: 200, needsReview: true }} />);
+    expect(screen.getByText("₱800.00")).toBeInTheDocument();
+    expect(screen.getByText("Historical income — date unverified")).toBeInTheDocument();
+    expect(screen.getByText("₱200.00")).toBeInTheDocument();
+    expect(screen.getByText("Saved under this period; excluded from actual income.")).toBeInTheDocument();
+    expect(screen.getByText("Income history needs review. Some entries could not be included.")).toBeInTheDocument();
+  });
+
 });

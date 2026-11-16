@@ -1,3 +1,5 @@
+import { InflowIncomeNotes } from "./InflowIncomeNotes";
+import type { InflowIncomeReport } from "../utils/inflowIncome";
 import React, { useState, useRef, useMemo } from "react";
 import {
   History,
@@ -43,6 +45,7 @@ interface DashboardTabProps {
   fundProgressPercent: string;
   totalPendingReceivables: number;
   monthIncomeCollected: number;
+  incomeReport?: InflowIncomeReport;
   selectedMonth: string;
 
   // Execution Flow
@@ -87,6 +90,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   fundProgressPercent,
   totalPendingReceivables,
   monthIncomeCollected,
+  incomeReport,
   selectedMonth,
 
   priorityUnpaidSum,
@@ -309,13 +313,14 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex min-w-0 items-center justify-between gap-3 py-3 sm:block sm:px-4">
+                    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 py-3 sm:block sm:px-4">
                       <div className="text-xs font-medium text-muted">
                         {selectedMonth.split(" ")[0]} Income
                       </div>
                       <div className="text-sm sm:text-base font-semibold font-mono tracking-tight text-right sm:mt-1 sm:text-center text-positive">
                         ₱{monthIncomeCollected.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </div>
+                      {incomeReport && <div className="col-span-2"><InflowIncomeNotes report={incomeReport} /></div>}
                     </div>
                   </div>
                 </div>
