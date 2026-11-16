@@ -1,3 +1,5 @@
+import { MONTH_LIST } from "../constants/config";
+
 // Transaction dates and logging times are separate: backdating never changes loggedAt.
 export function transactionTimestamp(value?: string | number): number | undefined {
   if (typeof value !== "number" && (typeof value !== "string" || !value.includes("T"))) return undefined;
@@ -19,9 +21,31 @@ interface DatedTransaction {
   date: string;
   loggedAt?: string;
   createdAt?: number;
+  confirmedIncomeMonth?: string;
+}
+
+export function confirmedTransactionMonth(tx: DatedTransaction): string {
+  const match = /^([A-Za-z]+) ([1-9]\d{3})$/.exec(tx.confirmedIncomeMonth ?? "");
+  const index = match ? MONTH_LIST.indexOf(match[1]) : -1;
+  return match && index >= 0 ? `${match[2]}-${String(index + 1).padStart(2, "0")}` : "";
+}
+
+export function transactionMonth(tx: DatedTransaction): string {
+  return confirmedTransactionMonth(tx) || transactionDay(tx.date).slice(0, 7);
+}
+
+export function formatHistoryDate(tx: DatedTransaction, format = formatTransactionDateTime): string {
+  return confirmedTransactionMonth(tx)
+    ? `${tx.confirmedIncomeMonth} · Exact day unknown · Original date: ${format(tx.date, tx.loggedAt)}`
+    : format(tx.date, tx.loggedAt);
 }
 
 export function compareTransactionsNewestFirst(a: DatedTransaction, b: DatedTransaction): number {
+  const monthOrder = transactionMonth(b).localeCompare(transactionMonth(a));
+  if (monthOrder) return monthOrder;
+  const aConfirmed = !!confirmedTransactionMonth(a), bConfirmed = !!confirmedTransactionMonth(b);
+  // Month-only receipts follow dated entries in that month; never assign them a day.
+  if (aConfirmed !== bConfirmed) return aConfirmed ? 1 : -1;
   const dayOrder = transactionDay(b.date).localeCompare(transactionDay(a.date));
   if (dayOrder) return dayOrder;
   const aTime = transactionTimestamp(a.loggedAt) ?? transactionTimestamp(a.createdAt) ?? transactionTimestamp(a.date);

@@ -401,7 +401,7 @@ describe("DashboardTab", () => {
     expect(screen.getByText("Historical income — date unverified")).toBeInTheDocument();
     expect(screen.getByText("₱200.00")).toBeInTheDocument();
     expect(screen.getByText("Saved under this period; excluded from actual income.")).toBeInTheDocument();
-    expect(screen.getByText("Income history needs review. Some entries could not be included.")).toBeInTheDocument();
+    expect(screen.getByText("Income history needs review. Check receipt details before relying on this total.")).toBeInTheDocument();
   });
 
 });

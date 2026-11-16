@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { TransactionHistoryItem } from "../types/finance";
 import { formatMonthYear } from "../utils/dateHelpers";
-import { compareTransactionsNewestFirst, formatTransactionDateTime, transactionDay } from "../utils/transactionDates";
+import { compareTransactionsNewestFirst, confirmedTransactionMonth, formatHistoryDate, formatTransactionDateTime, transactionDay, transactionMonth } from "../utils/transactionDates";
 import { Modal } from "./ui/Modal";
 
 export interface TransactionHistoryModalProps {
@@ -63,9 +63,8 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
   const availableMonths = useMemo(() => {
     const monthSet = new Set<string>();
     transactions.forEach(tx => {
-      const day = transactionDay(tx.date);
-      if (day) {
-        const yyyyMm = day.slice(0, 7);
+      const yyyyMm = transactionMonth(tx);
+      if (yyyyMm) {
         if (/^\d{4}-\d{2}$/.test(yyyyMm)) {
           monthSet.add(yyyyMm);
         }
@@ -90,10 +89,10 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
     if (invalidRange) return [];
     return [...transactions].sort(compareTransactionsNewestFirst).filter(tx => {
       const day = transactionDay(tx.date);
-      if ((fromDate || toDate) && (!day || (fromDate && day < fromDate) || (toDate && day > toDate))) return false;
+      if ((fromDate || toDate) && (confirmedTransactionMonth(tx) || !day || (fromDate && day < fromDate) || (toDate && day > toDate))) return false;
       // Month filter
       if (selectedMonth !== "ALL") {
-        if (!day || !day.startsWith(selectedMonth)) {
+        if (transactionMonth(tx) !== selectedMonth) {
           return false;
         }
       }
@@ -263,6 +262,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
                 </label>
               </div>
               {invalidRange && <p id="history-date-error" role="alert" className="text-rose-500">Choose a To date on or after the From date.</p>}
+              {transactions.some(tx => confirmedTransactionMonth(tx)) && <p className="text-[11px] text-muted">Exact-date filters exclude receipts whose day is unknown. Use the month filter to include them.</p>}
               <p className="text-[11px] text-muted">Filters use the transaction date. Times are shown in your local time.</p>
             </div>
           </details>
@@ -424,7 +424,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
                     </span>
                   </div>
                   <span className="basis-full text-[10px] text-faint font-medium mt-1 text-right">
-                    {formatDateTime(tx.date, tx.loggedAt)}
+                    {formatHistoryDate(tx, formatDateTime)}
                   </span>
                 </div>
               ))}

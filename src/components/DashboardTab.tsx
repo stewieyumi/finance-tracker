@@ -1,3 +1,4 @@
+import { formatHistoryDate } from "../utils/transactionDates";
 import { InflowIncomeNotes } from "./InflowIncomeNotes";
 import type { InflowIncomeReport } from "../utils/inflowIncome";
 import React, { useState, useRef, useMemo } from "react";
@@ -723,7 +724,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                       {tx.amount > 0 ? "+" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </span>
                   </div>
-                  <span className="basis-full text-[10px] text-faint mt-1 text-right">{formatDateTime(tx.date, tx.loggedAt)}</span>
+                  <span className="basis-full text-[10px] text-faint mt-1 text-right">{formatHistoryDate(tx, formatDateTime)}</span>
                 </div>
               ))
             )}

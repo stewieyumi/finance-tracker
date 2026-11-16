@@ -181,9 +181,9 @@ const fallbackStartMonth = getMonthKey(new Date());
             <div className="text-[10px] text-faint mt-1 font-mono">
               Collected: ₱{yearlyStats.totalYearCollected.toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </div>
-            <InflowIncomeNotes report={yearlyStats.incomeReport} />
           </div>
         </div>
+        <InflowIncomeNotes report={yearlyStats.incomeReport} />
 
         <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
           <div className="flex justify-between items-center text-xs">
