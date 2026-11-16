@@ -1,3 +1,4 @@
+import { formatHistoryDate } from "../utils/transactionDates";
 import React from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { Settings, History, ArrowDownLeft, Calendar, Receipt, ArrowRight } from "lucide-react";
@@ -106,7 +107,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
                     {tx.amount > 0 ? "+" : tx.amount < 0 ? "−" : ""}₱{Math.abs(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
-                <span className="basis-full text-[10px] text-faint font-medium mt-1 text-right">{formatDateTime(tx.date, tx.loggedAt)}</span>
+                <span className="basis-full text-[10px] text-faint font-medium mt-1 text-right">{formatHistoryDate(tx, formatDateTime)}</span>
               </div>
             ))
           )}

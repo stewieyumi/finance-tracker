@@ -1,5 +1,6 @@
 import { TransactionHistoryItem, UnifiedFinanceData } from "../types/finance";
 import { compareTransactionsNewestFirst, transactionTimestamp } from "./transactionDates";
+import { countIncomeReceiptIds, resolveIncomeMonths } from "./inflowIncome";
 import { roundMoney } from "./currency";
 import { parseMonthKey } from "./dateHelpers";
 
@@ -51,12 +52,15 @@ export function buildTransactionHistory(
     });
   });
 
+  const receiptIdCounts = countIncomeReceiptIds(globalData.logs);
+
   // 3. Collected Inflows
   [...(globalData.library?.receivables ?? []), ...(globalData.library?.archivedReceivables ?? [])].forEach(r => {
     Object.entries(globalData.logs || {}).forEach(([monthKey, log]) => {
       const recLog = log.recsCollected?.[r.id];
 
       if (recLog && recLog.amountReceived > 0) {
+        const confirmed = resolveIncomeMonths(log, r.id, receiptIdCounts);
         let recordedAmount = 0;
         const settlements = log.receivableSettlements?.[r.id] ?? [];
         settlements.forEach((receipt, index) => {
@@ -67,6 +71,7 @@ export function buildTransactionHistory(
             title: r.name,
             amount: receipt.amount,
             date: receipt.receivedAt,
+            ...(receipt.id && confirmed.receipts.has(receipt.id) ? { confirmedIncomeMonth: confirmed.receipts.get(receipt.id) } : {}),
             type: "inflow",
             wallet: receipt.wallet ?? undefined,
             category: r.category
@@ -98,6 +103,7 @@ export function buildTransactionHistory(
           title: `${r.name}`,
           amount: legacyAmount,
           date: log.paymentDates?.[r.id] || txDate,
+          ...(confirmed.legacy ? { confirmedIncomeMonth: confirmed.legacy } : {}),
           type: "inflow",
           wallet: r.wallet || globalData?.settings?.defaultWallet || "main",
           category: r.category

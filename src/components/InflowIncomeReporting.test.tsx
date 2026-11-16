@@ -37,7 +37,7 @@ describe("yearly actual income and legacy presentation", () => {
     const d=fixture("Monthly");d.logs["November 2026"].receivableSettlements!.client[1].id="nov";
     render(<YearlyOverviewModal isOpen onClose={vi.fn()} globalData={d} selectedYear="2026" />);
     expect(screen.getByText("Collected: ₱0.00")).toBeInTheDocument();
-    expect(screen.getByText("Income history needs review. Some entries could not be included.")).toBeInTheDocument();
+    expect(screen.getByText("Income history needs review. Check receipt details before relying on this total.")).toBeInTheDocument();
   });
 
   it("does not show historical warnings on complete dated history",()=>{

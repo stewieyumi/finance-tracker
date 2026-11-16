@@ -144,8 +144,9 @@ TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}
 • ${targetMilestoneFund > 0
     ? `${globalData.settings?.goalName?.trim() || "Savings goal"}: ₱${fmt(globalData.wallets[globalData.settings?.milestoneWallet || "main"])} / ₱${fmt(targetMilestoneFund)} (${fundProgressPercent}%)`
     : "No savings goal set"}
-• Month Income Collected: ₱${fmt(incomeReport.actual)} (actual Inflows receipts)${incomeReport.historicalDateUnverified > 0 ? `
-• Historical income — date unverified: ₱${fmt(incomeReport.historicalDateUnverified)} (saved under this period; excluded from actual income)` : ""}${incomeReport.needsReview ? "\n• Income history needs review. Some entries could not be included." : ""}
+• Month Income Collected: ₱${fmt(incomeReport.actual)} (actual Inflows receipts)${incomeReport.confirmedMonthOnly ? `
+• Included with confirmed receipt month: ₱${fmt(incomeReport.confirmedMonthOnly)} (exact day unknown)` : ""}${incomeReport.historicalDateUnverified > 0 ? `
+• Historical income — date unverified: ₱${fmt(incomeReport.historicalDateUnverified)} (saved under this period; excluded from actual income)` : ""}${incomeReport.needsReview ? "\n• Income history needs review. Check receipt details before relying on this total." : ""}
 • Net Projected Position: ₱${fmt(netPosition)} ${netPosition >= 0 ? "(Surplus)" : "(Shortfall)"}
 ========================================`;
 }

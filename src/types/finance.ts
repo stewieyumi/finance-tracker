@@ -126,7 +126,20 @@ export interface ReceivableSettlement {
   reversedAt?: string;
 }
 
+/** A reviewed reporting correction; original receipt and wallet provenance stay unchanged. */
+export interface ConfirmedIncomeMonth {
+  month: string;
+  confirmedAt: string;
+  amount: number;
+}
+export type IncomeReceiptSource = Omit<ReceivableSettlement, "reversedAt">;
+export interface ReceivableIncomeMonths {
+  receipts?: Record<string, ConfirmedIncomeMonth & { source: IncomeReceiptSource }>;
+  legacy?: ConfirmedIncomeMonth & { paymentDate?: string; sourceReceipts: IncomeReceiptSource[] };
+}
+
 export interface MonthLog {
+  receivableIncomeMonths?: Record<string, ReceivableIncomeMonths>;
   receivableSettlements?: Record<string, ReceivableSettlement[]>;
   billsPaid?: string[];
   billSettlements?: Record<string, BillSettlement[]>;
@@ -236,6 +249,8 @@ export interface EditFormData {
 }
 
 export interface TransactionHistoryItem {
+  /** Derived from a guarded confirmation; never implies an exact receipt day. */
+  confirmedIncomeMonth?: string;
   loggedAt?: string;
   id: string;
   title: string;
