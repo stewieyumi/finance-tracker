@@ -207,6 +207,8 @@ export interface PaydayExecution {
 }
 
 export interface UnifiedFinanceData {
+  /** Last acknowledged expense change, retained after deletion to reject stale replay. */
+  expenseRevisions?: Record<string, string>;
   settings?: AppSettings;
   targetFund?: number;
   updatedAt?: number;

@@ -59,7 +59,9 @@ export function isValidFinanceBackup(data: unknown): data is UnifiedFinanceData 
     !isRecord(data.wallets) || !isRecord(data.library) ||
     !isRecord(data.logs) || !isRecord(data.settings)) return false;
 
-  return Object.values(data.wallets).every(isMoney) &&
+  return (data.expenseRevisions === undefined || (isRecord(data.expenseRevisions)
+      && Object.entries(data.expenseRevisions).every(([id, revision]) => id.trim() !== '' && typeof revision === 'string' && revision.trim() !== ''))) &&
+    Object.values(data.wallets).every(isMoney) &&
     Object.values(data.logs).every(isRecord) &&
     data.library.bills.every(bill => isIdentifiedRecord(bill) && isMoney(bill.amount)) &&
     data.library.receivables.every(receivable => isIdentifiedRecord(receivable) && isMoney(receivable.amount)) &&

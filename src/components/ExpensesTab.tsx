@@ -1,10 +1,12 @@
 import { compareTransactionsNewestFirst, formatTransactionDateTime } from "../utils/transactionDates";
 import { formatPHP, roundMoney } from "../utils/currency";
 import React, { useEffect, useId, useRef, useState } from "react";
-import { Camera, ScanLine, Plus, Receipt, Trash2, CheckCircle2, Upload, X } from "lucide-react";
+import { Camera, ScanLine, Plus, Receipt, Trash2, CheckCircle2, Upload, X, Edit2 } from "lucide-react";
 import { UnifiedFinanceData, Expense, ExpenseCategory, FinanceTransitionCommitter } from "../types/finance";
 import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
-import { getMonthKey, parseMonthKey } from "../utils/dateHelpers";
+import type { PaymentHistoryAction } from "../utils/paymentHistory";
+import { expenseMoneyIsLocked } from "../utils/expenseChanges";
+import { isValidDateKey, getMonthKey, parseMonthKey } from "../utils/dateHelpers";
 import { useExpenseActions } from "../hooks/useExpenseActions";
 import { useExpenseScanner } from "../hooks/useExpenseScanner";
 import { QUICK_EXPENSE_HASH } from "../constants/config";
@@ -21,7 +23,7 @@ interface ExpensesTabProps {
   selectedMonth?: string;
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
   commitExpenseTransition?: FinanceTransitionCommitter;
-  showToast: (msg: string) => void;
+  showToast: (msg: string, action?: PaymentHistoryAction) => void;
   walletLabels?: Record<string, string>;
 }
 
@@ -39,6 +41,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
 }) => {
   const expenseFormId = useId();
   const [showForm, setShowForm] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [editingRevision, setEditingRevision] = useState<string | null>(null);
   const [showScanOptions, setShowScanOptions] = useState(false);
   const [showPaste, setShowPaste] = useState(false);
   const [receiptText, setReceiptText] = useState("");
@@ -95,6 +99,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   const {
     handleSaveExpense,
     handleDeleteExpense,
+    handleEditExpense,
   } = useExpenseActions({
     globalData,
     setGlobalData,
@@ -109,6 +114,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
 
   const resetDraft = () => {
     hasDraft.current = false;
+    setEditingExpense(null);
+    setEditingRevision(null);
     setImportNote("");
     setForm({ merchant: "", amount: "", category: "Food & Dining", wallet: defaultWallet, date: getLocalToday() });
   };
@@ -119,6 +126,18 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
     resetDraft();
     setSaveError("");
     setShowForm(false);
+  };
+
+  const openExpenseEdit = (expense: Expense) => {
+    stopScanning();
+    closePaste();
+    setImportNote("");
+    setSaveError("");
+    setEditingExpense({ ...expense });
+    setEditingRevision(globalData.expenseRevisions?.[expense.id] ?? null);
+    setForm({ merchant: expense.merchant, amount: String(expense.amount), category: expense.category, wallet: expense.wallet, date: expense.date });
+    hasDraft.current = true;
+    setShowForm(true);
   };
 
   const createTextDraft = (event: React.FormEvent) => {
@@ -142,12 +161,18 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   };
 
   const expenses = [...(globalData.library?.expenses || [])].sort(compareTransactionsNewestFirst);
-  const duplicate = showForm ? findPossibleDuplicateExpense(expenses, form) : undefined;
+  const duplicate = showForm ? findPossibleDuplicateExpense(expenses.filter(expense => expense.id !== editingExpense?.id), form) : undefined;
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (isScanning) return;
-    if (duplicate && !window.confirm("A saved expense has the same merchant, amount, and date. Save this as a separate expense?")) return;
+    if (duplicate && !window.confirm(editingExpense
+      ? "Another saved expense has the same merchant, amount, and date. Save these changes anyway?"
+      : "A saved expense has the same merchant, amount, and date. Save this as a separate expense?")) return;
+    if (editingExpense) {
+      handleEditExpense(editingExpense, form, closeExpense, setSaveError, editingRevision);
+      return;
+    }
 
     handleSaveExpense(
       form,
@@ -164,6 +189,10 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   const customWallets = globalData.settings?.customWallets || [];
 
   const allWallets = customWallets || [];
+  const moneyLocked = Boolean(editingExpense && expenseMoneyIsLocked(editingExpense));
+  const originalWalletLabel = editingExpense && (allWallets.find(wallet => wallet.id === editingExpense.wallet)?.label
+    || globalData.settings?.archivedWallets?.find(wallet => wallet.id === editingExpense.wallet)?.label
+    || globalData.settings?.walletLabels?.[editingExpense.wallet] || editingExpense.wallet);
 
   const totalSpent = expenses.reduce((total, expense) => total + expense.amount, 0);
   const month = parseMonthKey(selectedMonth);
@@ -237,7 +266,10 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                     <div className="flex flex-col items-end shrink-0 ml-2">
                       <div className="flex items-center gap-2">
                         <span className="privacy-blur text-[13px] font-bold font-mono text-strong">-₱{exp.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                        <button onClick={() => handleDelete(exp)} aria-label="Delete expense" className="text-faint hover:text-rose-400 transition p-1 bg-inverse/[0.03] hover:bg-rose-500/10 rounded-lg">
+                        <button type="button" onClick={() => openExpenseEdit(exp)} aria-label={`Edit expense at ${exp.merchant}`} className="min-h-9 min-w-9 rounded-lg bg-fill p-2 text-muted transition hover:bg-fill-strong hover:text-primary">
+                          <Edit2 size={13} />
+                        </button>
+                        <button type="button" onClick={() => handleDelete(exp)} aria-label="Delete expense" className="text-faint hover:text-rose-400 transition p-1 bg-inverse/[0.03] hover:bg-rose-500/10 rounded-lg">
                           <Trash2 size={13} />
                         </button>
                       </div>
@@ -294,11 +326,14 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
               <div className={entryDialogStyles.header}>
                 <div className="flex min-w-0 items-center gap-3">
                   <span className={entryDialogStyles.icon}><Receipt size={18} aria-hidden="true" /></span>
-                  <h2 id="expense-form-title" className="text-sm font-semibold text-strong">Log Expense</h2>
+                  <h2 id="expense-form-title" className="text-sm font-semibold text-strong">{editingExpense ? "Edit Expense" : "Log Expense"}</h2>
                 </div>
                 <button type="button" aria-label="Cancel" onClick={closeExpense} className={entryDialogStyles.close}><X size={18} aria-hidden="true" /></button>
               </div>
 
+              {editingExpense && <p className="mb-3 text-xs text-muted">{moneyLocked
+                ? "This entry has a separate wallet deduction. You can update its details; amount and wallet changes need review."
+                : "Saving adjusts only the difference in your wallets. You can undo the change from Payment history."}</p>}
               {saveError && <p role="alert" className="mb-3 rounded-lg bg-fill px-3 py-2 text-sm text-primary">{saveError}</p>}
               {importNote && <p role="status" className="mb-3 text-sm text-muted">{importNote}</p>}
               {duplicate && <p role="status" className="mb-3 rounded-lg bg-fill px-3 py-2 text-sm text-primary">Possible duplicate. A saved expense has the same merchant, amount, and date.</p>}
@@ -331,7 +366,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                     <label htmlFor={`${expenseFormId}-amount`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Amount (₱)</label>
                     <div className="relative">
                       <span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-lg text-muted">₱</span>
-                      <input id={`${expenseFormId}-amount`} type="number" inputMode="decimal" min="0.01" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="0.00" className={entryDialogStyles.amount} required />
+                      <input id={`${expenseFormId}-amount`} disabled={moneyLocked} type="number" inputMode="decimal" min="0.01" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="0.00" className={entryDialogStyles.amount} required />
                     </div>
                   </div>
                   <div className="col-span-2 min-w-0">
@@ -340,7 +375,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                   </div>
                   <div className="min-w-0">
                     <label htmlFor={`${expenseFormId}-date`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Date</label>
-                    <input id={`${expenseFormId}-date`} type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full min-w-0 appearance-none bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-2 sm:px-3 py-2.5 text-[11px] text-strong min-h-11 box-border" required />
+                    <input id={`${expenseFormId}-date`} type="date" value={form.date} required={!editingExpense || isValidDateKey(editingExpense.date)} onChange={e => setForm({...form, date: e.target.value})} className="w-full min-w-0 appearance-none bg-surface-input border border-strong focus:border-emerald-500/50 rounded-xl px-2 sm:px-3 py-2.5 text-[11px] text-strong min-h-11 box-border" />
                   </div>
                   <div className="min-w-0">
                     <label htmlFor={`${expenseFormId}-category`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Category</label>
@@ -351,27 +386,29 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                         setForm(prev => ({
                           ...prev,
                           category,
-                          wallet: getDefaultExpenseWalletId(category, globalData.settings, globalData.wallets)
+                          wallet: editingExpense ? prev.wallet : getDefaultExpenseWalletId(category, globalData.settings, globalData.wallets)
                         }));
                       }}
                       className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-strong min-h-11 box-border"
                     >
+                      {!EXPENSE_CATEGORIES.includes(form.category as ExpenseCategory) && <option value={form.category}>{form.category}</option>}
                       {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                   <div className="col-span-2 min-w-0">
                     <label htmlFor={`${expenseFormId}-wallet`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Deduct From</label>
-                    <select id={`${expenseFormId}-wallet`} value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-primary font-semibold uppercase min-h-11 box-border">
+                    <select id={`${expenseFormId}-wallet`} disabled={moneyLocked} value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-primary font-semibold uppercase min-h-11 box-border">
+                      {editingExpense && !allWallets.some(wallet => wallet.id === editingExpense.wallet) && <option value={editingExpense.wallet} disabled>{originalWalletLabel}</option>}
                       {allWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                     </select>
                   </div>
                 </div>
 
-                <button type="button" aria-haspopup="dialog" onClick={() => setShowPaste(true)} className="min-h-11 rounded-lg px-2 text-xs font-medium text-muted hover:bg-fill hover:text-primary">
+                {!editingExpense && <button type="button" aria-haspopup="dialog" onClick={() => setShowPaste(true)} className="min-h-11 rounded-lg px-2 text-xs font-medium text-muted hover:bg-fill hover:text-primary">
                   Paste receipt text
-                </button>
+                </button>}
                 <button type="submit" disabled={isScanning} className={`${entryDialogStyles.primary} w-full`}>
-                  <CheckCircle2 size={14} /> Save & Deduct
+                  <CheckCircle2 size={14} /> {editingExpense ? "Save Changes" : "Save & Deduct"}
                 </button>
               </fieldset>
             </form>

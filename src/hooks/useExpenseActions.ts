@@ -4,6 +4,10 @@ import {
   Expense,
   FinanceTransitionCommitter
 } from "../types/finance";
+import type { PaymentHistoryAction } from "../utils/paymentHistory";
+import { applyExpenseEdit, applyExpenseReplay, expenseCents, makeExpenseChange, validExpenseRevisions } from "../utils/expenseChanges";
+import type { ExpenseChange, ExpenseForm, ExpenseTransitionResult } from "../utils/expenseChanges";
+export type { ExpenseForm, ExpenseTransitionResult } from "../utils/expenseChanges";
 import { generateId } from "../utils/idHelpers";
 import {
   applyWalletTransaction,
@@ -13,32 +17,21 @@ import {
   resolveWalletRoutingOrReject
 } from "../utils/financeHelpers";
 
-export interface ExpenseForm {
-  merchant: string;
-  amount: string;
-  category: string;
-  wallet: string;
-  date: string;
-}
-
 interface UseExpenseActionsProps {
   globalData: UnifiedFinanceData;
   setGlobalData?: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
   commitExpenseTransition?: FinanceTransitionCommitter;
-  showToast: (msg: string) => void;
+  showToast: (msg: string, action?: PaymentHistoryAction) => void;
 }
-
-export type ExpenseTransitionResult =
-  | { ok: true; data: UnifiedFinanceData; expense?: Expense; refundAmount?: number }
-  | { ok: false; error: string; data: UnifiedFinanceData };
 
 export function applyExpenseSave(
   prev: UnifiedFinanceData,
   form: ExpenseForm,
   loggedAt: string
 ): ExpenseTransitionResult {
-  const amount = parseFloat(form.amount);
-  if (!form.merchant || isNaN(amount) || amount <= 0) {
+  if (!validExpenseRevisions(prev)) return { ok: false, data: prev, error: "Expense history needs review." };
+  const amount = Number(form.amount);
+  if (!form.merchant.trim() || expenseCents(amount) === null || amount <= 0) {
     return { ok: false, error: "Invalid merchant or amount.", data: prev };
   }
 
@@ -75,10 +68,12 @@ export function applyExpenseSave(
     -amount
   );
 
+  const change = makeExpenseChange(prev, undefined, newExpense, 0);
   return {
     ok: true,
     data: {
       ...prev,
+      expenseRevisions: { ...prev.expenseRevisions, [newExpense.id]: change.id },
       wallets: nextWallets,
       library: {
         ...prev.library,
@@ -87,17 +82,21 @@ export function applyExpenseSave(
       updatedAt: Date.now(),
     },
     expense: newExpense,
+    change,
   };
 }
 
 export function applyExpenseDelete(
   prev: UnifiedFinanceData,
-  exp: Expense
+  exp: Expense,
+  expectedRevision: string | null = prev.expenseRevisions?.[exp.id] ?? null
 ): ExpenseTransitionResult {
+  if (!validExpenseRevisions(prev)) return { ok: false, data: prev, error: "Expense history needs review." };
   const matches = (prev.library.expenses || []).filter(entry => entry.id === exp.id);
   if (matches.length !== 1) {
     return { ok: false, error: "This expense no longer exists or its ID is duplicated.", data: prev };
   }
+  if ((prev.expenseRevisions?.[exp.id] ?? null) !== expectedRevision) return { ok: false, data: prev, error: "This expense has newer history. Review it before deleting." };
   const current = matches[0];
   const fields: Array<keyof Expense> = [
     "id", "merchant", "amount", "deductedAmount", "wallet", "category", "date", "loggedAt",
@@ -129,10 +128,12 @@ export function applyExpenseDelete(
     nextWallets[current.wallet] = finalCents / 100;
   }
 
+  const change = makeExpenseChange(prev, current, undefined, (prev.library.expenses || []).findIndex(entry => entry.id === current.id));
   return {
     ok: true,
     data: {
       ...prev,
+      expenseRevisions: { ...prev.expenseRevisions, [current.id]: change.id },
       wallets: nextWallets,
       library: {
         ...prev.library,
@@ -141,6 +142,7 @@ export function applyExpenseDelete(
       updatedAt: Date.now(),
     },
     refundAmount,
+    change,
   };
 }
 
@@ -166,6 +168,31 @@ export function useExpenseActions({
       return transition(globalData);
     }
     return { ok: false, error: "No state updater or transition committer provided.", data: globalData } as unknown as T;
+  };
+
+  const showExpenseChange = (message: string, change?: ExpenseChange, label: "Undo" | "Redo" = "Undo") => {
+    // Legacy setter-only consumers cannot acknowledge a mutation. The app supplies an authoritative committer.
+    if (!change || !commitExpenseTransition) { showToast(message); return; }
+    let available = true;
+    showToast(message, {
+      label, paymentId: change.id,
+      description: `expense at ${(change.after ?? change.before)!.merchant}`,
+      onClick: () => {
+        if (!available) { showToast("This expense action was already applied."); return; }
+        const result = executeTransition(prev => applyExpenseReplay(prev, change, label));
+        if (!result.ok) { showToast(result.error); return; }
+        available = false;
+        showExpenseChange(`Expense change ${label === "Undo" ? "undone" : "reapplied"}.`, change, label === "Undo" ? "Redo" : "Undo");
+      },
+    });
+  };
+
+  const handleEditExpense = (expense: Expense, form: ExpenseForm, onSuccess: () => void, onError = showToast, expectedRevision?: string | null) => {
+    if (!commitExpenseTransition) { onError("Expense editing is unavailable until the account is ready."); return; }
+    const result = executeTransition(prev => applyExpenseEdit(prev, expense, form, expectedRevision));
+    if (!result.ok) { onError(result.error); return; }
+    showExpenseChange("Expense updated.", result.change);
+    onSuccess();
   };
 
   const handleSaveExpense = useCallback(
@@ -205,7 +232,7 @@ export function useExpenseActions({
         return;
       }
 
-      showToast(`Logged ₱${amount} & deducted from wallet`);
+      showExpenseChange(`Logged ₱${amount} & deducted from wallet`, outcome.change);
       onSuccess();
       resetForm();
     },
@@ -214,6 +241,7 @@ export function useExpenseActions({
 
   const handleDeleteExpense = useCallback(
     (exp: Expense) => {
+      const expectedRevision = globalData.expenseRevisions?.[exp.id] ?? null;
       const refundAmount = exp.deductedAmount ?? exp.amount;
 
       if (
@@ -225,7 +253,7 @@ export function useExpenseActions({
       }
 
       const outcome = executeTransition(prev =>
-        applyExpenseDelete(prev, exp)
+        applyExpenseDelete(prev, exp, expectedRevision)
       );
 
       if (!outcome.ok) {
@@ -233,7 +261,7 @@ export function useExpenseActions({
         return;
       }
 
-      showToast("Expense deleted and refunded.");
+      showExpenseChange("Expense deleted and refunded.", outcome.change);
     },
     [globalData, setGlobalData, commitExpenseTransition, showToast]
   );
@@ -241,5 +269,6 @@ export function useExpenseActions({
   return {
     handleSaveExpense,
     handleDeleteExpense,
+    handleEditExpense,
   };
 }
