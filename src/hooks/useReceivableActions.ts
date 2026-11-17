@@ -90,7 +90,7 @@ export function applyReceiptReplay(
   if (isRedo) {
     const current = prev.library.receivables.find(item => item.id === id);
     if (
-      !current ||
+      !current || current.amountUnspecified ||
       current.amount !== receivable.amount ||
       current.frequency !== receivable.frequency ||
       current.date !== receivable.date ||
@@ -162,7 +162,7 @@ function isCurrentReceivable(
   const matches = prev.library.receivables.filter(item => item.id === receivable.id);
   const current = matches[0];
   if (
-    matches.length !== 1 || current.amount !== receivable.amount ||
+    matches.length !== 1 || current.amountUnspecified || receivable.amountUnspecified || current.amount !== receivable.amount ||
     current.wallet !== receivable.wallet || current.frequency !== receivable.frequency ||
     current.date !== receivable.date || current.startMonth !== receivable.startMonth ||
     current.monthlyDay !== receivable.monthlyDay ||
@@ -503,6 +503,7 @@ export function useReceivableActions({
   const addReceivable = (receivable: {
     name: string;
     amount: number;
+    amountUnspecified?: boolean;
     category: ReceivableCategory;
     frequency: ReceivableFrequency;
     biMonthlyDays?: number[];
@@ -510,17 +511,19 @@ export function useReceivableActions({
     date?: string;
     wallet?: string;
   }) => {
-    if (receivable.frequency === "By Date" && !isValidDateKey(receivable.date)) {
+    if (receivable.frequency === "By Date" && receivable.date?.trim() && !isValidDateKey(receivable.date)) {
       showToast("Please enter a valid date for this inflow.");
       return;
     }
 
-    if (receivable.frequency === "No Specific Date" && (!isInflowMoney(receivable.amount) || receivable.amount <= 0)) {
+    const frequency = receivable.frequency === "By Date" && !receivable.date?.trim() ? "No Specific Date" : receivable.frequency;
+    if (!receivable.name.trim() || !isInflowMoney(receivable.amount) ||
+        (receivable.amountUnspecified ? receivable.amount !== 0 : receivable.amount <= 0)) {
       showToast("Enter a valid amount greater than zero.");
       return;
     }
 
-    if (receivable.frequency === "No Specific Date" && !isInflowMonth(selectedMonth)) {
+    if (frequency === "No Specific Date" && !isInflowMonth(selectedMonth)) {
       showToast("Choose a valid starting month for this inflow.");
       return;
     }
@@ -530,13 +533,14 @@ export function useReceivableActions({
         id: generateId("r"),
         name: receivable.name.trim(),
         amount: receivable.amount,
+        amountUnspecified: receivable.amountUnspecified || undefined,
         category: receivable.category || "Other",
-        frequency: receivable.frequency,
+        frequency,
         wallet: receivable.wallet,
         biMonthlyDays: receivable.frequency === "Bi-monthly" ? receivable.biMonthlyDays || [15, 30] : [],
         monthlyDay: receivable.frequency === "Monthly" ? receivable.monthlyDay || 15 : undefined,
         date: receivable.frequency === "By Date" ? receivable.date || "" : "",
-        startMonth: receivable.frequency === "By Date" ? "" : selectedMonth
+        startMonth: frequency === "By Date" ? "" : selectedMonth
       };
       return {
         ok: true,

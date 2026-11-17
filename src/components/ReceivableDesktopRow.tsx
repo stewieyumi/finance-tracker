@@ -38,8 +38,8 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
   return (
     <tr
       data-testid={`receivable-desktop-row-${rec.id}`}
-      onClick={rec.collected || rec.needsScheduleReview ? undefined : () => onToggleStatus(rec)}
-      className={`group transition-all duration-150 ${rec.collected || rec.needsScheduleReview ? "" : "cursor-pointer"} ${
+      onClick={rec.collected || rec.needsScheduleReview || rec.amountUnspecified ? undefined : () => onToggleStatus(rec)}
+      className={`group transition-all duration-150 ${rec.collected || rec.needsScheduleReview || rec.amountUnspecified ? "" : "cursor-pointer"} ${
         rec.collected ? "opacity-45" : "hover:bg-inverse/[0.02]"
       }`}
     >
@@ -50,7 +50,7 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
             e.stopPropagation();
             onToggleStatus(rec);
           }}
-          disabled={rec.needsScheduleReview}
+          disabled={rec.needsScheduleReview || rec.amountUnspecified}
           aria-label={
             rec.collected
               ? `Undo received payment for ${rec.name}`
@@ -89,10 +89,7 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
       >
         <div>
           <div>
-            ₱
-            {rec.amount.toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-            })}
+            {rec.amountUnspecified ? "—" : `₱${rec.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
           </div>
           {isPartial ? (
             <div className="space-y-0.5 mt-0.5">
@@ -104,7 +101,7 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
               </div>
             </div>
           ) : (
-            isBiMonthly && !rec.collected && (
+            isBiMonthly && !rec.collected && !rec.amountUnspecified && (
               <div className="text-[9px] text-faint font-mono font-normal">
                 ₱{(rec.amount / 2).toLocaleString()}/payout
               </div>
@@ -148,7 +145,7 @@ export const ReceivableDesktopRow: React.FC<ReceivableDesktopRowProps> = ({
             </span>
           )}
           {rec.frequency === "No Specific Date" && (
-            <span className={rec.needsScheduleReview ? "chip-amber rounded px-1.5 py-0.5 text-xs" : "text-muted"}>{rec.needsScheduleReview ? "Inflow history needs review" : `No specific date · Since ${rec.startMonth}`}</span>
+            <span aria-label={rec.needsScheduleReview ? "Inflow history needs review" : "No specific date"} title={`No specific date · Since ${rec.startMonth}`} className={rec.needsScheduleReview ? "chip-amber rounded px-1.5 py-0.5 text-xs" : "text-muted"}>{rec.needsScheduleReview ? "Inflow history needs review" : "—"}</span>
           )}
           {rec.frequency === "Monthly" && (
             <span className="text-muted text-[11px]">

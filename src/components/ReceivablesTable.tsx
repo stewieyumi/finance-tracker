@@ -21,7 +21,7 @@ interface ReceivablesTableProps {
   selectedMonth: string;
   onToggleStatus: (rec: ReceivableViewModel) => void;
   onAddPayment: (rec: ReceivableViewModel, amt: number, paydayDay?: number) => void;
-  onAddReceivable: (rec: { name: string; amount: number; category: ReceivableCategory; frequency: ReceivableFrequency; biMonthlyDays?: number[]; monthlyDay?: number; date?: string; wallet?: string; }) => void;
+  onAddReceivable: (rec: { name: string; amount: number; amountUnspecified?: boolean; category: ReceivableCategory; frequency: ReceivableFrequency; biMonthlyDays?: number[]; monthlyDay?: number; date?: string; wallet?: string; }) => void;
   onDeleteReceivable: (id: string) => void;
   onSaveEdit: (category: "receivables") => void;
   editingId: string | null;
@@ -78,19 +78,20 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const amountUnspecified = !newReceivable.amount.trim();
     const amount = roundMoney(Number(newReceivable.amount));
     const monthlyAmount = newReceivable.frequency === "Bi-monthly" ? roundMoney(amount * 2) : amount;
-    if (!newReceivable.name.trim() || !Number.isFinite(monthlyAmount) || monthlyAmount <= 0) return;
+    if (!newReceivable.name.trim() || !Number.isFinite(monthlyAmount) || (!amountUnspecified && monthlyAmount <= 0)) return;
     if (newReceivable.frequency === "Bi-monthly" && !isValidTwiceMonthlySchedule(newReceivable.biMonthlyDays)) {
       alert("Choose two different days for a twice-monthly inflow.");
       return;
     }
-    if (newReceivable.frequency === "By Date" && !isValidDateKey(newReceivable.date)) {
+    if (newReceivable.frequency === "By Date" && newReceivable.date.trim() && !isValidDateKey(newReceivable.date)) {
       alert("Please enter a valid date for this inflow.");
       return;
     }
     onAddReceivable({
-      name: newReceivable.name, amount: monthlyAmount, category: newReceivable.category, frequency: newReceivable.frequency,
+      name: newReceivable.name, amount: monthlyAmount, amountUnspecified: amountUnspecified || undefined, category: newReceivable.category, frequency: newReceivable.frequency,
       biMonthlyDays: newReceivable.frequency === "Bi-monthly" ? newReceivable.biMonthlyDays : undefined, monthlyDay: newReceivable.frequency === "Monthly" ? newReceivable.monthlyDay : undefined,
       date: newReceivable.frequency === "By Date" ? newReceivable.date : undefined, wallet: newReceivable.wallet
     });
@@ -101,6 +102,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
   const handleStartEdit = (rec: ReceivableViewModel) => { setEditingId(rec.id); setEditForm({ ...rec }); setPayPopoverId(null); };
   const handleCancelEdit = () => { setEditingId(null); setEditForm({}); };
   const handlePaymentStatus = (rec: ReceivableViewModel) => {
+    if (rec.amountUnspecified) return;
     if (rec.frequency !== "Bi-monthly" || rec.collected || rec.amount <= 0) {
       onToggleStatus(rec);
       return;
@@ -190,6 +192,8 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = React.memo(({
           </button>
         </div>
       </div>
+
+      {activeReceivables.some(r => r.amountUnspecified) && <p className="mb-3 text-xs text-muted">Inflows shown as — have no amount yet and are excluded from totals. Use Edit to add details.</p>}
 
       {/* Pay-period selector: [ All ] [ 1–15 ] [ 16–31 ] */}
       <div className="flex items-center gap-1 bg-surface-lowest border border-inverse/[0.05] p-1 rounded-xl mb-3.5 max-w-fit">

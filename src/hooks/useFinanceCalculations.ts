@@ -289,7 +289,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
     const balance = getSafeWalletBalance(globalData?.wallets?.[milestoneKey], 0);
     return ((balance / targetMilestoneFund) * 100).toFixed(1);
   }, [globalData?.wallets, globalData?.settings, targetMilestoneFund]);
-  const totalPendingReceivables = useMemo(() => activeReceivables.filter(r => !r.collected).reduce((a, c) => a + Math.max(0, (parseFloat(String(c.amount)) || 0) - (parseFloat(String(c.amountReceived)) || 0)), 0), [activeReceivables]);
+  const totalPendingReceivables = useMemo(() => activeReceivables.filter(r => !r.collected && !r.amountUnspecified).reduce((a, c) => a + Math.max(0, (parseFloat(String(c.amount)) || 0) - (parseFloat(String(c.amountReceived)) || 0)), 0), [activeReceivables]);
   const incomeReport = useMemo(() => readInflowIncome(globalData, selectedMonth), [globalData, selectedMonth]);
   const monthIncomeCollected = incomeReport.actual;
   const totalUnpaidCommitments = useMemo(() => activeBills.filter(b => !b.paid).reduce((a, c) => a + (parseFloat(String(c.amount)) || 0), 0), [activeBills]);

@@ -63,6 +63,7 @@ export default function ReceivableAddModal({
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
+          <p className="text-xs text-muted">Amount and date are optional. Leave them blank and edit later.</p>
           <div>
             <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
               Inflow Name
@@ -90,12 +91,11 @@ export default function ReceivableAddModal({
                 value={newReceivable.amount}
                 onChange={(e) => onChange({ ...newReceivable, amount: e.target.value })}
                 min="0.01"
-                placeholder="0.00"
+                placeholder="—"
                 className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-strong outline-none focus:border-emerald-500"
-                required
               />
               {newReceivable.frequency === "Bi-monthly" && (
-                <p className="mt-1 text-xs text-muted">Monthly total: {formatPHP(roundMoney(Number(newReceivable.amount)) * 2)}</p>
+                <p className="mt-1 text-xs text-muted">Monthly total: {newReceivable.amount.trim() ? formatPHP(roundMoney(Number(newReceivable.amount)) * 2) : "—"}</p>
               )}
             </div>
 
@@ -251,7 +251,6 @@ export default function ReceivableAddModal({
                   value={newReceivable.date}
                   onChange={(e) => onChange({ ...newReceivable, date: e.target.value })}
                   className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
-                  required
                 />
               </div>
             )}

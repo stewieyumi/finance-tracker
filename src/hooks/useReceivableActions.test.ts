@@ -476,7 +476,7 @@ describe("useReceivableActions - payment mutations", () => {
     expect(record?.amountReceived).toBe(0);
   });
 
-  it("rejects adding a By Date inflow when date is missing or invalid", () => {
+  it("rejects adding a By Date inflow with a supplied invalid date", () => {
     const harness = createStateHarness(createTestData());
     const mockShowToast = vi.fn();
 
@@ -495,7 +495,7 @@ describe("useReceivableActions - payment mutations", () => {
         amount: 5000,
         category: "Shoot",
         frequency: "By Date",
-        date: "",
+        date: "2026-02-30",
       });
     });
 

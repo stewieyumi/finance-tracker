@@ -971,7 +971,7 @@ describe("useReceivableSaveActions - persistence and financial safety", () => {
     expect(thirdEvaluation.data).toBe(initialData);
   });
 
-  it("rejects saving By Date inflow when date is missing or invalid", () => {
+  it("rejects removing the scheduled date when the inflow already has receipt history", () => {
     const harness = createStateHarness(createTestData());
     const setEditingId = vi.fn();
     const showToast = vi.fn();
@@ -997,7 +997,7 @@ describe("useReceivableSaveActions - persistence and financial safety", () => {
 
     expect(setEditingId).not.toHaveBeenCalled();
     expect(showToast).toHaveBeenCalledWith(
-      "Please enter a valid date for this inflow."
+      "This inflow has recorded receipt history. Its scheduled date or frequency cannot be changed."
     );
   });
 

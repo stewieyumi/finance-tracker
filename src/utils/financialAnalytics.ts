@@ -123,7 +123,7 @@ export function calculateCashflowMomentum(
           parseFloat(String(receivable.amount)) || 0
         );
 
-        if (amount <= 0) {
+        if (receivable.amountUnspecified || amount <= 0) {
           return sum;
         }
 

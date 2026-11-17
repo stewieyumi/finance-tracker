@@ -1,5 +1,5 @@
 import { isInflowMonth, isInflowMoney } from "../utils/noDateInflows";
-import { isValidTwiceMonthlySchedule, isValidDateKey } from "../utils/dateHelpers";
+import { isValidTwiceMonthlySchedule, isValidDateKey, getMonthKey } from "../utils/dateHelpers";
 import {
   EditFormData,
   MonthLog,
@@ -38,7 +38,8 @@ export function applyReceivableEdit(
   prev: UnifiedFinanceData,
   editingId: string,
   editForm: EditFormData,
-  inputAmount: number
+  inputAmount: number,
+  selectedMonth = getMonthKey(new Date())
 ): ReceivableTransitionResult {
   const existingItem = prev.library?.receivables?.find(item => item.id === editingId);
   if (!existingItem) {
@@ -46,16 +47,32 @@ export function applyReceivableEdit(
   }
 
   const currentFrequency = existingItem.frequency;
-  const newFrequency = editForm.frequency ?? currentFrequency;
+  const hasHistory = hasReceivablePaymentHistory(prev.logs, editingId);
+  const requestedFrequency = editForm.frequency ?? currentFrequency;
   const currentDate = existingItem.date || "";
-  const newDate = editForm.date !== undefined ? String(editForm.date) : currentDate;
+  const newDate = editForm.date !== undefined ? String(editForm.date).trim() : currentDate;
+  // A newly blank one-time date uses the existing single-occurrence no-date flow.
+  // Preserve an undated legacy record's frequency when it already has receipts.
+  const newFrequency = requestedFrequency === "By Date" && !newDate &&
+    !(currentFrequency === "By Date" && !currentDate && hasHistory)
+      ? "No Specific Date" : requestedFrequency;
+  const amountUnspecified = editForm.amountUnspecified === true;
+  if (amountUnspecified && hasHistory) {
+    return { ok: false, error: "This inflow has recorded receipt history. Its amount cannot be left blank.", data: prev };
+  }
+  if (!String(editForm.name ?? existingItem.name).trim() || !isInflowMoney(inputAmount) ||
+      (amountUnspecified ? inputAmount !== 0 : inputAmount <= 0)) {
+    return { ok: false, error: "Enter a valid inflow name and amount, or leave the amount blank.", data: prev };
+  }
+  if (newFrequency === "By Date" && newDate && !isValidDateKey(newDate)) {
+    return { ok: false, error: "Please enter a valid date for this inflow.", data: prev };
+  }
 
   const dateChanged = (currentFrequency === "By Date" || newFrequency === "By Date") && newDate !== currentDate;
   const frequencyChanged = newFrequency !== currentFrequency;
-  const newStartMonth = String(editForm.startMonth ?? existingItem.startMonth ?? "");
-  if (newFrequency === "No Specific Date" && (!isInflowMoney(inputAmount) || inputAmount <= 0)) {
-    return { ok: false, error: "Enter a valid amount greater than zero.", data: prev };
-  }
+  const newStartMonth = newFrequency === "No Specific Date" && currentFrequency !== "No Specific Date"
+    ? String(editForm.startMonth || existingItem.startMonth || selectedMonth)
+    : String(editForm.startMonth ?? existingItem.startMonth ?? "");
   if (newFrequency === "No Specific Date" && !isInflowMonth(newStartMonth)) {
     return { ok: false, error: "Choose a valid starting month for this inflow.", data: prev };
   }
@@ -67,7 +84,7 @@ export function applyReceivableEdit(
     (currentFrequency !== "By Date" && newFrequency === "By Date") ||
     frequencyChanged || noDateAnchorChanged;
 
-  if (touchesScheduleOrFrequency && hasReceivablePaymentHistory(prev.logs, editingId)) {
+  if (touchesScheduleOrFrequency && hasHistory) {
     return {
       ok: false,
       error: noDateAnchorChanged
@@ -84,7 +101,8 @@ export function applyReceivableEdit(
       id: item.id,
       name: String(editForm.name ?? item.name).trim(),
       amount: inputAmount,
-      grossAmount:
+      amountUnspecified: amountUnspecified || undefined,
+      grossAmount: amountUnspecified ? undefined :
         editForm.grossAmount !== undefined
           ? Math.max(0, Number(editForm.grossAmount) || 0)
           : item.grossAmount,
@@ -107,12 +125,12 @@ export function applyReceivableEdit(
           : undefined,
       date:
         newFrequency === "By Date"
-          ? String(editForm.date ?? item.date ?? "")
+          ? newDate
           : "",
       startMonth:
         newFrequency === "By Date"
           ? ""
-          : String(editForm.startMonth ?? item.startMonth ?? "")
+          : newStartMonth
     };
 
     return updatedReceivable;
@@ -137,6 +155,7 @@ interface UseReceivableSaveActionsParams {
   editForm: EditFormData;
   setEditingId: React.Dispatch<React.SetStateAction<string | null>>;
   showToast: (message: string) => void;
+  selectedMonth?: string;
 }
 
 export function useReceivableSaveActions({
@@ -144,7 +163,8 @@ export function useReceivableSaveActions({
   editingId,
   editForm,
   setEditingId,
-  showToast
+  showToast,
+  selectedMonth
 }: UseReceivableSaveActionsParams) {
   const saveReceivableEdit = (): boolean => {
     if (!editingId) return false;
@@ -153,7 +173,7 @@ export function useReceivableSaveActions({
       showToast("Choose two different days for a twice-monthly inflow.");
       return false;
     }
-    if (editForm.frequency === "By Date" && !isValidDateKey(editForm.date)) {
+    if (editForm.frequency === "By Date" && editForm.date?.trim() && !isValidDateKey(editForm.date)) {
       showToast("Please enter a valid date for this inflow.");
       return false;
     }
@@ -163,12 +183,12 @@ export function useReceivableSaveActions({
         ? calculateNetSalary(editForm.grossAmount, editForm.deductions)
         : parseFloat(String(editForm.amount ?? ""));
 
-    if (!Number.isFinite(inputAmount) || inputAmount <= 0) {
+    if (!Number.isFinite(inputAmount) || (editForm.amountUnspecified ? inputAmount !== 0 : inputAmount <= 0)) {
       showToast("Amount must be greater than 0");
       return false;
     }
 
-    const outcome = commitReceivableTransition(prev => applyReceivableEdit(prev, editingId, editForm, inputAmount));
+    const outcome = commitReceivableTransition(prev => applyReceivableEdit(prev, editingId, editForm, inputAmount, selectedMonth));
 
     if (!outcome.ok) {
       showToast(outcome.error);

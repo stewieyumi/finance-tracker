@@ -49,6 +49,7 @@ export function buildFinancialSummary({
     });
 
   const totalPendingAmount = pending.reduce((acc, r) => {
+    if (r.amountUnspecified) return acc;
     const rec = parseFloat(String(r.amountReceived)) || 0;
 
     return acc + Math.max(
@@ -114,6 +115,7 @@ export function buildFinancialSummary({
               ? (r.biMonthlyDays && r.biMonthlyDays.length > 0 ? r.biMonthlyDays.map(formatOrdinal).join(" & ") : "15th & 30th")
               : `Monthly (Day ${r.monthlyDay || 15})`;
 
+        if (r.amountUnspecified) return `  • ${r.name} [${cat} | ${freqInfo}]: — (amount not set)`;
         return rec > 0
           ? `  • ${r.name} [${cat} | ${freqInfo}]: ₱${fmt(rem)} remaining (₱${fmt(rec)} collected of ₱${fmt(r.amount)})`
           : `  • ${r.name} [${cat} | ${freqInfo}]: ₱${fmt(r.amount)}`;
@@ -138,7 +140,7 @@ TOTAL UNPAID BILLS: ₱${fmt(totalUnpaidCommitments)}
 3. PENDING ${globalData?.settings?.inflowsLabel?.toUpperCase() || 'RECEIVABLES & INFLOWS'} (${pending.length} pending)
 ${recLines}
 ----------------------------------------
-TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}
+TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}${pending.some(r => r.amountUnspecified) ? " (excludes inflows with no amount)" : ""}
 
 4. GOAL TRACKING & NET OUTLOOK
 • ${targetMilestoneFund > 0

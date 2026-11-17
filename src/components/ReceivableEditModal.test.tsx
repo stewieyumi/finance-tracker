@@ -261,7 +261,7 @@ describe("ReceivableEditModal — Gross / Deductions Integration", () => {
     );
   });
 
-  it("9. Save triggers onSave and onCancel without re-emitting unedited form data", () => {
+  it("9. Save triggers onSave without prematurely closing before acknowledgement", () => {
     const editForm: EditFormData = {
       id: "rec-1",
       name: "Consulting Retainer",
@@ -289,7 +289,7 @@ describe("ReceivableEditModal — Gross / Deductions Integration", () => {
     fireEvent.click(saveBtn);
 
     expect(onSave).toHaveBeenCalled();
-    expect(onCancel).toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
   });
 
   it("10. Existing collection log is NOT modified when receivable gross/deductions are edited", () => {
@@ -390,7 +390,7 @@ describe("ReceivableEditModal — Gross / Deductions Integration", () => {
     fireEvent.click(saveBtn);
 
     expect(onSave).toHaveBeenCalled();
-    expect(onCancel).toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
     // onChange must NOT be called on save without explicit edits
     expect(onChange).not.toHaveBeenCalled();
     expect(editForm.grossAmount).toBeUndefined();

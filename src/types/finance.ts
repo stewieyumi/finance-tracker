@@ -67,6 +67,8 @@ export interface BillViewModel extends Bill {
 }
 
 export interface Receivable {
+  /** Unknown expected amount; numeric zero is a compatibility placeholder, never a receipt. */
+  amountUnspecified?: boolean;
   id: string;
   name: string;
   amount: number;
@@ -225,6 +227,7 @@ export interface UnifiedFinanceData {
 }
 
 export interface EditFormData {
+  amountUnspecified?: boolean;
   id?: string;
   name?: string;
   title?: string;
