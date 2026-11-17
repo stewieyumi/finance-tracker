@@ -45,3 +45,25 @@ password in their Apple Account. See [Apple's setup instructions](https://suppor
 Before release, test real iCloud authentication, calendar creation, ETag/MOVE
 behavior, disconnect/reconnect, and isolation between two Finance Tracker users.
 Local fixture tests simulate the provider and do not establish live iCloud support.
+
+
+## Redis sync integration checks
+
+Run `npm run test:sync-redis` after installing Redis server and CLI from the
+[official Redis installation instructions](https://redis.io/docs/latest/operate/oss_and_stack/install/install-redis/).
+Use `REDIS_SERVER_BIN` and `REDIS_CLI_BIN` if the binaries are outside PATH.
+The command fails if Redis is unavailable; it never connects to a configured
+cloud database. CI runs these checks after `npm run verify`.
+
+Each suite launches its own temporary Redis with TCP disabled, a private Unix
+socket and persistence disabled, then stops it and removes its temporary files.
+The handler's real Lua is executed through a test transport; Google token checks
+and browser storage/broadcast are fixtures. No provider credentials, personal
+finance records or running Redis service are used.
+
+Coverage includes competing writers, unchanged data after stale rejection,
+legacy/malformed envelopes, revision limits, account isolation, pending reload
+recovery (including a failed primary storage write), explicit conflict choices,
+and a lost response after an accepted save. This validates local Redis semantics;
+it does not certify a particular hosted provider's HTTP transport or live sign-in.
+Ordinary `npm test` explicitly skips these opt-in suites.

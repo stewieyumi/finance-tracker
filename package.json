@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:api-runtime": "node scripts/check-api-runtime.mjs",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.api.json",
-    "verify": "npm run typecheck && npm run lint -- --quiet && npm run test:api-runtime && vitest run && vite build && git diff --check"
+    "verify": "npm run typecheck && npm run lint -- --quiet && npm run test:api-runtime && vitest run && vite build && git diff --check",
+    "test:sync-redis": "node scripts/test-sync-redis.mjs"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",

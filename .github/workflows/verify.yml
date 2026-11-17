@@ -22,3 +22,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run verify
+      - name: Install Redis for isolated integration tests
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y redis-server
+      - run: npm run test:sync-redis
