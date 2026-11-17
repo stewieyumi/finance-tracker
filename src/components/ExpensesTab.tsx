@@ -8,6 +8,9 @@ import type { PaymentHistoryAction } from "../utils/paymentHistory";
 import { expenseMoneyIsLocked } from "../utils/expenseChanges";
 import { isValidDateKey, getMonthKey, parseMonthKey } from "../utils/dateHelpers";
 import { useExpenseActions } from "../hooks/useExpenseActions";
+import { ReceiptReview } from "./ReceiptReview";
+import type { ReceiptTransferDraft } from "./ReceiptReview";
+import type { ScanResult } from "../hooks/useExpenseScanner";
 import { useExpenseScanner } from "../hooks/useExpenseScanner";
 import { QUICK_EXPENSE_HASH } from "../constants/config";
 import { findPossibleDuplicateExpense, readReceiptDraft } from "../utils/receiptDraft";
@@ -25,6 +28,7 @@ interface ExpensesTabProps {
   commitExpenseTransition?: FinanceTransitionCommitter;
   showToast: (msg: string, action?: PaymentHistoryAction) => void;
   walletLabels?: Record<string, string>;
+  onReceiptTransfer?: (draft: ReceiptTransferDraft) => void;
 }
 
 const getLocalToday = () => {
@@ -37,10 +41,12 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   setGlobalData,
   commitExpenseTransition,
   showToast,
+  onReceiptTransfer,
   selectedMonth = getMonthKey(new Date())
 }) => {
   const expenseFormId = useId();
   const [showForm, setShowForm] = useState(false);
+  const [receiptReview, setReceiptReview] = useState<ScanResult | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [editingRevision, setEditingRevision] = useState<string | null>(null);
   const [showScanOptions, setShowScanOptions] = useState(false);
@@ -84,14 +90,15 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
     if (showForm) {
       expensePanelRef.current?.closest<HTMLElement>('[role="dialog"]')?.focus();
     }
-  }, [showForm, showPaste, quickEntryCount]);
+  }, [showForm, showPaste, quickEntryCount, receiptReview]);
 
   const { isScanning, failure, retryScan, fileInputRef, handleCapture, stopScanning } = useExpenseScanner({
     showToast,
     globalData,
-    onScanStart: () => { setSaveError(""); setShowForm(true); },
+    onScanStart: () => { setReceiptReview(null); setSaveError(""); setShowForm(true); },
     onScanComplete: (result) => {
       hasDraft.current = true;
+      if (result.review) { setReceiptReview(result); return; }
       setForm(prev => ({ ...prev, ...result }));
     },
   });
@@ -114,6 +121,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
 
   const resetDraft = () => {
     hasDraft.current = false;
+    setReceiptReview(null);
     setEditingExpense(null);
     setEditingRevision(null);
     setImportNote("");
@@ -194,11 +202,16 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
     || globalData.settings?.archivedWallets?.find(wallet => wallet.id === editingExpense.wallet)?.label
     || globalData.settings?.walletLabels?.[editingExpense.wallet] || editingExpense.wallet);
 
-  const totalSpent = expenses.reduce((total, expense) => total + expense.amount, 0);
+  const transferFees = (globalData.library.manualTransactions ?? []).filter(tx => tx.type === 'transfer' &&
+    typeof tx.transferFee === 'number' && Number.isFinite(tx.transferFee) && tx.transferFee > 0);
+  const feeTotal = roundMoney(transferFees.reduce((sum, tx) => sum + tx.transferFee!, 0));
+  const totalSpent = roundMoney(expenses.reduce((total, expense) => total + expense.amount, 0) + feeTotal);
   const month = parseMonthKey(selectedMonth);
   const monthPrefix = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}-`;
   const monthExpenses = expenses.filter(expense => expense.date.startsWith(monthPrefix));
-  const monthTotal = monthExpenses.reduce((total, expense) => total + expense.amount, 0);
+  const monthFeeTransactions = transferFees.filter(tx => tx.date.startsWith(monthPrefix));
+  const monthFeeTotal = roundMoney(monthFeeTransactions.reduce((sum, tx) => sum + tx.transferFee!, 0));
+  const monthTotal = roundMoney(monthExpenses.reduce((total, expense) => total + expense.amount, 0) + monthFeeTotal);
 
   return (
     <>
@@ -209,7 +222,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
             <div className="min-w-0">
               <h2 id="expenses-month" className="text-sm font-semibold text-muted">{selectedMonth} Spending</h2>
               <p className="privacy-blur mt-1 break-words font-mono text-2xl font-bold text-strong">{formatPHP(monthTotal)}</p>
-              <p className="mt-1 text-xs text-muted">{monthExpenses.length} {monthExpenses.length === 1 ? "expense" : "expenses"}</p>
+              <p className="mt-1 text-xs text-muted">{monthExpenses.length} {monthExpenses.length === 1 ? "expense" : "expenses"}{monthFeeTransactions.length > 0 ? ` · ${monthFeeTransactions.length} transfer ${monthFeeTransactions.length === 1 ? "fee" : "fees"}` : ""}</p>
+              {monthFeeTotal > 0 && <p className="mt-1 text-xs text-muted">Includes <span className="privacy-blur">{formatPHP(monthFeeTotal)}</span> in transfer fees. Transfers stay out of spending.</p>}
             </div>
             <button type="button" aria-haspopup="dialog" onClick={() => setShowForm(true)} className="shrink-0 rounded-lg bg-fill px-3 py-2 text-xs font-medium text-primary hover:bg-fill-strong">Log Expense</button>
           </div>
@@ -240,6 +254,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
             <span className="privacy-blur text-xs text-muted">All time: {formatPHP(totalSpent)}</span>
           </div>
 
+          {feeTotal > 0 && <p className="mb-3 text-xs text-muted">All-time spending includes transfer fees. Review those entries in Transaction History → Manage Ledger.</p>}
           <div className="overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle">
             {expenses.length === 0 ? (
               <div className="py-8 text-center text-faint text-xs italic">No expenses logged yet. Tap scan or manual to start tracking.</div>
@@ -305,12 +320,19 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
       <Modal
         isOpen={showForm}
         onClose={showPaste ? closePaste : closeExpense}
-        ariaLabelledBy={showPaste ? "paste-expense-title" : "expense-form-title"}
+        ariaLabel={receiptReview ? "Review receipt" : undefined}
+        ariaLabelledBy={receiptReview ? undefined : showPaste ? "paste-expense-title" : "expense-form-title"}
         closeOnBackdropClick={false}
         manageFocus
       >
         <div ref={expensePanelRef} className={`${entryDialogStyles.card} max-w-md`}>
-          {showPaste ? (
+          {receiptReview ? <ReceiptReview result={receiptReview} onCancel={closeExpense}
+            onExpense={(result, fee) => {
+              setForm({ merchant: result.merchant, amount: String((Math.round(Number(result.amount) * 100) + Math.round(fee * 100)) / 100),
+                date: result.date, category: result.category, wallet: result.wallet });
+              setImportNote(fee > 0 ? `Includes a ${formatPHP(fee)} transaction fee. Check the total and wallet before saving.` : 'Check the details and wallet before saving.');
+              setReceiptReview(null);
+            }} onTransfer={onReceiptTransfer ? draft => { onReceiptTransfer(draft); closeExpense(); } : undefined} /> : showPaste ? (
             <form onSubmit={createTextDraft} className="space-y-4">
               <h2 id="paste-expense-title" className="text-base font-semibold text-primary">Paste receipt text</h2>
               <p id="receipt-text-help" className="text-sm text-muted">Paste the purchase details from a receipt, email, or SMS. Any fields you already filled in stay as they are.</p>

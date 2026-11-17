@@ -68,7 +68,7 @@ export function countIncomeReceiptIds(logs: UnifiedFinanceData["logs"]): Map<str
 
 /** Invalid/stale confirmations never override source dates or promote a legacy balance. */
 export function resolveIncomeMonths(log: MonthLog, id: string, idCounts: Map<string, number>) {
-  const result = { receipts: new Map<string, string>(), legacy: undefined as string | undefined, needsReview: false };
+  const result = { receipts: new Map<string, string>(), dates: new Map<string, string>(), legacy: undefined as string | undefined, legacyDate: undefined as string | undefined, needsReview: false };
   const map: unknown = log.receivableIncomeMonths;
   if (map === undefined) return result;
   if (!record(map)) return { ...result, needsReview: true };
@@ -78,7 +78,8 @@ export function resolveIncomeMonths(log: MonthLog, id: string, idCounts: Map<str
   const rows = log.receivableSettlements?.[id] ?? [];
   if (!Array.isArray(rows)) return { ...result, needsReview: true };
   const valid = (v: unknown): v is RecordValue => record(v) && isInflowMonth(v.month) &&
-    !!receiptDate(v.confirmedAt, false) && isInflowMoney(v.amount) && v.amount > 0;
+    !!receiptDate(v.confirmedAt, false) && isInflowMoney(v.amount) && v.amount > 0 &&
+    (v.date === undefined || (typeof v.date === "string" && isValidDateKey(v.date) && getMonthKey(parseDateKey(v.date)) === v.month));
   if (correction.receipts !== undefined) {
     if (!record(correction.receipts)) result.needsReview = true;
     else for (const [receiptId, value] of Object.entries(correction.receipts)) {
@@ -90,6 +91,7 @@ export function resolveIncomeMonths(log: MonthLog, id: string, idCounts: Map<str
         result.needsReview = true; continue;
       }
       result.receipts.set(receiptId, value.month as string);
+      if (typeof value.date === "string") result.dates.set(receiptId, value.date);
     }
   }
   if (correction.legacy !== undefined) {
@@ -108,7 +110,7 @@ export function resolveIncomeMonths(log: MonthLog, id: string, idCounts: Map<str
         value.paymentDate !== log.paymentDates?.[id] || !expected || sources.some(s => !s) || expected.some(s => !s) ||
         sources.some(source => source?.id && idCounts.get(source.id) !== 1) ||
         JSON.stringify(sources) !== JSON.stringify(expected)) result.needsReview = true;
-    else result.legacy = value.month as string;
+    else { result.legacy = value.month as string; if (typeof value.date === "string") result.legacyDate = value.date; }
   }
   return result;
 }
@@ -184,7 +186,7 @@ export function readInflowIncome(
         recordedCents += cents;
         const correctedMonth = typeof row.id === "string" ? confirmed.receipts.get(row.id) : undefined;
         if (correctedMonth) {
-          if (matches(correctedMonth)) { datedCents += cents; receiptConfirmedCents += cents; }
+          if (matches(correctedMonth)) { datedCents += cents; if (!confirmed.dates.has(row.id as string)) receiptConfirmedCents += cents; }
           continue;
         }
         const date = receiptDate(row.receivedAt, kind !== "No Specific Date");
@@ -196,7 +198,7 @@ export function readInflowIncome(
       actualCents += datedCents;
       confirmedCents += receiptConfirmedCents;
       const residual = cachedCents - recordedCents;
-      if (confirmed.legacy && matches(confirmed.legacy)) { actualCents += residual; confirmedCents += residual; }
+      if (confirmed.legacy && matches(confirmed.legacy)) { actualCents += residual; if (!confirmed.legacyDate) confirmedCents += residual; }
       const unverified = (confirmed.legacy ? 0 : residual) + undatedCents;
       if (bucketMatches) historicalCents += unverified;
       else if (!month && unverified > 0) flag(rows);

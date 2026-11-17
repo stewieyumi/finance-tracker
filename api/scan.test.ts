@@ -8,7 +8,7 @@ vi.mock("../server/financeSession", () => ({
   readFinanceSession: session,
 }));
 const image = "data:image/jpeg;base64," + Buffer.from("fixture-image").toString("base64");
-const receipt = { merchant: "Sample Cafe", amount: 150.25, category: "Food & Dining", date: "2026-11-06" };
+const receipt = { merchant: "Sample Cafe", amount: 150.25, category: "Food & Dining", date: "2026-11-06", transactionKind: "expense", fee: 0, source: "", destination: "" };
 const providerResponse = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
 const candidate = (value: unknown) => ({ candidates: [{ content: { parts: [{ text: JSON.stringify(value) }] } }] });
 async function call(body: unknown = { image }, headers: VercelApiRequest["headers"] = { "x-finance-session": "fixture" }, method = "POST") {
@@ -130,4 +130,22 @@ describe("receipt scanner API", () => {
     vi.mocked(fetch).mockResolvedValueOnce(providerResponse(candidate({ ...receipt, date: "2026-02-30", category: "Unknown" })));
     expect(await call()).toMatchObject({ status: 200, body: { parsed: { date: "", category: "Other" } } });
   });
+  it.each([
+    ["MariBank", 778, 0, "G-Xchange / GCash"],
+    ["GCash", 100, 0, "GCash"],
+    ["GoTyme", 2000, 0, "GoTyme"],
+    ["BPI", 4357, 0, "Maya"],
+    ["Bank", 1500, 10, "GCash"],
+  ])("preserves principal and fee separately for synthetic %s provider responses", async (source, amount, fee, destination) => {
+    vi.mocked(fetch).mockResolvedValueOnce(providerResponse(candidate({ ...receipt, transactionKind: "transfer", source, destination, amount, fee })));
+    expect(await call()).toMatchObject({ status: 200, body: { parsed: { transactionKind: "transfer", source, destination, amount, fee } } });
+    const prompt = JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]!.body)).contents[0].parts[0].text;
+    expect(prompt).toContain("never decide whether either account belongs to the user");
+    expect(prompt).toContain("avoid counting that fee twice");
+  });
+  it.each([-1, null, "10", 0.001, Infinity, 10000001])("treats unclear/invalid fee %s as unknown rather than zero", async fee => {
+    vi.mocked(fetch).mockResolvedValueOnce(providerResponse(candidate({ ...receipt, fee, transactionKind: "strange" })));
+    expect(await call()).toMatchObject({ status: 200, body: { parsed: { fee: null, transactionKind: "unknown" } } });
+  });
+
 });

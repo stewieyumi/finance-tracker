@@ -150,6 +150,7 @@ vi.mock("./hooks/usePaydayActions", () => ({
 const renderedDashboardTargetFunds: number[] = [];
 let lastLandingOnGoogleSuccess: ((res: any) => void) | null = null;
 let lastAccountOnGoogleLogout: (() => void) | null = null;
+let lastReceiptLedgerProps: any;
 
 vi.mock("./components/DashboardTab", () => ({
   DashboardTab: (props: any) => {
@@ -159,7 +160,7 @@ vi.mock("./components/DashboardTab", () => ({
 }));
 vi.mock("./components/OperationsTab", () => ({ OperationsTab: () => <div data-testid="ops-tab" /> }));
 vi.mock("./components/WalletsTab", () => ({ WalletsTab: (props: any) => <div data-testid="wallets-tab"><button onClick={props.onTransfer}>Transfer</button></div> }));
-vi.mock("./components/ExpensesTab", () => ({ ExpensesTab: () => <div data-testid="expenses-tab" /> }));
+vi.mock("./components/ExpensesTab", () => ({ ExpensesTab: (props: any) => <div data-testid="expenses-tab"><button onClick={() => props.onReceiptTransfer({ amount: "100", fee: "1", date: "2026-11-01", source: "Synthetic bank", destination: "Synthetic wallet" })}>Review scanned transfer</button></div> }));
 vi.mock("./components/AccountTab", () => ({
   AccountTab: (props: any) => {
     lastAccountOnGoogleLogout = props.onGoogleLogout;
@@ -177,6 +178,7 @@ vi.mock("./components/BottomNav", () => ({
     <div data-testid="bottom-nav">
       <button data-testid="nav-account" onClick={() => props.onChange("account")} />
       <button data-testid="nav-wallets" onClick={() => props.onChange("wallets")} />
+      <button data-testid="nav-expenses" onClick={() => props.onChange("expenses")} />
     </div>
   ),
 }));
@@ -187,7 +189,7 @@ vi.mock("./components/DateJumpModal", () => ({ DateJumpModal: () => null }));
 vi.mock("./components/YearlyOverviewModal", () => ({ YearlyOverviewModal: () => null }));
 vi.mock("./components/FinancialAnalyticsModal", () => ({ FinancialAnalyticsModal: () => null }));
 vi.mock("./components/SettingsModal", () => ({ SettingsModal: () => null }));
-vi.mock("./components/HistoricalLedgerModal", () => ({ HistoricalLedgerModal: (props: any) => <div data-testid="ledger-modal" data-initial-type={props.initialType ?? "list"}><button onClick={props.onClose}>Close ledger</button></div> }));
+vi.mock("./components/HistoricalLedgerModal", () => ({ HistoricalLedgerModal: (props: any) => { lastReceiptLedgerProps = props; return <div data-testid="ledger-modal" data-initial-type={props.initialType ?? "list"}><button onClick={props.onClose}>Close ledger</button></div>; } }));
 vi.mock("./components/ErrorBoundary", () => ({
   ErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -285,6 +287,24 @@ describe("App — Google session recovery", () => {
     fireEvent.click(screen.getByRole("button", { name: "Manage Ledger" }));
     expect(await screen.findByTestId("ledger-modal")).toHaveAttribute("data-initial-type", "list");
     expect(mockCommitDataChange).toHaveBeenCalledTimes(initialCommitCount);
+  });
+
+  it("binds a scanned transfer to the originating account before rendering or committing it", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByTestId("nav-expenses"));
+    fireEvent.click(await screen.findByRole("button", { name: "Review scanned transfer" }));
+    expect(await screen.findByTestId("ledger-modal")).toHaveAttribute("data-initial-type", "transfer");
+    const captured = lastReceiptLedgerProps;
+    expect(captured.initialReceipt.amount).toBe("100");
+    const tokenB = "header." + btoa(JSON.stringify({ sub: "user_456" })) + ".sig";
+    store.ft_google_token = tokenB;
+    store.ft_google_user = JSON.stringify({ sub: "user_456", name: "Other fixture user" });
+    store.ft_master_data_v1_user_456 = store.ft_master_data_v1_user_123;
+    const transition = vi.fn();
+    expect(captured.commitLedgerTransition(transition)).toMatchObject({ ok: false, error: expect.stringMatching(/account changed/i) });
+    expect(transition).not.toHaveBeenCalled();
+    await act(async () => { window.dispatchEvent(new StorageEvent("storage", { key: "ft_google_token", newValue: tokenB })); });
+    expect(screen.queryByTestId("ledger-modal")).not.toBeInTheDocument();
   });
 
   it.each(['form', 'dialog'])("preserves an open %s when the update banner is pressed", async kind => {
