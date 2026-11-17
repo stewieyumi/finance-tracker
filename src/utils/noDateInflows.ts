@@ -21,7 +21,7 @@ export function noDateInflowState(data: UnifiedFinanceData, rec: Receivable, sel
   const validAnchor = isInflowMonth(month) && isInflowMonth(selectedMonth);
   const record = data.logs?.[month]?.recsCollected?.[rec.id];
   const received = record?.amountReceived ?? 0;
-  const validAmount = isInflowMoney(rec.amount) && rec.amount > 0;
+  const validAmount = rec.amountUnspecified ? rec.amount === 0 : isInflowMoney(rec.amount) && rec.amount > 0;
   const validReceived = isInflowMoney(received);
   const rows = data.logs?.[month]?.receivableSettlements?.[rec.id];
   const receipts = Array.isArray(rows) ? rows : [];
@@ -36,8 +36,9 @@ export function noDateInflowState(data: UnifiedFinanceData, rec: Receivable, sel
   const matchesReceipts = validReceived && Number.isSafeInteger(receiptCents) && receiptCents === Math.round(received * 100);
   const otherOccurrence = Object.entries(data.logs || {}).some(([key, log]) => key !== month &&
     (!!log?.recsCollected?.[rec.id] || !!log?.receivableSettlements?.[rec.id]?.length));
-  const valid = validAnchor && validAmount && validReceived && validReceipts && matchesReceipts && !otherOccurrence;
-  const collected = valid && received >= rec.amount;
+  const valid = validAnchor && validAmount && validReceived && validReceipts && matchesReceipts && !otherOccurrence &&
+    (!rec.amountUnspecified || (received === 0 && receipts.length === 0 && !record?.collected));
+  const collected = valid && !rec.amountUnspecified && received >= rec.amount;
   return {
     month, valid, collected,
     amountReceived: validReceived ? received : 0,

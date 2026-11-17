@@ -19,7 +19,7 @@ export const ReceivablePaymentActions: React.FC<ReceivablePaymentActionsProps> =
 
   return (
     <>
-      {!rec.collected && !rec.needsScheduleReview && (
+      {!rec.collected && !rec.needsScheduleReview && !rec.amountUnspecified && (
         <>
           <button
             type="button"

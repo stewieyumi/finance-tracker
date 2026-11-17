@@ -168,7 +168,7 @@ export function deriveNotifications(
         id: `pending_rec_${r.id}_${targetMonthForDue}`,
         type: "pending_receivable",
         title: `Pending: ${r.name}`,
-        message: `${r.name} (₱${r.amount.toLocaleString()}) is ${dueText}.`,
+        message: `${r.name} (${r.amountUnspecified ? "—" : `₱${r.amount.toLocaleString()}`}) is ${dueText}.`,
         amount: r.amount,
         actionRoute: "operations/inflows",
         targetId: r.id,

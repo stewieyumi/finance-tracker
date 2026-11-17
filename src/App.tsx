@@ -531,6 +531,7 @@ const { saveBillEdit } = useBillSaveActions({
 });
 
 const { saveReceivableEdit } = useReceivableSaveActions({
+  selectedMonth,
   commitReceivableTransition: syncedCommitReceivableTransition,
   editingId,
   editForm,

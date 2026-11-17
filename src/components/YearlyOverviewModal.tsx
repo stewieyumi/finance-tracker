@@ -77,6 +77,7 @@ const fallbackStartMonth = getMonthKey(new Date());
       });
 
       receivables.forEach(r => {
+        if (r.amountUnspecified) return;
         const amt = parseFloat(String(r.amount)) || 0;
         if (r.frequency === "Monthly" || r.frequency === "Bi-monthly") {
           if (monthDate >= parseMonthKey(r.startMonth || fallbackStartMonth)) {

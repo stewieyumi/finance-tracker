@@ -292,7 +292,7 @@ describe("ReceivablesTable - list, filtering, and interaction wiring", () => {
     expect(screen.getAllByText("Needs Date").length).toBeGreaterThan(0);
   });
 
-  it("validates date in the submit handler when adding a By Date inflow", () => {
+  it("allows the scheduled date to remain blank when adding an inflow", () => {
     const onAddReceivable = vi.fn();
     const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
 
@@ -303,13 +303,13 @@ describe("ReceivablesTable - list, filtering, and interaction wiring", () => {
     fireEvent.change(screen.getByPlaceholderText(/e\.g\. Salary, Client Payment/i), {
       target: { value: "New By Date Inflow" },
     });
-    fireEvent.change(screen.getByPlaceholderText("0.00"), {
+    fireEvent.change(screen.getByPlaceholderText("—"), {
       target: { value: "5000" },
     });
     // Frequency is "By Date" by default in newReceivable state, but date is empty
     fireEvent.click(screen.getByRole("button", { name: /add inflow/i }));
 
-    expect(onAddReceivable).not.toHaveBeenCalled();
+    expect(onAddReceivable).toHaveBeenCalledWith(expect.objectContaining({ name: "New By Date Inflow", amount: 5000, date: "" }));
     alertMock.mockRestore();
   });
 });
@@ -326,7 +326,7 @@ describe("one-time no-date inflow controls", () => {
     expect(within(dialog).getByText(/Starts September 2026/)).toBeInTheDocument();
     expect(dialog.querySelector('input[type="date"]')).toBeNull();
     fireEvent.change(within(dialog).getByPlaceholderText("e.g. Salary, Client Payment"), { target: { value: "Undated client" } });
-    fireEvent.change(within(dialog).getByPlaceholderText("0.00"), { target: { value: "5000" } });
+    fireEvent.change(within(dialog).getByPlaceholderText("—"), { target: { value: "5000" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Add Inflow" }));
     expect(add).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ name: "Undated client", frequency: "No Specific Date", amount: 5000, date: undefined }));
   });
@@ -334,7 +334,7 @@ describe("one-time no-date inflow controls", () => {
   it("shows the anchor on both layouts and explains how to leave half-month filtering", () => {
     renderReceivablesTable([noDate()]);
     for (const layout of ["mobile", "desktop"]) {
-      expect(within(screen.getByTestId(`receivable-${layout}-row-rec-test-1`)).getByText(/No specific date · Since September 2026/)).toBeInTheDocument();
+      expect(within(screen.getByTestId(`receivable-${layout}-row-rec-test-1`)).getByLabelText("No specific date")).toBeInTheDocument();
     }
     fireEvent.click(screen.getByRole("button", { name: "1–15" }));
     expect(screen.queryByText("Undated client")).not.toBeInTheDocument();

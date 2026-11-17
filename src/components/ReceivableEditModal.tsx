@@ -64,11 +64,13 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
   const netAmount = calculateNetSalary(currentGross, currentDeductions);
 
   const handleGrossChange = (valStr: string) => {
-    const parsed = valStr === "" ? 0 : parseFloat(valStr);
+    const amountUnspecified = !valStr.trim();
+    const parsed = amountUnspecified ? 0 : parseFloat(valStr);
     const nextGross = isNaN(parsed) ? 0 : Math.max(0, parsed);
     const nextNet = calculateNetSalary(nextGross, currentDeductions);
     onChange({
       ...editForm,
+      amountUnspecified: amountUnspecified || undefined,
       grossAmount: nextGross,
       deductions: currentDeductions,
       amount: nextNet,
@@ -120,7 +122,6 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
 
   const handleSave = () => {
     onSave();
-    onCancel();
   };
 
   return (
@@ -178,9 +179,9 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                 inputMode="decimal"
                 step="0.01"
                 min="0"
-                value={editForm.grossAmount !== undefined ? editForm.grossAmount : (editForm.amount ?? "")}
+                value={editForm.amountUnspecified ? "" : editForm.grossAmount !== undefined ? editForm.grossAmount : (editForm.amount ?? "")}
                 onChange={(e) => handleGrossChange(e.target.value)}
-                placeholder="0.00"
+                placeholder="—"
                 className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-strong outline-none focus:border-emerald-500"
               />
             </div>
@@ -278,10 +279,7 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                     data-testid="receivable-gross-display"
                     className="text-xs font-mono font-bold text-strong mt-0.5"
                   >
-                    ₱{currentGross.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {editForm.amountUnspecified ? "—" : `₱${currentGross.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   </div>
                 </div>
                 <div>
@@ -292,10 +290,7 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                     data-testid="receivable-deductions-display"
                     className="text-xs font-mono font-bold text-negative mt-0.5"
                   >
-                    -₱{totalDeductions.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {editForm.amountUnspecified ? "—" : `-₱${totalDeductions.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   </div>
                 </div>
                 <div>
@@ -306,10 +301,7 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                     data-testid="receivable-net-display"
                     className="text-xs font-mono font-bold text-positive mt-0.5"
                   >
-                    ₱{netAmount.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {editForm.amountUnspecified ? "—" : `₱${netAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   </div>
                 </div>
               </div>
@@ -490,7 +482,6 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                     onChange({ ...editForm, date: e.target.value })
                   }
                   className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
-                  required
                 />
               </div>
             )}
