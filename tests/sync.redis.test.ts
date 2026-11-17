@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { startTestRedis } from '../tests/redisHarness';
-import handler from './sync';
+import { startTestRedis } from './redisHarness';
+import handler from '../api/sync';
 
 // Only the HTTP transport is replaced: the handler's exact Lua executes in real Redis.
 const bridge = vi.hoisted(() => ({ command: undefined as undefined | ((...args: Array<string | number>) => Promise<any>) }));
