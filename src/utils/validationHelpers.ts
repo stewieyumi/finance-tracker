@@ -69,5 +69,7 @@ export function isValidFinanceBackup(data: unknown): data is UnifiedFinanceData 
     (data.library.expenses === undefined || (Array.isArray(data.library.expenses) &&
       data.library.expenses.every(expense => isIdentifiedRecord(expense) && isMoney(expense.amount)))) &&
     (data.library.manualTransactions === undefined || (Array.isArray(data.library.manualTransactions) &&
-      data.library.manualTransactions.every(entry => isIdentifiedRecord(entry) && isMoney(entry.amount))));
+      data.library.manualTransactions.every(entry => isIdentifiedRecord(entry) && isMoney(entry.amount) &&
+        (entry.transferFee === undefined || (entry.type === 'transfer' && isMoney(entry.transferFee) && entry.transferFee >= 0 &&
+          Number.isSafeInteger(Math.round(entry.transferFee * 100)) && Math.abs(entry.transferFee * 100 - Math.round(entry.transferFee * 100)) <= 1e-6)))));
 }

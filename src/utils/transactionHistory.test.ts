@@ -266,6 +266,7 @@ describe("buildTransactionHistory", () => {
     expect(buildTransactionHistory(data)).toEqual([
       {
         id: "mt-1_dest",
+        isTransfer: true,
         loggedAt: "1970-01-01T00:00:00.100Z",
         title: "Move money (Receive)",
         amount: 500,
@@ -276,6 +277,7 @@ describe("buildTransactionHistory", () => {
       },
       {
         id: "mt-1",
+        isTransfer: true,
         loggedAt: "1970-01-01T00:00:00.100Z",
         title: "Move money",
         amount: -500,

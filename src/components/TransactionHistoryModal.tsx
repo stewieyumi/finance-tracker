@@ -33,7 +33,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
   onOpenManualLedger
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<string>("ALL");
-  const [selectedType, setSelectedType] = useState<"all" | "inflow" | "expense" | "bill">("all");
+  const [selectedType, setSelectedType] = useState<"all" | "inflow" | "expense" | "bill" | "transfer">("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [displayLimit, setDisplayLimit] = useState<number>(PAGE_SIZE);
 
@@ -98,8 +98,9 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
       }
 
       // Type filter
-      if (selectedType !== "all") {
-        if (tx.type !== selectedType) {
+      if (selectedType === "transfer" && !tx.isTransfer) return false;
+      if (selectedType !== "all" && selectedType !== "transfer") {
+        if (tx.isTransfer || tx.type !== selectedType) {
           return false;
         }
       }
@@ -122,8 +123,9 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
 
   // Counts for filter pills
   const typeCounts = useMemo(() => {
-    const counts = { all: transactions.length, inflow: 0, expense: 0, bill: 0 };
+    const counts = { all: transactions.length, inflow: 0, expense: 0, bill: 0, transfer: 0 };
     transactions.forEach(tx => {
+      if (tx.isTransfer) { counts.transfer++; return; }
       if (tx.type === "inflow") counts.inflow++;
       else if (tx.type === "expense") counts.expense++;
       else if (tx.type === "bill") counts.bill++;
@@ -136,6 +138,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
     let inflows = 0;
     let outflows = 0;
     filteredTransactions.forEach(tx => {
+      if (tx.isTransfer) return;
       if (tx.amount > 0) inflows += tx.amount;
       else outflows += Math.abs(tx.amount);
     });
@@ -280,6 +283,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
             >
               All ({typeCounts.all})
             </button>
+            <button type="button" onClick={() => setSelectedType("transfer")} className={`min-h-9 rounded-xl border px-3 py-1.5 font-semibold whitespace-nowrap ${selectedType === "transfer" ? "bg-fill-strong border-strong text-primary" : "bg-surface-input border-strong text-muted"}`}>Transfers ({typeCounts.transfer})</button>
             <button
               type="button"
               onClick={() => setSelectedType("inflow")}

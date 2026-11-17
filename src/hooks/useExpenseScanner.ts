@@ -13,7 +13,8 @@ function recordScannerStatus(status: number | "invalid-response" | "network-erro
   }
 }
 
-interface ScanResult {
+export interface ScanResult {
+  review?: { kind: "expense" | "transfer" | "unknown"; fee: number | null; source: string; destination: string; dateKnown: boolean };
   merchant: string;
   amount: string;
   category: string;
@@ -211,9 +212,17 @@ export function useExpenseScanner({
       retryPhoto.current = null;
       onScanComplete({
         merchant, amount: String(amount), category, date,
+        review: {
+          kind: parsed.transactionKind === "expense" || parsed.transactionKind === "transfer" ? parsed.transactionKind : "unknown",
+          fee: typeof parsed.fee === "number" && Number.isFinite(parsed.fee) && parsed.fee >= 0 && parsed.fee <= 10_000_000
+            && Math.abs(Math.round(parsed.fee * 100) - parsed.fee * 100) < 0.000001 ? parsed.fee : null,
+          source: typeof parsed.source === "string" ? parsed.source.trim().slice(0, 80) : "",
+          destination: typeof parsed.destination === "string" ? parsed.destination.trim().slice(0, 80) : "",
+          dateKnown: Boolean(dateValue && date === parsed.date),
+        },
         wallet: getDefaultExpenseWalletId(category, globalData.settings, globalData.wallets),
       });
-      showToast("✨ Receipt scanned successfully! Review and tap Save & Deduct.");
+      showToast("Receipt scanned. Review the type, amount, fee and date before saving.");
     } catch {
       if (isCurrent()) {
         recordScannerStatus("network-error");

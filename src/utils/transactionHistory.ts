@@ -70,8 +70,8 @@ export function buildTransactionHistory(
             id: `${r.id}_${monthKey}_receipt_${receipt.id ?? index}`,
             title: r.name,
             amount: receipt.amount,
-            date: receipt.receivedAt,
-            ...(receipt.id && confirmed.receipts.has(receipt.id) ? { confirmedIncomeMonth: confirmed.receipts.get(receipt.id) } : {}),
+            date: receipt.id && confirmed.dates.has(receipt.id) ? confirmed.dates.get(receipt.id)! : receipt.receivedAt,
+            ...(receipt.id && confirmed.receipts.has(receipt.id) && !confirmed.dates.has(receipt.id) ? { confirmedIncomeMonth: confirmed.receipts.get(receipt.id) } : {}),
             type: "inflow",
             wallet: receipt.wallet ?? undefined,
             category: r.category
@@ -102,8 +102,8 @@ export function buildTransactionHistory(
           id: `${r.id}_${monthKey}`,
           title: `${r.name}`,
           amount: legacyAmount,
-          date: log.paymentDates?.[r.id] || txDate,
-          ...(confirmed.legacy ? { confirmedIncomeMonth: confirmed.legacy } : {}),
+          date: confirmed.legacyDate || log.paymentDates?.[r.id] || txDate,
+          ...(confirmed.legacy && !confirmed.legacyDate ? { confirmedIncomeMonth: confirmed.legacy } : {}),
           type: "inflow",
           wallet: r.wallet || globalData?.settings?.defaultWallet || "main",
           category: r.category
@@ -141,6 +141,7 @@ export function buildTransactionHistory(
     }
 
     txs.push({
+      ...(mt.type === "transfer" ? { isTransfer: true } : {}),
       id: mt.id,
       title: mt.title,
       amount: finalAmt,
@@ -153,6 +154,7 @@ export function buildTransactionHistory(
 
     if (mt.type === "transfer" && mt.destinationWallet) {
       txs.push({
+        isTransfer: true,
         id: mt.id + "_dest",
         title: mt.title + " (Receive)",
         amount: mt.amount,
@@ -162,6 +164,11 @@ export function buildTransactionHistory(
         wallet: mt.destinationWallet,
         category: mt.category || mt.type
       });
+    }
+    if (mt.type === "transfer" && typeof mt.transferFee === "number" && Number.isFinite(mt.transferFee) && mt.transferFee > 0) {
+      txs.push({ id: mt.id + "_fee", title: mt.title + " (Fee)", amount: -mt.transferFee, date: mt.date,
+        ...(transactionTimestamp(mt.createdAt) !== undefined ? { loggedAt: new Date(mt.createdAt).toISOString() } : {}),
+        type: "expense", wallet: mt.wallet, category: "Transfer fee" });
     }
   });
 

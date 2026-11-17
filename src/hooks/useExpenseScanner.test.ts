@@ -121,13 +121,14 @@ describe("useExpenseScanner", () => {
     expect(onScanStart).toHaveBeenCalledTimes(1);
     expect(onScanComplete).toHaveBeenCalledTimes(1);
     expect(onScanComplete).toHaveBeenCalledWith({
+      review: { kind: "unknown", fee: null, source: "", destination: "", dateKnown: true },
       merchant: "Starbucks",
       amount: "150",
       category: "Food & Dining",
       wallet: expect.any(String),
       date: "2026-09-22",
     });
-    expect(showToast).toHaveBeenCalledWith("✨ Receipt scanned successfully! Review and tap Save & Deduct.");
+    expect(showToast).toHaveBeenCalledWith("Receipt scanned. Review the type, amount, fee and date before saving.");
     expect(result.current.isScanning).toBe(false);
   });
 

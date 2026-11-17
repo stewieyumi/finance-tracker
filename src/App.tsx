@@ -1,3 +1,4 @@
+import type { ReceiptTransferDraft } from './components/ReceiptReview';
 import { formatTransactionDateTime as formatDateTime } from "./utils/transactionDates";
 import { PaymentHistoryMenu } from "./components/PaymentHistoryMenu";
 import { recordPaymentAction, type PaymentHistory, type PaymentHistoryAction } from "./utils/paymentHistory";
@@ -260,7 +261,11 @@ const {
   const [editForm, setEditForm] = useState<EditFormData>({});
   const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [ledgerInitialType, setLedgerInitialType] = useState<'transfer' | undefined>();
-  const openLedger = (initialType?: 'transfer') => {
+  const [ledgerReceipt, setLedgerReceipt] = useState<ReceiptTransferDraft | undefined>();
+  const [ledgerReceiptOwner, setLedgerReceiptOwner] = useState<string | null>(null);
+  const openLedger = (initialType?: 'transfer', receipt?: ReceiptTransferDraft) => {
+    setLedgerReceipt(receipt);
+    setLedgerReceiptOwner(receipt ? getFinanceSubject() : null);
     setLedgerInitialType(initialType);
     setShowLedgerModal(true);
   };
@@ -1131,10 +1136,13 @@ const copySummaryToClipboard = async () => {
             </Suspense>
           </ErrorBoundary>
         )}
-        {showLedgerModal && (
+        {showLedgerModal && (!ledgerReceipt || (ledgerReceiptOwner === dataOwnerSub && isDataOwnedByActiveSub)) && (
           <ErrorBoundary>
             <Suspense fallback={deferredModalFallback}>
-              <HistoricalLedgerModal isOpen={showLedgerModal} initialType={ledgerInitialType} onClose={() => setShowLedgerModal(false)} globalData={globalData} commitLedgerTransition={commitDataTransition} showToast={showToast} />
+              <HistoricalLedgerModal isOpen={showLedgerModal} initialType={ledgerInitialType} initialReceipt={ledgerReceipt} onClose={() => setShowLedgerModal(false)} globalData={globalData} commitLedgerTransition={transition => {
+                if (ledgerReceipt && ledgerReceiptOwner !== getFinanceSubject()) return { ok: false, data: globalData, error: "Your account changed. Scan this receipt again for the current account." };
+                return commitDataTransition(transition);
+              }} showToast={showToast} />
             </Suspense>
           </ErrorBoundary>
         )}
@@ -1259,6 +1267,7 @@ const copySummaryToClipboard = async () => {
                 selectedMonth={selectedMonth}
                 globalData={globalData}
                 setGlobalData={syncedSetGlobalData}
+                onReceiptTransfer={draft => openLedger('transfer', draft)}
                 commitExpenseTransition={syncedCommitTransition}
                 showToast={showToast}
               />

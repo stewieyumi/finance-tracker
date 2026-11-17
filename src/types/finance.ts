@@ -24,6 +24,8 @@ export interface ManualTransaction {
   date: string;
   wallet?: string;
   destinationWallet?: string;
+  /** Separate charge on the source wallet; principal amount remains unchanged. */
+  transferFee?: number;
   category?: string;
   note?: string;
   createdAt: number;
@@ -130,6 +132,8 @@ export interface ReceivableSettlement {
 
 /** A reviewed reporting correction; original receipt and wallet provenance stay unchanged. */
 export interface ConfirmedIncomeMonth {
+  /** Confirmed payment day, when known; original receipt provenance remains unchanged. */
+  date?: string;
   month: string;
   confirmedAt: string;
   amount: number;
@@ -254,6 +258,7 @@ export interface EditFormData {
 }
 
 export interface TransactionHistoryItem {
+  isTransfer?: boolean;
   /** Derived from a guarded confirmation; never implies an exact receipt day. */
   confirmedIncomeMonth?: string;
   loggedAt?: string;

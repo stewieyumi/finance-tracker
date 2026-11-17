@@ -10,7 +10,7 @@ export function InflowIncomeNotes({ report }: { report: InflowIncomeReport }) {
       <span className="block text-[10px]">Saved under this period; excluded from actual income.</span>
     </p>}
     {!!report.confirmedMonthOnly && <p>
-      Includes <span className="font-mono privacy-blur">{formatPHP(report.confirmedMonthOnly)}</span> with a confirmed receipt month; exact day unknown.
+      Includes <span className="font-mono privacy-blur">{formatPHP(report.confirmedMonthOnly)}</span>; exact payment day unknown.
     </p>}
     {report.needsReview && <p className="text-warning">Income history needs review. Check receipt details before relying on this total.</p>}
   </div>;

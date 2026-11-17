@@ -6,6 +6,7 @@ import { generateId } from '../utils/idHelpers';
 import { Modal } from './ui/Modal';
 import { entryDialogStyles } from './ui/dialogStyles';
 import { formatPHP } from '../utils/currency';
+import type { ReceiptTransferDraft } from './ReceiptReview';
 import { getDefaultTransferWallets, parseWalletBalance, validateActiveWalletAssignment } from '../utils/financeHelpers';
 
 export type LedgerTransitionResult =
@@ -28,6 +29,7 @@ interface Props {
   commitLedgerTransition: LedgerTransitionCommitter;
   showToast: (msg: string) => void;
   initialType?: ManualTransaction['type'];
+  initialReceipt?: ReceiptTransferDraft;
 }
 
 export interface LedgerSaveInput {
@@ -40,6 +42,9 @@ export interface LedgerSaveInput {
   date: string;
   wallet: string;
   destinationWallet?: string;
+  transferFee?: string | number;
+  checkDuplicate?: boolean;
+  allowDuplicate?: boolean;
   category?: string;
   note?: string;
   updateWallets: boolean;
@@ -73,6 +78,11 @@ const toValidCents = (value: string | number): number | null => {
     return null;
   }
   return cents;
+};
+
+const feeCents = (value: unknown): number | null => {
+  if (value === undefined || value === 0 || (typeof value === 'string' && /^0+(?:\.0{1,2})?$/.test(value.trim()))) return 0;
+  return typeof value === 'string' || typeof value === 'number' ? toValidCents(value) : null;
 };
 
 const walletBalanceCents = (
@@ -120,6 +130,7 @@ const isSameManualTransaction = (a: ManualTransaction, b: ManualTransaction): bo
   (a.category || '') === (b.category || '') &&
   (a.note || '') === (b.note || '') &&
   (a.postingMode ?? 'wallet') === (b.postingMode ?? 'wallet') &&
+  (a.transferFee ?? 0) === (b.transferFee ?? 0) &&
   a.createdAt === b.createdAt;
 
 export const applyLedgerSave = (
@@ -134,6 +145,10 @@ export const applyLedgerSave = (
     return { ok: false, data, error: 'Choose a valid transaction type.' };
   }
   const newCents = toValidCents(input.amount);
+  const newFee = feeCents(input.transferFee);
+  if (newFee === null || (input.type !== 'transfer' && newFee !== 0) || (newCents !== null && !Number.isSafeInteger(newCents + newFee))) {
+    return { ok: false, data, error: 'Enter a valid transfer fee (0 if none).' };
+  }
   if (newCents === null) {
     return { ok: false, data, error: 'Enter a valid positive amount.' };
   }
@@ -174,6 +189,12 @@ export const applyLedgerSave = (
     return { ok: false, data, error: 'This transaction was already recorded.' };
   }
 
+  if (input.checkDuplicate && input.editingId === null && !input.allowDuplicate && existingTxs.some(tx =>
+    tx.type === 'transfer' && tx.date === input.date && tx.wallet === input.wallet && tx.destinationWallet === input.destinationWallet &&
+    tx.amount === newCents / 100 && (tx.transferFee ?? 0) === newFee / 100)) {
+    return { ok: false, data, error: 'A matching transfer is already in history. Check it before saving another.' };
+  }
+
   if (
     isArchivedWallet(data, input.wallet) ||
     (input.type === 'transfer' && isArchivedWallet(data, input.destinationWallet))
@@ -200,7 +221,8 @@ export const applyLedgerSave = (
 
   if (oldTx && oldTx.postingMode !== 'history-only') {
     const oldCents = toValidCents(oldTx.amount);
-    if (oldCents === null) {
+    const oldFee = feeCents(oldTx.transferFee);
+    if (oldCents === null || oldFee === null || (oldTx.type !== 'transfer' && oldFee !== 0) || !Number.isSafeInteger(oldCents + oldFee)) {
       return { ok: false, data, error: 'The existing transaction amount is invalid.' };
     }
     if (
@@ -214,7 +236,7 @@ export const applyLedgerSave = (
     } else if (oldTx.type === 'expense') {
       addDelta(oldTx.wallet, oldCents);
     } else if (oldTx.type === 'transfer') {
-      addDelta(oldTx.wallet, oldCents);
+      addDelta(oldTx.wallet, oldCents + oldFee);
       addDelta(oldTx.destinationWallet!, -oldCents);
     }
   }
@@ -225,7 +247,7 @@ export const applyLedgerSave = (
     } else if (input.type === 'expense') {
       addDelta(input.wallet, -newCents);
     } else if (input.type === 'transfer') {
-      addDelta(input.wallet, -newCents);
+      addDelta(input.wallet, -(newCents + newFee));
       addDelta(input.destinationWallet!, newCents);
     }
   }
@@ -265,6 +287,7 @@ export const applyLedgerSave = (
     date: input.date,
     wallet: input.wallet,
     destinationWallet: input.type === 'transfer' ? input.destinationWallet : undefined,
+    ...(input.type === 'transfer' && newFee > 0 ? { transferFee: newFee / 100 } : {}),
     category: input.category,
     note: input.note,
     postingMode: input.updateWallets ? 'wallet' : 'history-only',
@@ -315,7 +338,8 @@ export const applyLedgerDelete = (
   const nextWallets = { ...data.wallets };
   if (currentTx.postingMode !== 'history-only') {
     const cents = toValidCents(currentTx.amount);
-    if (cents === null) {
+    const fee = feeCents(currentTx.transferFee);
+    if (cents === null || fee === null || (currentTx.type !== 'transfer' && fee !== 0) || !Number.isSafeInteger(cents + fee)) {
       return { ok: false, data, error: 'The transaction amount is invalid.' };
     }
     if (
@@ -334,7 +358,7 @@ export const applyLedgerDelete = (
     } else if (currentTx.type === 'expense') {
       addDelta(currentTx.wallet, cents);
     } else if (currentTx.type === 'transfer') {
-      addDelta(currentTx.wallet, cents);
+      addDelta(currentTx.wallet, cents + fee);
       addDelta(currentTx.destinationWallet!, -cents);
     }
 
@@ -406,6 +430,7 @@ export const HistoricalLedgerModal: React.FC<Props> = ({
   commitLedgerTransition,
   showToast,
   initialType,
+  initialReceipt,
 }) => {
   const formId = useId();
   const isWalletTransfer = initialType === 'transfer';
@@ -414,17 +439,22 @@ export const HistoricalLedgerModal: React.FC<Props> = ({
   const [view, setView] = useState<'list' | 'form'>(initialType ? 'form' : 'list');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTx, setEditingTx] = useState<ManualTransaction | null>(null);
+  const [receiptSaveId] = useState(() => generateId('mtx'));
   const [saveError, setSaveError] = useState('');
+  const [showFee, setShowFee] = useState(Boolean(initialReceipt));
+  const [duplicateReceipt, setDuplicateReceipt] = useState(false);
+  const [allowDuplicateReceipt, setAllowDuplicateReceipt] = useState(false);
 
   const [form, setForm] = useState({
     title: isWalletTransfer ? 'Transfer' : '',
-    amount: '',
+    amount: initialReceipt?.amount ?? '',
+    transferFee: initialReceipt?.fee ?? '0',
     type: initialType ?? ('expense' as ManualTransaction['type']),
-    date: localDate,
-    wallet: isWalletTransfer
+    date: initialReceipt?.date ?? localDate,
+    wallet: initialReceipt ? '' : isWalletTransfer
       ? transferDefaults.wallet
       : globalData.settings?.defaultWallet || 'main',
-    destinationWallet: isWalletTransfer ? transferDefaults.destinationWallet : '',
+    destinationWallet: initialReceipt ? '' : isWalletTransfer ? transferDefaults.destinationWallet : '',
     category: '',
     note: '',
     updateWallets: true,
@@ -446,11 +476,14 @@ export const HistoricalLedgerModal: React.FC<Props> = ({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const input: LedgerSaveInput = {
-      id: editingId || generateId('mtx'),
+      id: editingId || (initialReceipt ? receiptSaveId : generateId('mtx')),
       editingId,
       expectedOldTx: editingId !== null ? editingTx : undefined,
       title: form.title,
       amount: form.amount,
+      transferFee: form.type === 'transfer' ? form.transferFee : undefined,
+      checkDuplicate: Boolean(initialReceipt),
+      allowDuplicate: allowDuplicateReceipt,
       type: form.type,
       date: form.date,
       wallet: form.wallet,
@@ -466,6 +499,7 @@ export const HistoricalLedgerModal: React.FC<Props> = ({
 
     if (!outcome.ok) {
       setSaveError(outcome.error);
+      setDuplicateReceipt(outcome.error.startsWith('A matching transfer'));
       showToast(outcome.error);
       return;
     }
@@ -510,12 +544,14 @@ export const HistoricalLedgerModal: React.FC<Props> = ({
       return;
     }
     const sourceWallet = tx.wallet || 'main';
+    setShowFee(Boolean(tx.transferFee));
     setEditingId(tx.id);
     setEditingTx(tx);
     setSaveError('');
     setForm({
       title: tx.title,
       amount: String(tx.amount),
+      transferFee: String(tx.transferFee ?? 0),
       type: tx.type,
       date: tx.date,
       wallet: sourceWallet,
@@ -528,11 +564,12 @@ export const HistoricalLedgerModal: React.FC<Props> = ({
   };
 
   const openAdd = () => {
+    setShowFee(false);
     setEditingId(null);
     setEditingTx(null);
     setSaveError('');
     setForm({
-      title: '', amount: '', type: 'expense',
+      title: '', amount: '', transferFee: '0', type: 'expense',
       date: getLocalDateKey(),
       wallet: globalData.settings?.defaultWallet || 'main',
       destinationWallet: '', category: '', note: '', updateWallets: true
@@ -586,6 +623,7 @@ export const HistoricalLedgerModal: React.FC<Props> = ({
                           </>
                         )}
                       </div>
+                      {tx.type === 'transfer' && !!tx.transferFee && <span className="privacy-blur text-[10px] text-muted">Fee: {formatPHP(tx.transferFee)}</span>}
                       <div className="flex items-center gap-1">
                         <button onClick={() => openEdit(tx)} className="p-1.5 text-faint hover:text-amber-400 rounded hover:bg-amber-500/10 transition"><Edit2 size={13}/></button>
                         <button onClick={() => handleDelete(tx)} className="p-1.5 text-faint hover:text-rose-400 rounded hover:bg-rose-500/10 transition"><Trash2 size={13}/></button>
@@ -596,8 +634,10 @@ export const HistoricalLedgerModal: React.FC<Props> = ({
               </div>
             </div>
           ) : (
-            <form noValidate onChange={() => setSaveError('')} onSubmit={handleSave} className="space-y-4">
+            <form noValidate onChange={() => { setSaveError(''); }} onSubmit={handleSave} className="space-y-4">
+              {duplicateReceipt && <label className="flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={allowDuplicateReceipt} onChange={e => setAllowDuplicateReceipt(e.target.checked)} />This is a different transfer; save another entry</label>}
               {saveError && <p role="alert" className="rounded-lg bg-fill px-3 py-2 text-xs text-rose-500">{saveError}</p>}
+              {initialReceipt && <p className="text-xs text-muted">Scanned receipt{initialReceipt.source || initialReceipt.destination ? `: ${initialReceipt.source || '?'} → ${initialReceipt.destination || '?'}` : ''}. Choose your own From and To wallets. Nothing is saved until you tap Transfer.</p>}
               {!isWalletTransfer && <>
                 <div className="grid grid-cols-3 gap-2 bg-surface-lowest p-1.5 rounded-xl border border-inverse/[0.05]">
                 {['expense', 'income', 'transfer'].map(t => (
@@ -628,6 +668,7 @@ export const HistoricalLedgerModal: React.FC<Props> = ({
                 <div className="min-w-0">
                   <label htmlFor={`${formId}-from`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">{isWalletTransfer ? 'From' : form.type === 'transfer' ? 'From Wallet' : 'Wallet'}</label>
                   <select id={`${formId}-from`} aria-describedby={isWalletTransfer ? `${formId}-from-balance` : undefined} required value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value, destinationWallet: e.target.value === form.destinationWallet ? '' : form.destinationWallet})} className="min-h-11 w-full min-w-0 bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500">
+                    {initialReceipt && <option value="">Select...</option>}
                     {customWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                   </select>
                   {isWalletTransfer && <p id={`${formId}-from-balance`} className="mt-1.5 break-words text-[11px] text-muted">Balance: <span className="privacy-blur font-mono tabular-nums">{walletBalance(form.wallet)}</span></p>}
@@ -643,6 +684,14 @@ export const HistoricalLedgerModal: React.FC<Props> = ({
                   </div>
                 )}
               </div>
+              {form.type === 'transfer' && !showFee && <button type="button" onClick={() => setShowFee(true)} className="min-h-11 text-xs text-muted underline">Add transfer fee</button>}
+              {form.type === 'transfer' && showFee && <>
+                <label className="block text-xs text-muted" htmlFor={`${formId}-fee`}>Transfer fee (₱)
+                  <input id={`${formId}-fee`} type="number" inputMode="decimal" min="0" step="0.01" value={form.transferFee} onChange={e => setForm({ ...form, transferFee: e.target.value })} className="mt-1 min-h-11 w-full rounded-xl border border-strong bg-surface-input px-3 text-xs text-primary" />
+                </label>
+                {Number.isFinite(Number(form.amount)) && Number.isFinite(Number(form.transferFee)) && <p className="text-xs text-muted">Total from source: <span className="privacy-blur font-mono">{formatPHP((Math.round(Number(form.amount) * 100) + Math.round(Number(form.transferFee) * 100)) / 100)}</span></p>}
+                {initialReceipt && <label className="block text-xs text-muted" htmlFor={`${formId}-receipt-date`}>Payment date<input id={`${formId}-receipt-date`} type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="mt-1 min-h-11 w-full rounded-xl border border-strong bg-surface-input px-3 text-xs text-primary" /></label>}
+              </>}
               {!isWalletTransfer && <><label className="flex items-center gap-2 text-xs text-primary">
                 <input type="checkbox" checked={form.updateWallets} onChange={event => setForm({ ...form, updateWallets: event.target.checked })} />
                 Update wallet balances
