@@ -36,3 +36,27 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y redis-server
       - run: npm run test:sync-redis
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - name: Upload browser failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-smoke-diagnostics
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
