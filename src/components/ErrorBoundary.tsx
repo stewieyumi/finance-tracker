@@ -4,6 +4,7 @@ import { AlertTriangle } from "lucide-react";
 interface Props {
   children?: ReactNode;
   message?: string;
+  onRetry?: () => void;
 }
 
 interface State {
@@ -34,7 +35,10 @@ export class ErrorBoundary extends Component<Props, State> {
             <span>{this.props.message ?? "Something broke in this card. Other features remain operational."}</span>
           </div>
           <button
-            onClick={() => this.setState({ hasError: false, error: null })}
+            onClick={() => {
+              this.props.onRetry?.();
+              this.setState({ hasError: false, error: null });
+            }}
             className="bg-inverse/[0.08] hover:bg-inverse/[0.14] px-2.5 py-1 rounded-lg text-[10px] font-medium transition"
           >
             Retry

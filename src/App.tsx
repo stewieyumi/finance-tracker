@@ -1,3 +1,4 @@
+import { deferredScreen } from "./components/ui/deferredScreen";
 import type { ReceiptTransferDraft } from './components/ReceiptReview';
 import { formatTransactionDateTime as formatDateTime } from "./utils/transactionDates";
 import { PaymentHistoryMenu } from "./components/PaymentHistoryMenu";
@@ -37,22 +38,24 @@ import { useReceivableSaveActions, ReceivableTransitionCommitter } from "./hooks
 import { useShootSaveActions } from "./hooks/useShootSaveActions";
 import { usePaydayActions } from "./hooks/usePaydayActions";
 
-import { BillsTable } from "./components/BillsTable";
-import { ReceivablesTable } from "./components/ReceivablesTable";
-import { ShootsTable } from "./components/ShootsTable";
 import { DashboardTab } from "./components/DashboardTab";
 import { NotificationModal } from "./components/NotificationModal";
-import { WalletsTab } from "./components/WalletsTab";
 import { BottomNav, TabType } from "./components/BottomNav";
 import { SyncConflictModal } from "./components/SyncConflictModal";
 import { useAppUpdate } from "./hooks/useAppUpdate";
 import { useTheme } from "./hooks/useTheme";
 import { LandingPage } from "./components/LandingPage";
-import { OnboardingWizard } from "./components/OnboardingWizard";
-import { OperationsTab } from "./components/OperationsTab";
-import { AccountTab } from "./components/AccountTab";
 import { isReturningUser, shouldShowOnboarding } from "./utils/onboardingHelpers";
 import { isValidFinanceBackup, isValidFinanceData } from "./utils/validationHelpers";
+
+const OperationsTab = deferredScreen(() => import("./components/OperationsTab")
+  .then(module => ({ default: module.OperationsTab })), "operations");
+const WalletsTab = deferredScreen(() => import("./components/WalletsTab")
+  .then(module => ({ default: module.WalletsTab })), "wallets");
+const AccountTab = deferredScreen(() => import("./components/AccountTab")
+  .then(module => ({ default: module.AccountTab })), "account");
+const OnboardingWizard = deferredScreen(() => import("./components/OnboardingWizard")
+  .then(module => ({ default: module.OnboardingWizard })), "setup", true);
 
 const ExpensesTab = lazy(() => import("./components/ExpensesTab")
   .then(module => ({ default: module.ExpensesTab })));

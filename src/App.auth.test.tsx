@@ -279,12 +279,12 @@ describe("App — Google session recovery", () => {
     render(<App />);
     const initialCommitCount = mockCommitDataChange.mock.calls.length;
     fireEvent.click(screen.getByTestId("nav-wallets"));
-    fireEvent.click(screen.getByRole("button", { name: "Transfer" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Transfer" }));
     expect(await screen.findByTestId("ledger-modal")).toHaveAttribute("data-initial-type", "transfer");
     expect(mockCommitDataChange).toHaveBeenCalledTimes(initialCommitCount);
     fireEvent.click(screen.getByRole("button", { name: "Close ledger" }));
     fireEvent.click(screen.getByTestId("nav-account"));
-    fireEvent.click(screen.getByRole("button", { name: "Manage Ledger" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Manage Ledger" }));
     expect(await screen.findByTestId("ledger-modal")).toHaveAttribute("data-initial-type", "list");
     expect(mockCommitDataChange).toHaveBeenCalledTimes(initialCommitCount);
   });
