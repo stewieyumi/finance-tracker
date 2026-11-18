@@ -21,7 +21,16 @@ jobs:
           node-version: '26'
           cache: npm
       - run: npm ci
+      - name: Report development dependency advisories
+        # Picomatch currently has no patched release; keep the full report visible.
+        continue-on-error: true
+        run: npm audit
+      - name: Check production dependency advisories
+        run: npm audit --omit=dev
       - run: npm run verify
+        env:
+          # Public fixture for synthetic CI builds only; never a deployment credential.
+          VITE_GOOGLE_CLIENT_ID: 000000000000-ci-build.apps.googleusercontent.com
       - name: Install Redis for isolated integration tests
         run: |
           sudo apt-get update -qq

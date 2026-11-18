@@ -1,19 +1,62 @@
-# React + Vite
+# Finance Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Local setup and build
 
-Currently, two official plugins are available:
+Use Node 26 (the version family used in CI), then run `npm ci`.
+Create `.env.local` with your **public** Google OAuth web client ID:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```dotenv
+VITE_GOOGLE_CLIENT_ID=YOUR_PUBLIC_CLIENT_ID.apps.googleusercontent.com
+```
 
-## React Compiler
+Run `npm run dev` for local development. Configure the local app origin in the
+Google OAuth client. Run `npm run verify` for typechecks, lint, API startup,
+tests and a production build. Run `npm run test:sync-redis` separately for the
+isolated real-Redis checks described below.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+`npm run build` requires a nonblank `VITE_GOOGLE_CLIENT_ID`, including custom
+build modes. Vite embeds this public value in the browser bundle at build time.
+Set it in each deployment's build environment before building; changing a runtime
+variable afterward does not rewrite an already-built static bundle.
 
-## Expanding the ESLint configuration
+CI supplies `000000000000-ci-build.apps.googleusercontent.com` to its verification
+step so it can compile without accessing an account. This is a public synthetic
+fixture, not a working sign-in client. To run that same credential-free check:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```sh
+VITE_GOOGLE_CLIENT_ID=000000000000-ci-build.apps.googleusercontent.com npm run verify
+```
+
+Use your real public client ID for deployments and real sign-in testing. A build
+with the synthetic fixture checks compilation only. The guard checks presence;
+Google still validates the client and allowed origins during sign-in.
+
+## Dependency audit status
+
+Run `npm audit` to see the complete build/test dependency report, and
+`npm audit --omit=dev` for production dependencies. CI reports the complete
+result and requires the production audit to pass.
+
+The current development graph still includes Picomatch <=4.0.7, for which
+[GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
+has no published patched version. Its regular-expression denial of service
+requires attacker-controlled glob patterns. Current Tailwind/Vite patterns are
+project configuration, not user transaction input. This limits the observed
+exposure; it does not remove the affected dependency or certify every dev-server
+usage. Keep the advisory visible and refresh the lockfile when an upstream fix
+is available. Production dependencies currently have no reported advisories.
+
+## Server environment
+
+Configure server-only values in the deployment environment. Redis-backed sync,
+sessions and Quick Expense use `KV_REST_API_URL` and `KV_REST_API_TOKEN`. Receipt
+scanning additionally uses `GEMINI_API_KEY`. Optional direct iCloud connections
+use `CALENDAR_ENCRYPTION_KEY` as described below. Google token verification also
+uses the same public `VITE_GOOGLE_CLIENT_ID` on the server.
+
+Keep server secrets out of `VITE_` variables and source control. Required provider
+configuration depends on the feature; the static build guard validates only the
+public Google client ID, not live Redis, scanner or calendar access.
 
 ## Per-user Apple Calendar connections
 
