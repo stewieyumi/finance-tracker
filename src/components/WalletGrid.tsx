@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useId, useRef } from 'react';
+import { Modal } from './ui/Modal';
 import { Plus, X, CreditCard, CheckCircle2 } from 'lucide-react';
 import { entryDialogStyles } from './ui/dialogStyles';
 import { WalletState, CustomWallet, WalletMutationHandler, WalletMutationOutcome } from '../types/finance';
@@ -11,11 +12,8 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
   const [editValue, setEditValue] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") setEditingWallet(null); };
-    if (editingWallet) { window.addEventListener("keydown", handleKeyDown); document.body.style.overflow = "hidden"; }
-    return () => { window.removeEventListener("keydown", handleKeyDown); document.body.style.overflow = "unset"; };
-  }, [editingWallet]);
+  const balanceFormId = useId();
+  const balanceInputRef = useRef<HTMLInputElement>(null);
 
   const openEdit = (wallet: CustomWallet, currentBalance: number | null) => {
     setError("");
@@ -81,26 +79,27 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
               </button>
             );
           })}
-          {(!customWallets || customWallets.length === 0) && <div className="col-span-2 py-4 text-center text-faint text-xs italic">No accounts found. Manage accounts below.</div>}
+          {(!customWallets || customWallets.length === 0) && <div className="col-span-2 py-4 text-center text-faint text-xs italic">No wallets yet. Add a wallet below, then tap it to set its current balance.</div>}
         </div>
       </div>
 
       {editingWallet && (
-        <div className="fixed inset-0 z-[200] bg-[var(--bg-modal-scrim)] backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={(e) => { if (e.target === e.currentTarget) setEditingWallet(null); }}>
+        <Modal isOpen onClose={() => setEditingWallet(null)} ariaLabelledBy={`${balanceFormId}-title`} manageFocus initialFocusRef={balanceInputRef} className="z-[200]">
           <div className={`${entryDialogStyles.card} max-w-sm`}>
             <div className={entryDialogStyles.header}>
               <div className="flex items-center gap-3">
                 <div className={entryDialogStyles.icon}><CreditCard size={18} /></div>
-                <div><h3 className="text-sm font-bold text-strong leading-tight">Edit Balance</h3><p className="text-[11px] text-muted font-medium">{editingWallet.label}</p></div>
+                <div><h3 id={`${balanceFormId}-title`} className="text-sm font-bold text-strong leading-tight">Edit Balance</h3><p className="text-[11px] text-muted font-medium">{editingWallet.label}</p></div>
               </div>
               <button type="button" aria-label="Close balance editor" onClick={() => setEditingWallet(null)} className={entryDialogStyles.close}><X size={16}/></button>
             </div>
+            <p id={`${balanceFormId}-help`} className="mb-4 text-xs text-muted">Set the current balance to match your bank, e-wallet, or cash on hand. Quick Add Income adds money to the existing balance.</p>
             <form onSubmit={handleSave} className="space-y-6">
               <div className="relative flex items-center justify-center bg-surface-lowest border border-strong rounded-2xl p-5 focus-within:border-blue-500/50 transition-colors shadow-inner">
                 <span className="absolute left-5 text-faint font-mono text-xl">₱</span>
-                <input aria-label="Balance" aria-invalid={Boolean(error)} type="number" inputMode="decimal" step="0.01" autoFocus value={editValue} onChange={e => { setEditValue(e.target.value); setError(""); }} className="bg-transparent text-center text-3xl font-bold font-mono outline-none w-full text-strong" placeholder="0.00" />
+                <input ref={balanceInputRef} aria-label="Balance" aria-describedby={`${balanceFormId}-help${error ? ` ${balanceFormId}-error` : ''}`} aria-invalid={Boolean(error)} type="number" inputMode="decimal" step="0.01" value={editValue} onChange={e => { setEditValue(e.target.value); setError(""); }} className="bg-transparent text-center text-3xl font-bold font-mono outline-none w-full text-strong" placeholder="0.00" />
               </div>
-              {error && <p role="alert" className="text-sm text-primary">{error}</p>}
+              {error && <p id={`${balanceFormId}-error`} role="alert" className="text-sm text-primary">{error}</p>}
               <div>
                 <div className="text-[10px] uppercase tracking-wider font-semibold text-faint mb-2.5 text-center">Quick Add Income</div>
                 <div className="grid grid-cols-3 gap-2">
@@ -110,7 +109,7 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
               <button type="submit" className={`${entryDialogStyles.primary} w-full`}><CheckCircle2 size={16} /> Save Balance</button>
             </form>
           </div>
-        </div>
+        </Modal>
       )}
     </>
   );

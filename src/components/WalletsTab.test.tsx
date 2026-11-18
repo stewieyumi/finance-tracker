@@ -97,7 +97,7 @@ describe("WalletsTab archival", () => {
   it("blocks archiving a wallet with money or an active payment route", () => {
     const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     const { setGlobalData, unmount } = renderWallets(makeData());
-    fireEvent.click(screen.getAllByRole("button", { name: "Archive account" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Archive Delete Me account" }));
     expect(alert).toHaveBeenLastCalledWith("Bring this wallet to zero before archiving it.");
     expect(setGlobalData).not.toHaveBeenCalled();
     unmount();
@@ -105,7 +105,7 @@ describe("WalletsTab archival", () => {
     const data = makeData();
     data.wallets.w_del = 0;
     const next = renderWallets(data);
-    fireEvent.click(screen.getAllByRole("button", { name: "Archive account" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Archive Delete Me account" }));
     expect(alert).toHaveBeenLastCalledWith("Change the wallet used by settings, commitments, or inflows before archiving.");
     expect(next.setGlobalData).not.toHaveBeenCalled();
   });
@@ -118,7 +118,7 @@ describe("WalletsTab archival", () => {
     data.library.receivables = [];
     data.settings = { customWallets: data.settings?.customWallets, [preference]: "w_del" };
     const { setGlobalData } = renderWallets(data);
-    fireEvent.click(screen.getAllByRole("button", { name: "Archive account" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Archive Delete Me account" }));
     expect(alert).toHaveBeenCalledWith("Change the wallet used by settings, commitments, or inflows before archiving.");
     expect(setGlobalData).not.toHaveBeenCalled();
   });
@@ -132,7 +132,7 @@ describe("WalletsTab archival", () => {
     data.settings = { customWallets: data.settings?.customWallets };
     const { setGlobalData, rerender } = renderWallets(data);
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Archive account" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Archive Delete Me account" }));
     expect(confirm).toHaveBeenCalled();
     const archive = setGlobalData.mock.calls[0][0];
     const archived = archive(data) as UnifiedFinanceData;
@@ -163,7 +163,7 @@ describe("WalletsTab archival", () => {
     // null balance
     (data.wallets as any).w_del = null;
     const { setGlobalData: set1, unmount: u1 } = renderWallets(data);
-    fireEvent.click(screen.getAllByRole("button", { name: "Archive account" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Archive Delete Me account" }));
     expect(alert).toHaveBeenCalledWith("Cannot archive wallet with an invalid or corrupted balance. Repair the balance first.");
     expect(set1).not.toHaveBeenCalled();
     u1();
@@ -171,7 +171,7 @@ describe("WalletsTab archival", () => {
     // NaN balance
     (data.wallets as any).w_del = NaN;
     const { setGlobalData: set2, unmount: u2 } = renderWallets(data);
-    fireEvent.click(screen.getAllByRole("button", { name: "Archive account" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Archive Delete Me account" }));
     expect(alert).toHaveBeenCalledWith("Cannot archive wallet with an invalid or corrupted balance. Repair the balance first.");
     expect(set2).not.toHaveBeenCalled();
     u2();
@@ -179,7 +179,7 @@ describe("WalletsTab archival", () => {
     // malformed string balance
     (data.wallets as any).w_del = "corrupted";
     const { setGlobalData: set3, unmount: u3 } = renderWallets(data);
-    fireEvent.click(screen.getAllByRole("button", { name: "Archive account" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Archive Delete Me account" }));
     expect(alert).toHaveBeenCalledWith("Cannot archive wallet with an invalid or corrupted balance. Repair the balance first.");
     expect(set3).not.toHaveBeenCalled();
     u3();
@@ -194,7 +194,7 @@ describe("WalletsTab archival", () => {
     data.settings = { customWallets: data.settings?.customWallets };
     const { setGlobalData } = renderWallets(data);
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Archive account" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Archive Delete Me account" }));
     expect(confirm).toHaveBeenCalled();
     const updater = setGlobalData.mock.calls[0][0];
     const archived = updater(data);

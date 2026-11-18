@@ -11,6 +11,7 @@ export interface ModalProps {
   closeOnBackdropClick?: boolean;
   closeOnEscape?: boolean;
   manageFocus?: boolean;
+  initialFocusRef?: React.RefObject<HTMLElement | null>;
   className?: string;
 }
 
@@ -25,6 +26,7 @@ export const Modal: React.FC<ModalProps> = ({
   closeOnBackdropClick = true,
   closeOnEscape = true,
   manageFocus = false,
+  initialFocusRef,
   className = "",
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -34,14 +36,16 @@ export const Modal: React.FC<ModalProps> = ({
     if (!isOpen || !manageFocus || !dialog) return;
 
     const previousFocus = document.activeElement;
-    dialog.focus();
+    const target = initialFocusRef?.current;
+    if (target && dialog.contains(target)) target.focus();
+    else dialog.focus();
 
     return () => {
       if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
         previousFocus.focus();
       }
     };
-  }, [isOpen, manageFocus]);
+  }, [isOpen, manageFocus, initialFocusRef]);
 
   const handleTab = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!manageFocus || event.key !== "Tab") return;

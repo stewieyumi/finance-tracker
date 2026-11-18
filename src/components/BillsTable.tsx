@@ -225,7 +225,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
         </button>
       </div>
 
-     <BillsList
+     {activeBills.length === 0 ? <p className="rounded-xl bg-surface-low px-4 py-5 text-center text-sm text-muted">No commitments scheduled for {selectedMonth}. Add a bill, subscription, or installment to get started.</p> : <BillsList
        filteredBills={filteredBills}
        firstHalfBills={firstHalfBills}
        secondHalfBills={secondHalfBills}
@@ -238,7 +238,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
        onToggleStatus={onToggleStatus}
        onEdit={handleStartEdit}
        hideSettled={hideSettled}
-     />
+     />}
 
       <button onClick={() => setIsAdding(true)} className="w-full mt-3.5 py-3.5 border border-dashed border-inverse/[0.15] hover:border-blue-500/50 hover:bg-blue-500/10 text-muted hover:text-blue-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">
         <Plus size={15} /> Add New Commitment
