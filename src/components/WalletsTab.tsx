@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useId, useEffect, useRef } from 'react';
 import { Plus, Archive, Edit2, CreditCard, Info, ArrowRightLeft } from 'lucide-react';
 import { UnifiedFinanceData, CustomWallet, WalletMutationHandler } from '../types/finance';
 import { formatPHP } from '../utils/currency';
@@ -20,6 +20,8 @@ const COLORS = [
   "text-pink-400", "text-secondary", "text-blue-400"
 ];
 
+const COLOR_NAMES = ["Rose", "Amber", "Emerald", "Cyan", "Indigo", "Purple", "Pink", "Neutral", "Blue"];
+
 const WALLET_NAME_SUGGESTIONS = [
   "BDO", "BPI", "Metrobank", "UnionBank", "Security Bank",
   "GCash", "Maya", "GoTyme", "MariBank", "SeaBank",
@@ -28,6 +30,16 @@ const WALLET_NAME_SUGGESTIONS = [
 
 export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalData, onCommit, onIncrement, onTransfer }) => {
   const [showAdd, setShowAdd] = useState(false);
+  const formId = useId();
+  const returnFocusId = useRef<string | null>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const [nameError, setNameError] = useState('');
+  useEffect(() => {
+    if (!showAdd && returnFocusId.current) {
+      document.getElementById(returnFocusId.current)?.focus();
+      returnFocusId.current = null;
+    }
+  }, [showAdd]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [walletName, setWalletName] = useState("");
   const [walletColor, setWalletColor] = useState(COLORS[2]);
@@ -35,7 +47,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
   const handleAddOrEdit = (e: React.FormEvent) => {
     e.preventDefault();
     const name = walletName.trim();
-    if (!name) return;
+    if (!name) { setNameError('Enter a name for this wallet, such as Cash or GCash.'); nameInputRef.current?.focus(); return; }
 
     setGlobalData(prev => {
       let updatedWallets = [...(prev.settings?.customWallets || [])];
@@ -62,6 +74,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
   };
 
   const openEdit = (id: string, currentLabel: string, currentColor: string) => {
+    returnFocusId.current = `${formId}-edit-${id}`; setNameError('');
     setEditingId(id); setWalletName(currentLabel); setWalletColor(currentColor || COLORS[2]); setShowAdd(true);
   };
 
@@ -221,14 +234,15 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
       <WalletGrid wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} savingsWallet={globalData.settings?.savingsWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
       <div className="rounded-2xl bg-surface p-3 sm:p-4">
         <div className="flex items-center justify-between mb-4"><h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><CreditCard size={14} className="text-emerald-400" /> Account Management</h2></div>
+        <p id={`${formId}-help`} className="mb-4 text-xs text-muted">A wallet is where you keep money, such as cash, GCash, or a bank account. Add it here, then tap its balance above to update it.</p>
         {customWallets.length > 0 && !showAdd && (
           <div className="mb-4 overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle">
             {customWallets.map(w => (
               <div key={w.id} className="flex min-h-12 items-center justify-between px-3 py-2">
                 <div className="flex items-center gap-2.5"><div className={`w-2.5 h-2.5 rounded-full bg-current ${w.color || 'text-emerald-400'} shadow-[0_0_8px_currentColor]`} /><span className="privacy-blur text-xs font-semibold text-primary">{w.label}</span></div>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => openEdit(w.id, w.label, w.color || COLORS[2])} aria-label="Edit account" className="text-faint hover:text-amber-400 p-1.5 transition rounded-lg hover:bg-amber-500/10"><Edit2 size={14} /></button>
-                  <button onClick={() => handleArchive(w.id, w.label)} aria-label="Archive account" className="text-faint hover:text-rose-400 p-1.5 transition rounded-lg hover:bg-rose-500/10"><Archive size={14} /></button>
+                  <button id={`${formId}-edit-${w.id}`} type="button" onClick={() => openEdit(w.id, w.label, w.color || COLORS[2])} aria-label={`Edit ${w.label} account`} className="grid min-h-11 min-w-11 place-items-center text-faint hover:text-amber-400 p-1.5 transition rounded-lg hover:bg-amber-500/10"><Edit2 size={14} /></button>
+                  <button onClick={() => handleArchive(w.id, w.label)} aria-label={`Archive ${w.label} account`} className="grid min-h-11 min-w-11 place-items-center text-faint hover:text-rose-400 p-1.5 transition rounded-lg hover:bg-rose-500/10"><Archive size={14} /></button>
                 </div>
               </div>
             ))}
@@ -240,32 +254,34 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
             {globalData.settings.archivedWallets.map(wallet => (
               <div key={wallet.id} className="mt-3 flex items-center justify-between text-xs">
                 <span className="privacy-blur">{wallet.label}</span>
-                <button type="button" onClick={() => handleRestore(wallet.id)} aria-label={`Restore ${wallet.label}`} className="rounded-lg px-3 py-2 text-emerald-400">Restore</button>
+                <button type="button" onClick={() => handleRestore(wallet.id)} aria-label={`Restore ${wallet.label}`} className="min-h-11 rounded-lg px-3 py-2 text-emerald-400">Restore</button>
               </div>
             ))}
           </details>
         )}
         {showAdd ? (
-          <form onSubmit={handleAddOrEdit} className="bg-surface border border-subtle rounded-xl p-4 space-y-4 shadow-inner">
+          <form aria-label={editingId ? "Edit wallet" : "Add wallet"} aria-describedby={`${formId}-help`} onSubmit={handleAddOrEdit} className="bg-surface border border-subtle rounded-xl p-4 space-y-4 shadow-inner">
             <div>
-              <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">Account Name</label>
-              <input type="text" list="wallet-name-suggestions" placeholder="e.g., BPI, GCash, Vault..." value={walletName} onChange={e => setWalletName(e.target.value)} autoFocus className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500" required />
-              <datalist id="wallet-name-suggestions">
+              <label htmlFor={`${formId}-name`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">Account Name</label>
+              <input id={`${formId}-name`} ref={nameInputRef} aria-invalid={Boolean(nameError)} aria-describedby={nameError ? `${formId}-name-error` : `${formId}-balance-help`} type="text" list={`${formId}-suggestions`} placeholder="e.g., BPI, GCash, Vault..." value={walletName} onChange={e => { setWalletName(e.target.value); setNameError(''); }} autoFocus className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500" required />
+              <datalist id={`${formId}-suggestions`}>
                 {WALLET_NAME_SUGGESTIONS.map(name => (
                   <option key={name} value={name} />
                 ))}
               </datalist>
+              <p id={`${formId}-balance-help`} className="mt-1 text-xs text-muted">{editingId ? 'Updating the name or color keeps the current balance.' : 'New wallets start at ₱0. Set the current balance from the wallet list after saving.'}</p>
+              {nameError && <p id={`${formId}-name-error`} role="alert" className="mt-1 text-xs text-negative">{nameError}</p>}
             </div>
-            <div><label className="text-[10px] text-faint uppercase font-semibold mb-2 block">Accent Color</label>
-              <div className="flex items-center flex-wrap gap-3">{COLORS.map(c => <button type="button" key={c} onClick={() => setWalletColor(c)} className={`w-6 h-6 rounded-full bg-current ${c} border-2 transition-all duration-300 ${walletColor === c ? 'border-white scale-110 shadow-[0_0_12px_currentColor]' : 'border-transparent opacity-40 hover:opacity-100 hover:scale-105'}`} />)}</div>
+            <div><p id={`${formId}-colors`} className="text-[10px] text-faint uppercase font-semibold mb-2 block">Accent Color</p>
+              <div role="group" aria-labelledby={`${formId}-colors`} className="flex items-center flex-wrap gap-1">{COLORS.map((c, index) => <button type="button" key={c} aria-label={`${COLOR_NAMES[index]} accent`} aria-pressed={walletColor === c} onClick={() => setWalletColor(c)} className="grid size-11 place-items-center rounded-xl hover:bg-fill"><span aria-hidden="true" className={`size-6 rounded-full bg-current ${c} border-2 transition-all duration-300 ${walletColor === c ? 'border-strong scale-110 shadow-[0_0_12px_currentColor]' : 'border-transparent opacity-40'}`} /></button>)}</div>
             </div>
             <div className="flex items-center gap-2 pt-2 border-t border-inverse/[0.04]">
-              <button type="button" onClick={() => { setShowAdd(false); setEditingId(null); setWalletName(""); }} className="flex-1 py-2.5 bg-inverse/[0.05] hover:bg-inverse/[0.1] text-xs font-semibold rounded-xl transition">Cancel</button>
-              <button type="submit" className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-emerald-900/20 transition">{editingId ? "Update" : "Save"} Account</button>
+              <button type="button" onClick={() => { setShowAdd(false); setEditingId(null); setWalletName(""); }} className="min-h-11 flex-1 py-2.5 bg-inverse/[0.05] hover:bg-inverse/[0.1] text-xs font-semibold rounded-xl transition">Cancel</button>
+              <button type="submit" className="min-h-11 flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-emerald-900/20 transition">{editingId ? "Update" : "Save"} Account</button>
             </div>
           </form>
         ) : (
-          <button onClick={() => { setShowAdd(true); setEditingId(null); setWalletName(""); setWalletColor(COLORS[2]); }} className="w-full py-3.5 border border-dashed border-inverse/[0.15] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted hover:text-emerald-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2"><Plus size={15} /> Add New Account</button>
+          <button id={`${formId}-add`} type="button" onClick={() => { returnFocusId.current = `${formId}-add`; setNameError(''); setShowAdd(true); setEditingId(null); setWalletName(""); setWalletColor(COLORS[2]); }} className="w-full py-3.5 border border-dashed border-inverse/[0.15] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted hover:text-emerald-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2"><Plus size={15} /> Add New Account</button>
         )}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId, useRef } from "react";
 import { Plus, X } from "lucide-react";
 import { ALL_MONTH_YEAR_OPTIONS } from "../constants/config";
 import { BillType, CustomWallet } from "../types/finance";
@@ -29,12 +29,16 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
   customWallets,
   onSubmit,
   onCancel,
-}) => (
-  <Modal
+}) => {
+  const formId = useId();
+  const nameRef = useRef<HTMLInputElement>(null);
+  return <Modal
     isOpen={true}
     onClose={onCancel}
     variant="floating"
     ariaLabel="Add New Commitment"
+    manageFocus
+    initialFocusRef={nameRef}
   >
     <div className={`${entryDialogStyles.card} max-w-md mx-auto`}>
       <div className={entryDialogStyles.header}>
@@ -47,11 +51,13 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
               Add New Commitment
             </h3>
             <p className="text-[11px] text-muted font-medium">
-              Add a recurring bill or loan
+              Track a bill, subscription, or installment
             </p>
           </div>
         </div>
         <button
+          type="button"
+          aria-label="Cancel new commitment"
           onClick={onCancel}
           className={entryDialogStyles.close}
         >
@@ -59,30 +65,31 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
         </button>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-4">
+      <p id={`${formId}-help`} className="mb-4 text-xs text-muted">Adding a commitment sets up what you owe. Money is deducted when you record a payment.</p>
+      <form aria-describedby={`${formId}-help`} onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+          <label htmlFor={`${formId}-name`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
             Commitment Name
           </label>
-          <input
+          <input id={`${formId}-name`}
             type="text"
             value={newBill.name}
             onChange={(e) =>
               setNewBill({ ...newBill, name: e.target.value })
             }
-            autoFocus
+            ref={nameRef}
             placeholder="e.g. Internet Bill"
-            className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500"
+            className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500"
             required
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+            <label htmlFor={`${formId}-amount`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
               Amount (₱)
             </label>
-            <input
+            <input id={`${formId}-amount`}
               type="number"
               inputMode="decimal"
               step="0.01"
@@ -91,21 +98,22 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
                 setNewBill({ ...newBill, amount: e.target.value })
               }
               placeholder="0.00"
-              className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-strong outline-none focus:border-blue-500"
+              className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-strong outline-none focus:border-blue-500"
               required
             />
           </div>
 
           <div>
-            <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
-              Wallet Route
+            <label htmlFor={`${formId}-wallet`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+              Pay from wallet
             </label>
-            <select
+            <select id={`${formId}-wallet`}
               value={newBill.wallet}
               onChange={(e) =>
                 setNewBill({ ...newBill, wallet: e.target.value })
               }
-              className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-primary uppercase font-semibold outline-none focus:border-blue-500"
+              aria-describedby={`${formId}-wallet-help`}
+              className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-primary uppercase font-semibold outline-none focus:border-blue-500"
             >
               {customWallets?.map((cw) => (
                 <option key={cw.id} value={cw.id}>
@@ -113,13 +121,14 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
                 </option>
               ))}
             </select>
+            <p id={`${formId}-wallet-help`} className="mt-1 text-xs text-muted">Choose the wallet you normally use to pay this commitment.</p>
           </div>
 
           <div>
-            <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+            <label htmlFor={`${formId}-type`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
               Type
             </label>
-            <select
+            <select id={`${formId}-type`}
               value={newBill.type}
               onChange={(e) =>
                 setNewBill({
@@ -127,7 +136,7 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
                   type: e.target.value as BillType,
                 })
               }
-              className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500"
+              className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500"
             >
               <option value="Bill">Bill</option>
               <option value="Subscription">Subscription</option>
@@ -138,15 +147,15 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
           </div>
 
           <div>
-            <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
-              Due Date
+            <label htmlFor={`${formId}-dueDay`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+              Due day each month
             </label>
-            <select
+            <select id={`${formId}-dueDay`}
               value={newBill.dueDay}
               onChange={(e) =>
                 setNewBill({ ...newBill, dueDay: e.target.value })
               }
-              className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500"
+              className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500"
             >
               {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                 <option key={d} value={String(d)}>
@@ -160,10 +169,10 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
         {newBill.type === "Loan / Installment" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+              <label htmlFor={`${formId}-startMonth`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
                 Start Month
               </label>
-              <select
+              <select id={`${formId}-startMonth`}
                 value={newBill.startMonth}
                 onChange={(e) =>
                   setNewBill({
@@ -171,7 +180,7 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
                     startMonth: e.target.value,
                   })
                 }
-                className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500"
+                className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500"
               >
                 {ALL_MONTH_YEAR_OPTIONS.map((m) => (
                   <option key={m} value={m}>
@@ -182,10 +191,10 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
             </div>
 
             <div>
-              <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+              <label htmlFor={`${formId}-endMonth`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
                 End Month
               </label>
-              <select
+              <select id={`${formId}-endMonth`}
                 value={newBill.endMonth}
                 onChange={(e) =>
                   setNewBill({
@@ -193,7 +202,7 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
                     endMonth: e.target.value,
                   })
                 }
-                className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500"
+                className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-blue-500"
               >
                 {ALL_MONTH_YEAR_OPTIONS.map((m) => (
                   <option key={m} value={m}>
@@ -215,5 +224,5 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
         </div>
       </form>
     </div>
-  </Modal>
-);
+  </Modal>;
+};

@@ -181,4 +181,30 @@ describe("Modal Primitive", () => {
     fireEvent.click(backdrop);
     expect(onClose).not.toHaveBeenCalled();
   });
+  it("focuses an explicit field, traps tab at boundaries, and returns focus to the opener", () => {
+    function Harness() {
+      const [open, setOpen] = React.useState(false);
+      const field = React.useRef<HTMLInputElement>(null);
+      return <><button onClick={() => setOpen(true)}>Open form</button>{open && <Modal isOpen manageFocus initialFocusRef={field} onClose={() => setOpen(false)} ariaLabel="Focused form"><button onClick={() => setOpen(false)}>Close form</button><input ref={field} aria-label="First field"/><button>Save form</button></Modal>}</>;
+    }
+    render(<Harness/>);
+    const opener=screen.getByRole("button",{name:"Open form"});opener.focus();fireEvent.click(opener);
+    expect(screen.getByLabelText("First field")).toHaveFocus();
+    const first=screen.getByRole("button",{name:"Close form"}),last=screen.getByRole("button",{name:"Save form"});
+    const rects=vi.spyOn(HTMLElement.prototype,"getClientRects").mockReturnValue([{width:1,height:1}] as unknown as DOMRectList);
+    try {
+      first.focus();fireEvent.keyDown(first,{key:"Tab",shiftKey:true});expect(last).toHaveFocus();
+      fireEvent.keyDown(last,{key:"Tab"});expect(first).toHaveFocus();
+      fireEvent.keyDown(window,{key:"Escape"});expect(opener).toHaveFocus();
+    } finally { rects.mockRestore(); }
+  });
+
+  it("keeps focus in the dialog if the requested field belongs outside it", () => {
+    const external=document.createElement("input");document.body.append(external);
+    try {
+      render(<Modal isOpen manageFocus initialFocusRef={{current:external}} onClose={vi.fn()} ariaLabel="Bounded form"><button>Inside</button></Modal>);
+      expect(screen.getByRole("dialog",{name:"Bounded form"})).toHaveFocus();
+    } finally {external.remove();}
+  });
+
 });
