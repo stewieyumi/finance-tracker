@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId, useRef } from "react";
 import { Plus, X } from "lucide-react";
 import { ReceivableCategory, ReceivableFrequency } from "../types/finance";
 import { formatOrdinal } from "../utils/displayHelpers";
@@ -36,12 +36,16 @@ export default function ReceivableAddModal({
   onSubmit,
   startMonth,
 }: ReceivableAddModalProps) {
+  const formId = useId();
+  const nameRef = useRef<HTMLInputElement>(null);
   return (
     <Modal
       isOpen={true}
       onClose={onClose}
       variant="floating"
       ariaLabel="Add New Inflow"
+      manageFocus
+      initialFocusRef={nameRef}
     >
       <div className={`${entryDialogStyles.card} max-w-md mx-auto`}>
         <div className={entryDialogStyles.header}>
@@ -55,6 +59,8 @@ export default function ReceivableAddModal({
             </div>
           </div>
           <button
+            type="button"
+            aria-label="Cancel new inflow"
             onClick={onClose}
             className={entryDialogStyles.close}
           >
@@ -62,29 +68,30 @@ export default function ReceivableAddModal({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <p className="text-xs text-muted">Amount and date are optional. Leave them blank and edit later.</p>
+        <form aria-describedby={`${formId}-help`} onSubmit={onSubmit} className="space-y-4">
+          <p id={`${formId}-help`} className="text-xs text-muted">Amount and date are optional. Leave them blank and edit later.</p>
           <div>
-            <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+            <label htmlFor={`${formId}-name`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
               Inflow Name
             </label>
-            <input
+            <input id={`${formId}-name`}
               type="text"
               value={newReceivable.name}
               onChange={(e) => onChange({ ...newReceivable, name: e.target.value })}
-              autoFocus
+              ref={nameRef}
               placeholder="e.g. Salary, Client Payment"
-              className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
+              className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
               required
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+              <label htmlFor={`${formId}-amount`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
                 {newReceivable.frequency === "Bi-monthly" ? "Amount per payday (₱)" : "Amount (₱)"}
               </label>
-              <input
+              <input id={`${formId}-amount`}
+                aria-describedby={`${formId}-help`}
                 type="number"
                 inputMode="decimal"
                 step="0.01"
@@ -92,7 +99,7 @@ export default function ReceivableAddModal({
                 onChange={(e) => onChange({ ...newReceivable, amount: e.target.value })}
                 min="0.01"
                 placeholder="—"
-                className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-strong outline-none focus:border-emerald-500"
+                className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-strong outline-none focus:border-emerald-500"
               />
               {newReceivable.frequency === "Bi-monthly" && (
                 <p className="mt-1 text-xs text-muted">Monthly total: {newReceivable.amount.trim() ? formatPHP(roundMoney(Number(newReceivable.amount)) * 2) : "—"}</p>
@@ -100,15 +107,15 @@ export default function ReceivableAddModal({
             </div>
 
             <div>
-              <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+              <label htmlFor={`${formId}-category`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
                 Category
               </label>
-              <select
+              <select id={`${formId}-category`}
                 value={newReceivable.category}
                 onChange={(e) =>
                   onChange({ ...newReceivable, category: e.target.value as ReceivableCategory })
                 }
-                className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
+                className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
               >
                 {categoriesList.map((cat) => (
                   <option key={cat} value={cat}>
@@ -119,13 +126,13 @@ export default function ReceivableAddModal({
             </div>
 
             <div>
-              <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+              <label htmlFor={`${formId}-wallet`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
                 Destination Wallet
               </label>
-              <select
+              <select id={`${formId}-wallet`}
                 value={newReceivable.wallet}
                 onChange={(e) => onChange({ ...newReceivable, wallet: e.target.value })}
-                className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-primary uppercase font-semibold outline-none focus:border-emerald-500"
+                className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-primary uppercase font-semibold outline-none focus:border-emerald-500"
               >
                 {allWallets.map((w) => (
                   <option key={w.id} value={w.id}>
@@ -136,11 +143,10 @@ export default function ReceivableAddModal({
             </div>
 
             <div>
-              <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+              <label htmlFor={`${formId}-frequency`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
                 Frequency
               </label>
-              <select
-                aria-label="Frequency"
+              <select id={`${formId}-frequency`}
                 value={newReceivable.frequency}
                 onChange={(e) =>
                   onChange({
@@ -148,7 +154,7 @@ export default function ReceivableAddModal({
                     frequency: e.target.value as ReceivableFrequency,
                   })
                 }
-                className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
+                className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
               >
                 <option value="By Date">Specific Date</option>
                 <option value="No Specific Date">One-time — No Specific Date</option>
@@ -165,10 +171,10 @@ export default function ReceivableAddModal({
               <div className="col-span-1 sm:col-span-2">
                 <div className="flex gap-2 mb-3">
                   <div className="flex-1">
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+                    <label htmlFor={`${formId}-first-day`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
                       First Day
                     </label>
-                    <select
+                    <select id={`${formId}-first-day`}
                       value={newReceivable.biMonthlyDays?.[0] || 15}
                       onChange={(e) =>
                         onChange({
@@ -179,7 +185,7 @@ export default function ReceivableAddModal({
                           ].sort((a, b) => a - b),
                         })
                       }
-                      className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none"
+                      className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none"
                     >
                       {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                         <option key={d} value={d}>
@@ -190,10 +196,10 @@ export default function ReceivableAddModal({
                   </div>
 
                   <div className="flex-1">
-                    <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+                    <label htmlFor={`${formId}-second-day`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
                       Second Day
                     </label>
-                    <select
+                    <select id={`${formId}-second-day`}
                       value={newReceivable.biMonthlyDays?.[1] || 30}
                       onChange={(e) =>
                         onChange({
@@ -204,7 +210,7 @@ export default function ReceivableAddModal({
                           ].sort((a, b) => a - b),
                         })
                       }
-                      className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none"
+                      className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none"
                     >
                       {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                         <option key={d} value={d}>
@@ -219,10 +225,10 @@ export default function ReceivableAddModal({
 
             {newReceivable.frequency === "Monthly" && (
               <div className="col-span-1 sm:col-span-2">
-                <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+                <label htmlFor={`${formId}-monthly-day`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
                   Day of Month
                 </label>
-                <select
+                <select id={`${formId}-monthly-day`}
                   value={newReceivable.monthlyDay}
                   onChange={(e) =>
                     onChange({
@@ -230,7 +236,7 @@ export default function ReceivableAddModal({
                       monthlyDay: parseInt(e.target.value, 10),
                     })
                   }
-                  className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
+                  className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
                 >
                   {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                     <option key={d} value={d}>
@@ -243,14 +249,15 @@ export default function ReceivableAddModal({
 
             {newReceivable.frequency === "By Date" && (
               <div className="col-span-1 sm:col-span-2">
-                <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+                <label htmlFor={`${formId}-date`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
                   Date
                 </label>
-                <input
+                <input id={`${formId}-date`}
+                  aria-describedby={`${formId}-help`}
                   type="date"
                   value={newReceivable.date}
                   onChange={(e) => onChange({ ...newReceivable, date: e.target.value })}
-                  className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
+                  className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500"
                 />
               </div>
             )}
