@@ -33,3 +33,7 @@ codebase*.xml
 *.json
 !tsconfig.api.json
 finance_backup.json
+
+# Browser test artifacts
+/playwright-report/
+/test-results/

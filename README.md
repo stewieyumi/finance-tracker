@@ -110,3 +110,31 @@ recovery (including a failed primary storage write), explicit conflict choices,
 and a lost response after an accepted save. This validates local Redis semantics;
 it does not certify a particular hosted provider's HTTP transport or live sign-in.
 Ordinary `npm test` explicitly skips these opt-in suites.
+
+
+## Browser smoke tests
+
+Install the locked development dependencies, then run:
+
+```sh
+npx playwright install chromium
+npm run test:browser
+```
+
+The suite builds the real app with a public synthetic client ID and launches its
+own preview on `http://127.0.0.1:5188`. The port must be free; it never reuses an
+existing server. Each case uses a new Chromium context with synthetic session
+and finance data. Sync requests are fulfilled in memory, Google SDK loading is
+stubbed, and other external/unexpected API requests are blocked and fail tests.
+No existing browser profile, cloud database or real provider account is used.
+
+Three workflows run at desktop and 375px phone sizes: first-time setup/wallet/
+expense persistence, an internal transfer with a fee, and optional inflow entry
+with cancel/focus checks. Browser results use `*.pw.ts` so ordinary Vitest does
+not collect them. CI runs the suite in a separate job and retains synthetic-data
+failure traces/screenshots for seven days. Local artifacts are ignored by Git.
+
+These are Chromium rendering and application-flow checks with simulated cloud
+auth/sync. They do not validate real Google sign-in, Redis/provider behavior,
+Safari/iOS compatibility, camera access, or physical-phone performance. The
+existing unit/integration and real Redis checks remain separate.
