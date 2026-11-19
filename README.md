@@ -166,3 +166,35 @@ usable list reachable; the background page stays locked while History is open.
 Browser checks cover stationary controls with65 synthetic records, loading
 more, search and expanded date filters on a short viewport in both themes and
 screen sizes, without changing finance snapshots.
+
+
+## Install as an app
+
+Dashboard offers a dismissible installation helper; Account → Install app keeps
+it available later. “Not now” suppresses the Dashboard invitation for seven days
+on that device. Standalone/app mode hides the invitation and changes the Account
+entry to Installation help.
+
+When the browser supplies `beforeinstallprompt`, clicking Install app opens its
+native prompt. The event is consumed once, no prompt opens automatically, and
+accepting a prompt is not reported as completed installation until `appinstalled`.
+Otherwise the guide provides Android Chrome, Windows Edge/Chrome, iPhone/iPad
+Safari, and Mac Safari instructions. Device detection selects instructions only;
+it does not infer native-prompt availability. Browsers cannot reliably report
+all apps previously installed outside the current session.
+
+The existing web manifest and icons are reused. Installation adds no service
+worker or offline guarantees; cloud sync, scanning, and automatic Shortcut saving
+still need internet. This helper does not resolve cellular-network errors in
+Apple Shortcuts.
+
+Eight install browser cases cover light/dark fallback guidance, short-screen
+reachability, dismissal persistence, Account access, focus restoration, simulated
+native-prompt lifecycle, app-mode suppression, and unchanged finance snapshots.
+The full Chromium suite has 22 cases. Native events and device identification are
+simulated; actual Android/Windows OS installation and Safari behavior require
+real-device checks after deployment.
+
+Browser references: [native prompt lifecycle](https://developer.mozilla.org/en-US/docs/Web/API/BeforeInstallPromptEvent/prompt),
+[Android Chrome](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=en),
+[Windows Edge](https://support.microsoft.com/en-us/edge/install-manage-or-uninstall-apps-in-microsoft-edge).

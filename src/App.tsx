@@ -1,3 +1,4 @@
+import { useAppInstall } from "./hooks/useAppInstall";
 import { deferredScreen } from "./components/ui/deferredScreen";
 import type { ReceiptTransferDraft } from './components/ReceiptReview';
 import { formatTransactionDateTime as formatDateTime } from "./utils/transactionDates";
@@ -68,6 +69,9 @@ const YearlyOverviewModal = lazy(() => import("./components/YearlyOverviewModal"
   .then(module => ({ default: module.YearlyOverviewModal })));
 const FinancialAnalyticsModal = lazy(() => import("./components/FinancialAnalyticsModal")
   .then(module => ({ default: module.FinancialAnalyticsModal })));
+
+const InstallAppGuide = lazy(() => import("./components/InstallAppGuide")
+  .then(module => ({ default: module.InstallAppGuide })));
 
 const GuidedTour = lazy(() => import("./components/GuidedTour")
   .then(module => ({ default: module.GuidedTour })));
@@ -176,6 +180,8 @@ function safeLoadAll(sub: string | null = getFinanceSubject()): UnifiedFinanceDa
 
 export default function App() {
   const { updateAvailable } = useAppUpdate();
+  const appInstall = useAppInstall();
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
   const [dataOwnerSub, setDataOwnerSub] = useState<string | null>(() =>
     getFinanceSubject()
@@ -682,6 +688,7 @@ const { saveShootEdit } = useShootSaveActions({
 
   const isTourOpen = Boolean(tourOwnerSub && tourOwnerSub === dataOwnerSub && isDataOwnedByActiveSub && !hasValidatedActiveConflict);
   const isModalOpen =
+    showInstallGuide ||
     isTourOpen ||
     showDatePickerModal ||
     showYearlyModal ||
@@ -1192,6 +1199,17 @@ const copySummaryToClipboard = async () => {
           onNavigate={handleNotificationNavigate}
         />
 
+        {activeTab === "home" && (!isModalOpen || showInstallGuide) && ((!appInstall.added && !appInstall.dismissed) || showInstallGuide) && !isEditing && !hasValidatedActiveConflict && (
+          <section aria-label="Add Finance Tracker to your device" className="dashboard-material flex flex-wrap items-center gap-3 rounded-2xl p-4">
+            <Download size={20} aria-hidden="true" className="shrink-0 text-muted" />
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-semibold text-strong">Keep Finance Tracker one tap away</h2>
+              <p className="mt-1 text-xs leading-relaxed text-muted">Add it to your Home Screen or desktop for quicker access.</p>
+            </div>
+            <button type="button" onClick={() => { setShowInstallGuide(true); if (appInstall.canPrompt) void appInstall.install(); }} className="min-h-11 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-500">{appInstall.canPrompt ? "Install app" : "How to install"}</button>
+            <button type="button" onClick={appInstall.dismissOffer} className="min-h-11 rounded-xl px-3 text-xs font-medium text-muted hover:bg-fill">Not now</button>
+          </section>
+        )}
         {activeTab === "home" && (
           <DashboardTab
             globalData={dashboardGlobalData}
@@ -1296,6 +1314,8 @@ const copySummaryToClipboard = async () => {
             onGoogleSuccess={handleGoogleSuccess}
             onGoogleError={() => showToast("Google Sign-In Failed")}
             onOpenSettings={() => setShowSettingsModal(true)}
+            onOpenInstallGuide={() => setShowInstallGuide(true)}
+            isAppMode={appInstall.added}
             importInputRef={importInputRef}
             onImportFile={handleImportFile}
             allTransactions={allTransactions}
@@ -1307,6 +1327,12 @@ const copySummaryToClipboard = async () => {
         )}
       </div>
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
+      {showInstallGuide && !hasValidatedActiveConflict && <ErrorBoundary onRetry={() => setShowInstallGuide(false)} message="Installation help couldn't load. Try again from Account.">
+        <Suspense fallback={deferredModalFallback}>
+          <InstallAppGuide onClose={() => setShowInstallGuide(false)} canPrompt={appInstall.canPrompt}
+            added={appInstall.added} busy={appInstall.busy} status={appInstall.status} onInstall={appInstall.install} />
+        </Suspense>
+      </ErrorBoundary>}
       {isTourOpen && <ErrorBoundary onRetry={() => setTourOwnerSub(null)} message="The tour couldn't load. Close it and try again from Getting Started.">
         <Suspense fallback={deferredModalFallback}>
           <GuidedTour onClose={() => setTourOwnerSub(null)} onSetupQuickExpense={() => {
