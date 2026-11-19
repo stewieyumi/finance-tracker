@@ -10,6 +10,7 @@ test('new-user setup, wallet creation, and expense deduction survive reopening',
   await page.getByRole('spinbutton', { name: 'Target Amount' }).fill('10000');
   await page.getByRole('button', { name: 'Next: Appearance' }).click();
   await page.getByRole('button', { name: 'Finish Setup & Launch' }).click();
+  await page.getByRole('dialog', { name: 'App tour' }).getByRole('button', { name: 'Skip tour' }).click();
   await navigate(page, 'Wallets');
   await page.getByRole('button', { name: 'Add New Account' }).click();
   await page.getByRole('combobox', { name: 'Account Name' }).fill('Travel Cash');

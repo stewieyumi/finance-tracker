@@ -25,6 +25,7 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
           return (
             <button
               key={id}
+              data-tour={id}
               type="button"
               onClick={() => onChange(id)}
               className={`flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border px-0.5 py-1 transition-colors motion-reduce:transition-none ${isActive

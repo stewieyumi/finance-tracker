@@ -1,3 +1,4 @@
+import { useTransactionListHeight } from "../hooks/useTransactionListHeight";
 import { compareTransactionsNewestFirst, formatTransactionDateTime } from "../utils/transactionDates";
 import { formatPHP, roundMoney } from "../utils/currency";
 import React, { useEffect, useId, useRef, useState } from "react";
@@ -44,6 +45,9 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   onReceiptTransfer,
   selectedMonth = getMonthKey(new Date())
 }) => {
+  const expenseLayoutRef = useRef<HTMLDivElement>(null);
+  const expenseListRef = useRef<HTMLDivElement>(null);
+  const expenseListHeight = useTransactionListHeight(expenseLayoutRef, expenseListRef, "page");
   const expenseFormId = useId();
   const [showForm, setShowForm] = useState(false);
   const [receiptReview, setReceiptReview] = useState<ScanResult | null>(null);
@@ -215,7 +219,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
 
   return (
     <>
-      <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
+      <div ref={expenseLayoutRef} className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
 
         <section aria-labelledby="expenses-month" className="rounded-2xl border border-subtle bg-surface-elevated p-4 shadow-sm sm:p-5">
           <div className="flex items-start justify-between gap-3">
@@ -255,7 +259,9 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
           </div>
 
           {feeTotal > 0 && <p className="mb-3 text-xs text-muted">All-time spending includes transfer fees. Review those entries in Transaction History → Manage Ledger.</p>}
-          <div className="overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle">
+          <div ref={expenseListRef} role="region" aria-label="Recent expenses" tabIndex={0}
+            style={{ height: expenseListHeight ?? "40dvh" }}
+            className="overflow-y-auto overscroll-contain rounded-xl bg-surface-low divide-y divide-subtle">
             {expenses.length === 0 ? (
               <div className="py-8 text-center text-faint text-xs italic">No expenses logged yet. Tap scan or manual to start tracking.</div>
             ) : (
