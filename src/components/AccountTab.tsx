@@ -10,6 +10,8 @@ interface AccountTabProps {
   onGoogleSuccess: (credentialResponse: any) => void;
   onGoogleError: () => void;
   onOpenSettings: () => void;
+  onOpenInstallGuide?: () => void;
+  isAppMode?: boolean;
   importInputRef: React.RefObject<HTMLInputElement | null>;
   onImportFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   allTransactions: TransactionHistoryItem[];
@@ -25,6 +27,8 @@ export const AccountTab: React.FC<AccountTabProps> = ({
   onGoogleSuccess,
   onGoogleError,
   onOpenSettings,
+  onOpenInstallGuide,
+  isAppMode = false,
   importInputRef,
   onImportFile,
   allTransactions,
@@ -53,6 +57,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
         <div className="flex flex-col gap-3 mx-auto w-full">
           <button onClick={onOpenSettings} className="w-full px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"><Settings size={16} /> Open Settings</button>
         </div>
+        {onOpenInstallGuide && <button type="button" onClick={onOpenInstallGuide} className="mt-3 min-h-11 w-full rounded-xl bg-fill px-4 text-sm font-semibold text-primary hover:bg-fill-strong">{isAppMode ? "Installation help" : "Install app"}</button>}
         <input ref={importInputRef} type="file" accept="application/json" onChange={onImportFile} className="hidden" />
       </div>
 
