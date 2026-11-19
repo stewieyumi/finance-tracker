@@ -69,6 +69,9 @@ const YearlyOverviewModal = lazy(() => import("./components/YearlyOverviewModal"
 const FinancialAnalyticsModal = lazy(() => import("./components/FinancialAnalyticsModal")
   .then(module => ({ default: module.FinancialAnalyticsModal })));
 
+const GuidedTour = lazy(() => import("./components/GuidedTour")
+  .then(module => ({ default: module.GuidedTour })));
+
 const SettingsModal = lazy(() => import("./components/SettingsModal")
   .then(module => ({ default: module.SettingsModal })));
 
@@ -233,6 +236,9 @@ const {
   const [showYearlyModal, setShowYearlyModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [tourOwnerSub, setTourOwnerSub] = useState<string | null>(null);
+  const [highlightQuickExpense, setHighlightQuickExpense] = useState(false);
+  React.useEffect(() => { setTourOwnerSub(null); setHighlightQuickExpense(false); }, [dataOwnerSub]);
   const [showAppleCalendar, setShowAppleCalendar] = useState(false);
   const [showGoalSetupModal, setShowGoalSetupModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>(() =>
@@ -674,7 +680,9 @@ const { saveShootEdit } = useShootSaveActions({
     };
   }, [globalData, walletDisplayLabels]);
 
+  const isTourOpen = Boolean(tourOwnerSub && tourOwnerSub === dataOwnerSub && isDataOwnedByActiveSub && !hasValidatedActiveConflict);
   const isModalOpen =
+    isTourOpen ||
     showDatePickerModal ||
     showYearlyModal ||
     showAnalyticsModal ||
@@ -982,6 +990,8 @@ const copySummaryToClipboard = async () => {
         }))}
         onComplete={(completedData) => {
           syncedSetGlobalData(completedData);
+          setActiveTab("home");
+          setTourOwnerSub(dataOwnerSub);
           showToast("✨ Setup complete! Welcome to Finance Tracker.");
         }}
       />
@@ -1125,7 +1135,7 @@ const copySummaryToClipboard = async () => {
         {showSettingsModal && (
           <ErrorBoundary>
             <Suspense fallback={deferredModalFallback}>
-              <SettingsModal onOpenCalendarExport={() => { setActiveTab("operations"); setOpsTab("gigs"); }} onOpenCalendar={() => setShowAppleCalendar(true)} onRestoreImportBackup={restorePreImportBackup} onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} onClose={() => setShowSettingsModal(false)} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
+              <SettingsModal onOpenCalendarExport={() => { setActiveTab("operations"); setOpsTab("gigs"); }} onOpenCalendar={() => setShowAppleCalendar(true)} onRestoreImportBackup={restorePreImportBackup} onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} initialQuickExpense={highlightQuickExpense} onClose={() => { setShowSettingsModal(false); setHighlightQuickExpense(false); }} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
             </Suspense>
           </ErrorBoundary>
         )}
@@ -1203,6 +1213,7 @@ const copySummaryToClipboard = async () => {
             latestExecution={latestExecution}
             recentTransactions={recentTransactions}
             onOpenSettings={(tab) => { setSettingsInitialTab(tab); setShowSettingsModal(true); }}
+            onStartTour={() => setTourOwnerSub(dataOwnerSub)}
             onConfigureGoal={() => setShowGoalSetupModal(true)}
             onExecutePaydaySplit={handleExecutePaydaySplit}
             onUndoPaydaySplit={handleUndoPaydaySplit}
@@ -1296,6 +1307,16 @@ const copySummaryToClipboard = async () => {
         )}
       </div>
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
+      {isTourOpen && <ErrorBoundary onRetry={() => setTourOwnerSub(null)} message="The tour couldn't load. Close it and try again from Getting Started.">
+        <Suspense fallback={deferredModalFallback}>
+          <GuidedTour onClose={() => setTourOwnerSub(null)} onSetupQuickExpense={() => {
+            setTourOwnerSub(null);
+            setSettingsInitialTab("general");
+            setHighlightQuickExpense(true);
+            setShowSettingsModal(true);
+          }} />
+        </Suspense>
+      </ErrorBoundary>}
     </div>
   );
 }

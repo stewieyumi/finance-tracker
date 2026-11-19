@@ -54,7 +54,7 @@ export const test = base.extend<{ isolatedApp: (data?: UnifiedFinanceData) => Pr
         }
         const isStatic = url.origin === origin && request.method() === 'GET' &&
           (url.pathname === '/' || url.pathname.startsWith('/assets/') ||
-            ['/manifest.json', '/icon-192.png', '/icon-512.png'].includes(url.pathname));
+            ['/manifest.json', '/icon-192.png', '/icon-512.png', '/shortcuts/Finance%20Tracker%20Quick%20Expense.shortcut'].includes(url.pathname));
         if (isStatic) { await route.continue(); return; }
         unexpected.push(`${request.method()} ${url.origin}${url.pathname}`);
         await route.abort('blockedbyclient');

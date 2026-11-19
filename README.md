@@ -138,3 +138,31 @@ These are Chromium rendering and application-flow checks with simulated cloud
 auth/sync. They do not validate real Google sign-in, Redis/provider behavior,
 Safari/iOS compatibility, camera access, or physical-phone performance. The
 existing unit/integration and real Redis checks remain separate.
+
+
+## Guided introduction
+
+Finishing first-time setup starts a skippable spotlight tour of the five main
+navigation areas. Existing users can replay it from Dashboard → Getting Started
+→ Take a quick tour. It explains controls without recording transactions.
+After the tour, an optional Quick Expense / iPhone Back Tap introduction opens
+General settings with Quick Expense expanded and focused. It does not install
+Shortcuts or create an automatic-saving connection without the user's action.
+
+The preset download requests a separate browser context and includes Home Screen
+return guidance so it does not intentionally navigate the tracker away. Its real
+iPhone Home Screen → Safari/Shortcuts handoff still needs device acceptance;
+Chromium download checks cannot certify that iOS behavior. Additional browser
+cases cover the tour in light/dark mode at desktop and phone sizes, a 320px
+resize, keyboard dismissal, direct setup entry, and unchanged finance snapshots.
+
+
+Expenses and full Transaction History keep their top controls outside a
+keyboard-focusable transaction list. Lists use the viewport space below those
+controls, so scrolling records keeps the summary, entry buttons or filters in
+place. Account retains its existing history preview. Very short/zoomed screens
+can scroll the surrounding page or dialog when needed to keep controls and a
+usable list reachable; the background page stays locked while History is open.
+Browser checks cover stationary controls with65 synthetic records, loading
+more, search and expanded date filters on a short viewport in both themes and
+screen sizes, without changing finance snapshots.

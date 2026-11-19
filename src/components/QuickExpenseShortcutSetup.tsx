@@ -39,7 +39,8 @@ export function QuickExpenseShortcutSetup({ globalData }: { globalData: UnifiedF
   const wallets = Object.keys(globalData.wallets).filter(id => !globalData.settings?.archivedWallets?.some(wallet => wallet.id === id));
   const walletLabel = (id: string) => globalData.settings?.customWallets?.find(wallet => wallet.id === id)?.label ?? globalData.settings?.walletLabels?.[id] ?? id;
   return <div className="space-y-3">
-    <a href="/shortcuts/Finance%20Tracker%20Quick%20Expense.shortcut" download="Finance Tracker Quick Expense.shortcut" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 font-semibold text-primary hover:bg-fill-strong"><Download size={15} /> Add to Apple Shortcuts</a>
+    <a href="/shortcuts/Finance%20Tracker%20Quick%20Expense.shortcut" download="Finance Tracker Quick Expense.shortcut" target="_blank" rel="noopener noreferrer" aria-describedby="shortcut-return-help" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 font-semibold text-primary hover:bg-fill-strong"><Download size={15} /> Add to Apple Shortcuts</a>
+    <p id="shortcut-return-help">Opens separately in Safari or Shortcuts. To return here on iPhone, tap Finance Tracker on your Home Screen. Keep this setup open while you add the shortcut.</p>
     <p>Download the latest preset, then open it and tap Add Shortcut. Reinstall it to update an older shortcut. Connect automatic saving below and paste your private key when the preset asks for it.</p>
     <button type="button" aria-expanded={open} onClick={() => { setOpen(value => !value); if (!open) void request(); }} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 font-semibold text-primary hover:bg-fill-strong"><Link2 size={14} /> Automatic saving</button>
     {open && <div className="space-y-3 rounded-xl border border-subtle p-3">

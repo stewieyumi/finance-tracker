@@ -955,3 +955,11 @@ describe("Quick Expense setup", () => {
     expect(screen.getByLabelText("Quick Expense link")).toHaveValue(`${window.location.origin}/#quick-expense`);
   });
 });
+
+it("opens and focuses Quick Expense directly from the tour without saving settings", () => {
+  const { setGlobalData } = renderSettingsModal(createMockData(), { initialQuickExpense: true });
+  const summary = screen.getByText("Quick Expense", { exact: true }).closest("summary")!;
+  expect(summary.parentElement).toHaveAttribute("open");
+  expect(summary).toHaveFocus();
+  expect(setGlobalData).not.toHaveBeenCalled();
+});

@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useTransactionListHeight } from "../hooks/useTransactionListHeight";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   X,
   History,
@@ -32,6 +33,9 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
   formatDateTime = formatTransactionDateTime,
   onOpenManualLedger
 }) => {
+  const historyPanelRef = useRef<HTMLDivElement>(null);
+  const historyListRef = useRef<HTMLDivElement>(null);
+  const historyListHeight = useTransactionListHeight(historyPanelRef, historyListRef, "dialog", isOpen);
   const [selectedMonth, setSelectedMonth] = useState<string>("ALL");
   const [selectedType, setSelectedType] = useState<"all" | "inflow" | "expense" | "bill" | "transfer">("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -157,8 +161,9 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
       variant="sheet"
       ariaLabel="Transaction History"
       manageFocus
+      className="!justify-start"
     >
-      <div className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-2xl mx-auto shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
+      <div ref={historyPanelRef} className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-2xl mx-auto shadow-2xl mt-auto sm:mb-auto shrink-0 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-3">
@@ -350,8 +355,10 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
         </div>
 
         <p className="px-4 pt-2 text-[10px] text-muted sm:px-5">Newest first</p>
-        {/* Scrollable Transaction List */}
-        <div className="overflow-y-auto p-4 sm:p-5 space-y-2 flex-1 min-h-[100px]">
+        {/* Keep the controls above the independently scrollable records. */}
+        <div ref={historyListRef} role="region" aria-label="History transactions" tabIndex={0}
+          style={{ height: historyListHeight ?? "40dvh" }}
+          className="overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-2">
           {filteredTransactions.length === 0 ? (
             <div className="py-12 text-center text-faint text-xs italic flex flex-col items-center justify-center gap-2">
               <History size={24} className="opacity-30" />

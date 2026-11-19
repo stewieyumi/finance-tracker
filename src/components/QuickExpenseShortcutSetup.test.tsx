@@ -76,3 +76,12 @@ it("keeps a legacy connection restricted and requires confirmation before enabli
   expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("currently active, synced wallets"));
   expect(fetch).toHaveBeenCalledTimes(1);
 });
+
+it("preserves the app context when handing the public preset to Safari or Shortcuts", () => {
+  render(<QuickExpenseShortcutSetup globalData={data} />);
+  const link = screen.getByRole("link", { name: "Add to Apple Shortcuts" });
+  expect(link).toHaveAttribute("target", "_blank");
+  expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  expect(screen.getByText(/To return here on iPhone/)).toBeVisible();
+  expect(fetch).not.toHaveBeenCalled();
+});

@@ -1,5 +1,5 @@
 import { QuickExpenseShortcutSetup } from "./QuickExpenseShortcutSetup";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { X, Settings, Briefcase, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2, CalendarPlus, Search, Wallet, ChevronRight, Copy, Zap } from "lucide-react";
 import { Deduction, DeductionType, UnifiedFinanceData } from "../types/finance";
 import { migrateLegacyBills } from "../utils/financeMigrations";
@@ -56,6 +56,7 @@ const settingsAction = `${settingsRow} w-full text-left text-sm font-medium text
 interface SettingsModalProps {
   isOpen: boolean;
   initialTab?: SettingsSection;
+  initialQuickExpense?: boolean;
   onClose: () => void;
   globalData: UnifiedFinanceData;
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
@@ -92,8 +93,17 @@ const formatOrdinal = (n: number) => {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab = "general", onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull, onExport, onImportClick, onRestoreImportBackup, onOpenCalendar, onOpenCalendarExport }) => {
-  const [activeTab, setActiveTab] = useState<SettingsSection>(initialTab);
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab = "general", initialQuickExpense = false, onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull, onExport, onImportClick, onRestoreImportBackup, onOpenCalendar, onOpenCalendarExport }) => {
+  const [activeTab, setActiveTab] = useState<SettingsSection>(initialQuickExpense ? "general" : initialTab);
+  const quickExpenseDetails = useRef<HTMLDetailsElement>(null);
+  useLayoutEffect(() => {
+    if (!isOpen || !initialQuickExpense) return;
+    const details = quickExpenseDetails.current;
+    if (!details) return;
+    details.open = true;
+    details.scrollIntoView?.({ block: "nearest" });
+    details.querySelector("summary")?.focus();
+  }, [isOpen, initialQuickExpense, activeTab]);
   const [sectionSearch, setSectionSearch] = useState("");
   const [quickExpenseCopyStatus, setQuickExpenseCopyStatus] = useState("");
   const quickExpenseUrl = `${window.location.origin}/${QUICK_EXPENSE_HASH}`;
@@ -116,11 +126,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
 
   useEffect(() => {
     if (isOpen) {
-      setActiveTab(initialTab);
+      setActiveTab(initialQuickExpense ? "general" : initialTab);
       setSectionSearch("");
       setQuickExpenseCopyStatus("");
     }
-  }, [isOpen, initialTab]);
+  }, [isOpen, initialTab, initialQuickExpense]);
   const [form, setForm] = useState(() =>
     createSettingsForm(globalData.settings, globalData.wallets, {
       inflowCategories: PRESETS.videographer.inflowCats,
@@ -355,7 +365,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                 </div>
               </div>
 
-              <details className={`${settingsGroup} group/quick-expense`}>
+              <details ref={quickExpenseDetails} className={`${settingsGroup} group/quick-expense ${initialQuickExpense ? "ring-2 ring-blue-500/60" : ""}`}>
                 <summary className={`${settingsAction} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
                   <span className="flex items-center gap-2"><Zap size={16} aria-hidden="true" /> Quick Expense</span>
                   <ChevronRight size={15} aria-hidden="true" className="text-muted transition-transform group-open/quick-expense:rotate-90" />

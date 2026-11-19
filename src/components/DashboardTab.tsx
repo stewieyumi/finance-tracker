@@ -66,6 +66,7 @@ interface DashboardTabProps {
   // Actions
   onOpenSettings: (tab: "general" | "baselines" | "sync") => void;
   onConfigureGoal?: () => void;
+  onStartTour?: () => void;
   onExecutePaydaySplit: () => void;
   onUndoPaydaySplit: (executionId: string) => void;
   onJumpToOverdue: () => void;
@@ -108,6 +109,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
   onOpenSettings,
   onConfigureGoal,
+  onStartTour,
   onExecutePaydaySplit,
   onUndoPaydaySplit,
   onJumpToOverdue,
@@ -776,6 +778,10 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         <div className="w-full max-w-md rounded-3xl border border-subtle bg-surface-modal p-5 shadow-xl sm:p-6">
           <h2 id="getting-started-title" className="text-lg font-semibold text-strong">Getting Started</h2>
           <p className="mt-1 text-sm text-muted">Pick one thing to try. You can come back anytime from Quick Actions.</p>
+          {onStartTour && <button type="button" onClick={() => { setShowGettingStarted(false); onStartTour(); }}
+            className="mt-4 min-h-11 w-full rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-500">
+            Take a quick tour
+          </button>}
           <ol className="my-4 divide-y divide-subtle overflow-hidden rounded-2xl bg-surface">
             {gettingStartedSteps.map(({ action, title, description, icon: Icon }) => (
               <li key={action}>
