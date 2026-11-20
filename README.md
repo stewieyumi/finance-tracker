@@ -290,3 +290,9 @@ connection races, blocked calendar actions, same-account recreation, and late
 write acknowledgments. The browser suite covers all 22 guide areas in light and
 dark at desktop and phone sizes. Physical Safari/OS checks and live-account
 deletion are not implied by this isolated coverage.
+
+
+API test filenames use the `_*.test.ts` convention so Vercel excludes them from
+function discovery. The native API import check rejects unprefixed test files
+before deployment. The seven application API routes remain unchanged by this
+packaging rule. See [Vercel's utility-file convention](https://vercel.com/docs/functions/configuring-functions/advanced-configuration).
