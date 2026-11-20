@@ -39,7 +39,7 @@ for (const theme of ['light', 'dark'] as const) {
       await tour.getByRole('button', { name: 'Next', exact: true }).click();
     }
     await tour.getByRole('button', { name: 'Finish tour' }).click();
-    await expect(tour.getByRole('heading', { name: 'Quick Expense with Back Tap' })).toBeFocused();
+    await expect(tour.getByRole('heading', { name: 'Quick Expense and app access' })).toBeFocused();
     await positioned();
     await page.screenshot({ path: testInfo.outputPath(`quick-expense-${theme}.png`) });
     await tour.getByRole('button', { name: 'Set up Quick Expense' }).click();

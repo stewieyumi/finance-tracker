@@ -22,9 +22,10 @@ describe("OnboardingWizard", () => {
     expect(screen.getByText("Welcome, Alex!")).toBeInTheDocument();
     const getStartedBtn = screen.getByRole("button", { name: /get started/i });
     fireEvent.click(getStartedBtn);
+    fireEvent.click(screen.getByRole("button", { name: /^Regular income/ }));
 
     // Step 2: Salary & Payday
-    expect(screen.getByText(/Payday Salary & Schedule/i)).toBeInTheDocument();
+    expect(screen.getByText(/How does money come in/i)).toBeInTheDocument();
     const salaryInput = screen.getByLabelText("Gross Salary");
     fireEvent.change(salaryInput, { target: { value: "30000" } });
 
@@ -89,7 +90,8 @@ describe("OnboardingWizard", () => {
 
     // Step 1 -> Step 2
     fireEvent.click(screen.getByRole("button", { name: /get started/i }));
-    expect(screen.getByText(/Payday Salary & Schedule/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Regular income/ }));
+    expect(screen.getByText(/How does money come in/i)).toBeInTheDocument();
 
     // Step 2 -> Step 1 (Back)
     fireEvent.click(screen.getByRole("button", { name: /back/i }));
@@ -101,6 +103,7 @@ describe("OnboardingWizard", () => {
     render(<OnboardingWizard globalData={INITIAL_UNIFIED_DATA} onComplete={onComplete} onSkip={onSkip} />);
 
     fireEvent.click(screen.getByRole("button", { name: /get started/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Regular income/ }));
     fireEvent.change(screen.getByLabelText("Gross Salary"), { target: { value: "30000" } });
     fireEvent.click(screen.getByRole("button", { name: /skip setup/i }));
 
@@ -115,6 +118,7 @@ describe("OnboardingWizard", () => {
     const onComplete = vi.fn();
     render(<OnboardingWizard globalData={data} onComplete={onComplete} onSkip={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: /get started/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Regular income/ }));
     fireEvent.click(screen.getByRole("button", { name: "Custom Days" }));
     const days = screen.getByLabelText("Custom Payday Days") as HTMLInputElement;
     fireEvent.change(days, { target: { value: "" } });
@@ -143,6 +147,7 @@ describe("OnboardingWizard", () => {
     const onComplete = vi.fn();
     render(<OnboardingWizard globalData={INITIAL_UNIFIED_DATA} onComplete={onComplete} onSkip={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: /get started/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Regular income/ }));
     fireEvent.click(screen.getByRole("button", { name: "Custom Days" }));
     fireEvent.change(screen.getByLabelText("Custom Payday Days"), { target: { value } });
     fireEvent.click(screen.getByRole("button", { name: /next: wallets/i }));
@@ -157,6 +162,7 @@ describe("OnboardingWizard", () => {
   it("names deduction and wallet controls and announces selected preferences", () => {
     render(<OnboardingWizard globalData={INITIAL_UNIFIED_DATA} onComplete={vi.fn()} onSkip={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: /get started/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Regular income/ }));
     expect(screen.getByRole("button", { name: /15th & 30th/i })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: /add deduction/i }));
     expect(screen.getByRole("textbox", { name: "Deduction 1 name" })).toBeInTheDocument();
@@ -171,5 +177,80 @@ describe("OnboardingWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Light" }));
     expect(screen.getByRole("button", { name: "Light" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Dark" })).toHaveAttribute("aria-pressed", "false");
+  });
+});
+
+describe("inclusive first setup", () => {
+  const finishFromIncome = () => {
+    fireEvent.click(screen.getByRole("button", { name: /next: wallets/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next: milestone goal/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next: appearance/i }));
+    fireEvent.click(screen.getByRole("button", { name: /finish setup & launch/i }));
+  };
+
+  it.each([
+    ["Employee", "Regular income", "SALARY & BONUSES", "Bonus"],
+    ["Creative / Multimedia", "Both", "RECEIVABLES & INFLOWS", "Edit"],
+    ["Freelancer", "Irregular income", "INVOICES & PAYMENTS", "Retainer"],
+    ["Business / Self-employed", "Irregular income", "SALES & PAYMENTS", "Customer Payment"],
+    ["Personal / Student", "Set up later", "INCOME & ALLOWANCE", "Gift"],
+  ])("supports %s with independently chosen %s", (work, pattern, title, category) => {
+    const data = structuredClone(INITIAL_UNIFIED_DATA);
+    data.wallets.main = 1234.56;
+    const original = structuredClone(data);
+    const complete = vi.fn();
+    render(<OnboardingWizard globalData={data} onComplete={complete} onSkip={vi.fn()} />);
+    fireEvent.click(screen.getByText(work));
+    fireEvent.click(screen.getByRole("button", { name: "Get Started" }));
+    // Occupation never selects a salary schedule for the user.
+    expect(screen.queryByLabelText("Gross Salary")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${pattern}`) }));
+    if (pattern === "Regular income" || pattern === "Both") {
+      fireEvent.change(screen.getByLabelText("Gross Salary"), { target: { value: "12000" } });
+    } else {
+      expect(screen.queryByLabelText("Gross Salary")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Custom Payday Days")).not.toBeInTheDocument();
+    }
+    expect(complete).not.toHaveBeenCalled();
+    finishFromIncome();
+    const saved: UnifiedFinanceData = complete.mock.calls[0][0];
+    expect(saved.settings?.inflowsLabel).toBe(title);
+    expect(saved.settings?.inflowCategories).toContain(category);
+    expect(saved.settings?.perPayoutSalary).toBe(pattern === "Regular income" || pattern === "Both" ? 12000 : 0);
+    if (pattern === "Irregular income") expect(saved.settings?.paydayDays).toEqual([]);
+    if (pattern === "Set up later") expect(saved.settings?.paydayDays).toBeUndefined();
+    expect(saved.wallets).toEqual(original.wallets);
+    expect(saved.library).toEqual(original.library);
+    expect(saved.logs).toEqual(original.logs);
+    expect(data).toEqual(original);
+  });
+
+  it("keeps custom labels and existing regular-pay configuration when choosing later", () => {
+    const data = structuredClone(INITIAL_UNIFIED_DATA);
+    data.settings = { ...data.settings, inflowsLabel: "My payments", gigCategories: ["Custom"],
+      perPayoutSalary: 9000, grossPerPayoutSalary: 10000,
+      salaryDeductions: [{ id: "tax", name: "Tax", type: "fixed", value: 1000 }], paydayDays: [7, 21] };
+    const complete = vi.fn();
+    render(<OnboardingWizard globalData={data} onComplete={complete} onSkip={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Get Started" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Set up later/ }));
+    finishFromIncome();
+    expect(complete.mock.calls[0][0].settings).toMatchObject({ inflowsLabel: "My payments", gigCategories: ["Custom"],
+      perPayoutSalary: 9000, grossPerPayoutSalary: 10000, paydayDays: [7, 21], salaryDeductions: data.settings.salaryDeductions });
+  });
+
+  it("discards a regular-pay draft when irregular is chosen and does not validate hidden custom dates", () => {
+    const data = structuredClone(INITIAL_UNIFIED_DATA);
+    const complete = vi.fn();
+    render(<OnboardingWizard globalData={data} onComplete={complete} onSkip={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Get Started" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Regular income/ }));
+    fireEvent.change(screen.getByLabelText("Gross Salary"), { target: { value: "15000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Custom Days" }));
+    fireEvent.change(screen.getByLabelText("Custom Payday Days"), { target: { value: "invalid" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Irregular income/ }));
+    finishFromIncome();
+    expect(complete.mock.calls[0][0].settings).toMatchObject({ perPayoutSalary: 0, grossPerPayoutSalary: 0, paydayDays: [], salaryDeductions: [] });
+    expect(complete.mock.calls[0][0].wallets).toEqual(data.wallets);
   });
 });

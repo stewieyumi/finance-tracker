@@ -1335,7 +1335,7 @@ const copySummaryToClipboard = async () => {
       </ErrorBoundary>}
       {isTourOpen && <ErrorBoundary onRetry={() => setTourOwnerSub(null)} message="The tour couldn't load. Close it and try again from Getting Started.">
         <Suspense fallback={deferredModalFallback}>
-          <GuidedTour onClose={() => setTourOwnerSub(null)} onSetupQuickExpense={() => {
+          <GuidedTour onClose={() => setTourOwnerSub(null)} onInstallApp={() => { setTourOwnerSub(null); setShowInstallGuide(true); }} onSetupQuickExpense={() => {
             setTourOwnerSub(null);
             setSettingsInitialTab("general");
             setHighlightQuickExpense(true);

@@ -3,6 +3,7 @@ import { test, expect, returningData, storedData, navigate } from './fixtures';
 test('new-user setup, wallet creation, and expense deduction survive reopening', async ({ page, isolatedApp }) => {
   const app = await isolatedApp();
   await page.getByRole('button', { name: 'Get Started' }).click();
+  await page.getByRole('button', { name: /^Regular income/ }).click();
   await page.getByRole('spinbutton', { name: 'Gross Salary' }).fill('24000');
   await page.getByRole('button', { name: 'Next: Wallets' }).click();
   await page.getByRole('button', { name: 'Next: Milestone Goal' }).click();
