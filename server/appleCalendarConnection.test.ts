@@ -3,6 +3,10 @@ import type { Redis } from "@upstash/redis";
 import { deleteAppleConnection, parseAppleCredentials, readAppleConnection, saveAppleConnection } from "./appleCalendarConnection";
 const records = new Map<string, any>();
 const store = {
+  eval: vi.fn(async (_script: string, keys: string[], args: string[]) => {
+    if ((records.get(keys[1]) ?? "") !== args[0]) return 0;
+    records.set(keys[0], JSON.parse(args[1])); return 1;
+  }),
   set: vi.fn(async (key: string, value: unknown) => { records.set(key, value); }),
   get: vi.fn(async (key: string) => records.get(key) ?? null),
   del: vi.fn(async (key: string) => records.delete(key)),

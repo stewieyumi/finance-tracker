@@ -1,3 +1,4 @@
+import { GuideButton } from "./ContextGuideControls";
 import React from "react";
 import { X, Banknote, Settings, CheckCircle2, ArrowRight, CalendarPlus } from "lucide-react";
 import { PaydayExecution, CustomWallet } from "../types/finance";
@@ -55,7 +56,8 @@ export const PaydayModal: React.FC<PaydayModalProps> = ({
       manageFocus
       ariaLabel="Payday Distribution Modal"
     >
-      <div className={`${entryDialogStyles.card} max-w-md space-y-4`}>
+      <div data-guide-screen="payday" className={`${entryDialogStyles.card} max-w-md space-y-4`}>
+        <div className="flex justify-end"><GuideButton screen="payday" name="Payday plan" /></div>
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-2">
             <Banknote size={16} className="text-emerald-400" />
@@ -105,7 +107,7 @@ export const PaydayModal: React.FC<PaydayModalProps> = ({
             Planned wallet allocations for this payout:
           </div>
 
-          <div className="space-y-1.5 bg-surface-low border border-inverse/[0.05] rounded-2xl p-3.5">
+          <div data-guide-target="payday-plan" className="space-y-1.5 bg-surface-low border border-inverse/[0.05] rounded-2xl p-3.5">
             {Object.entries(paydayAllocations)
               .filter(([_, amount]) => amount > 0)
               .map(([walletKey, amount]) => (
@@ -165,7 +167,7 @@ export const PaydayModal: React.FC<PaydayModalProps> = ({
             onExecutePaydaySplit();
             onClose();
           }}
-          disabled={disabled}
+          data-guide-target="payday-save" disabled={disabled}
           className="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:bg-fill-strong disabled:text-faint disabled:cursor-not-allowed text-white font-semibold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-blue-600/20 no-privacy-blur"
         >
           <span>{disabled ? "Distribution locked / completed" : "Auto-Distribute to Wallets"}</span>

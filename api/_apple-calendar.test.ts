@@ -47,7 +47,13 @@ beforeEach(async () => {
     mock.records.set(key, value); return "OK";
   });
   mock.del.mockImplementation(async key => Number(mock.records.delete(key)));
-  mock.release.mockImplementation(async (_script, [key], [token]) => mock.records.get(key) === token ? Number(mock.records.delete(key)) : 0);
+  mock.release.mockImplementation(async (_script, keys, args) => {
+    if (keys.length === 2) {
+      if ((mock.records.get(keys[1]) ?? "") !== args[0]) return 0;
+      mock.records.set(keys[0], JSON.parse(args[1])); return 1;
+    }
+    return mock.records.get(keys[0]) === args[0] ? Number(mock.records.delete(keys[0])) : 0;
+  });
   mock.incr.mockResolvedValue(1); mock.expire.mockResolvedValue(1);
   mock.session.mockResolvedValue({ sub: "user-a", email: "user-a@example.test" });
   mock.calendars.mockResolvedValue({ pending: {}, done: {}, moved: {}, cancelled: {} });

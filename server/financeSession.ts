@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { Redis } from "@upstash/redis";
+import { readAccountEpoch } from "./accountLifecycle.js";
 
 const COOKIE_NAME = "__Host-ft_session";
 export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
@@ -12,11 +13,13 @@ export interface FinanceProfile {
   name?: string;
   email?: string;
   picture?: string;
+  accountEpoch?: string;
 }
 
 interface FinanceSession {
   profile: FinanceProfile;
   binding: string;
+  accountEpoch?: string;
 }
 
 let redis: Redis | undefined;
@@ -49,14 +52,18 @@ export async function readFinanceSession(req: Request): Promise<FinanceProfile |
   // It cannot authenticate a request without the separate HttpOnly cookie.
   if (!token || typeof binding !== "string" || !/^[a-f0-9]{32}$/.test(binding)) return null;
   const session = await sessionStore().get<FinanceSession>(redisKey(token));
-  return session?.binding === binding && session.profile?.sub ? session.profile : null;
+  if (session?.binding !== binding || !session.profile?.sub) return null;
+  const accountEpoch = await readAccountEpoch(sessionStore(), session.profile.sub);
+  if ((session.accountEpoch ?? "") !== accountEpoch || (accountEpoch && req.headers["x-finance-account"] !== accountEpoch)) return null;
+  return accountEpoch ? { ...session.profile, accountEpoch } : session.profile;
 }
 
 export async function createFinanceSession(profile: FinanceProfile) {
   const token = randomBytes(32).toString("hex");
   const binding = randomBytes(16).toString("hex");
-  await sessionStore().set(redisKey(token), { profile, binding }, { ex: SESSION_TTL_SECONDS });
-  return { binding, cookie: sessionCookie(token, SESSION_TTL_SECONDS) };
+  const accountEpoch = await readAccountEpoch(sessionStore(), profile.sub);
+  await sessionStore().set(redisKey(token), { profile, binding, ...(accountEpoch ? { accountEpoch } : {}) }, { ex: SESSION_TTL_SECONDS });
+  return { binding, accountEpoch, cookie: sessionCookie(token, SESSION_TTL_SECONDS) };
 }
 
 export async function revokeFinanceSession(req: Request) {

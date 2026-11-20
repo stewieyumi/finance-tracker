@@ -1,3 +1,4 @@
+import { GuideButton } from "./ContextGuideControls";
 import { formatHistoryDate } from "../utils/transactionDates";
 import React from "react";
 import { GoogleLogin } from "@react-oauth/google";
@@ -38,7 +39,8 @@ export const AccountTab: React.FC<AccountTabProps> = ({
   formatDateTime,
 }) => {
   return (
-    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
+    <div data-guide-screen="account" className="space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
+        <div className="flex justify-end"><GuideButton screen="account" name="Account" /></div>
       <div className="flex flex-col items-center justify-center rounded-2xl bg-surface p-4 text-center sm:p-5">
         <div className="mb-4 flex w-full flex-col items-center gap-3 rounded-xl bg-surface-low p-4">
           {googleUser ? (
@@ -55,9 +57,9 @@ export const AccountTab: React.FC<AccountTabProps> = ({
           )}
         </div>
         <div className="flex flex-col gap-3 mx-auto w-full">
-          <button onClick={onOpenSettings} className="w-full px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"><Settings size={16} /> Open Settings</button>
+          <button data-guide-target="settings" onClick={onOpenSettings} className="w-full px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"><Settings size={16} /> Open Settings</button>
         </div>
-        {onOpenInstallGuide && <button type="button" onClick={onOpenInstallGuide} className="mt-3 min-h-11 w-full rounded-xl bg-fill px-4 text-sm font-semibold text-primary hover:bg-fill-strong">{isAppMode ? "Installation help" : "Install app"}</button>}
+        {onOpenInstallGuide && <button data-guide-target="installation" type="button" onClick={onOpenInstallGuide} className="mt-3 min-h-11 w-full rounded-xl bg-fill px-4 text-sm font-semibold text-primary hover:bg-fill-strong">{isAppMode ? "Installation help" : "Install app"}</button>}
         <input ref={importInputRef} type="file" accept="application/json" onChange={onImportFile} className="hidden" />
       </div>
 
@@ -80,7 +82,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
               <button
                 type="button"
                 onClick={onOpenTransactionHistory}
-                aria-label="View Full History"
+                data-guide-target="history" aria-label="View Full History"
                 className="px-2.5 py-1 bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 rounded-lg text-[10px] uppercase font-bold tracking-wider transition border border-blue-500/25 flex items-center gap-1"
               >
                 View All <ArrowRight size={10} />
@@ -128,7 +130,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
         </div>
       </div>
       {googleUser && (
-        <button type="button" onClick={onGoogleLogout} className="min-h-11 w-full rounded-xl border border-rose-500/30 bg-rose-600/20 py-2.5 text-xs font-semibold text-rose-400 transition hover:bg-rose-600/40">
+        <button data-guide-target="signout" type="button" onClick={onGoogleLogout} className="min-h-11 w-full rounded-xl border border-rose-500/30 bg-rose-600/20 py-2.5 text-xs font-semibold text-rose-400 transition hover:bg-rose-600/40">
           Sign Out
         </button>
       )}

@@ -12,8 +12,13 @@ try {
     "-p", "tsconfig.api.json", "--noEmit", "false", "--outDir", output], { cwd: root, stdio: "inherit" });
   writeFileSync(join(output, "package.json"), JSON.stringify({ type: "module" }));
   symlinkSync(join(root, "node_modules"), join(output, "node_modules"), "junction");
-  const entries = readdirSync(join(root, "api"))
-    .filter(name => name.endsWith(".ts") && !name.endsWith(".test.ts"))
+  const apiFiles = readdirSync(join(root, "api"));
+  // Vercel treats API test files as endpoints unless their names start with an underscore.
+  if (apiFiles.some(name => name.endsWith(".test.ts") && !name.startsWith("_"))) {
+    throw new Error("Prefix API test filenames with _ so Vercel does not deploy them as functions.");
+  }
+  const entries = apiFiles
+    .filter(name => name.endsWith(".ts") && !name.endsWith(".test.ts") && !name.startsWith("_"))
     .map(name => pathToFileURL(join(output, "api", name.replace(/\.ts$/, ".js"))).href);
   // Importing only checks startup. No handler is invoked and no user data or provider is accessed.
   execFileSync(process.execPath, ["--input-type=module", "--eval", `

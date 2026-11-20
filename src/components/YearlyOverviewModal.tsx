@@ -1,3 +1,4 @@
+import { GuideButton } from "./ContextGuideControls";
 import { readInflowIncome } from "../utils/inflowIncome";
 import { InflowIncomeNotes } from "./InflowIncomeNotes";
 import React, { useState, useMemo, useEffect, useRef } from "react";
@@ -111,7 +112,8 @@ const fallbackStartMonth = getMonthKey(new Date());
       variant="floating"
       ariaLabel="Yearly Overview Modal"
     >
-      <div className="bg-surface-elevated border border-inverse/[0.09] rounded-3xl p-5 sm:p-6 w-full max-w-lg space-y-5 shadow-2xl max-h-[88vh] overflow-y-auto">
+      <div data-guide-screen="yearly" className="bg-surface-elevated border border-inverse/[0.09] rounded-3xl p-5 sm:p-6 w-full max-w-lg space-y-5 shadow-2xl max-h-[88vh] overflow-y-auto">
+        <div className="flex justify-end"><GuideButton screen="yearly" name="Yearly overview" /></div>
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-2.5">
             <Calendar size={16} className="text-blue-400" />
@@ -121,7 +123,7 @@ const fallbackStartMonth = getMonthKey(new Date());
 
             <div className="relative" ref={yearDropdownRef}>
               <button
-                onClick={() => setShowYearDropdown(prev => !prev)}
+                data-guide-target="year-choice" onClick={() => setShowYearDropdown(prev => !prev)}
                 className="h-7 px-2.5 rounded-xl bg-surface-sunken hover:bg-inverse/[0.08] border border-inverse/[0.08] text-xs font-mono font-bold text-blue-400 flex items-center gap-1.5 transition"
               >
                 <span>{activeYear}</span>
@@ -158,7 +160,7 @@ const fallbackStartMonth = getMonthKey(new Date());
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div data-guide-target="year-summary" className="grid grid-cols-2 gap-3">
           <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4">
             <div className="text-[10px] uppercase font-semibold text-faint tracking-wider">
               {activeYear} Commitments

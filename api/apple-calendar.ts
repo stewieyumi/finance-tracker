@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { readAccountEpoch } from "../server/accountLifecycle.js";
 import { OAuth2Client } from "google-auth-library";
 import { readFinanceSession, usesFinanceSession } from "../server/financeSession.js";
 import { AppleCalendarError, connectAppleCalendar, getAppleCalendars, pushAppleEvent, readAppleEvents, setupAppleCalendars } from "../server/appleCalendar.js";
@@ -20,10 +21,12 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
   try {
     // The verified app user owns the connection. No Apple account or owner ID from the request can select another record.
     let sub: string;
+    let accountEpoch = "";
     if (usesFinanceSession(req)) {
       const profile = await readFinanceSession(req);
       if (!profile?.sub) return res.status(401).json({ error: "Please reconnect your Finance Tracker account." });
       sub = profile.sub;
+      accountEpoch = profile.accountEpoch ?? "";
     } else {
       const authorization = req.headers.authorization;
       const credential = typeof authorization === "string" ? authorization.replace(/^Bearer\s+/i, "") : "";
@@ -66,6 +69,7 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
 
     const redis = calendarStore();
     const userKey = calendarUserKey(sub);
+    if (await readAccountEpoch(redis, sub) !== accountEpoch) throw new AppleCalendarError("Reconnect your account before using Calendar.", 401);
     if (body.action === "status") {
       try {
         return res.status(200).json({ connection: publicAppleConnection(await readAppleConnection(redis, sub)) });
@@ -83,6 +87,7 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
       throw new AppleCalendarError("Another Calendar action is running. Try again in a moment.", 409);
     }
     try {
+      if (await readAccountEpoch(redis, sub) !== accountEpoch) throw new AppleCalendarError("Your account changed. Reconnect before continuing.", 401);
       let connection;
       try { connection = await readAppleConnection(redis, sub); } catch (error) {
         if (error instanceof AppleCalendarError && error.status === 409 && ["connect", "disconnect"].includes(body.action)) {
@@ -106,7 +111,7 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
         // Validate against Apple before replacing a working connection. No events are written on connect.
         const client = await connectAppleCalendar(signal, credentials!);
         await getAppleCalendars(client);
-        const saved = await saveAppleConnection(redis, sub, credentials!);
+        const saved = await saveAppleConnection(redis, sub, credentials!, accountEpoch);
         return res.status(200).json({ connection: publicAppleConnection(saved) });
       }
       if (!connection) return res.status(409).json({ error: "Connect your iCloud account to continue.", connectionRequired: true });

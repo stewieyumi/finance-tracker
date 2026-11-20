@@ -1,3 +1,4 @@
+import { GuideButton } from "./ContextGuideControls";
 import { formatHistoryDate } from "../utils/transactionDates";
 import { InflowIncomeNotes } from "./InflowIncomeNotes";
 import type { InflowIncomeReport } from "../utils/inflowIncome";
@@ -263,7 +264,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
     }`;
 
   return (
-    <div className="space-y-5 sm:space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
+    <div data-guide-screen="dashboard" className="space-y-5 sm:space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
+        <div className="flex justify-end"><GuideButton screen="dashboard" name="Dashboard" /></div>
       {/* 1. FINANCIAL OVERVIEW CAROUSEL STAGE */}
       <div className="w-full space-y-2.5">
         {/* Contained Stage Viewport */}
@@ -286,7 +288,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 <div
                   role={activeSlide !== 0 ? "button" : undefined}
                   tabIndex={activeSlide !== 0 ? 0 : undefined}
-                  aria-label="Financial Overview"
+                  data-guide-target="overview" aria-label="Financial Overview"
                   onClick={() => {
                     if (activeSlide !== 0) scrollToSlide(0);
                   }}
@@ -560,7 +562,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
       <button
         type="button"
-        onClick={onNavigateToWallets}
+        data-guide-target="wallets" onClick={onNavigateToWallets}
         className="group block w-full dashboard-material rounded-3xl p-5 text-left transition hover:border-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 sm:p-6"
       >
         <span className="flex items-center justify-between gap-3">
@@ -592,7 +594,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
       <section aria-labelledby="dashboard-quick-actions" className="dashboard-material rounded-2xl p-4 sm:p-5">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 id="dashboard-quick-actions" className="text-sm font-semibold text-primary">Quick Actions</h2>
+          <h2 id="dashboard-quick-actions" className="text-sm font-semibold text-primary" data-guide-target="quick-actions">Quick Actions</h2>
           <button type="button" onClick={() => setShowQuickAdd(true)} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-fill px-2.5 text-xs font-medium text-primary transition hover:bg-fill-strong">
             <Plus size={14} aria-hidden="true" /> Quick Add
           </button>
@@ -663,7 +665,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       {(globalData.settings?.perPayoutSalary ?? 0) > 0 || latestExecution ? <button
         type="button"
         aria-haspopup="dialog"
-        onClick={() => setShowPaydayModal(true)}
+        data-guide-target="planning" onClick={() => setShowPaydayModal(true)}
         className="dashboard-material w-full text-left hover:border-emerald-500/30 rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group active:scale-[0.99] flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
       >
         <span className="flex items-center gap-3.5">
@@ -693,7 +695,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           <ArrowRight size={14} className="text-faint group-hover:text-positive group-hover:translate-x-0.5 transition-all" />
         </span>
       </button> : <div className="dashboard-material rounded-2xl p-4 sm:p-5">
-        <h2 className="text-sm font-semibold text-primary">Income at your pace</h2>
+        <h2 data-guide-target="planning" className="text-sm font-semibold text-primary">Income at your pace</h2>
         <p className="mt-1 text-xs leading-relaxed text-muted">Track client payments, sales, or other money in Inflows. You do not need a monthly salary.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {onNavigateToOps && <button type="button" onClick={() => onNavigateToOps("inflows")} className="min-h-11 rounded-xl bg-fill px-3 text-xs font-semibold text-primary hover:bg-fill-strong">Track an inflow</button>}

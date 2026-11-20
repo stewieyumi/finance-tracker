@@ -1,3 +1,5 @@
+import { DeleteAccountSettings } from "./DeleteAccountSettings";
+import { GuideButton, GuidePreferences } from "./ContextGuideControls";
 import { WORK_PRESETS as PRESETS } from "../constants/workPresets";
 import { QuickExpenseShortcutSetup } from "./QuickExpenseShortcutSetup";
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
@@ -20,6 +22,7 @@ import { exportPaydaysToCalendar } from "../utils/calendarExport";
 import { applyTheme, ThemeMode } from "../hooks/useTheme";
 
 const SETTINGS_SECTIONS = {
+  account: { label: "Account", icon: Settings, color: "bg-rose-700", description: "Export your data or permanently delete your Finance Tracker account.", keywords: "account delete deletion privacy leave remove export" },
   general: {
     label: "General", icon: Settings, color: "bg-neutral-500",
     description: "Personalize your appearance, shortcuts, and dashboard labels.",
@@ -70,6 +73,8 @@ interface SettingsModalProps {
   onRestoreImportBackup?: () => void;
   onOpenCalendar?: () => void;
   onOpenCalendarExport?: () => void;
+  onDeleteAccount?: () => Promise<void>;
+  accountEmail?: string;
 }
 
 const EXPENSE_CATEGORIES = [
@@ -87,7 +92,7 @@ const formatOrdinal = (n: number) => {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab = "general", initialQuickExpense = false, onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull, onExport, onImportClick, onRestoreImportBackup, onOpenCalendar, onOpenCalendarExport }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab = "general", initialQuickExpense = false, onDeleteAccount, accountEmail, onClose, globalData, setGlobalData, totalLiquid, debugLog, onForcePush, onForcePull, onExport, onImportClick, onRestoreImportBackup, onOpenCalendar, onOpenCalendarExport }) => {
   const [activeTab, setActiveTab] = useState<SettingsSection>(initialQuickExpense ? "general" : initialTab);
   const quickExpenseDetails = useRef<HTMLDetailsElement>(null);
   useLayoutEffect(() => {
@@ -269,7 +274,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
       variant="floating"
       ariaLabel="App Settings"
     >
-      <div className="flex max-h-[88dvh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-default bg-surface-low shadow-2xl">
+      <div data-guide-screen={`settings-${activeTab}`} className="flex max-h-[88dvh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-default bg-surface-low shadow-2xl">
+        <div className="flex justify-end"><GuideButton screen={`settings-${activeTab}`} name={"Settings"} /></div>
         <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-3 pt-4 sm:px-6 sm:pt-5">
           <div className="flex items-center gap-2">
             <Settings size={18} className="text-secondary" />
@@ -338,6 +344,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                   <p className="text-xs leading-relaxed text-muted">{activeSection.description}</p>
                 </div>
               </header>
+          {activeTab === "account" && <DeleteAccountSettings email={accountEmail} onExport={onExport} onDelete={onDeleteAccount} />}
           {activeTab === "general" && (
             <div className="space-y-5">
               <div className={settingsGroup}>
@@ -359,7 +366,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                 </div>
               </div>
 
-              <details ref={quickExpenseDetails} className={`${settingsGroup} group/quick-expense ${initialQuickExpense ? "ring-2 ring-blue-500/60" : ""}`}>
+              <div data-guide-target="guide-preferences"><GuidePreferences /></div>
+              <details data-guide-target="quick-expense" ref={quickExpenseDetails} className={`${settingsGroup} group/quick-expense ${initialQuickExpense ? "ring-2 ring-blue-500/60" : ""}`}>
                 <summary className={`${settingsAction} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
                   <span className="flex items-center gap-2"><Zap size={16} aria-hidden="true" /> Quick Expense</span>
                   <ChevronRight size={15} aria-hidden="true" className="text-muted transition-transform group-open/quick-expense:rotate-90" />
@@ -749,7 +757,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
                   <div>
                     <label className="text-[10px] text-faint uppercase font-semibold mb-1 block">Default Wallet for New Bills</label>
                     <div className="text-[10px] text-faint mb-2">Pre-selected when you add a bill. Existing bills are unaffected.</div>
-                    <select value={form.defaultWallet} onChange={e => setForm({...form, defaultWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
+                    <select data-guide-target="wallet-routing" value={form.defaultWallet} onChange={e => setForm({...form, defaultWallet: e.target.value})} className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-purple-500 cursor-pointer">
                       <WalletSelectOptions />
                     </select>
                   </div>
@@ -860,7 +868,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
               </details>
 
               <div className="grid grid-cols-2 gap-2 pt-2">
-                <button onClick={onForcePush} className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><Cloud size={13} /> Push Data</button>
+                <button data-guide-target="cloud-actions" onClick={onForcePush} className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><Cloud size={13} /> Push Data</button>
                 <button onClick={onForcePull} className="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/30 font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5"><Database size={13} /> Pull Data</button>
               </div>
               
@@ -913,7 +921,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
           )}
         </div>
 
-        {activeTab !== "sync" && activeTab !== "calendar" && (
+        {activeTab !== "sync" && activeTab !== "calendar" && activeTab !== "account" && (
           <div className="flex shrink-0 items-center gap-2 border-t border-subtle bg-surface-elevated p-4 sm:px-6">
             <button
               type="button"
@@ -924,7 +932,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
             </button>
             <button
               type="button"
-              onClick={handleSave}
+              data-guide-target="settings-save" onClick={handleSave}
               className="flex-1 bg-[var(--bg-selection)] hover:bg-[var(--bg-selection-hover)] text-white text-xs font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20"
             >
               <Save size={14} /> Save Settings

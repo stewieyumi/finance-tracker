@@ -1,4 +1,5 @@
 import { jwtDecode } from "jwt-decode";
+import { prepareAccountEpoch } from "./accountData";
 
 export const SESSION_STORAGE_KEY = "ft_app_session";
 export const LEGACY_TOKEN_KEY = "ft_google_token";
@@ -13,18 +14,22 @@ interface Profile {
 interface AppSession {
   profile: Profile;
   binding: string;
+  accountEpoch?: string;
 }
 
 function isAppSession(value: unknown): value is AppSession {
   const session = value as Partial<AppSession> | null;
   return Boolean(session && typeof session.profile?.sub === "string" && session.profile.sub &&
-    typeof session.binding === "string" && /^[a-f0-9]{32}$/.test(session.binding));
+    typeof session.binding === "string" && /^[a-f0-9]{32}$/.test(session.binding) &&
+    (session.accountEpoch === undefined || (typeof session.accountEpoch === "string" && /^v1_[a-f0-9]{32}$/.test(session.accountEpoch))));
 }
 
 export function readAppSession(): AppSession | null {
   try {
     const session: unknown = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) ?? "null");
-    return isAppSession(session) ? session : null;
+    if (!isAppSession(session)) return null;
+    prepareAccountEpoch(session.profile.sub, session.accountEpoch);
+    return session;
   } catch {
     return null;
   }
@@ -49,7 +54,7 @@ export function getFinanceAuth(): { sub: string | null; key: string; headers: Re
   if (session) return {
     sub: session.profile.sub,
     key: `session:${session.binding}`,
-    headers: { "X-Finance-Session": session.binding },
+    headers: { "X-Finance-Session": session.binding, ...(session.accountEpoch ? { "X-Finance-Account": session.accountEpoch } : {}) },
   };
 
   const token = getLegacyToken();
@@ -85,7 +90,20 @@ export async function startAppSession(credential: string, expectedSub?: string):
   if (!isAppSession(session) || (expectedSub && session.profile.sub !== expectedSub)) {
     throw new Error("Could not verify your Finance Tracker session. Please try again.");
   }
+  prepareAccountEpoch(session.profile.sub, session.accountEpoch);
   return session;
+}
+
+export async function deleteAppAccount(session: AppSession): Promise<void> {
+  if (readAppSession()?.binding !== session.binding) throw new Error("The signed-in account changed. Reopen Settings.");
+  const res = await fetch("/api/account", {
+    method: "DELETE", headers: { "Content-Type": "application/json", "X-Finance-Auth": "1", "X-Finance-Session": session.binding, ...(session.accountEpoch ? { "X-Finance-Account": session.accountEpoch } : {}) },
+    body: JSON.stringify({ confirmation: "DELETE", expectedSub: session.profile.sub }), cache: "no-store",
+  });
+  const result = await res.json().catch(() => null);
+  if (!res.ok || result?.deleted !== true || result.sub !== session.profile.sub) {
+    throw new Error(result?.error || "Deletion could not be confirmed. Reconnect to check your account before trying again.");
+  }
 }
 
 export async function endAppSession(session: AppSession): Promise<void> {

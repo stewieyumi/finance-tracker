@@ -239,3 +239,60 @@ Chromium cases cover freelance setup through a name-only inflow and reopening
 in both themes at desktop and phone sizes. New-user setup screenshots use an
 explicit visual theme fixture before saved appearance is chosen; tour appearance
 uses the actual saved theme. Browser auth/cloud are simulated as described above.
+
+
+## Contextual guides
+
+First visits to 22 registered areas show a short spotlight guide: the five main
+tabs, Operations sections, six Settings sections, four Runway views, Yearly,
+Upcoming, Payday, Transaction History, and goal setup. A Guide button replays the
+current area's introduction. Skip, Escape, Back, and Done operate only the guide;
+they do not activate the highlighted financial or account controls.
+
+Completion and the General → First-visit guides preference are scoped to the
+signed-in subject on this device. Automatic guides wait while the general tour,
+installation help, an editor, or a sync conflict is open. Direct Quick Expense
+setup suppresses automatic guidance until that setup is left. Guidance makes the
+background inert and restores focus to the area's Guide button when closed.
+It does not change financial schema, saved balances, or transactions.
+
+## Delete Finance Tracker account
+
+Settings → Account offers Export JSON backup and a separate deletion dialog.
+Deletion requires a bound app session, the current account identity, and typing
+DELETE. Cancel and Escape leave records unchanged. While a request is pending,
+the confirmation prevents duplicate submission or dismissal. Errors keep the
+dialog open and do not claim successful deletion.
+
+The DELETE /api/account handler atomically removes that subject's finance record,
+encrypted iCloud connection, and active Quick Expense connection. Other accounts
+are preserved. A calendar action holding the existing per-user lock returns a
+retryable conflict before deletion. A non-financial account-generation marker
+revokes old sessions and blocks stale sync writes and connection saves. On a
+subsequent sign-in, generation-aware clients clear that subject's old local
+snapshots and pending writes before they can sync; older clients lacking the
+new generation acknowledgment must update before reconnecting a deleted profile.
+In-memory sync generations also reset, so late acknowledgments cannot revive an
+old pending snapshot. No financial schema migration is needed.
+
+This removes Finance Tracker's stored data and connections, not a user's Google
+or bank accounts, downloaded backups, or external calendar events. Offline
+copies cannot be remotely erased; they may remain until the device reconnects.
+A minimal deletion marker is retained to prevent stale-device restoration.
+Existing temporary security/session and request-replay records expire within
+30 days. A later sign-in starts a fresh profile. Unknown request outcomes are
+reported as unconfirmed; the user is directed to reconnect and check.
+
+Validation uses synthetic accounts only: browser confirmation/cancellation,
+success and failure; exact-owner cache cleanup; and real disposable Redis tests
+for atomic deletion, stale sessions and bearer writers, in-flight sync and
+connection races, blocked calendar actions, same-account recreation, and late
+write acknowledgments. The browser suite covers all 22 guide areas in light and
+dark at desktop and phone sizes. Physical Safari/OS checks and live-account
+deletion are not implied by this isolated coverage.
+
+
+API test filenames use the `_*.test.ts` convention so Vercel excludes them from
+function discovery. The native API import check rejects unprefixed test files
+before deployment. The seven application API routes remain unchanged by this
+packaging rule. See [Vercel's utility-file convention](https://vercel.com/docs/functions/configuring-functions/advanced-configuration).
