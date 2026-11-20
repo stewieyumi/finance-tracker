@@ -3,7 +3,7 @@ import React, { useState, useId, useEffect, useRef } from 'react';
 import { Plus, Archive, Edit2, CreditCard, Info, ArrowRightLeft } from 'lucide-react';
 import { UnifiedFinanceData, CustomWallet, WalletMutationHandler } from '../types/finance';
 import { formatPHP } from '../utils/currency';
-import { getWalletForBill, reconcileWalletBalances, parseWalletBalance } from '../utils/financeHelpers';
+import { getWalletForBill, reconcileWalletBalances, parseWalletBalance, validateActiveWalletAssignment } from '../utils/financeHelpers';
 import { WalletGrid } from './WalletGrid';
 
 interface WalletsTabProps {
@@ -34,6 +34,8 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
   const [showAdd, setShowAdd] = useState(false);
   const formId = useId();
   const returnFocusId = useRef<string | null>(null);
+  const firstBalanceButtonRef = useRef<HTMLButtonElement>(null);
+  const addWalletButtonRef = useRef<HTMLButtonElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const [nameError, setNameError] = useState('');
   useEffect(() => {
@@ -152,6 +154,8 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
   const reconciled = reconcileWalletBalances(globalData);
   const customWallets = globalData.settings?.customWallets || [];
   const totalWalletBalance = reconciled.totalLiquid;
+  const hasFundedWallet = reconciled.activeWallets.some(wallet => wallet.balance > 0 &&
+    validateActiveWalletAssignment(wallet.id, globalData.settings, globalData.wallets).ok);
 
   return (
     <div data-guide-screen="wallets" className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
@@ -159,7 +163,11 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
       {onNavigateToExpenses && (globalData.library.expenses?.length ?? 0) === 0 && <section aria-label="Your first steps" className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4">
         <h2 className="text-sm font-semibold text-primary">One wallet, then one expense</h2>
         <p className="mt-1 text-xs leading-relaxed text-muted">Use an existing wallet or add your own. Tap its balance and enter what you have today. Then record a purchase you made after that starting balance.</p>
-        <button type="button" onClick={onNavigateToExpenses} className="mt-3 min-h-11 rounded-xl bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-500">Record your first expense</button>
+        <button type="button" onClick={() => {
+          if (hasFundedWallet) onNavigateToExpenses();
+          else if (customWallets.length) firstBalanceButtonRef.current?.click();
+          else addWalletButtonRef.current?.click();
+        }} className="mt-3 min-h-11 rounded-xl bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-500">{hasFundedWallet ? "Record your first expense" : customWallets.length ? "Set starting balance" : "Add your first wallet"}</button>
       </section>}
       <section aria-labelledby="wallets-total" className="rounded-2xl border border-subtle bg-surface-elevated p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -239,7 +247,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
           </div>
         </details>
       )}
-      <WalletGrid wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} savingsWallet={globalData.settings?.savingsWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
+      <WalletGrid firstBalanceButtonRef={firstBalanceButtonRef} wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} savingsWallet={globalData.settings?.savingsWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
       <div className="rounded-2xl bg-surface p-3 sm:p-4">
         <div className="flex items-center justify-between mb-4"><h2 data-guide-target="accounts" className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><CreditCard size={14} className="text-emerald-400" /> Account Management</h2></div>
         <p id={`${formId}-help`} className="mb-4 text-xs text-muted">A wallet is where you keep money, such as cash, GCash, or a bank account. Add it here, then tap its balance above to update it.</p>
@@ -289,7 +297,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
             </div>
           </form>
         ) : (
-          <button data-guide-interactive="open" data-guide-target="add-wallet" id={`${formId}-add`} type="button" onClick={() => { returnFocusId.current = `${formId}-add`; setNameError(''); setShowAdd(true); setEditingId(null); setWalletName(""); setWalletColor(COLORS[2]); }} className="w-full py-3.5 border border-dashed border-inverse/[0.15] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted hover:text-emerald-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2"><Plus size={15} /> Add New Account</button>
+          <button ref={addWalletButtonRef} data-guide-interactive="open" data-guide-target="add-wallet" id={`${formId}-add`} type="button" onClick={() => { returnFocusId.current = `${formId}-add`; setNameError(''); setShowAdd(true); setEditingId(null); setWalletName(""); setWalletColor(COLORS[2]); }} className="w-full py-3.5 border border-dashed border-inverse/[0.15] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted hover:text-emerald-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2"><Plus size={15} /> Add New Account</button>
         )}
       </div>
     </div>

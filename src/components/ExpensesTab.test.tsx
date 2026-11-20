@@ -25,6 +25,22 @@ const createTestData = (): UnifiedFinanceData => ({
   }
 });
 
+it("shows the selected wallet's live balance without changing the draft or saving", () => {
+  const data = createTestData(); data.wallets.cash = 250;
+  const setGlobalData = vi.fn();
+  const { rerender } = render(<ExpensesTab globalData={data} setGlobalData={setGlobalData} showToast={vi.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: /^Manual/ }));
+  const wallet = screen.getByRole("combobox", { name: "Deduct From" });
+  expect(wallet).toHaveAccessibleDescription("Current balance: ₱5,000.00");
+  fireEvent.change(wallet, { target: { value: "cash" } });
+  expect(wallet).toHaveAccessibleDescription("Current balance: ₱250.00");
+  rerender(<ExpensesTab globalData={{ ...data, wallets: { ...data.wallets, cash: 175 } }} setGlobalData={setGlobalData} showToast={vi.fn()} />);
+  expect(wallet).toHaveAccessibleDescription("Current balance: ₱175.00");
+  rerender(<ExpensesTab globalData={{ ...data, wallets: { ...data.wallets, cash: NaN } }} setGlobalData={setGlobalData} showToast={vi.fn()} />);
+  expect(wallet).toHaveAccessibleDescription("Current balance: Unavailable");
+  expect(setGlobalData).not.toHaveBeenCalled();
+});
+
 describe("ExpensesTab - wallet balance protection", () => {
   it("exposes each expense field through its visible label", () => {
     render(<ExpensesTab globalData={createTestData()} setGlobalData={vi.fn()} showToast={vi.fn()} />);

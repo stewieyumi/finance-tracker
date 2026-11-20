@@ -5,9 +5,9 @@ import { entryDialogStyles } from './ui/dialogStyles';
 import { WalletState, CustomWallet, WalletMutationHandler, WalletMutationOutcome } from '../types/finance';
 import { parseWalletBalance } from '../utils/financeHelpers';
 
-interface WalletGridProps { wallets: WalletState; customWallets?: CustomWallet[]; milestoneWallet?: string; savingsWallet?: string; onCommit: WalletMutationHandler; onIncrement: WalletMutationHandler; }
+interface WalletGridProps { firstBalanceButtonRef?: React.Ref<HTMLButtonElement>; wallets: WalletState; customWallets?: CustomWallet[]; milestoneWallet?: string; savingsWallet?: string; onCommit: WalletMutationHandler; onIncrement: WalletMutationHandler; }
 
-export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, milestoneWallet, savingsWallet, customWallets, onCommit, onIncrement }) => {
+export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ firstBalanceButtonRef, wallets, milestoneWallet, savingsWallet, customWallets, onCommit, onIncrement }) => {
   const [editingWallet, setEditingWallet] = useState<(CustomWallet & { balance: number | null }) | null>(null);
   const [editValue, setEditValue] = useState("");
   const [error, setError] = useState("");
@@ -47,7 +47,7 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
       <div className="rounded-2xl bg-surface p-3 sm:p-4">
         <div className="mb-2 px-1 text-sm font-semibold text-primary">Liquid Cash Wallets</div>
         <div className="overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle">
-          {(customWallets || []).map(w => {
+          {(customWallets || []).map((w, index) => {
             const parsed = parseWalletBalance(wallets[w.id]);
             const currentBalance = parsed.isValid ? parsed.balance : null;
             const isMilestoneWallet = w.id === milestoneWallet;
@@ -65,7 +65,7 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
             const displayColor = `${w.color || "text-strong"} font-bold`;
 
             return (
-              <button data-guide-interactive="open" key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`wallet-balance-row group relative flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-high ${roleClasses}`}>
+              <button ref={index === 0 ? firstBalanceButtonRef : undefined} data-guide-interactive="open" key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`wallet-balance-row group relative flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-high ${roleClasses}`}>
                 <span className="flex min-w-0 items-center gap-2">
                   <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full bg-current ${w.color || "text-muted"}`} />
                   <span className="privacy-blur truncate text-sm font-medium text-primary">{w.label}</span>

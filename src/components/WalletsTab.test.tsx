@@ -215,3 +215,30 @@ it("offers the next expense step only before a first expense and only navigates 
   rerender(<WalletsTab {...props} globalData={makeData()} />);
   expect(screen.queryByRole("button", { name: "Record your first expense" })).not.toBeInTheDocument();
 });
+
+it("opens the existing balance editor before suggesting a first expense when active wallets have no funds", () => {
+  const data = makeData(); data.library.expenses = [];
+  data.wallets = { w_del: 0, w_fallback: 0, w_other: 0, old: 9000 };
+  data.settings = { ...data.settings, archivedWallets: [{ id: "old", label: "Archived" }] };
+  const onCommit = vi.fn(); const setGlobalData = vi.fn(); const onNavigateToExpenses = vi.fn();
+  const props = { globalData: data, setGlobalData, onCommit, onIncrement: vi.fn(), onNavigateToExpenses };
+  const { rerender } = render(<WalletsTab {...props} />);
+  expect(screen.queryByRole("button", { name: "Record your first expense" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Set starting balance" }));
+  expect(screen.getByRole("spinbutton", { name: "Balance" })).toHaveFocus();
+  expect(onCommit).not.toHaveBeenCalled(); expect(setGlobalData).not.toHaveBeenCalled(); expect(onNavigateToExpenses).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Close balance editor" }));
+  // A funded wallet is usable even if another wallet makes the combined total negative.
+  rerender(<WalletsTab {...props} globalData={{ ...data, wallets: { w_del: 100, w_fallback: -500, w_other: 0, old: 0 } }} />);
+  fireEvent.click(screen.getByRole("button", { name: "Record your first expense" }));
+  expect(onNavigateToExpenses).toHaveBeenCalledOnce(); expect(onCommit).not.toHaveBeenCalled(); expect(setGlobalData).not.toHaveBeenCalled();
+});
+
+it("offers wallet creation if there is no balance row to open", () => {
+  const data = makeData(); data.library = { bills: [], receivables: [], shoots: [], expenses: [] };
+  data.wallets = {}; data.settings = { ...data.settings, customWallets: [] };
+  const setGlobalData = vi.fn();
+  render(<WalletsTab globalData={data} setGlobalData={setGlobalData} onCommit={vi.fn()} onIncrement={vi.fn()} onNavigateToExpenses={vi.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Add your first wallet" }));
+  expect(screen.getByRole("form", { name: "Add wallet" })).toBeVisible(); expect(setGlobalData).not.toHaveBeenCalled();
+});
