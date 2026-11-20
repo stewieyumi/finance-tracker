@@ -123,7 +123,7 @@ const fallbackStartMonth = getMonthKey(new Date());
 
             <div className="relative" ref={yearDropdownRef}>
               <button
-                data-guide-target="year-choice" onClick={() => setShowYearDropdown(prev => !prev)}
+                data-guide-interactive="open" data-guide-target="year-choice" onClick={() => setShowYearDropdown(prev => !prev)}
                 className="h-7 px-2.5 rounded-xl bg-surface-sunken hover:bg-inverse/[0.08] border border-inverse/[0.08] text-xs font-mono font-bold text-blue-400 flex items-center gap-1.5 transition"
               >
                 <span>{activeYear}</span>

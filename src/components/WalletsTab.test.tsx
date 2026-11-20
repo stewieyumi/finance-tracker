@@ -203,3 +203,15 @@ describe("WalletsTab archival", () => {
     expect(archived.wallets.w_del).toBeUndefined();
   });
 });
+
+it("offers the next expense step only before a first expense and only navigates when chosen", () => {
+  const data = makeData(); data.library.expenses = [];
+  const onNavigateToExpenses = vi.fn(); const setGlobalData = vi.fn(); const onCommit = vi.fn(); const onIncrement = vi.fn();
+  const props = { globalData: data, setGlobalData, onCommit, onIncrement, onNavigateToExpenses };
+  const { rerender } = render(<WalletsTab {...props} />);
+  fireEvent.click(screen.getByRole("button", { name: "Record your first expense" }));
+  expect(onNavigateToExpenses).toHaveBeenCalledOnce();
+  expect(setGlobalData).not.toHaveBeenCalled(); expect(onCommit).not.toHaveBeenCalled(); expect(onIncrement).not.toHaveBeenCalled();
+  rerender(<WalletsTab {...props} globalData={makeData()} />);
+  expect(screen.queryByRole("button", { name: "Record your first expense" })).not.toBeInTheDocument();
+});

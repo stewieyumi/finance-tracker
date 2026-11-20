@@ -47,7 +47,7 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(settings).toBeVisible();
     const details = settings.locator('details').filter({ hasText: 'Add to Apple Shortcuts' });
     await expect(details).toHaveAttribute('open', '');
-    await expect(details.locator('summary')).toBeFocused();
+    await expect(details.locator(':scope > summary')).toBeFocused();
     const link = settings.getByRole('link', { name: 'Add to Apple Shortcuts' });
     await expect(link).toHaveAttribute('target', '_blank');
     await expect(link).toHaveAttribute('rel', 'noopener noreferrer');

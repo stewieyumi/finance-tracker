@@ -57,9 +57,9 @@ export const AccountTab: React.FC<AccountTabProps> = ({
           )}
         </div>
         <div className="flex flex-col gap-3 mx-auto w-full">
-          <button data-guide-target="settings" onClick={onOpenSettings} className="w-full px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"><Settings size={16} /> Open Settings</button>
+          <button data-guide-interactive="open" data-guide-target="settings" onClick={onOpenSettings} className="w-full px-6 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl transition shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"><Settings size={16} /> Open Settings</button>
         </div>
-        {onOpenInstallGuide && <button data-guide-target="installation" type="button" onClick={onOpenInstallGuide} className="mt-3 min-h-11 w-full rounded-xl bg-fill px-4 text-sm font-semibold text-primary hover:bg-fill-strong">{isAppMode ? "Installation help" : "Install app"}</button>}
+        {onOpenInstallGuide && <button data-guide-interactive="open" data-guide-target="installation" type="button" onClick={onOpenInstallGuide} className="mt-3 min-h-11 w-full rounded-xl bg-fill px-4 text-sm font-semibold text-primary hover:bg-fill-strong">{isAppMode ? "Installation help" : "Install app"}</button>}
         <input ref={importInputRef} type="file" accept="application/json" onChange={onImportFile} className="hidden" />
       </div>
 
@@ -82,7 +82,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
               <button
                 type="button"
                 onClick={onOpenTransactionHistory}
-                data-guide-target="history" aria-label="View Full History"
+                data-guide-interactive="open" data-guide-target="history" aria-label="View Full History"
                 className="px-2.5 py-1 bg-blue-600/15 hover:bg-blue-600/25 text-blue-400 rounded-lg text-[10px] uppercase font-bold tracking-wider transition border border-blue-500/25 flex items-center gap-1"
               >
                 View All <ArrowRight size={10} />

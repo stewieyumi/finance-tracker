@@ -5,6 +5,14 @@ import { CONTEXT_GUIDES, type ContextGuideStep } from "./contextGuideSteps";
 import { GUIDE_OPEN_EVENT, GUIDE_PREFERENCE_EVENT, readGuidePreferences, saveGuidePreferences } from "../utils/contextGuidePreferences";
 
 const visible = (element: Element | null): element is HTMLElement => element instanceof HTMLElement && element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden";
+function actionTarget(root: HTMLElement, step: ContextGuideStep): HTMLElement | null {
+  if (!step.action) return null;
+  const target = root.querySelector<HTMLElement>(step.action.target ?? step.target);
+  if (!visible(target) || target.matches(":disabled, [aria-disabled=true]")) return null;
+  if (step.action.kind === "open" && !target.matches('button[data-guide-interactive="open"], summary[data-guide-interactive="open"]')) return null;
+  return target;
+}
+
 interface ActiveGuide { screen: string; root: HTMLElement; steps: ContextGuideStep[]; }
 interface Props { subject: string; paused: boolean; automaticPaused?: boolean; onActiveChange: (active: boolean) => void; }
 
@@ -12,6 +20,8 @@ export function ContextualGuides({ subject, paused, automaticPaused = false, onA
   const [active, setActive] = useState<ActiveGuide | null>(null);
   const activeRef = useRef(active); activeRef.current = active;
   const completed = useRef(new Set<string>());
+  const handoff = useRef<number | null>(null);
+  useEffect(() => () => { if (handoff.current !== null) cancelAnimationFrame(handoff.current); }, [subject]);
   useEffect(() => { onActiveChange(Boolean(active) && !paused); }, [active, paused, onActiveChange]);
   useEffect(() => () => onActiveChange(false), [onActiveChange]);
   useEffect(() => {
@@ -61,17 +71,39 @@ export function ContextualGuides({ subject, paused, automaticPaused = false, onA
   }, [subject, paused, automaticPaused]);
 
   if (!active || paused) return null;
-  const close = () => {
+  const close = (task?: ContextGuideStep) => {
+    const target = task ? actionTarget(active.root, task) : null;
     completed.current.add(active.screen);
     const preferences = readGuidePreferences(subject);
     saveGuidePreferences(subject, { ...preferences, completed: [...new Set([...preferences.completed, active.screen])] });
     setActive(null);
-    requestAnimationFrame(() => { if (active.root.isConnected) active.root.querySelector<HTMLButtonElement>("[data-guide-replay]")?.focus({ preventScroll: true }); });
+    handoff.current = requestAnimationFrame(() => {
+      handoff.current = null;
+      if (!active.root.isConnected || document.getElementById("root")?.inert) return;
+      if (!task || !target || target !== actionTarget(active.root, task)) {
+        active.root.querySelector<HTMLButtonElement>("[data-guide-replay]")?.focus({ preventScroll: true });
+        return;
+      }
+      target.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });
+      if (task.action?.kind === "open") {
+        // Opening is opt-in and limited to marked form/view launchers, never Save or Delete.
+        if (target instanceof HTMLElement && target.tagName === "SUMMARY") {
+          const details = target.parentElement;
+          if (details instanceof HTMLDetailsElement) details.open = true;
+          target.focus();
+        } else target.click();
+      } else {
+        const temporaryTabIndex = !target.hasAttribute("tabindex") && target.tabIndex < 0;
+        if (temporaryTabIndex) target.setAttribute("tabindex", "-1");
+        target.focus();
+        if (temporaryTabIndex) target.addEventListener("blur", () => target.removeAttribute("tabindex"), { once: true });
+      }
+    });
   };
-  return createPortal(<SpotlightGuide key={active.screen} guide={active} onClose={close} />, document.body);
+  return createPortal(<SpotlightGuide key={active.screen} guide={active} onClose={() => close()} onTry={close} />, document.body);
 }
 
-function SpotlightGuide({ guide, onClose }: { guide: ActiveGuide; onClose: () => void }) {
+function SpotlightGuide({ guide, onClose, onTry }: { guide: ActiveGuide; onClose: () => void; onTry: (step: ContextGuideStep) => void }) {
   const [index, setIndex] = useState(0);
   const [layout, setLayout] = useState<{ target: DOMRect; top: number; left: number; width: number; maxHeight: number }>();
   const card = useRef<HTMLDivElement>(null);
@@ -125,6 +157,10 @@ function SpotlightGuide({ guide, onClose }: { guide: ActiveGuide; onClose: () =>
           <button type="button" onClick={onClose} className="min-h-11 rounded-xl px-3 text-xs text-muted hover:bg-fill">Skip guide</button></div>
         <h2 ref={heading} tabIndex={-1} className="text-base font-bold text-strong outline-none">{step.title}</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">{step.text}</p>
+        {step.action && actionTarget(guide.root, step) && <div className="mt-3 space-y-2">
+          <button data-guide-try type="button" onClick={() => onTry(step)} className="min-h-11 w-full rounded-xl border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-sm font-semibold text-primary hover:bg-fill-strong">{step.action.label}</button>
+          <p className="text-xs leading-relaxed text-muted">Use your own details. You choose what to save. Replay this guide anytime with Guide.</p>
+        </div>}
         <div className="mt-4 flex gap-2">
           {index > 0 && <button type="button" onClick={() => setIndex(index - 1)} className="min-h-11 rounded-xl bg-fill px-3 text-sm font-semibold hover:bg-fill-strong">Back</button>}
           <button type="button" onClick={index === guide.steps.length - 1 ? onClose : () => setIndex(index + 1)} className="min-h-11 flex-1 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-500">{index === guide.steps.length - 1 ? "Done" : "Next"}</button>

@@ -28,6 +28,7 @@ interface OnboardingWizardProps {
   globalData: UnifiedFinanceData;
   onComplete: (completedData: UnifiedFinanceData) => void;
   onSkip: () => void;
+  onStartTracking?: () => void;
   userName?: string;
 }
 
@@ -41,6 +42,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   globalData,
   onComplete,
   onSkip,
+  onStartTracking,
   userName,
 }) => {
   const [step, setStep] = useState<number>(1);
@@ -263,6 +265,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 </div>
               </div>
             </div>
+
+            {onStartTracking && <section aria-label="Start tracking today" className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4">
+              <h2 className="text-sm font-semibold text-primary">Start with what you have today</h2>
+              <p className="mt-1 text-xs leading-relaxed text-muted">Set one wallet’s current balance, then record your first expense. Income schedules, goals, and other tools can wait.</p>
+              <button type="button" onClick={onStartTracking} className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-500">
+                Start with a wallet <ArrowRight size={14} aria-hidden="true" />
+              </button>
+            </section>}
 
             <fieldset>
               <legend className="mb-2 text-sm font-semibold text-primary">What best describes you?</legend>
