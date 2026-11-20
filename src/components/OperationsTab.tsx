@@ -1,3 +1,4 @@
+import { GuideButton } from "./ContextGuideControls";
 import React from "react";
 import { UpcomingBillsCard, type UpcomingBill } from "./UpcomingBillsCard";
 import { getMonthKey } from "../utils/dateHelpers";
@@ -137,10 +138,11 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
 
   return (
     <div
-      id="operations-section"
+      data-guide-screen={`operations-${opsTab}`} id="operations-section"
       className="space-y-4 sm:space-y-5 animate-in fade-in zoom-in-95 duration-400 ease-out"
     >
-      <nav aria-label="Plan sections" className="grid grid-cols-3 gap-1 rounded-xl bg-fill p-1">
+      <div className="flex justify-end"><GuideButton screen={`operations-${opsTab}`} name={opsTab === "bills" ? "Commitments" : opsTab === "inflows" ? "Inflows" : "Gigs and tasks"} /></div>
+      <nav data-guide-target="sections" aria-label="Plan sections" className="grid grid-cols-3 gap-1 rounded-xl bg-fill p-1">
         {([
           ["bills", "Commitments"],
           ["inflows", "Inflows"],

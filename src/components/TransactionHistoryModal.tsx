@@ -1,3 +1,4 @@
+import { GuideButton } from "./ContextGuideControls";
 import { useTransactionListHeight } from "../hooks/useTransactionListHeight";
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
@@ -163,7 +164,8 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
       manageFocus
       className="!justify-start"
     >
-      <div ref={historyPanelRef} className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-2xl mx-auto shadow-2xl mt-auto sm:mb-auto shrink-0 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
+      <div data-guide-screen="history" ref={historyPanelRef} className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-2xl mx-auto shadow-2xl mt-auto sm:mb-auto shrink-0 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
+        <div className="flex justify-end"><GuideButton screen="history" name="Transaction history" /></div>
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-inverse/[0.06]">
           <div className="flex items-center gap-3">
@@ -237,7 +239,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
               <select
                 value={selectedMonth}
                 onChange={e => { setSelectedMonth(e.target.value); setFromDate(""); setToDate(""); }}
-                aria-label="Filter by month"
+                data-guide-target="history-filters" aria-label="Filter by month"
                 className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2 text-xs text-strong outline-none focus:border-blue-500 cursor-pointer"
               >
                 <option value="ALL">All Months ({transactions.length})</option>

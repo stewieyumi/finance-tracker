@@ -52,9 +52,9 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
   };
 
   try {
-    const { binding, cookie } = await createFinanceSession(profile);
+    const { binding, cookie, accountEpoch } = await createFinanceSession(profile);
     res.setHeader("Set-Cookie", cookie);
-    return res.status(200).json({ profile, binding });
+    return res.status(200).json({ profile, binding, ...(accountEpoch ? { accountEpoch } : {}) });
   } catch {
     return res.status(503).json({ error: "Unable to start a session. Please try again." });
   }

@@ -1,3 +1,4 @@
+import { GuideButton } from "./ContextGuideControls";
 import React from "react";
 import { X, Calendar, AlertCircle, ArrowRight, CheckCircle2, Clock } from "lucide-react";
 import { BillViewModel } from "../types/finance";
@@ -51,12 +52,13 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
       manageFocus
       ariaLabel="Upcoming Commitments Modal"
     >
-      <div className={`${entryDialogStyles.card} max-w-md space-y-4`}>
+      <div data-guide-screen="upcoming" className={`${entryDialogStyles.card} max-w-md space-y-4`}>
+        <div className="flex justify-end"><GuideButton screen="upcoming" name="Upcoming commitments" /></div>
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-subtle">
           <div className="flex items-center gap-2">
             <Calendar size={16} className="text-amber-400" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-strong">
+            <h3 data-guide-target="upcoming-list" className="text-sm font-bold uppercase tracking-wider text-strong">
               Upcoming Commitments
             </h3>
           </div>
@@ -71,7 +73,7 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
         </div>
 
         {/* Urgency Summary Cards */}
-        <div className="grid grid-cols-2 gap-2.5 text-xs">
+        <div data-guide-target="upcoming-summary" className="grid grid-cols-2 gap-2.5 text-xs">
           <div className="bg-surface-low border border-subtle rounded-2xl p-3">
             <span className="text-muted text-[11px] font-medium block">Total Unpaid</span>
             <span className="text-base font-bold font-mono text-strong mt-0.5 block">

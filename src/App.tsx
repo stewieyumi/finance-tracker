@@ -24,7 +24,8 @@ import {
 import { migrateBaseWallets, migrateLegacyBills } from "./utils/financeMigrations";
 
 import { useCloudSync, notifyAuthTokenChanged } from "./hooks/useCloudSync";
-import { endAppSession, getFinanceSubject, getLegacyToken, readAppSession, startAppSession, LEGACY_TOKEN_KEY, SESSION_STORAGE_KEY } from "./utils/financeAuth";
+import { clearAccountLocalData } from "./utils/accountData";
+import { deleteAppAccount, endAppSession, getFinanceSubject, getLegacyToken, readAppSession, startAppSession, LEGACY_TOKEN_KEY, SESSION_STORAGE_KEY } from "./utils/financeAuth";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { usePullToRefresh } from "./hooks/usePullToRefresh";
 import { useFinanceCalculations } from "./hooks/useFinanceCalculations";
@@ -72,6 +73,8 @@ const FinancialAnalyticsModal = lazy(() => import("./components/FinancialAnalyti
 
 const InstallAppGuide = lazy(() => import("./components/InstallAppGuide")
   .then(module => ({ default: module.InstallAppGuide })));
+
+const ContextualGuides = lazy(() => import("./components/ContextualGuides").then(module => ({ default: module.ContextualGuides })));
 
 const GuidedTour = lazy(() => import("./components/GuidedTour")
   .then(module => ({ default: module.GuidedTour })));
@@ -182,6 +185,7 @@ export default function App() {
   const { updateAvailable } = useAppUpdate();
   const appInstall = useAppInstall();
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [contextGuideOpen, setContextGuideOpen] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
   const [dataOwnerSub, setDataOwnerSub] = useState<string | null>(() =>
     getFinanceSubject()
@@ -381,13 +385,14 @@ const {
     authRequestPending.current = true;
     setSignInError("");
     try {
+      const previousEpoch = readAppSession()?.accountEpoch ?? "";
       const session = await startAppSession(response.credential, currentSub ?? undefined);
       const { profile } = session;
       localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
       localStorage.removeItem(LEGACY_TOKEN_KEY);
       localStorage.removeItem("ft_google_user");
       localStorage.setItem("ft_last_profile", JSON.stringify(profile));
-      if (dataOwnerSub !== profile.sub) {
+      if (dataOwnerSub !== profile.sub || previousEpoch !== (session.accountEpoch ?? "")) {
         setDataOwnerSub(profile.sub);
         setGlobalData(safeLoadAll(profile.sub));
       }
@@ -401,6 +406,27 @@ const {
     } finally {
       authRequestPending.current = false;
     }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (authRequestPending.current) throw new Error("Another account action is running. Please wait.");
+    const session = readAppSession();
+    if (!session) throw new Error("Reconnect your Finance Tracker account before deleting it.");
+    authRequestPending.current = true;
+    try {
+      await deleteAppAccount(session);
+      let localCleanupFailed = false;
+      try { clearAccountLocalData(session.profile.sub); } catch { localCleanupFailed = true; }
+      if (readAppSession()?.binding !== session.binding) return; // Preserve another account opened while the request was running.
+      googleLogout();
+      for (const key of [LEGACY_TOKEN_KEY, "ft_google_user", "ft_last_profile", SESSION_STORAGE_KEY]) {
+        try { localStorage.removeItem(key); } catch { localCleanupFailed = true; }
+      }
+      setShowSettingsModal(false); setGoogleUser(null); setDataOwnerSub(null); setGlobalData(INITIAL_UNIFIED_DATA);
+      notifyAuthTokenChanged?.();
+      setSignInError(localCleanupFailed ? "Cloud account deleted. This browser could not clear all cached copies; clear this site’s browser data to remove them." : "");
+      showToast(localCleanupFailed ? "Cloud account deleted. Browser cleanup needs attention." : "Finance Tracker account deleted.");
+    } finally { authRequestPending.current = false; }
   };
 
   const handleGoogleLogout = async () => {
@@ -688,6 +714,7 @@ const { saveShootEdit } = useShootSaveActions({
 
   const isTourOpen = Boolean(tourOwnerSub && tourOwnerSub === dataOwnerSub && isDataOwnedByActiveSub && !hasValidatedActiveConflict);
   const isModalOpen =
+    contextGuideOpen ||
     showInstallGuide ||
     isTourOpen ||
     showDatePickerModal ||
@@ -1142,7 +1169,7 @@ const copySummaryToClipboard = async () => {
         {showSettingsModal && (
           <ErrorBoundary>
             <Suspense fallback={deferredModalFallback}>
-              <SettingsModal onOpenCalendarExport={() => { setActiveTab("operations"); setOpsTab("gigs"); }} onOpenCalendar={() => setShowAppleCalendar(true)} onRestoreImportBackup={restorePreImportBackup} onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} initialQuickExpense={highlightQuickExpense} onClose={() => { setShowSettingsModal(false); setHighlightQuickExpense(false); }} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
+              <SettingsModal onDeleteAccount={readAppSession() ? handleDeleteAccount : undefined} accountEmail={googleUser?.email} onOpenCalendarExport={() => { setActiveTab("operations"); setOpsTab("gigs"); }} onOpenCalendar={() => setShowAppleCalendar(true)} onRestoreImportBackup={restorePreImportBackup} onExport={exportBackup} onImportClick={() => importInputRef.current?.click()} isOpen={showSettingsModal} initialTab={settingsInitialTab} initialQuickExpense={highlightQuickExpense} onClose={() => { setShowSettingsModal(false); setHighlightQuickExpense(false); }} globalData={globalData} setGlobalData={syncedSetGlobalData} totalLiquid={totalLiquid} debugLog={debugLog} onForcePush={forceManualSync} onForcePull={() => pullLatestData(false)} />
             </Suspense>
           </ErrorBoundary>
         )}
@@ -1327,6 +1354,10 @@ const copySummaryToClipboard = async () => {
         )}
       </div>
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
+      {dataOwnerSub && isDataOwnedByActiveSub && <ErrorBoundary message="Guidance is unavailable. Your records are still accessible."><Suspense fallback={null}>
+        <ContextualGuides key={dataOwnerSub} subject={dataOwnerSub} onActiveChange={setContextGuideOpen}
+          automaticPaused={highlightQuickExpense} paused={isTourOpen || hasValidatedActiveConflict || isEditing || showInstallGuide} />
+      </Suspense></ErrorBoundary>}
       {showInstallGuide && !hasValidatedActiveConflict && <ErrorBoundary onRetry={() => setShowInstallGuide(false)} message="Installation help couldn't load. Try again from Account.">
         <Suspense fallback={deferredModalFallback}>
           <InstallAppGuide onClose={() => setShowInstallGuide(false)} canPrompt={appInstall.canPrompt}

@@ -1,3 +1,4 @@
+import { GuideButton } from "./ContextGuideControls";
 import React, { useState, useMemo } from "react";
 import { X, Sparkles, ShieldCheck, CreditCard, TrendingUp, Target } from "lucide-react";
 import { parseMonthKey } from "../utils/dateHelpers";
@@ -65,13 +66,14 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
       variant="floating"
       ariaLabel="Financial Intelligence Modal"
     >
-      <div
+      <div data-guide-screen={`runway-${activeTab}`}
         className="bg-surface-elevated border border-subtle rounded-3xl p-5 sm:p-6 w-full max-w-2xl space-y-5 shadow-2xl max-h-[88vh] overflow-y-auto"
       >
+        <div className="flex justify-end"><GuideButton screen={`runway-${activeTab}`} name="Runway and analytics" /></div>
         <div className="flex items-center justify-between pb-3 border-b border-subtle">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-amber-400" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-strong">
+            <h3 data-guide-target="analytics-content" className="text-sm font-bold uppercase tracking-wider text-strong">
               Financial Intelligence & Runway ({selectedMonth})
             </h3>
           </div>
@@ -85,7 +87,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
           </button>
         </div>
 
-        <div className="flex gap-4 border-b border-subtle overflow-x-auto whitespace-nowrap hide-scrollbar">
+        <div data-guide-target="analytics-tabs" className="flex gap-4 border-b border-subtle overflow-x-auto whitespace-nowrap hide-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab("overview")}

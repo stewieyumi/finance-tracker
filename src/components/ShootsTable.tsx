@@ -159,7 +159,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
   return (
     <div className="w-full rounded-2xl bg-surface p-3 sm:p-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><Camera size={13} className="text-amber-400" />{selectedMonth} Upcoming Shoots & Production Gigs</h2>
+        <h2 data-guide-target="filters" className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><Camera size={13} className="text-amber-400" />{selectedMonth} Upcoming Shoots & Production Gigs</h2>
         <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
           {syncStatus && (
             <span
@@ -347,7 +347,7 @@ export const ShootsTable: React.FC<ShootsTableProps> = React.memo(({
         </table>
       </div>
 
-      <button onClick={() => setIsAdding(true)} className="w-full mt-3.5 py-3.5 border border-dashed border-inverse/[0.15] hover:border-amber-500/50 hover:bg-amber-500/10 text-muted hover:text-amber-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">
+      <button data-guide-target="add" onClick={() => setIsAdding(true)} className="w-full mt-3.5 py-3.5 border border-dashed border-inverse/[0.15] hover:border-amber-500/50 hover:bg-amber-500/10 text-muted hover:text-amber-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">
         <Plus size={15} /> Add New Gig
       </button>
 

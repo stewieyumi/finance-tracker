@@ -29,11 +29,13 @@ beforeEach(() => {
   readSession.mockImplementation(async (req: VercelApiRequest) => req.headers.cookie === "account-a" ? { sub: "account-a" } : req.headers.cookie === "account-b" ? { sub: "account-b" } : null);
   // Redis double implements string CAS and TTL arguments; financial mutation runs only in the real handler.
   evalMock.mockImplementation(async (_script: string, keys: string[], args: (string | number)[]) => {
-    if (keys.length === 2) {
+    if (keys.length === 3) {
+      if ((records.get(keys[2]) ?? "") !== args[4]) return "revoked";
       const previous = records.get(keys[0]); if (previous) records.delete(String(args[0]) + previous);
       records.set(keys[0], String(args[1])); records.set(keys[1], String(args[2])); return 1;
     }
-    if (keys.length === 1) {
+    if (keys.length === 2 && !_script.includes("maxRevision")) {
+      if ((records.get(keys[1]) ?? "") !== args[1]) return "revoked";
       const previous = records.get(keys[0]); if (previous) records.delete(String(args[0]) + previous); records.delete(keys[0]); return 1;
     }
     if (records.get(keys[1]) !== args[0] || records.get(keys[2]) !== args[1]) return "revoked";
@@ -128,7 +130,7 @@ describe("expense-only Apple Shortcut connection", () => {
     expect(read.body.record.library.expenses).toHaveLength(1);
     const normal = evalMock.getMockImplementation()!;
     evalMock.mockImplementation(async (script, keys, args) => {
-      if (keys.length === 1 && script.includes("maxRevision")) {
+      if (keys.length === 2 && script.includes("maxRevision")) {
         const current = cloud();
         if (args[0] !== current.revision) return JSON.stringify({ ok: false, conflict: true, raw: records.get(keys[0]), revision: current.revision });
         throw new Error("A stale browser write should never be accepted");

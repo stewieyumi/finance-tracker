@@ -21,6 +21,7 @@ export const MilestoneProgressBar: React.FC<MilestoneProgressBarProps> = React.m
   return (
     <div
       role={onConfigureGoal ? "button" : undefined}
+      aria-label={onConfigureGoal ? "Configure savings goal" : undefined}
       tabIndex={onConfigureGoal ? 0 : undefined}
       onKeyDown={onConfigureGoal ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onConfigureGoal(); } } : undefined}
       onClick={onConfigureGoal}

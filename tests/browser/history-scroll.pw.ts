@@ -18,7 +18,8 @@ for (const theme of ['light', 'dark'] as const) {
     const entryTop = (await entry.boundingBox())!.y;
     const pageTop = await page.evaluate(() => document.scrollingElement!.scrollTop);
     const recentBox = (await recent.boundingBox())!;
-    expect(recentBox.height).toBeGreaterThanOrEqual(160);
+    // Layout rectangles can differ from CSS pixels by a tiny subpixel rounding amount.
+    expect(Math.round(recentBox.height)).toBeGreaterThanOrEqual(160);
     await page.mouse.move(recentBox.x + recentBox.width / 2, recentBox.y + Math.min(recentBox.height - 20, 60));
     await page.mouse.wheel(0, 600);
     await expect.poll(() => recent.evaluate(element => element.scrollTop)).toBeGreaterThan(100);
@@ -61,7 +62,7 @@ for (const theme of ['light', 'dark'] as const) {
     await history.getByRole('textbox', { name: 'From date' }).fill('2026-11-19');
     await history.getByRole('textbox', { name: 'To date' }).fill('2026-11-19');
     await records.scrollIntoViewIfNeeded();
-    expect((await records.boundingBox())!.height).toBeGreaterThanOrEqual(160);
+    expect(Math.round((await records.boundingBox())!.height)).toBeGreaterThanOrEqual(160);
     await history.getByRole('button', { name: 'Close transaction history' }).click();
     await expect(history).toBeHidden();
     expect(await storedData(page)).toEqual(snapshot);

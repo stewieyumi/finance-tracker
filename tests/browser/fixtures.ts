@@ -17,12 +17,12 @@ export function returningData(): UnifiedFinanceData {
   return data;
 }
 
-export const test = base.extend<{ isolatedApp: (data?: UnifiedFinanceData) => Promise<{ waitForSaved: () => Promise<void> }> }>({
+export const test = base.extend<{ isolatedApp: (data?: UnifiedFinanceData, options?: { guides?: boolean; accountDeletion?: "success" | "failure" }) => Promise<{ waitForSaved: () => Promise<void> }> }>({
   isolatedApp: async ({ context, page }, use) => {
     const unexpected: string[] = [];
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
-    await use(async (data) => {
+    await use(async (data, options) => {
       let record = data ? structuredClone(data) : null;
       let revision = record ? 1 : 0;
       await context.route('**/*', async route => {
@@ -30,6 +30,14 @@ export const test = base.extend<{ isolatedApp: (data?: UnifiedFinanceData) => Pr
         const url = new URL(request.url());
         if (url.origin === 'https://accounts.google.com' && url.pathname === '/gsi/client') {
           await route.fulfill({ contentType: 'application/javascript', body: '/* Identity provider is simulated for browser smoke tests. */' });
+          return;
+        }
+        if (url.origin === origin && url.pathname === '/api/account' && options?.accountDeletion) {
+          expect(request.method()).toBe('DELETE');
+          expect(request.headers()['x-finance-session']).toBe(binding);
+          expect(request.postDataJSON()).toEqual({ confirmation: 'DELETE', expectedSub: subject });
+          if (options.accountDeletion === 'failure') await route.fulfill({ status: 503, json: { error: 'Synthetic deletion unavailable' } });
+          else { record = null; revision = 0; await route.fulfill({ json: { deleted: true, sub: subject } }); }
           return;
         }
         if (url.origin === origin && url.pathname === '/api/sync') {
@@ -59,13 +67,15 @@ export const test = base.extend<{ isolatedApp: (data?: UnifiedFinanceData) => Pr
         unexpected.push(`${request.method()} ${url.origin}${url.pathname}`);
         await route.abort('blockedbyclient');
       });
-      await context.addInitScript(({ key, session, initial }) => {
+      await context.addInitScript(({ key, session, initial, guides }) => {
+        const guideKey = `ft_context_guides_v1_${encodeURIComponent(session.profile.sub)}`;
+        if (!localStorage.getItem(guideKey)) localStorage.setItem(guideKey, JSON.stringify({ automatic: guides, completed: [] }));
         if (!localStorage.getItem('ft_app_session')) localStorage.setItem('ft_app_session', JSON.stringify(session));
         if (initial && !localStorage.getItem(key)) {
           localStorage.setItem(key, JSON.stringify(initial));
           localStorage.setItem('ft_sync_base_revision_browser-smoke-only', '1');
         }
-      }, { key: storageKey, session, initial: data ?? null });
+      }, { key: storageKey, session, initial: data ?? null, guides: options?.guides ?? false });
       await page.goto('/');
       return {
         waitForSaved: async () => {

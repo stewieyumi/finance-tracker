@@ -3,7 +3,7 @@ import { UnifiedFinanceData } from "../types/finance";
 import { isValidFinanceData } from "../utils/validationHelpers";
 import { SyncConflictState, LastResolvedConflict } from "../types/finance";
 import { INITIAL_UNIFIED_DATA } from "../constants/initialData";
-import { getFinanceAuth, getFinanceSubject, getLegacyToken, LEGACY_TOKEN_KEY, SESSION_STORAGE_KEY } from "../utils/financeAuth";
+import { getFinanceAuth, getFinanceSubject, getLegacyToken, readAppSession, LEGACY_TOKEN_KEY, SESSION_STORAGE_KEY } from "../utils/financeAuth";
 
 export { getGoogleSubFromToken } from "../utils/financeAuth";
 export const DATA_STORAGE_KEY = "ft_master_data_v1";
@@ -300,6 +300,7 @@ export function useCloudSync(
   const dirtyOwnerSubRef = useRef<string | null>(null);
   const localMutationGenerationRef = useRef(0);
   const accountSessionGenerationRef = useRef(0);
+  const accountEpochRef = useRef(readAppSession()?.accountEpoch ?? "");
   const pullRequestIdRef = useRef(0);
   const pushRequestIdRef = useRef(0);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
@@ -370,14 +371,15 @@ export function useCloudSync(
   };
 
   const transitionToSub = useCallback(
-    (newSub: string | null) => {
-      if (newSub === activeSubRef.current) {
+    (newSub: string | null, force = false) => {
+      if (newSub === activeSubRef.current && !force) {
         return;
       }
 
       rejectedTokenRef.current = "";
       setSyncNeedsSignIn(false);
       activeSubRef.current = newSub;
+      accountEpochRef.current = readAppSession()?.accountEpoch ?? "";
       accountSessionGenerationRef.current += 1;
       pullRequestIdRef.current += 1;
       pushRequestIdRef.current += 1;
@@ -422,6 +424,10 @@ export function useCloudSync(
       const { key: token, sub } = getFinanceAuth();
       if (sub !== activeSubRef.current) {
         transitionToSub(sub);
+      } else if (sub && (readAppSession()?.accountEpoch ?? "") !== accountEpochRef.current) {
+        // A recreated account must drop old in-memory pending writes as well as disk caches.
+        transitionToSub(sub, true);
+        resumeSyncRef.current();
       } else if (sub && rejectedTokenRef.current && token !== rejectedTokenRef.current) {
         rejectedTokenRef.current = "";
         setSyncNeedsSignIn(false);

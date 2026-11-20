@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { Redis } from "@upstash/redis";
+import { accountEpochKey } from "./accountLifecycle.js";
 import { AppleCalendarError } from "./appleCalendar.js";
 
 export interface AppleCredentials { username: string; password: string }
@@ -43,7 +44,7 @@ export function parseAppleCredentials(value: unknown): AppleCredentials | null {
   return { username: email, password: normalized.match(/.{4}/g)!.join("-") };
 }
 
-export async function saveAppleConnection(redis: Redis, sub: string, credentials: AppleCredentials) {
+export async function saveAppleConnection(redis: Redis, sub: string, credentials: AppleCredentials, accountEpoch = "") {
   const connection: AppleConnection = { ...credentials, id: randomBytes(16).toString("hex") };
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", encryptionKey(), iv);
@@ -53,7 +54,11 @@ export async function saveAppleConnection(redis: Redis, sub: string, credentials
   const encrypted: EncryptedConnection = {
     version: 1, iv: iv.toString("base64"), tag: cipher.getAuthTag().toString("base64"), ciphertext: ciphertext.toString("base64"),
   };
-  await redis.set(storageKey(sub), encrypted);
+  const saved = await redis.eval(`
+    if (redis.call('GET', KEYS[2]) or '') ~= ARGV[1] then return 0 end
+    redis.call('SET', KEYS[1], ARGV[2]); return 1
+  `, [storageKey(sub), accountEpochKey(sub)], [accountEpoch, JSON.stringify(encrypted)]);
+  if (saved !== 1) throw new AppleCalendarError("Your account changed. Reconnect before continuing.", 409);
   return connection;
 }
 

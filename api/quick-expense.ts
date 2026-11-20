@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { Redis } from "@upstash/redis";
 import { readFinanceSession } from "../server/financeSession.js";
+import { accountEpochKey } from "../server/accountLifecycle.js";
 import type { VercelApiRequest, VercelApiResponse } from "./notion.js";
 
 export const config = { api: { bodyParser: { sizeLimit: "4kb" } } };
@@ -56,6 +57,7 @@ export const SAVE_SHORTCUT_EXPENSE = `
   return ARGV[5]
 `;
 const REPLACE_CONNECTION = `
+  if (redis.call('GET', KEYS[3]) or '') ~= ARGV[5] then return 'revoked' end
   local previous = redis.call('GET', KEYS[1])
   if previous then redis.call('DEL', ARGV[1] .. previous) end
   redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[4])
@@ -63,6 +65,7 @@ const REPLACE_CONNECTION = `
   return 1
 `;
 const REVOKE_CONNECTION = `
+  if (redis.call('GET', KEYS[2]) or '') ~= ARGV[2] then return 'revoked' end
   local previous = redis.call('GET', KEYS[1])
   if previous then redis.call('DEL', ARGV[1] .. previous) end
   redis.call('DEL', KEYS[1])
@@ -85,7 +88,7 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
       if (!profile) return fail(401, "Sign in again to manage your shortcut.");
       const ownerKey = OWNER + profile.sub;
       if (body.action === "disconnect") {
-        await redis.eval(REVOKE_CONNECTION, [ownerKey], [PREFIX]);
+        if (await redis.eval(REVOKE_CONNECTION, [ownerKey, accountEpochKey(profile.sub)], [PREFIX, profile.accountEpoch ?? ""]) === "revoked") return fail(401, "Account changed. Reconnect in the app.");
         return res.status(200).json({ connected: false });
       }
       if (body.action === "connect") {
@@ -96,7 +99,7 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
         const digest = hash(token);
         const connection: Connection = { id: randomUUID(), sub: profile.sub, walletId: body.walletId, walletLabel: label(record.data, body.walletId), expiresAt: Date.now() + CONNECTION_TTL * 1000,
           ...(body.walletSelection === "each-run" ? { walletIds: Object.keys(record.data.wallets).filter(id => usableWallet(record.data, id)) } : {}) };
-        await redis.eval(REPLACE_CONNECTION, [ownerKey, PREFIX + digest], [PREFIX, digest, JSON.stringify(connection), CONNECTION_TTL]);
+        if (await redis.eval(REPLACE_CONNECTION, [ownerKey, PREFIX + digest, accountEpochKey(profile.sub)], [PREFIX, digest, JSON.stringify(connection), CONNECTION_TTL, profile.accountEpoch ?? ""]) === "revoked") return fail(401, "Account changed. Reconnect in the app.");
         return res.status(200).json({ connected: true, token, walletId: connection.walletId, walletLabel: connection.walletLabel, walletSelection: connection.walletIds ? "each-run" : "fixed", expiresAt: connection.expiresAt });
       }
       const digest = await redis.get<string>(ownerKey);

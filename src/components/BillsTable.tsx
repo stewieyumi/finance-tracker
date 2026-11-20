@@ -113,7 +113,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
   return (
     <div ref={tableRef} className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-lg">
       <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 shrink-0">
+        <h2 data-guide-target="filters" className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 shrink-0">
           <Calendar size={13} className="text-blue-400" /> {selectedMonth} Commitments
         </h2>
         <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -240,7 +240,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
        hideSettled={hideSettled}
      />}
 
-      <button onClick={() => setIsAdding(true)} className="w-full mt-3.5 py-3.5 border border-dashed border-inverse/[0.15] hover:border-blue-500/50 hover:bg-blue-500/10 text-muted hover:text-blue-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">
+      <button data-guide-target="add" onClick={() => setIsAdding(true)} className="w-full mt-3.5 py-3.5 border border-dashed border-inverse/[0.15] hover:border-blue-500/50 hover:bg-blue-500/10 text-muted hover:text-blue-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">
         <Plus size={15} /> Add New Commitment
       </button>
 

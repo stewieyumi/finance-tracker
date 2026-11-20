@@ -289,7 +289,7 @@ describe("api/sync.ts", () => {
     mockEval.mockResolvedValueOnce('{"ok":true,"revision":1}');
     const res = await authenticatedRequest("PUT", JSON.stringify({ data: snapshot, baseRevision }));
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(mockEval.mock.calls[0][2]).toEqual([0, JSON.stringify(snapshot), 2000, 0]);
+    expect(mockEval.mock.calls[0][2]).toEqual([0, JSON.stringify(snapshot), 2000, 0, ""]);
   });
 
   it("maps the mocked missing-key conflict and ties the contract to the Lua guard", async () => {
@@ -300,7 +300,7 @@ describe("api/sync.ts", () => {
       success: false, accepted: false, error: "conflict", revision: 0, data: null, empty: true,
     });
     const [script, , args] = mockEval.mock.calls[0];
-    expect(args).toEqual([7, JSON.stringify(snapshot), 2000, 0]);
+    expect(args).toEqual([7, JSON.stringify(snapshot), 2000, 0, ""]);
     expect(script).toContain("local currentRevision = 0");
     expect(script).toContain("not isLegacyWrite and currentRevision ~= tonumber(ARGV[1])");
     expect(script.indexOf("currentRevision ~= tonumber(ARGV[1])")).toBeLessThan(script.indexOf("redis.call('SET'"));
@@ -311,7 +311,7 @@ describe("api/sync.ts", () => {
       ok: false, conflict: true, revision: 0, raw: JSON.stringify(snapshot),
     }));
     const res = await authenticatedRequest("PUT", snapshot);
-    expect(mockEval.mock.calls[0][2]).toEqual([0, JSON.stringify(snapshot), 2000, 1]);
+    expect(mockEval.mock.calls[0][2]).toEqual([0, JSON.stringify(snapshot), 2000, 1, ""]);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
       success: true, accepted: false, cloudUpdatedAt: 2000, data: snapshot, revision: 0,
@@ -379,7 +379,7 @@ describe("api/sync.ts", () => {
       success: true, accepted: true, data: snapshot, revision: Number.MAX_SAFE_INTEGER,
     });
     const [script, , args] = mockEval.mock.calls[0];
-    expect(args).toEqual([Number.MAX_SAFE_INTEGER - 1, JSON.stringify(snapshot), 2000, 0]);
+    expect(args).toEqual([Number.MAX_SAFE_INTEGER - 1, JSON.stringify(snapshot), 2000, 0, ""]);
     expect(script).toContain("local maxRevision = 9007199254740991");
     expect(script).toContain("current.revision ~= nil or current.data ~= nil");
     expect(script).toContain("if not isCompatible(data) then return invalid end");

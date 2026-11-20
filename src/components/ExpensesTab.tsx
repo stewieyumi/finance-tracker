@@ -1,3 +1,4 @@
+import { GuideButton } from "./ContextGuideControls";
 import { useTransactionListHeight } from "../hooks/useTransactionListHeight";
 import { compareTransactionsNewestFirst, formatTransactionDateTime } from "../utils/transactionDates";
 import { formatPHP, roundMoney } from "../utils/currency";
@@ -219,7 +220,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
 
   return (
     <>
-      <div ref={expenseLayoutRef} className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
+      <div data-guide-screen="expenses" ref={expenseLayoutRef} className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
+        <div className="flex justify-end"><GuideButton screen="expenses" name="Expenses" /></div>
 
         <section aria-labelledby="expenses-month" className="rounded-2xl border border-subtle bg-surface-elevated p-4 shadow-sm sm:p-5">
           <div className="flex items-start justify-between gap-3">
@@ -238,12 +240,12 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
           <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleCapture} className="hidden" />
           <input type="file" accept="image/*" ref={uploadInputRef} onChange={handleCapture} className="hidden" />
           <div className="grid grid-cols-2 gap-3">
-            <button type="button" aria-haspopup="dialog" disabled={isScanning} onClick={() => setShowScanOptions(true)} className={expenseEntryCardClass}>
+            <button data-guide-target="scan" type="button" aria-haspopup="dialog" disabled={isScanning} onClick={() => setShowScanOptions(true)} className={expenseEntryCardClass}>
               <span className="scanner-icon flex size-9 items-center justify-center rounded-xl border text-violet-accent"><ScanLine size={18} aria-hidden="true" /></span>
               <span className="text-sm font-semibold text-primary">Scan</span>
               <span className="text-xs text-muted">Take a photo or upload a screenshot.</span>
             </button>
-            <button type="button" aria-haspopup="dialog" onClick={() => setShowForm(true)} className={expenseEntryCardClass}>
+            <button data-guide-target="manual" type="button" aria-haspopup="dialog" onClick={() => setShowForm(true)} className={expenseEntryCardClass}>
               <span className="flex size-9 items-center justify-center rounded-xl bg-fill text-muted"><Plus size={18} aria-hidden="true" /></span>
               <span className="text-sm font-semibold text-primary">Manual</span>
               <span className="text-xs text-muted">Type or paste your purchase details.</span>
@@ -254,7 +256,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
         {/* Recent Expenses Ledger */}
         <div className="rounded-2xl bg-surface p-3 sm:p-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-primary">Recent Transactions</h2>
+            <h2 data-guide-target="recent-expenses" className="text-sm font-semibold text-primary">Recent Transactions</h2>
             <span className="privacy-blur text-xs text-muted">All time: {formatPHP(totalSpent)}</span>
           </div>
 

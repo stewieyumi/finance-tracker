@@ -1,3 +1,4 @@
+import { GuideButton } from "./ContextGuideControls";
 import React, { useState, useId, useEffect, useRef } from 'react';
 import { Plus, Archive, Edit2, CreditCard, Info, ArrowRightLeft } from 'lucide-react';
 import { UnifiedFinanceData, CustomWallet, WalletMutationHandler } from '../types/finance';
@@ -152,11 +153,12 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
   const totalWalletBalance = reconciled.totalLiquid;
 
   return (
-    <div className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
+    <div data-guide-screen="wallets" className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
+        <div className="flex justify-end"><GuideButton screen="wallets" name="Wallets" /></div>
       <section aria-labelledby="wallets-total" className="rounded-2xl border border-subtle bg-surface-elevated p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="wallets-total" className="text-sm font-semibold text-muted">Total Wallet Balance</h2>
-          {onTransfer && <button type="button" onClick={onTransfer} disabled={customWallets.length < 2}
+          {onTransfer && <button data-guide-target="transfer" type="button" onClick={onTransfer} disabled={customWallets.length < 2}
             className="flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 text-sm font-medium text-primary transition hover:bg-fill-strong disabled:cursor-not-allowed disabled:opacity-50">
             <ArrowRightLeft size={16} aria-hidden="true" /> Transfer
           </button>}
@@ -233,7 +235,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
       )}
       <WalletGrid wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} savingsWallet={globalData.settings?.savingsWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
       <div className="rounded-2xl bg-surface p-3 sm:p-4">
-        <div className="flex items-center justify-between mb-4"><h2 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><CreditCard size={14} className="text-emerald-400" /> Account Management</h2></div>
+        <div className="flex items-center justify-between mb-4"><h2 data-guide-target="accounts" className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><CreditCard size={14} className="text-emerald-400" /> Account Management</h2></div>
         <p id={`${formId}-help`} className="mb-4 text-xs text-muted">A wallet is where you keep money, such as cash, GCash, or a bank account. Add it here, then tap its balance above to update it.</p>
         {customWallets.length > 0 && !showAdd && (
           <div className="mb-4 overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle">
@@ -281,7 +283,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
             </div>
           </form>
         ) : (
-          <button id={`${formId}-add`} type="button" onClick={() => { returnFocusId.current = `${formId}-add`; setNameError(''); setShowAdd(true); setEditingId(null); setWalletName(""); setWalletColor(COLORS[2]); }} className="w-full py-3.5 border border-dashed border-inverse/[0.15] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted hover:text-emerald-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2"><Plus size={15} /> Add New Account</button>
+          <button data-guide-target="add-wallet" id={`${formId}-add`} type="button" onClick={() => { returnFocusId.current = `${formId}-add`; setNameError(''); setShowAdd(true); setEditingId(null); setWalletName(""); setWalletColor(COLORS[2]); }} className="w-full py-3.5 border border-dashed border-inverse/[0.15] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted hover:text-emerald-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2"><Plus size={15} /> Add New Account</button>
         )}
       </div>
     </div>

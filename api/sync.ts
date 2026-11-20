@@ -1,5 +1,6 @@
 import { readFinanceSession, usesFinanceSession } from "../server/financeSession.js";
 import { Redis } from "@upstash/redis";
+import { accountEpochKey, readAccountEpoch } from "../server/accountLifecycle.js";
 
 declare const process: {
   env: {
@@ -86,11 +87,15 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
   }
 
   let USER_REDIS_KEY: string;
+  let subject: string;
+  let accountEpoch = "";
   if (usesFinanceSession(req)) {
     res.setHeader("Cache-Control", "no-store");
     try {
       const profile = await readFinanceSession(req);
       if (!profile) return res.status(401).json({ error: "Unauthorized: Session expired or changed." });
+      subject = profile.sub;
+      accountEpoch = profile.accountEpoch ?? "";
       USER_REDIS_KEY = `finance_data_g_${profile.sub}`;
     } catch {
       return res.status(503).json({ error: "Unable to verify session." });
@@ -129,6 +134,7 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
       return res.status(401).json({ error: "Unauthorized: Invalid Google token." });
     }
 
+    subject = googleSub;
     USER_REDIS_KEY = `finance_data_g_${googleSub}`;
   }
 
@@ -136,6 +142,7 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
     if (req.method === "GET") {
       const isVersionCheck = req.url?.includes("version_only=true");
       const rawData = await redis.get<unknown>(USER_REDIS_KEY);
+      if (await readAccountEpoch(redis, subject) !== accountEpoch) return res.status(401).json({ error: "Account changed. Reconnect before syncing." });
 
       if (rawData === null) {
         return res.status(200).json({});
@@ -183,6 +190,7 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
       }
 
       const script = `
+        if (redis.call('GET', KEYS[2]) or '') ~= ARGV[5] then return '{"ok":false,"error":"ACCOUNT_CHANGED"}' end
         local rawCurrent = redis.call('GET', KEYS[1])
         local maxRevision = 9007199254740991
         local currentRevision = 0
@@ -270,19 +278,20 @@ export default async function handler(req: VercelApiRequest, res: VercelApiRespo
         return '{"ok":true,"revision":' .. nextRevision .. '}'
       `;
 
-      const resultStr = await redis.eval<[number, string, number, number], string>(
+      const resultStr = await redis.eval<[number, string, number, number, string], string>(
         script,
-        [USER_REDIS_KEY],
+        [USER_REDIS_KEY, accountEpochKey(subject)],
         [
           baseRevision ?? 0,
           JSON.stringify(dataToSave),
           dataToSave.updatedAt,
-          isLegacyWrite ? 1 : 0
+          isLegacyWrite ? 1 : 0, accountEpoch
         ]
       );
 
       const result = typeof resultStr === "string" ? JSON.parse(resultStr) : resultStr;
 
+      if (result?.error === "ACCOUNT_CHANGED") return res.status(401).json({ error: "Account changed. Reconnect before syncing." });
       if (result?.error === "REVISION_EXHAUSTED") {
         return res.status(503).json({ error: result.error, revision: result.revision });
       }
