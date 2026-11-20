@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useExpenseActions } from "./useExpenseActions";
+import { useExpenseActions, applyExpenseSave } from "./useExpenseActions";
 import { INITIAL_UNIFIED_DATA } from "../constants/initialData";
 import { UnifiedFinanceData, Expense } from "../types/finance";
 
@@ -25,6 +25,23 @@ const createTestData = (): UnifiedFinanceData => ({
 });
 
 describe("useExpenseActions", () => {
+  it.each([
+    [0, "Lunch Wallet has ₱0.00. Check its balance in Wallets or choose another wallet."],
+    [100, "Insufficient balance in Lunch Wallet. Need ₱150"],
+  ])("uses the wallet's current name and preserves state when balance is %s", (balance, message) => {
+    const data = createTestData(); data.wallets.maya = balance;
+    data.settings = { ...data.settings, walletLabels: { maya: "Old name" }, customWallets: [{ id: "maya", label: "Lunch Wallet" }] };
+    const before = structuredClone(data);
+    const form = { merchant: "Lunch", amount: "150", category: "Food & Dining", wallet: "maya", date: "2026-11-20" };
+    const direct = applyExpenseSave(data, form, "2026-11-20T04:00:00.000Z");
+    expect(direct).toMatchObject({ ok: false, error: message }); expect(direct.data).toBe(data);
+    const setGlobalData = vi.fn(); const onError = vi.fn(); const onSuccess = vi.fn();
+    const { result } = renderHook(() => useExpenseActions({ globalData: data, setGlobalData, showToast: vi.fn() }));
+    act(() => result.current.handleSaveExpense(form, onSuccess, vi.fn(), onError));
+    expect(onError).toHaveBeenCalledWith(message);
+    expect(setGlobalData).not.toHaveBeenCalled(); expect(onSuccess).not.toHaveBeenCalled(); expect(data).toEqual(before);
+  });
+
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -136,7 +153,7 @@ describe("useExpenseActions", () => {
 
     expect(setGlobalData).not.toHaveBeenCalled();
     expect(showToast).toHaveBeenCalledWith(
-      "Insufficient balance in maya. Need ₱1,000"
+      "Insufficient balance in Maya. Need ₱1,000"
     );
   });
 

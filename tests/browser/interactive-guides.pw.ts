@@ -34,6 +34,11 @@ for (const theme of ['light', 'dark'] as const) {
     expect(initial?.settings?.perPayoutSalary).toBe(0);
     expect(initial?.library.expenses).toEqual([]);
     expect(initial?.wallets).toEqual({ main: 0, savings: 0, cash: 0 });
+    await balance.getByRole('button', { name: 'Close balance editor', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Record your first expense', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Set starting balance', exact: true }).click();
+    await expect(balance.getByRole('spinbutton', { name: 'Balance', exact: true })).toBeFocused();
+    expect(await storedData(page)).toEqual(initial);
     await balance.getByRole('spinbutton', { name: 'Balance', exact: true }).fill('1000');
     await balance.getByRole('button', { name: 'Save Balance', exact: true }).click();
     await expect.poll(async () => (await storedData(page))?.wallets.main).toBe(1000);
@@ -202,5 +207,46 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(guide.getByRole('button', { name: 'Try a transfer', exact: true })).toHaveCount(0);
     await page.keyboard.press('Escape');
     expect(await storedData(page)).toEqual(snapshot);
+  });
+}
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`zero balance recovery and checklist reflect saved data in ${theme} mode`, async ({ page, isolatedApp }, testInfo) => {
+    if (testInfo.project.name === 'phone') await page.setViewportSize({ width: 320, height: 568 });
+    const data = returningData();
+    data.settings = { ...data.settings, theme, defaultWallet: 'cw_browser_wallet', customWallets: [{ id: 'cw_browser_wallet', label: 'Lunch Wallet' }, { id: 'cash', label: 'Cash' }] };
+    data.wallets = { cw_browser_wallet: 0, cash: 250 };
+    const app = await isolatedApp(data);
+    await navigate(page, 'Expenses');
+    await page.getByRole('button', { name: /^Manual\b/ }).click();
+    const expense = page.getByRole('dialog', { name: 'Log Expense', exact: true });
+    const wallet = expense.getByRole('combobox', { name: 'Deduct From', exact: true });
+    await expect(wallet).toHaveAccessibleDescription('Current balance: ₱0.00');
+    await expense.getByRole('textbox', { name: 'Merchant / Name', exact: true }).fill('Lunch');
+    await expense.getByRole('spinbutton', { name: 'Amount (₱)', exact: true }).fill('150');
+    const snapshot = await storedData(page);
+    await expense.getByRole('button', { name: 'Save & Deduct', exact: true }).click();
+    await expect(expense.getByRole('alert')).toHaveText('Lunch Wallet has ₱0.00. Check its balance in Wallets or choose another wallet.');
+    expect(await storedData(page)).toEqual(snapshot);
+    await wallet.selectOption('cash');
+    await expect(wallet).toHaveAccessibleDescription('Current balance: ₱250.00');
+    await wallet.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath(`selected-balance-${theme}.png`) });
+    await expense.getByRole('button', { name: 'Save & Deduct', exact: true }).click();
+    await expect(expense).toBeHidden();
+    await expect.poll(async () => (await storedData(page))?.wallets).toEqual({ cw_browser_wallet: 0, cash: 100 });
+    await navigate(page, 'Dashboard');
+    await page.getByRole('button', { name: 'Getting Started', exact: true }).click();
+    const guide = page.getByRole('dialog', { name: 'Getting Started', exact: true });
+    await expect(guide.getByRole('button', { name: /^Start with a wallet/ })).toContainText('Balance ready');
+    await expect(guide.getByRole('button', { name: /^Record your first expense/ })).toContainText('Already added');
+    await expect(guide.getByRole('button', { name: /^Track incoming money/ })).toContainText('Not added yet');
+    await expect(guide.getByRole('button', { name: /^Set up a commitment/ })).toContainText('Not added yet');
+    await page.screenshot({ path: testInfo.outputPath(`getting-started-checks-${theme}.png`) });
+    await guide.getByRole('button', { name: 'Done', exact: true }).click();
+    await app.waitForSaved();
+    await page.reload();
+    expect((await storedData(page))?.wallets).toEqual({ cw_browser_wallet: 0, cash: 100 });
+    expect((await storedData(page))?.library.expenses).toEqual([expect.objectContaining({ merchant: 'Lunch', amount: 150, wallet: 'cash' })]);
   });
 }

@@ -18,7 +18,8 @@ import {
   ArrowRight,
   Plus,
   ChevronRight,
-  CircleHelp
+  CircleHelp,
+  CheckCircle2
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { MilestoneProgressBar } from "./MilestoneProgressBar";
@@ -34,7 +35,7 @@ import {
 } from "../types/finance";
 import { calculateSafeToSpend } from "../utils/financialAnalytics";
 import { getPaydayDatesInRange, normalizePaydayDays, parseMonthKey } from "../utils/dateHelpers";
-import { reconcileWalletBalances } from "../utils/financeHelpers";
+import { reconcileWalletBalances, validateActiveWalletAssignment } from "../utils/financeHelpers";
 
 import { reconcileDebt } from "../utils/debtReconciliation";
 
@@ -228,6 +229,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   const gettingStartedSteps = ([
     {
       action: "wallet",
+      complete: reconciled.activeWallets.some(wallet => wallet.balance > 0 && validateActiveWalletAssignment(wallet.id, globalData.settings, globalData.wallets).ok),
       title: "Start with a wallet",
       description: "Use an existing wallet or add an account, then enter its current balance.",
       icon: Wallet,
@@ -235,6 +237,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
     },
     {
       action: "expense",
+      complete: (globalData.library.expenses?.length ?? 0) > 0,
       title: "Record your first expense",
       description: "Choose Scan or Manual, review the details, and save to the wallet you paid from.",
       icon: Receipt,
@@ -242,6 +245,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
     },
     {
       action: "inflow",
+      complete: (globalData.library.receivables?.length ?? 0) > 0,
       title: "Track incoming money",
       description: "Add a client payment, salary, sale, or allowance. Amount and date can wait.",
       icon: ArrowDownLeft,
@@ -249,6 +253,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
     },
     {
       action: "bill",
+      complete: (globalData.library.bills?.length ?? 0) > 0,
       title: "Set up a commitment",
       description: "Choose Add New Commitment to track a bill, subscription, or installment.",
       icon: Calendar,
@@ -793,13 +798,13 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       >
         <div className="w-full max-w-md rounded-3xl border border-subtle bg-surface-modal p-5 shadow-xl sm:p-6">
           <h2 id="getting-started-title" className="text-lg font-semibold text-strong">Getting Started</h2>
-          <p className="mt-1 text-sm text-muted">Start with one wallet and one expense. Try the other tools when you need them; you can come back anytime from Quick Actions.</p>
+          <p className="mt-1 text-sm text-muted">Start with one wallet and one expense. Checkmarks reflect your current balances and saved records. Try the other tools when you need them.</p>
           {onStartTour && <button type="button" onClick={() => { setShowGettingStarted(false); onStartTour(); }}
             className="mt-4 min-h-11 w-full rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-500">
             Take a quick tour
           </button>}
           <ol className="my-4 divide-y divide-subtle overflow-hidden rounded-2xl bg-surface">
-            {gettingStartedSteps.map(({ action, title, description, icon: Icon }) => (
+            {gettingStartedSteps.map(({ action, complete, title, description, icon: Icon }) => (
               <li key={action}>
                 <button
                   type="button"
@@ -809,9 +814,10 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                   }}
                   className="flex min-h-12 w-full items-center gap-3 px-3 py-3 text-left transition hover:bg-fill focus-visible:outline-offset-[-2px]"
                 >
-                  <Icon size={17} className="shrink-0 text-muted" aria-hidden="true" />
+                  {complete ? <CheckCircle2 size={17} className="shrink-0 text-emerald-500" aria-hidden="true" /> : <Icon size={17} className="shrink-0 text-muted" aria-hidden="true" />}
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold text-primary">{title}</span>
+                    <span className="sr-only">{complete ? action === "wallet" ? "Balance ready" : "Already added" : "Not added yet"}</span>
                     <span className="mt-0.5 block text-xs text-muted">{description}</span>
                   </span>
                   <ChevronRight size={16} className="shrink-0 text-muted" aria-hidden="true" />

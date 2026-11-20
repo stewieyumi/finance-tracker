@@ -5,7 +5,7 @@ import { formatPHP, roundMoney } from "../utils/currency";
 import React, { useEffect, useId, useRef, useState } from "react";
 import { Camera, ScanLine, Plus, Receipt, Trash2, CheckCircle2, Upload, X, Edit2 } from "lucide-react";
 import { UnifiedFinanceData, Expense, ExpenseCategory, FinanceTransitionCommitter } from "../types/finance";
-import { getDefaultExpenseWalletId } from "../utils/financeHelpers";
+import { getDefaultExpenseWalletId, parseWalletBalance } from "../utils/financeHelpers";
 import type { PaymentHistoryAction } from "../utils/paymentHistory";
 import { expenseMoneyIsLocked } from "../utils/expenseChanges";
 import { isValidDateKey, getMonthKey, parseMonthKey } from "../utils/dateHelpers";
@@ -202,6 +202,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   const customWallets = globalData.settings?.customWallets || [];
 
   const allWallets = customWallets || [];
+  const selectedWalletBalance = form.wallet ? parseWalletBalance(globalData.wallets?.[form.wallet]) : undefined;
   const moneyLocked = Boolean(editingExpense && expenseMoneyIsLocked(editingExpense));
   const originalWalletLabel = editingExpense && (allWallets.find(wallet => wallet.id === editingExpense.wallet)?.label
     || globalData.settings?.archivedWallets?.find(wallet => wallet.id === editingExpense.wallet)?.label
@@ -427,10 +428,11 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                   </div>
                   <div className="col-span-2 min-w-0">
                     <label htmlFor={`${expenseFormId}-wallet`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Deduct From</label>
-                    <select id={`${expenseFormId}-wallet`} disabled={moneyLocked} value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-primary font-semibold uppercase min-h-11 box-border">
+                    <select id={`${expenseFormId}-wallet`} aria-describedby={`${expenseFormId}-wallet-balance`} disabled={moneyLocked} value={form.wallet} onChange={e => setForm({...form, wallet: e.target.value})} className="w-full min-w-0 bg-surface-input border border-strong rounded-xl px-2 py-2.5 text-[11px] text-primary font-semibold uppercase min-h-11 box-border">
                       {editingExpense && !allWallets.some(wallet => wallet.id === editingExpense.wallet) && <option value={editingExpense.wallet} disabled>{originalWalletLabel}</option>}
                       {allWallets.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                     </select>
+                    <p id={`${expenseFormId}-wallet-balance`} aria-live="polite" className="mt-1 text-xs text-muted">Current balance: <span className="privacy-blur font-mono font-semibold">{selectedWalletBalance?.isValid ? formatPHP(selectedWalletBalance.balance) : "Unavailable"}</span></p>
                   </div>
                 </div>
 

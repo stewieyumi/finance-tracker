@@ -272,10 +272,25 @@ First-time users can choose Start with a wallet on the welcome screen to bypass
 optional setup and go straight to Wallets. This only sets the existing onboarding
 completion flag; it does not apply unsaved presets, income plans, goals, balances,
 or records. The full five-screen setup remains available as the alternative.
-Wallets shows a next-expense link until an expense exists. Starting balances should
-reflect today's real accounts; record purchases made after that starting balance
-to avoid subtracting historical spending twice. Getting Started lists wallet and
-expense tasks before optional income/commitment planning.
+Before the first expense, Wallets first offers Set starting balance when no usable
+active wallet is funded (or Add your first wallet when none exists). It opens the
+existing editor without saving. Once any valid active wallet has a positive
+balance, it offers Record your first expense. Readiness uses individual usable
+wallets, not the combined cash total or a count of wallet names. Starting balances
+should reflect today's real accounts; record purchases made after that starting
+balance to avoid subtracting historical spending twice.
+
+The expense form shows the selected wallet's current balance below Deduct From,
+updates it when the wallet/balance changes, and identifies invalid balances as
+unavailable. Insufficient-funds messages prefer the configured wallet name and
+explain where to check a zero balance. Existing validation and deductions remain
+unchanged.
+
+Getting Started lists wallet and expense tasks before optional income/commitment
+planning. Green checks derive from a currently funded active wallet and existing
+expense, inflow, and commitment records. They describe current saved data, not
+permanent completion flags; extra empty wallets alone do not earn a wallet check.
+Opening the checklist does not save data or move money.
 
 Quick Expense setup includes an expandable mobile-data troubleshooting guide and
 Apple's device-settings instructions. It never sends a test expense or retries an

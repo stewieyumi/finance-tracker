@@ -310,6 +310,30 @@ describe("DashboardTab", () => {
     expect(defaultProps.onNavigateToExpenses).toHaveBeenCalled();
   });
 
+  it("derives checklist indicators from usable funds and saved entries without recording completion", () => {
+    const data = structuredClone(INITIAL_UNIFIED_DATA);
+    // Extra zero-balance wallets alone do not mean a starting balance is ready.
+    data.settings = { ...data.settings, customWallets: [...data.settings!.customWallets!, { id: "extra", label: "Extra" }] };
+    data.wallets.extra = 0;
+    const { rerender } = render(<DashboardTab {...defaultProps} globalData={data} />);
+    fireEvent.click(screen.getByRole("button", { name: "Getting Started" }));
+    const guide = screen.getByRole("dialog", { name: "Getting Started" });
+    expect(within(guide).getAllByText("Not added yet")).toHaveLength(4);
+    const funded = structuredClone(data); funded.wallets.main = 100;
+    funded.library.expenses = [{ id: "expense", merchant: "Lunch", amount: 10, category: "Other", wallet: "main", date: "2026-11-20" }];
+    funded.library.receivables = [{ id: "inflow", name: "Client", amount: 0, amountUnspecified: true, frequency: "No Specific Date" }];
+    funded.library.bills = [{ id: "bill", name: "Internet", amount: 50, dueDay: "20", type: "Bill" }];
+    const before = structuredClone(funded);
+    rerender(<DashboardTab {...defaultProps} globalData={funded} />);
+    expect(within(guide).getByText("Balance ready")).toBeInTheDocument();
+    expect(within(guide).getAllByText("Already added")).toHaveLength(3);
+    expect(within(guide).queryByText("Not added yet")).not.toBeInTheDocument();
+    expect(funded).toEqual(before);
+    expect(defaultProps.onCommitWallet).not.toHaveBeenCalled(); expect(defaultProps.onExecutePaydaySplit).not.toHaveBeenCalled();
+    rerender(<DashboardTab {...defaultProps} globalData={data} />);
+    expect(within(guide).getAllByText("Not added yet")).toHaveLength(4);
+  });
+
   it.each([
     ["Start with a wallet", "wallets"],
     ["Record your first expense", "expenses"],

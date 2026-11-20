@@ -24,6 +24,14 @@ interface UseExpenseActionsProps {
   showToast: (msg: string, action?: PaymentHistoryAction) => void;
 }
 
+function insufficientExpenseBalanceMessage(data: UnifiedFinanceData, walletId: string, balance: number, amount: number): string {
+  const label = data.settings?.customWallets?.find(wallet => wallet.id === walletId)?.label
+    || data.settings?.walletLabels?.[walletId] || walletId;
+  return balance === 0
+    ? `${label} has ₱0.00. Check its balance in Wallets or choose another wallet.`
+    : `Insufficient balance in ${label}. Need ₱${amount.toLocaleString()}`;
+}
+
 export function applyExpenseSave(
   prev: UnifiedFinanceData,
   form: ExpenseForm,
@@ -43,10 +51,9 @@ export function applyExpenseSave(
 
   const currentBal = getSafeWalletBalance(prev.wallets?.[walletId], 0);
   if (!hasSufficientWalletBalance(currentBal, amount)) {
-    const label = prev.settings?.walletLabels?.[walletId] || walletId;
     return {
       ok: false,
-      error: `Insufficient balance in ${label}. Need ₱${amount.toLocaleString()}`,
+      error: insufficientExpenseBalanceMessage(prev, walletId, currentBal, amount),
       data: prev
     };
   }
@@ -214,11 +221,7 @@ export function useExpenseActions({
 
       const currentBal = getSafeWalletBalance(globalData.wallets?.[walletId], 0);
       if (!hasSufficientWalletBalance(currentBal, amount)) {
-        onError(
-          `Insufficient balance in ${
-            globalData.settings?.walletLabels?.[walletId] || walletId
-          }. Need ₱${amount.toLocaleString()}`
-        );
+        onError(insufficientExpenseBalanceMessage(globalData, walletId, currentBal, amount));
         return;
       }
 
