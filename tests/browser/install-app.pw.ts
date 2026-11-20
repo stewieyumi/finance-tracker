@@ -23,6 +23,7 @@ async function installEnvironment(page: import('@playwright/test').Page, phone: 
 for (const theme of ['light', 'dark'] as const) {
   test(`install guidance works without native support in ${theme} mode`, async ({ page, isolatedApp }, testInfo) => {
     const phone = testInfo.project.name === 'phone';
+    const originalSize = page.viewportSize()!;
     await installEnvironment(page, phone);
     const data = returningData(); data.settings = { ...data.settings, theme };
     await isolatedApp(data);
@@ -43,6 +44,9 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(opener).toBeFocused();
     await offer.getByRole('button', { name: 'Not now' }).click();
     await expect(offer).toBeHidden();
+    // Keep the short-screen reachability check separate from reopening at the device size.
+    // Reloading a resized mobile-emulation context can retain a different layout viewport.
+    await page.setViewportSize(originalSize);
     await page.reload();
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
     await expect(offer).toBeHidden();
