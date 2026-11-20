@@ -39,7 +39,8 @@ jobs:
 
   browser-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Browser/font setup plus the expanded responsive matrix can exceed ten minutes.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
