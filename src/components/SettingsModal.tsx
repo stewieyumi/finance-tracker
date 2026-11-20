@@ -1,3 +1,4 @@
+import { WORK_PRESETS as PRESETS } from "../constants/workPresets";
 import { QuickExpenseShortcutSetup } from "./QuickExpenseShortcutSetup";
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { X, Settings, Briefcase, Save, Cloud, Database, ArrowRightLeft, Download, Upload, Banknote, Plus, Trash2, CalendarPlus, Search, Wallet, ChevronRight, Copy, Zap } from "lucide-react";
@@ -70,13 +71,6 @@ interface SettingsModalProps {
   onOpenCalendar?: () => void;
   onOpenCalendarExport?: () => void;
 }
-
-const PRESETS = {
-  employee: { label: "9-to-5 Employee", inflows: "SALARY & BONUSES", gigs: "SIDE HUSTLES", inflowCats: ["Salary", "Bonus", "13th Month", "Reimbursement", "Other"], gigCats: ["Freelance", "Tutoring", "Online Selling", "Other"] },
-  videographer: { label: "Multimedia Artist", inflows: "RECEIVABLES & INFLOWS", gigs: "UPCOMING SHOOTS & GIGS", inflowCats: ["Salary", "Shoot", "Edit", "Payment", "Other"], gigCats: ["Solo Shoot", "Assistant", "Video Edit", "Event", "Commercial", "Other"] },
-  freelance: { label: "Freelancer / Dev", inflows: "INVOICES & PAYMENTS", gigs: "FREELANCE PROJECTS", inflowCats: ["Retainer", "Project", "Consulting", "Other"], gigCats: ["Frontend", "Backend", "Fullstack", "Design", "Maintenance", "Other"] },
-  personal: { label: "Personal / Student", inflows: "INCOME & ALLOWANCE", gigs: "TASKS & HUSTLES", inflowCats: ["Allowance", "Salary", "Gift", "Side Hustle", "Other"], gigCats: ["Part-time", "Errand", "Online Selling", "Other"] }
-};
 
 const EXPENSE_CATEGORIES = [
   "Food & Dining",

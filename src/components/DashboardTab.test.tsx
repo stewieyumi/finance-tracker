@@ -14,6 +14,7 @@ describe("DashboardTab", () => {
   const defaultProps = {
     globalData: {
       ...INITIAL_UNIFIED_DATA,
+      settings: { ...INITIAL_UNIFIED_DATA.settings, perPayoutSalary: 15000 },
       wallets: { main: 5000, savings: 2000 },
       library: {
         ...INITIAL_UNIFIED_DATA.library,
@@ -213,6 +214,17 @@ describe("DashboardTab", () => {
     expect(defaultProps.onJumpToOverdue).toHaveBeenCalled();
   });
 
+  it("offers inflow tracking instead of a salary plan when regular pay is not configured", () => {
+    render(<DashboardTab {...defaultProps} globalData={{ ...defaultProps.globalData,
+      settings: { ...defaultProps.globalData.settings, perPayoutSalary: 0 } }} />);
+    expect(screen.queryByRole("button", { name: /^Payday Plan/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Track an inflow" }));
+    expect(defaultProps.onNavigateToOps).toHaveBeenCalledWith("inflows");
+    fireEvent.click(screen.getByRole("button", { name: "Set up regular pay" }));
+    expect(defaultProps.onOpenSettings).toHaveBeenCalledWith("baselines");
+    expect(defaultProps.onExecutePaydaySplit).not.toHaveBeenCalled();
+  });
+
   it("shows monthly net salary on the Payday Plan and per-payout allocations in the modal", () => {
     render(<DashboardTab
       {...defaultProps}
@@ -267,6 +279,7 @@ describe("DashboardTab", () => {
     render(
       <DashboardTab
         {...defaultProps}
+        globalData={{ ...defaultProps.globalData, settings: { ...defaultProps.globalData.settings, perPayoutSalary: 0 } }}
         latestExecution={latestExecution}
       />
     );

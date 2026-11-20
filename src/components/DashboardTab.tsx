@@ -226,6 +226,13 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
   const gettingStartedSteps = ([
     {
+      action: "inflow",
+      title: "Track incoming money",
+      description: "Add a client payment, salary, sale, or allowance. Amount and date can wait.",
+      icon: ArrowDownLeft,
+      available: onNavigateToOps,
+    },
+    {
       action: "wallet",
       title: "Add a wallet",
       description: "Choose Add New Account for a bank account, e-wallet, or cash you want to track.",
@@ -652,8 +659,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         </button>
       </div>
 
-      {/* 3. COMPACT PAYDAY PLAN CARD */}
-      <button
+      {/* Regular-income planning is optional; irregular payments use Inflows. */}
+      {(globalData.settings?.perPayoutSalary ?? 0) > 0 || latestExecution ? <button
         type="button"
         aria-haspopup="dialog"
         onClick={() => setShowPaydayModal(true)}
@@ -685,7 +692,14 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           </span>
           <ArrowRight size={14} className="text-faint group-hover:text-positive group-hover:translate-x-0.5 transition-all" />
         </span>
-      </button>
+      </button> : <div className="dashboard-material rounded-2xl p-4 sm:p-5">
+        <h2 className="text-sm font-semibold text-primary">Income at your pace</h2>
+        <p className="mt-1 text-xs leading-relaxed text-muted">Track client payments, sales, or other money in Inflows. You do not need a monthly salary.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {onNavigateToOps && <button type="button" onClick={() => onNavigateToOps("inflows")} className="min-h-11 rounded-xl bg-fill px-3 text-xs font-semibold text-primary hover:bg-fill-strong">Track an inflow</button>}
+          <button type="button" onClick={() => onOpenSettings("baselines")} className="min-h-11 rounded-xl px-3 text-xs font-medium text-muted hover:bg-fill">Set up regular pay</button>
+        </div>
+      </div>}
 
       {/* 5. RECENT ACTIVITY */}
       <ErrorBoundary>

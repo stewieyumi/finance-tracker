@@ -963,3 +963,20 @@ it("opens and focuses Quick Expense directly from the tour without saving settin
   expect(summary).toHaveFocus();
   expect(setGlobalData).not.toHaveBeenCalled();
 });
+
+it("applies the same business preset later without changing financial records or regular pay", () => {
+  const data = createMockData();
+  data.settings = { ...data.settings, perPayoutSalary: 8000, grossPerPayoutSalary: 8000, paydayDays: [10] };
+  const original = structuredClone(data);
+  const { setGlobalData } = renderSettingsModal(data, { initialTab: "general" });
+  fireEvent.click(screen.getByRole("button", { name: "Business / Self-employed" }));
+  expect(setGlobalData).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Save Settings" }));
+  const updated = setGlobalData.mock.calls[0][0](data);
+  expect(updated.settings).toMatchObject({ inflowsLabel: "SALES & PAYMENTS", gigsLabel: "ORDERS & TASKS", perPayoutSalary: 8000, paydayDays: [10] });
+  expect(updated.settings.inflowCategories).toContain("Customer Payment");
+  expect(updated.wallets).toEqual(original.wallets);
+  expect(updated.library).toEqual(original.library);
+  expect(updated.logs).toEqual(original.logs);
+  expect(data).toEqual(original);
+});

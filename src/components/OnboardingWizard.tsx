@@ -1,3 +1,4 @@
+import { WORK_PRESETS, type WorkPreset } from "../constants/workPresets";
 import React, { useEffect, useId, useRef, useState } from "react";
 import {
   CheckCircle2,
@@ -47,7 +48,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { headingRef.current?.focus(); }, [step]);
 
-  // Step 2: Salary & Paydays
+  const [workPreset, setWorkPreset] = useState<WorkPreset | "custom">("custom");
+  const [incomePattern, setIncomePattern] = useState<"later" | "regular" | "irregular" | "mixed">(
+    (globalData.settings?.grossPerPayoutSalary ?? globalData.settings?.perPayoutSalary ?? 0) > 0 ? "regular" : "later"
+  );
+  const hasRegularIncome = incomePattern === "regular" || incomePattern === "mixed";
+
+  // Optional regular-income planning. Individual client payments use Inflows.
   const [grossSalary, setGrossSalary] = useState<number>(
     globalData.settings?.grossPerPayoutSalary ??
       globalData.settings?.perPayoutSalary ??
@@ -162,14 +169,23 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     const alignRoute = (currentRoute?: string) =>
       wallets.some(w => w.id === currentRoute) ? currentRoute! : defaultActive;
 
+    const preset = workPreset === "custom" ? undefined : WORK_PRESETS[workPreset];
+    const incomeSettings = hasRegularIncome ? {
+      grossPerPayoutSalary: grossSalary, salaryDeductions: deductions,
+      perPayoutSalary: netSalary, paydayDays: finalPaydays,
+    } : incomePattern === "irregular" ? {
+      grossPerPayoutSalary: 0, salaryDeductions: [], perPayoutSalary: 0, paydayDays: [],
+    } : {}; // Setting up later leaves existing configuration untouched.
+
     const completedData: UnifiedFinanceData = {
       ...globalData,
       settings: {
         ...(globalData.settings || {}),
-        grossPerPayoutSalary: grossSalary,
-        salaryDeductions: deductions,
-        perPayoutSalary: netSalary,
-        paydayDays: finalPaydays,
+        ...incomeSettings,
+        ...(preset ? {
+          inflowsLabel: preset.inflows, gigsLabel: preset.gigs,
+          inflowCategories: [...preset.inflowCats], gigCategories: [...preset.gigCats],
+        } : {}),
         goalName,
         targetFund,
         defaultWallet: alignRoute(globalData.settings?.defaultWallet),
@@ -230,8 +246,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 {userName ? `Welcome, ${userName}!` : "Welcome to Finance Tracker"}
               </h1>
               <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed">
-                Set up your wallets, paydays, and savings goal now, or head straight to the dashboard.
-                The Getting Started guide in Quick Actions shows you how to add your first entries.
+                Start with the way you work, then choose what to set up. Regular pay, freelance payments, or both are welcome.
               </p>
             </div>
 
@@ -240,14 +255,31 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <ShieldCheck size={18} className="text-emerald-400 shrink-0 mt-0.5" />
                 <div className="text-xs">
                   <span className="font-semibold text-strong block">
-                    Zero guesswork setup
+                    Your setup, your pace
                   </span>
                   <span className="text-muted text-[11px]">
-                    We've provided sensible defaults for everything. You can adjust any of this now or anytime in Settings.
+                    Presets suggest labels and categories. Every tool stays available, and you can customize them in Settings → General anytime.
                   </span>
                 </div>
               </div>
             </div>
+
+            <fieldset>
+              <legend className="mb-2 text-sm font-semibold text-primary">What best describes you?</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {(Object.keys(WORK_PRESETS) as WorkPreset[]).map(key => <button key={key} type="button"
+                  aria-pressed={workPreset === key} onClick={() => setWorkPreset(key)}
+                  className={`min-h-16 rounded-xl border p-3 text-left ${workPreset === key ? "border-blue-500 bg-blue-500/10" : "border-subtle bg-surface-input"}`}>
+                  <span className="block text-xs font-semibold text-primary">{WORK_PRESETS[key].label}</span>
+                  <span className="mt-1 block text-xs text-muted">{WORK_PRESETS[key].description}</span>
+                </button>)}
+                <button type="button" aria-pressed={workPreset === "custom"} onClick={() => setWorkPreset("custom")}
+                  className={`min-h-16 rounded-xl border p-3 text-left ${workPreset === "custom" ? "border-blue-500 bg-blue-500/10" : "border-subtle bg-surface-input"}`}>
+                  <span className="block text-xs font-semibold text-primary">General / choose later</span>
+                  <span className="mt-1 block text-xs text-muted">Keep the current labels and make it your own.</span>
+                </button>
+              </div>
+            </fieldset>
 
             <button
               type="button"
@@ -264,14 +296,34 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           <div className="space-y-5 animate-fade-in">
             <div>
               <h2 ref={headingRef} tabIndex={-1} className="text-base font-bold text-strong flex items-center gap-2">
-                <Banknote size={16} className="text-purple-400" /> Payday Salary & Schedule
+                <Banknote size={16} className="text-purple-400" /> How does money come in?
               </h2>
               <p className="text-xs text-muted mt-1">
-                Configure your gross paycheck per period and payday dates.
+                Your work preset does not decide your pay schedule. Choose what fits, or set it up later.
               </p>
             </div>
 
-            <div className="space-y-4">
+            <fieldset>
+              <legend className="sr-only">Income pattern</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  ["regular", "Regular income", "Salary, allowance, or a fixed retainer."],
+                  ["irregular", "Irregular income", "Client payments or sales as they arrive."],
+                  ["mixed", "Both", "Regular pay plus other payments."],
+                  ["later", "Set up later", "Start tracking without a salary schedule."],
+                ] as const).map(([id, label, description]) => <button key={id} type="button"
+                  aria-pressed={incomePattern === id} onClick={() => { setIncomePattern(id); setShowPaydayError(false); }}
+                  className={`min-h-16 rounded-xl border p-3 text-left ${incomePattern === id ? "border-blue-500 bg-blue-500/10" : "border-subtle bg-surface-input"}`}>
+                  <span className="block text-xs font-semibold text-primary">{label}</span>
+                  <span className="mt-1 block text-xs text-muted">{description}</span>
+                </button>)}
+              </div>
+            </fieldset>
+            {!hasRegularIncome && <p className="rounded-xl bg-surface-sunken p-3 text-xs leading-relaxed text-muted">
+              Add client payments, sales, gifts, or allowance in Operations → Inflows. You can start with just a name and add the amount or date later. Record receipt only when money arrives; a work preset never adds money to a wallet.
+            </p>}
+            {hasRegularIncome && <div className="space-y-4">
+              <p className="text-xs text-muted">Plan only your regular pay here. Add variable payments separately in Operations → Inflows. This does not mark any income received.</p>
               <div>
                 <label htmlFor={`${formId}-salary`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">
                   Gross Salary / Pay Period (₱)
@@ -419,7 +471,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                   </span>
                 </div>
               </div>
-            </div>
+            </div>}
 
             <div className="flex gap-2 pt-2">
               <button
@@ -432,7 +484,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  if (paydayPreset === "custom" && !validCustomPaydays) {
+                  if (hasRegularIncome && paydayPreset === "custom" && !validCustomPaydays) {
                     setShowPaydayError(true);
                     return;
                   }
@@ -676,18 +728,19 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 </div>
               </div>
 
+              <p className="text-xs text-muted">Work preset: {workPreset === "custom" ? "General / choose later" : WORK_PRESETS[workPreset].label}. All features remain available.</p>
               {/* Review Summary Card */}
               <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 space-y-2 text-xs">
                 <div className="flex justify-between items-center text-muted">
-                  <span>Net Salary:</span>
+                  <span>Regular pay per period:</span>
                   <span className="font-mono font-semibold text-strong">
-                    ₱{netSalary.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    {hasRegularIncome ? `₱${netSalary.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : incomePattern === "irregular" ? "No fixed pay" : "Set up later"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-muted">
                   <span>Payday Dates:</span>
                   <span className="font-semibold text-strong">
-                    {paydayPreset === "15_30" ? "15th & 30th" : customPaydayDays.join(", ")}
+                    {hasRegularIncome ? (paydayPreset === "15_30" ? "15th & 30th" : customPaydayDays.join(", ")) : "Not required"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-muted">

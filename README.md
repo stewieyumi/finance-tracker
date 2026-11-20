@@ -198,3 +198,44 @@ real-device checks after deployment.
 Browser references: [native prompt lifecycle](https://developer.mozilla.org/en-US/docs/Web/API/BeforeInstallPromptEvent/prompt),
 [Android Chrome](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=en),
 [Windows Edge](https://support.microsoft.com/en-us/edge/install-manage-or-uninstall-apps-in-microsoft-edge).
+
+
+## Work presets and flexible first setup
+
+First setup offers Employee, Creative / Multimedia, Freelancer, Business /
+Self-employed, Personal / Student, or General / choose later. Work presets are
+shared with Settings → General and suggest labels and categories only. They do
+not create accounts with money, sample transactions, paid work, or received
+income. Every feature stays available; a work preset does not choose a pay
+schedule or restrict the user to a profession.
+
+Income is a separate choice: regular, irregular, both, or set up later. Regular
+and mixed income expose the existing optional gross-pay, deduction, and payday
+controls. Irregular income saves zero regular pay and no configured pay dates;
+client payments are tracked through Inflows. Choosing later preserves current
+regular-pay configuration. No income-pattern or profession schema is added.
+Wallet balances, library records, and history are preserved at completion;
+partial setup edits are discarded when setup is skipped. Setup changes are
+saved only at Finish Setup & Launch.
+
+When regular pay is not configured, Dashboard shows Income at your pace with
+an Inflows entry and optional regular-pay setup instead of a zero-salary plan.
+A previous payday execution keeps the existing distribution/undo view available.
+The calculation, collection, payment, and wallet-mutation implementations are
+unchanged.
+
+The replayable guided introduction defaults to five short areas, with an
+optional ten-area All features tour. Expand More about this area for practical
+notes on transfers, receipt review, inflows/partial receipts, commitments, gig
+statuses, goals/planning, history filters, settings/backups, and optional
+calendars. The final step offers installation guidance and clearly identifies
+Quick Expense / Back Tap as an optional iPhone setup. Tour navigation performs
+no financial actions. Skip, Escape, Back, and replay remain available.
+
+Validation includes work/income combinations, later/irregular transitions,
+Settings preset consistency, zero-pay Dashboard navigation, preservation of
+prior payday undo access, and short-screen full-tour navigation. Four new
+Chromium cases cover freelance setup through a name-only inflow and reopening
+in both themes at desktop and phone sizes. New-user setup screenshots use an
+explicit visual theme fixture before saved appearance is chosen; tour appearance
+uses the actual saved theme. Browser auth/cloud are simulated as described above.
