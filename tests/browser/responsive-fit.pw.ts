@@ -88,6 +88,9 @@ for (const [width, height] of profiles) for (const theme of ['light', 'dark'] as
     issues.push(...clippedLabels.map(label => `Bottom navigation: clipped label ${label}`));
     await check('Dashboard');
     await page.screenshot({ path: testInfo.outputPath('dashboard.png') });
+    await openCheck(page.getByRole('button', { name: 'Getting Started', exact: true }), 'Getting Started');
+    await page.screenshot({ path: testInfo.outputPath('getting-started.png') });
+    await dialog('Getting Started').getByRole('button', { name: 'Done', exact: true }).click();
     await openCheck(page.getByRole('button', { name: 'Configure savings goal' }), 'Goal Configuration Modal');
     await page.getByRole('button', { name: 'Close goal setup modal' }).click();
     await openCheck(page.getByRole('button', { name: 'Runway', exact: true }), 'Financial Intelligence Modal');

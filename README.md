@@ -290,7 +290,9 @@ Getting Started lists wallet and expense tasks before optional income/commitment
 planning. Green checks derive from a currently funded active wallet and existing
 expense, inflow, and commitment records. They describe current saved data, not
 permanent completion flags; extra empty wallets alone do not earn a wallet check.
-Opening the checklist does not save data or move money.
+Opening the checklist does not save data or move money. The checklist panel caps
+its height to the available dynamic viewport and scrolls internally on short
+screens so its heading, tour button, tasks, and dismissal stay reachable.
 
 Quick Expense setup includes an expandable mobile-data troubleshooting guide and
 Apple's device-settings instructions. It never sends a test expense or retries an
