@@ -85,3 +85,12 @@ it("preserves the app context when handing the public preset to Safari or Shortc
   expect(screen.getByText(/To return here on iPhone/)).toBeVisible();
   expect(fetch).not.toHaveBeenCalled();
 });
+
+it("offers mobile-data troubleshooting without sending or retrying an expense", () => {
+  render(<QuickExpenseShortcutSetup globalData={data} />);
+  fireEvent.click(screen.getByText("Shortcut not working on mobile data?"));
+  expect(screen.getByText(/If an expense may have been sent/)).toBeVisible();
+  expect(screen.getByText(/There is no offline queue/)).toBeVisible();
+  expect(screen.getByRole("link", { name: "Apple’s mobile data instructions" })).toHaveAttribute("href", "https://support.apple.com/guide/iphone/view-or-change-cellular-data-settings-iph3dd5f213/ios");
+  expect(fetch).not.toHaveBeenCalled();
+});

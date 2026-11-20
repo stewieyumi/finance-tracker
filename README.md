@@ -249,12 +249,39 @@ Upcoming, Payday, Transaction History, and goal setup. A Guide button replays th
 current area's introduction. Skip, Escape, Back, and Done operate only the guide;
 they do not activate the highlighted financial or account controls.
 
+Each of the 22 areas also offers an optional task action, such as Add your first
+wallet, Record your first expense, Add your first inflow, or Set your first goal.
+A task action closes the spotlight, then opens the existing form/view or focuses
+its relevant field. Only explicitly marked form/view launchers may be clicked;
+Save, Delete, payment, distribution, sync, import, and sign-out controls are never
+activated by guidance. Settings and read-only planning areas focus their tools
+without changing values. The user reviews and saves their own real entries.
+Guide dismissal means the introduction was seen, not that a financial task was
+completed. Cancelling a task leaves it available through the area's Guide button.
+
 Completion and the General → First-visit guides preference are scoped to the
 signed-in subject on this device. Automatic guides wait while the general tour,
 installation help, an editor, or a sync conflict is open. Direct Quick Expense
 setup suppresses automatic guidance until that setup is left. Guidance makes the
 background inert and restores focus to the area's Guide button when closed.
-It does not change financial schema, saved balances, or transactions.
+It does not change financial schema, saved balances, or transactions. Task actions
+restore the normal interface before opening a form or moving focus, and queued
+handoffs are cancelled if the subject's guide unmounts.
+
+First-time users can choose Start with a wallet on the welcome screen to bypass
+optional setup and go straight to Wallets. This only sets the existing onboarding
+completion flag; it does not apply unsaved presets, income plans, goals, balances,
+or records. The full five-screen setup remains available as the alternative.
+Wallets shows a next-expense link until an expense exists. Starting balances should
+reflect today's real accounts; record purchases made after that starting balance
+to avoid subtracting historical spending twice. Getting Started lists wallet and
+expense tasks before optional income/commitment planning.
+
+Quick Expense setup includes an expandable mobile-data troubleshooting guide and
+Apple's device-settings instructions. It never sends a test expense or retries an
+uncertain save. A Safari connectivity check cannot prove native Shortcuts has data
+access. The previously reported iPhone cellular error still needs a physical-device
+check; these help instructions do not establish a fix.
 
 ## Delete Finance Tracker account
 

@@ -240,7 +240,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
        hideSettled={hideSettled}
      />}
 
-      <button data-guide-target="add" onClick={() => setIsAdding(true)} className="w-full mt-3.5 py-3.5 border border-dashed border-inverse/[0.15] hover:border-blue-500/50 hover:bg-blue-500/10 text-muted hover:text-blue-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">
+      <button data-guide-interactive="open" data-guide-target="add" onClick={() => setIsAdding(true)} className="w-full mt-3.5 py-3.5 border border-dashed border-inverse/[0.15] hover:border-blue-500/50 hover:bg-blue-500/10 text-muted hover:text-blue-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2">
         <Plus size={15} /> Add New Commitment
       </button>
 

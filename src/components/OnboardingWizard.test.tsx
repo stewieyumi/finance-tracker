@@ -6,6 +6,17 @@ import { INITIAL_UNIFIED_DATA } from "../constants/initialData";
 import { UnifiedFinanceData } from "../types/finance";
 
 describe("OnboardingWizard", () => {
+  it("can start with a wallet without applying a preset or completing the full wizard", () => {
+    const onStartTracking = vi.fn(); const onComplete = vi.fn(); const onSkip = vi.fn();
+    const data = structuredClone(INITIAL_UNIFIED_DATA); const original = structuredClone(data);
+    render(<OnboardingWizard globalData={data} onComplete={onComplete} onSkip={onSkip} onStartTracking={onStartTracking} />);
+    fireEvent.click(screen.getByRole("button", { name: /^Freelancer/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Start with a wallet" }));
+    expect(onStartTracking).toHaveBeenCalledOnce();
+    expect(onComplete).not.toHaveBeenCalled(); expect(onSkip).not.toHaveBeenCalled();
+    expect(data).toEqual(original);
+  });
+
   it("renders Welcome step and navigates through the wizard to completion", () => {
     const onComplete = vi.fn();
 

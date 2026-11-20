@@ -311,8 +311,8 @@ describe("DashboardTab", () => {
   });
 
   it.each([
-    ["Add a wallet", "wallets"],
-    ["Record an expense", "expenses"],
+    ["Start with a wallet", "wallets"],
+    ["Record your first expense", "expenses"],
     ["Set up a commitment", "bills"],
   ])("Getting Started routes %s without executing financial actions", (title, destination) => {
     render(<DashboardTab {...defaultProps} />);

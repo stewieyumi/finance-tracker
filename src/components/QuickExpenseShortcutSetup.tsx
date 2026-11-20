@@ -60,6 +60,17 @@ export function QuickExpenseShortcutSetup({ globalData }: { globalData: UnifiedF
       </div>}
       <p>Assign Finance Tracker Quick Expense in iPhone Settings → Accessibility → Touch → Back Tap. A successful save finishes quietly; if the request is interrupted, check History before entering it again.</p>
     </div>}
+    <details className="rounded-xl border border-subtle p-3">
+      <summary className="min-h-11 cursor-pointer font-semibold text-primary">Shortcut not working on mobile data?</summary>
+      <ol className="mt-2 list-decimal space-y-2 pl-5">
+        <li>Turn off Wi-Fi for this check and open Finance Tracker in Safari. If it cannot load, check your mobile connection first.</li>
+        <li>In iPhone Settings → Cellular or Mobile Data, allow Shortcuts to use data if it appears in the app list.</li>
+        <li>Open the shortcut in Apple’s Shortcuts app. If it works there, check the shortcut assigned to Back Tap.</li>
+        <li>If an expense may have been sent, check History before entering it again. A connection check in Safari does not confirm that Shortcuts can connect.</li>
+      </ol>
+      <p className="mt-2">Automatic saving needs internet. There is no offline queue.</p>
+      <a href="https://support.apple.com/guide/iphone/view-or-change-cellular-data-settings-iph3dd5f213/ios" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex min-h-11 items-center font-medium text-primary underline">Apple’s mobile data instructions</a>
+    </details>
     {status && <p role="status">{status}</p>}
   </div>;
 }

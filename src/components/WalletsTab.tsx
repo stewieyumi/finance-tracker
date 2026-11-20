@@ -13,6 +13,7 @@ interface WalletsTabProps {
   onIncrement: WalletMutationHandler;
   onOpenSettings?: () => void;
   onTransfer?: () => void;
+  onNavigateToExpenses?: () => void;
 }
 
 const COLORS = [
@@ -29,7 +30,7 @@ const WALLET_NAME_SUGGESTIONS = [
   "CIMB", "Tonik", "Cash On-Hand"
 ];
 
-export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalData, onCommit, onIncrement, onTransfer }) => {
+export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalData, onCommit, onIncrement, onTransfer, onNavigateToExpenses }) => {
   const [showAdd, setShowAdd] = useState(false);
   const formId = useId();
   const returnFocusId = useRef<string | null>(null);
@@ -155,10 +156,15 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
   return (
     <div data-guide-screen="wallets" className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
         <div className="flex justify-end"><GuideButton screen="wallets" name="Wallets" /></div>
+      {onNavigateToExpenses && (globalData.library.expenses?.length ?? 0) === 0 && <section aria-label="Your first steps" className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4">
+        <h2 className="text-sm font-semibold text-primary">One wallet, then one expense</h2>
+        <p className="mt-1 text-xs leading-relaxed text-muted">Use an existing wallet or add your own. Tap its balance and enter what you have today. Then record a purchase you made after that starting balance.</p>
+        <button type="button" onClick={onNavigateToExpenses} className="mt-3 min-h-11 rounded-xl bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-500">Record your first expense</button>
+      </section>}
       <section aria-labelledby="wallets-total" className="rounded-2xl border border-subtle bg-surface-elevated p-4 shadow-sm sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="wallets-total" className="text-sm font-semibold text-muted">Total Wallet Balance</h2>
-          {onTransfer && <button data-guide-target="transfer" type="button" onClick={onTransfer} disabled={customWallets.length < 2}
+          {onTransfer && <button data-guide-interactive="open" data-guide-target="transfer" type="button" onClick={onTransfer} disabled={customWallets.length < 2}
             className="flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 text-sm font-medium text-primary transition hover:bg-fill-strong disabled:cursor-not-allowed disabled:opacity-50">
             <ArrowRightLeft size={16} aria-hidden="true" /> Transfer
           </button>}
@@ -283,7 +289,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
             </div>
           </form>
         ) : (
-          <button data-guide-target="add-wallet" id={`${formId}-add`} type="button" onClick={() => { returnFocusId.current = `${formId}-add`; setNameError(''); setShowAdd(true); setEditingId(null); setWalletName(""); setWalletColor(COLORS[2]); }} className="w-full py-3.5 border border-dashed border-inverse/[0.15] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted hover:text-emerald-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2"><Plus size={15} /> Add New Account</button>
+          <button data-guide-interactive="open" data-guide-target="add-wallet" id={`${formId}-add`} type="button" onClick={() => { returnFocusId.current = `${formId}-add`; setNameError(''); setShowAdd(true); setEditingId(null); setWalletName(""); setWalletColor(COLORS[2]); }} className="w-full py-3.5 border border-dashed border-inverse/[0.15] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted hover:text-emerald-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2"><Plus size={15} /> Add New Account</button>
         )}
       </div>
     </div>

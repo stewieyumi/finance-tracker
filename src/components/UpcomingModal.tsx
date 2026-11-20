@@ -163,7 +163,7 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
         </div>
 
         {/* Primary CTA */}
-        <button
+        <button data-guide-interactive="open" data-guide-target="upcoming-open"
           type="button"
           onClick={() => {
             onViewAllCommitments();

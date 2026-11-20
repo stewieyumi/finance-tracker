@@ -65,7 +65,7 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ wallets, mile
             const displayColor = `${w.color || "text-strong"} font-bold`;
 
             return (
-              <button key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`wallet-balance-row group relative flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-high ${roleClasses}`}>
+              <button data-guide-interactive="open" key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`wallet-balance-row group relative flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-high ${roleClasses}`}>
                 <span className="flex min-w-0 items-center gap-2">
                   <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full bg-current ${w.color || "text-muted"}`} />
                   <span className="privacy-blur truncate text-sm font-medium text-primary">{w.label}</span>

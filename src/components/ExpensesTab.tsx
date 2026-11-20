@@ -240,12 +240,12 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
           <input type="file" accept="image/*" capture="environment" ref={fileInputRef} onChange={handleCapture} className="hidden" />
           <input type="file" accept="image/*" ref={uploadInputRef} onChange={handleCapture} className="hidden" />
           <div className="grid grid-cols-2 gap-3">
-            <button data-guide-target="scan" type="button" aria-haspopup="dialog" disabled={isScanning} onClick={() => setShowScanOptions(true)} className={expenseEntryCardClass}>
+            <button data-guide-interactive="open" data-guide-target="scan" type="button" aria-haspopup="dialog" disabled={isScanning} onClick={() => setShowScanOptions(true)} className={expenseEntryCardClass}>
               <span className="scanner-icon flex size-9 items-center justify-center rounded-xl border text-violet-accent"><ScanLine size={18} aria-hidden="true" /></span>
               <span className="text-sm font-semibold text-primary">Scan</span>
               <span className="text-xs text-muted">Take a photo or upload a screenshot.</span>
             </button>
-            <button data-guide-target="manual" type="button" aria-haspopup="dialog" onClick={() => setShowForm(true)} className={expenseEntryCardClass}>
+            <button data-guide-interactive="open" data-guide-target="manual" type="button" aria-haspopup="dialog" onClick={() => setShowForm(true)} className={expenseEntryCardClass}>
               <span className="flex size-9 items-center justify-center rounded-xl bg-fill text-muted"><Plus size={18} aria-hidden="true" /></span>
               <span className="text-sm font-semibold text-primary">Manual</span>
               <span className="text-xs text-muted">Type or paste your purchase details.</span>

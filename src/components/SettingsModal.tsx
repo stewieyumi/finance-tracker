@@ -370,7 +370,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
 
               <div data-guide-target="guide-preferences"><GuidePreferences /></div>
               <details data-guide-target="quick-expense" ref={quickExpenseDetails} className={`${settingsGroup} group/quick-expense ${initialQuickExpense ? "ring-2 ring-blue-500/60" : ""}`}>
-                <summary className={`${settingsAction} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+                <summary data-guide-interactive="open" className={`${settingsAction} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
                   <span className="flex items-center gap-2"><Zap size={16} aria-hidden="true" /> Quick Expense</span>
                   <ChevronRight size={15} aria-hidden="true" className="text-muted transition-transform group-open/quick-expense:rotate-90" />
                 </summary>
@@ -829,7 +829,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
 
           {activeTab === "calendar" && <div className="space-y-4">
             <section className={settingsGroup}>
-              <button type="button" aria-label="Add to Calendar" disabled={!onOpenCalendarExport} onClick={() => { handleCancel(); onOpenCalendarExport?.(); }} className={settingsAction}>
+              <button data-guide-interactive="open" type="button" aria-label="Add to Calendar" disabled={!onOpenCalendarExport} onClick={() => { handleCancel(); onOpenCalendarExport?.(); }} className={settingsAction}>
                 <span className="min-w-0 flex-1"><span className="block">Add to Calendar</span><span className="mt-1 block text-xs font-normal text-muted">Choose a gig or task, then share or download its calendar file. No Apple account setup needed.</span></span>
                 <ChevronRight size={16} className="shrink-0 text-muted" />
               </button>

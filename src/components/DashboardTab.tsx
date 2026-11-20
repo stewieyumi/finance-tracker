@@ -227,25 +227,25 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
   const gettingStartedSteps = ([
     {
-      action: "inflow",
-      title: "Track incoming money",
-      description: "Add a client payment, salary, sale, or allowance. Amount and date can wait.",
-      icon: ArrowDownLeft,
-      available: onNavigateToOps,
-    },
-    {
       action: "wallet",
-      title: "Add a wallet",
-      description: "Choose Add New Account for a bank account, e-wallet, or cash you want to track.",
+      title: "Start with a wallet",
+      description: "Use an existing wallet or add an account, then enter its current balance.",
       icon: Wallet,
       available: onNavigateToWallets,
     },
     {
       action: "expense",
-      title: "Record an expense",
-      description: "Choose Manual, enter what you spent, and pick the wallet you paid from.",
+      title: "Record your first expense",
+      description: "Choose Scan or Manual, review the details, and save to the wallet you paid from.",
       icon: Receipt,
       available: onNavigateToExpenses,
+    },
+    {
+      action: "inflow",
+      title: "Track incoming money",
+      description: "Add a client payment, salary, sale, or allowance. Amount and date can wait.",
+      icon: ArrowDownLeft,
+      available: onNavigateToOps,
     },
     {
       action: "bill",
@@ -562,7 +562,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
       <button
         type="button"
-        data-guide-target="wallets" onClick={onNavigateToWallets}
+        data-guide-interactive="open" data-guide-target="wallets" onClick={onNavigateToWallets}
         className="group block w-full dashboard-material rounded-3xl p-5 text-left transition hover:border-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 sm:p-6"
       >
         <span className="flex items-center justify-between gap-3">
@@ -793,7 +793,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       >
         <div className="w-full max-w-md rounded-3xl border border-subtle bg-surface-modal p-5 shadow-xl sm:p-6">
           <h2 id="getting-started-title" className="text-lg font-semibold text-strong">Getting Started</h2>
-          <p className="mt-1 text-sm text-muted">Pick one thing to try. You can come back anytime from Quick Actions.</p>
+          <p className="mt-1 text-sm text-muted">Start with one wallet and one expense. Try the other tools when you need them; you can come back anytime from Quick Actions.</p>
           {onStartTour && <button type="button" onClick={() => { setShowGettingStarted(false); onStartTour(); }}
             className="mt-4 min-h-11 w-full rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-500">
             Take a quick tour

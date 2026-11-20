@@ -1018,6 +1018,10 @@ const copySummaryToClipboard = async () => {
       <OnboardingWizard
         globalData={globalData}
         userName={googleUser?.name}
+        onStartTracking={() => {
+          syncedSetGlobalData(previous => ({ ...previous, settings: { ...previous.settings, hasCompletedOnboarding: true } }));
+          setActiveTab("wallets");
+        }}
         onSkip={() => syncedSetGlobalData(previous => ({
           ...previous,
           settings: { ...previous.settings, hasCompletedOnboarding: true },
@@ -1320,7 +1324,7 @@ const copySummaryToClipboard = async () => {
           />
         )}
 
-        {activeTab === "wallets" && <WalletsTab onTransfer={() => openLedger('transfer')} globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} />}
+        {activeTab === "wallets" && <WalletsTab onNavigateToExpenses={() => setActiveTab("expenses")} onTransfer={() => openLedger('transfer')} globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} />}
         {activeTab === "expenses" && (
           <ErrorBoundary>
             <Suspense fallback={<p role="status" className="p-4 text-sm text-muted">Loading expenses…</p>}>
