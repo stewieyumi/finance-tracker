@@ -3,9 +3,9 @@ import { CircleHelp } from "lucide-react";
 import { getFinanceSubject } from "../utils/financeAuth";
 import { GUIDE_OPEN_EVENT, GUIDE_PREFERENCE_EVENT, readGuidePreferences, saveGuidePreferences } from "../utils/contextGuidePreferences";
 
-export function GuideButton({ screen, name }: { screen: string; name: string }) {
+export function GuideButton({ screen, name, compact = false }: { screen: string; name: string; compact?: boolean }) {
   return <button data-guide-replay={screen} type="button" aria-label={`${name} guide`} onClick={() => window.dispatchEvent(new CustomEvent(GUIDE_OPEN_EVENT, { detail: screen }))}
-    className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-medium text-muted hover:bg-fill hover:text-primary"><CircleHelp size={15} aria-hidden="true" /> Guide</button>;
+    className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-medium text-muted hover:bg-fill hover:text-primary"><CircleHelp size={15} aria-hidden="true" /><span className={compact ? "hidden sm:inline" : undefined}>Guide</span></button>;
 }
 export function GuidePreferences() {
   const subject = getFinanceSubject();
