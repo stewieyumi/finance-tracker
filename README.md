@@ -296,3 +296,26 @@ API test filenames use the `_*.test.ts` convention so Vercel excludes them from
 function discovery. The native API import check rejects unprefixed test files
 before deployment. The seven application API routes remain unchanged by this
 packaging rule. See [Vercel's utility-file convention](https://vercel.com/docs/functions/configuring-functions/advanced-configuration).
+
+
+## Responsive fit coverage
+
+The browser suite checks 14 CSS viewport sizes from 320 × 320 through
+1920 × 1080, in light and dark themes. Narrow cases use the existing touch/mobile
+project; wider cases use the desktop project. Short landscape and compact
+640 × 450 viewports exercise layouts with limited space. These are browser
+emulations, not physical Safari, keyboard, notch, or OS-install certification.
+
+Returning-user cases include long record names and large balances. Checks cover
+page overflow, unintended horizontal scrollers, full bottom-navigation labels,
+footer clearance, and reachable modal headings, fields, and actions. Intentional
+horizontal tab/table scrollers remain allowed. The suite opens entry, transfer,
+balance, commitment, gig, history, ledger, planning, and Settings screens without
+saving financial changes; the finance snapshot must stay unchanged. Separate
+first-setup and expanded-tour cases cover portrait, landscape, and desktop flow.
+
+On narrow screens the main header wraps, installation actions sit below their
+text, and navigation uses less spacing below 375 pixels while preserving its text size and touch
+height. Settings keeps its guide beside the close control and caps the mobile
+section list so the content area remains scrollable on short screens. Desktop
+Settings retains its sidebar arrangement.

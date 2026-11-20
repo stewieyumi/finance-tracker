@@ -1,4 +1,19 @@
 import { test, expect, navigate, returningData, storedData } from './fixtures';
+import type { Locator } from '@playwright/test';
+
+async function listWheelPoint(list: Locator) {
+  await list.scrollIntoViewIfNeeded();
+  return list.evaluate(element => {
+    const box = element.getBoundingClientRect();
+    const top = Math.max(0, box.top), bottom = Math.min(window.innerHeight, box.bottom);
+    const x = box.x + box.width / 2;
+    for (const fraction of [0.5, 0.25, 0.75]) {
+      const y = top + (bottom - top) * fraction;
+      if (element.contains(document.elementFromPoint(x, y))) return { x, y };
+    }
+    throw new Error('No unobscured point inside the scrolling list.');
+  });
+}
 
 for (const theme of ['light', 'dark'] as const) {
   test(`top controls stay fixed while expense and history lists scroll in ${theme} mode`, async ({ page, isolatedApp }, testInfo) => {
@@ -15,12 +30,13 @@ for (const theme of ['light', 'dark'] as const) {
     const recent = page.getByRole('region', { name: 'Recent expenses' });
     await expect(recent).toBeVisible();
     const snapshot = await storedData(page);
+    const recentPoint = await listWheelPoint(recent);
     const entryTop = (await entry.boundingBox())!.y;
     const pageTop = await page.evaluate(() => document.scrollingElement!.scrollTop);
     const recentBox = (await recent.boundingBox())!;
     // Layout rectangles can differ from CSS pixels by a tiny subpixel rounding amount.
     expect(Math.round(recentBox.height)).toBeGreaterThanOrEqual(160);
-    await page.mouse.move(recentBox.x + recentBox.width / 2, recentBox.y + Math.min(recentBox.height - 20, 60));
+    await page.mouse.move(recentPoint.x, recentPoint.y);
     await page.mouse.wheel(0, 600);
     await expect.poll(() => recent.evaluate(element => element.scrollTop)).toBeGreaterThan(100);
     expect(Math.abs((await entry.boundingBox())!.y - entryTop)).toBeLessThan(1);
@@ -34,10 +50,10 @@ for (const theme of ['light', 'dark'] as const) {
     const heading = history.getByRole('heading', { name: 'Transaction History', exact: true });
     const search = history.getByRole('textbox', { name: 'Search transactions' });
     await expect(records).toBeVisible();
+    const recordsPoint = await listWheelPoint(records);
     const headingTop = (await heading.boundingBox())!.y;
     const searchTop = (await search.boundingBox())!.y;
-    const listBox = (await records.boundingBox())!;
-    await page.mouse.move(listBox.x + listBox.width / 2, listBox.y + Math.min(listBox.height - 20, 60));
+    await page.mouse.move(recordsPoint.x, recordsPoint.y);
     await page.mouse.wheel(0, 600);
     await expect.poll(() => records.evaluate(element => element.scrollTop)).toBeGreaterThan(100);
     expect(Math.abs((await heading.boundingBox())!.y - headingTop)).toBeLessThan(1);

@@ -275,24 +275,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
       ariaLabel="App Settings"
     >
       <div data-guide-screen={`settings-${activeTab}`} className="flex max-h-[88dvh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-default bg-surface-low shadow-2xl">
-        <div className="flex justify-end"><GuideButton screen={`settings-${activeTab}`} name={"Settings"} /></div>
         <div className="flex shrink-0 items-center justify-between gap-3 px-4 pb-3 pt-4 sm:px-6 sm:pt-5">
           <div className="flex items-center gap-2">
             <Settings size={18} className="text-secondary" />
             <h3 className="text-lg font-bold tracking-tight text-strong">App Settings</h3>
           </div>
-          <button
-            onClick={handleCancel}
-            aria-label="Close settings modal"
-            className="text-faint hover:text-strong p-1.5 rounded-lg transition"
-            title="Close (Esc)"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <GuideButton screen={`settings-${activeTab}`} name="Settings" compact />
+            <button
+              onClick={handleCancel}
+              aria-label="Close settings modal"
+              className="text-faint hover:text-strong p-1.5 rounded-lg transition"
+              title="Close (Esc)"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-2 px-2 pb-2 min-[480px]:flex-row">
-          <nav aria-label="Settings sections" className="shrink-0 rounded-2xl border border-default bg-surface-low px-2 py-2 min-[480px]:w-[34%] min-[480px]:max-w-56 min-[480px]:overflow-y-auto">
+          <nav aria-label="Settings sections" className="max-h-[24dvh] shrink-0 overflow-y-auto rounded-2xl border border-default bg-surface-low px-2 py-2 min-[480px]:max-h-none min-[480px]:w-[34%] min-[480px]:max-w-56">
             <label className="flex min-h-9 items-center gap-2 rounded-xl bg-fill px-3 text-muted focus-within:ring-2 focus-within:ring-blue-500">
               <Search size={15} aria-hidden="true" />
               <input

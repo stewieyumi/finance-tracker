@@ -1071,7 +1071,7 @@ const copySummaryToClipboard = async () => {
         )}
 
         <div className="flex flex-col gap-3.5 pb-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-bold tracking-tight text-strong">
                 {{ home: "Dashboard", operations: "Plan", wallets: "Wallets", expenses: "Expenses", account: "Account" }[activeTab]}
@@ -1227,14 +1227,16 @@ const copySummaryToClipboard = async () => {
         />
 
         {activeTab === "home" && (!isModalOpen || showInstallGuide) && ((!appInstall.added && !appInstall.dismissed) || showInstallGuide) && !isEditing && !hasValidatedActiveConflict && (
-          <section aria-label="Add Finance Tracker to your device" className="dashboard-material flex flex-wrap items-center gap-3 rounded-2xl p-4">
+          <section aria-label="Add Finance Tracker to your device" className="dashboard-material grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-2xl p-4 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
             <Download size={20} aria-hidden="true" className="shrink-0 text-muted" />
             <div className="min-w-0 flex-1">
               <h2 className="text-sm font-semibold text-strong">Keep Finance Tracker one tap away</h2>
               <p className="mt-1 text-xs leading-relaxed text-muted">Add it to your Home Screen or desktop for quicker access.</p>
             </div>
-            <button type="button" onClick={() => { setShowInstallGuide(true); if (appInstall.canPrompt) void appInstall.install(); }} className="min-h-11 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-500">{appInstall.canPrompt ? "Install app" : "How to install"}</button>
-            <button type="button" onClick={appInstall.dismissOffer} className="min-h-11 rounded-xl px-3 text-xs font-medium text-muted hover:bg-fill">Not now</button>
+            <div className="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-1">
+              <button type="button" onClick={() => { setShowInstallGuide(true); if (appInstall.canPrompt) void appInstall.install(); }} className="min-h-11 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-500">{appInstall.canPrompt ? "Install app" : "How to install"}</button>
+              <button type="button" onClick={appInstall.dismissOffer} className="min-h-11 rounded-xl px-3 text-xs font-medium text-muted hover:bg-fill">Not now</button>
+            </div>
           </section>
         )}
         {activeTab === "home" && (
