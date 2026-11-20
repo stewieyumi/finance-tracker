@@ -315,7 +315,7 @@ saving financial changes; the finance snapshot must stay unchanged. Separate
 first-setup and expanded-tour cases cover portrait, landscape, and desktop flow.
 
 On narrow screens the main header wraps, installation actions sit below their
-text, and navigation uses less spacing while preserving its text size and touch
+text, and navigation uses less spacing below 375 pixels while preserving its text size and touch
 height. Settings keeps its guide beside the close control and caps the mobile
 section list so the content area remains scrollable on short screens. Desktop
 Settings retains its sidebar arrangement.

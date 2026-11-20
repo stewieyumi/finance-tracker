@@ -200,3 +200,20 @@ for (const [width, height] of [[320, 568], [568, 320], [1280, 720]] as const) fo
     expect(await storedData(page)).toEqual(snapshot);
   });
 }
+
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`navigation labels fit wider fonts in ${theme} mode`, async ({ page, isolatedApp }, testInfo) => {
+    test.skip(testInfo.project.name !== 'phone', 'Narrow touch navigation check.');
+    await page.setViewportSize({ width: 320, height: 568 });
+    const data = returningData(); data.settings = { ...data.settings, theme };
+    await isolatedApp(data);
+    await page.addStyleTag({ content: 'body { font-family: Verdana, sans-serif; }' });
+    const labels = page.getByRole('navigation', { name: 'Main navigation' }).locator('button span');
+    await expect(labels).toHaveCount(5);
+    for (const width of [320, 360, 375]) {
+      await page.setViewportSize({ width, height: 568 });
+      await expect.poll(() => labels.evaluateAll(items => items.filter(item => item.scrollWidth > item.clientWidth + 1).map(item => item.textContent))).toEqual([]);
+    }
+  });
+}
