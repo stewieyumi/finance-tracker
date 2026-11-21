@@ -18,29 +18,32 @@ export function BottomNav({ activeTab, onChange }: BottomNavProps) {
   ] as const;
 
   return (
-    <nav aria-label="Main navigation" className="navigation-edge pointer-events-none fixed inset-x-0 bottom-0 z-50 px-1 min-[375px]:px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-      <div className="navigation-glass pointer-events-auto mx-auto grid w-full max-w-lg grid-cols-5 gap-0 rounded-3xl p-0.5 min-[375px]:gap-1 min-[375px]:p-1.5 sm:gap-2">
-        {tabs.map(({ id, label, icon: Icon, accent }) => {
-          const isActive = activeTab === id;
-          return (
-            <button
-              key={id}
-              data-tour={id}
-              type="button"
-              onClick={() => onChange(id)}
-              className={`flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl !border-0 px-0 py-1 min-[375px]:!border min-[375px]:px-0.5 transition-colors motion-reduce:transition-none ${isActive
-                ? `${accent} nav-current`
-                : "border-transparent text-muted hover:bg-fill hover:text-primary"
-              }`}
-              aria-label={label}
-              aria-current={isActive ? "page" : undefined}
-            >
-              <Icon aria-hidden="true" size={21} strokeWidth={isActive ? 2.25 : 1.75} />
-              <span className={`max-w-full truncate text-[10px] ${isActive ? "font-semibold" : "font-medium"}`}>{label}</span>
-            </button>
-          );
-        })}
-      </div>
-    </nav>
+    // Use a top-anchored viewport rail instead of relying on iOS fixed-bottom positioning.
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-50 flex h-[100dvh] flex-col justify-end">
+      <nav aria-label="Main navigation" className="navigation-edge pointer-events-none relative shrink-0 px-1 min-[375px]:px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="navigation-glass pointer-events-auto mx-auto grid w-full max-w-lg grid-cols-5 gap-0 rounded-3xl p-0.5 min-[375px]:gap-1 min-[375px]:p-1.5 sm:gap-2">
+          {tabs.map(({ id, label, icon: Icon, accent }) => {
+            const isActive = activeTab === id;
+            return (
+              <button
+                key={id}
+                data-tour={id}
+                type="button"
+                onClick={() => onChange(id)}
+                className={`flex min-h-[52px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl !border-0 px-0 py-1 min-[375px]:!border min-[375px]:px-0.5 transition-colors motion-reduce:transition-none ${isActive
+                  ? `${accent} nav-current`
+                  : "border-transparent text-muted hover:bg-fill hover:text-primary"
+                }`}
+                aria-label={label}
+                aria-current={isActive ? "page" : undefined}
+              >
+                <Icon aria-hidden="true" size={21} strokeWidth={isActive ? 2.25 : 1.75} />
+                <span className={`max-w-full truncate text-[10px] ${isActive ? "font-semibold" : "font-medium"}`}>{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
   );
 }
