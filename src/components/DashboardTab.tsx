@@ -796,7 +796,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         ariaLabelledBy="getting-started-title"
         manageFocus
       >
-        <div className="w-full max-w-md rounded-3xl border border-subtle bg-surface-modal p-5 shadow-xl sm:p-6">
+        <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-subtle bg-surface-modal p-5 shadow-xl sm:max-h-[calc(100dvh-3rem)] sm:p-6">
           <h2 id="getting-started-title" className="text-lg font-semibold text-strong">Getting Started</h2>
           <p className="mt-1 text-sm text-muted">Start with one wallet and one expense. Checkmarks reflect your current balances and saved records. Try the other tools when you need them.</p>
           {onStartTour && <button type="button" onClick={() => { setShowGettingStarted(false); onStartTour(); }}
