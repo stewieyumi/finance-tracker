@@ -2,9 +2,10 @@ import { WalletNameInput } from "./WalletNameInput";
 import { GuideButton } from "./ContextGuideControls";
 import React, { useState, useId, useEffect, useRef } from 'react';
 import { Plus, Archive, Edit2, CreditCard, Info, ArrowRightLeft } from 'lucide-react';
-import { UnifiedFinanceData, CustomWallet, WalletMutationHandler } from '../types/finance';
+import { UnifiedFinanceData, CustomWallet, WalletMutationHandler, WalletMutationOutcome } from '../types/finance';
 import { formatPHP } from '../utils/currency';
 import { getWalletForBill, reconcileWalletBalances, parseWalletBalance, validateActiveWalletAssignment } from '../utils/financeHelpers';
+import { readWalletSavings, walletSavingsTotals } from "../utils/walletSavings";
 import { WalletGrid } from './WalletGrid';
 
 interface WalletsTabProps {
@@ -12,6 +13,7 @@ interface WalletsTabProps {
   setGlobalData: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
   onCommit: WalletMutationHandler;
   onIncrement: WalletMutationHandler;
+  onSaveSavings?: (id: string, amount: number, expected: { balance: unknown; savings: unknown }) => WalletMutationOutcome | void;
   onOpenSettings?: () => void;
   onTransfer?: () => void;
   onNavigateToExpenses?: () => void;
@@ -31,7 +33,7 @@ const WALLET_NAME_SUGGESTIONS = [
   "CIMB", "Tonik", "Cash On-Hand"
 ];
 
-export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalData, onCommit, onIncrement, onTransfer, onNavigateToExpenses }) => {
+export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalData, onCommit, onIncrement, onSaveSavings, onTransfer, onNavigateToExpenses }) => {
   const [showAdd, setShowAdd] = useState(false);
   const formId = useId();
   const returnFocusId = useRef<string | null>(null);
@@ -89,6 +91,8 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
     if (!parsed.isValid) {
       return "Cannot archive wallet with an invalid or corrupted balance. Repair the balance first.";
     }
+    if (readWalletSavings(data, id).savings === null) return "Review this wallet’s savings before archiving it.";
+    if ((readWalletSavings(data, id).savings ?? 0) !== 0) return "Release this wallet’s savings before archiving it.";
     if (parsed.balance !== 0) {
       return "Bring this wallet to zero before archiving it.";
     }
@@ -155,6 +159,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
   const reconciled = reconcileWalletBalances(globalData);
   const customWallets = globalData.settings?.customWallets || [];
   const totalWalletBalance = reconciled.totalLiquid;
+  const savingsTotals = walletSavingsTotals(globalData);
   const hasFundedWallet = reconciled.activeWallets.some(wallet => wallet.balance > 0 &&
     validateActiveWalletAssignment(wallet.id, globalData.settings, globalData.wallets).ok);
 
@@ -179,7 +184,9 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
           </button>}
         </div>
         <p className="privacy-blur mt-1 break-words font-mono text-2xl font-bold text-strong">{formatPHP(totalWalletBalance)}</p>
-        <p className="mt-1 text-xs text-muted">Across {customWallets.length} active {customWallets.length === 1 ? "wallet" : "wallets"}</p>
+        <dl className="mt-3 grid min-w-0 grid-cols-2 gap-3 text-xs"><div><dt className="text-muted">Savings</dt><dd className="privacy-blur mt-1 break-all font-mono font-semibold text-primary">{formatPHP(savingsTotals.savings)}</dd></div><div><dt className="text-muted">Available to spend</dt><dd className="privacy-blur mt-1 break-all font-mono font-semibold text-primary">{formatPHP(savingsTotals.available)}</dd></div></dl>
+        <p className="mt-2 text-xs text-muted">Savings stay within your wallet balances. Setting money aside does not move it.</p>
+        {savingsTotals.needsReview && <p role="status" className="mt-2 text-xs text-warning">Review wallet savings and balances before using the spending guidance.</p>}
         {onTransfer && customWallets.length < 2 && <p className="mt-2 text-xs text-muted">Add another wallet to enable transfers.</p>}
       </section>
       {!reconciled.isComplete && (
@@ -248,7 +255,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
           </div>
         </details>
       )}
-      <WalletGrid firstBalanceButtonRef={firstBalanceButtonRef} wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} savingsWallet={globalData.settings?.savingsWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
+      <WalletGrid savings={globalData.settings?.walletSavings} onSaveSavings={onSaveSavings} firstBalanceButtonRef={firstBalanceButtonRef} wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} savingsWallet={globalData.settings?.savingsWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
       <div className="rounded-2xl bg-surface p-3 sm:p-4">
         <div className="flex items-center justify-between mb-4"><h2 data-guide-target="accounts" className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><CreditCard size={14} className="text-emerald-400" /> Account Management</h2></div>
         <p id={`${formId}-help`} className="mb-4 text-xs text-muted">A wallet is where you keep money, such as cash, GCash, or a bank account. Add it here, then tap its balance above to update it.</p>

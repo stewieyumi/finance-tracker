@@ -222,7 +222,7 @@ describe("B1 correction regressions — wallet actions and acknowledgement", () 
     const fail = vi.fn(() => ({ ok: false as const, error: "Wallet changed; review it." }));
     render(<WalletGrid wallets={{ main: 100 }} customWallets={[{ id: "main", label: "Main" }]}
       onCommit={fail} onIncrement={fail} />);
-    fireEvent.click(screen.getByRole("button", { name: /Main/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Main.*Total balance/ }));
     if (kind === "increment") fireEvent.click(screen.getByRole("button", { name: /^100$/ }));
     else fireEvent.click(screen.getByRole("button", { name: "Save Balance" }));
     expect(screen.getByRole("heading", { name: "Edit Balance" })).toBeInTheDocument();
@@ -232,7 +232,7 @@ describe("B1 correction regressions — wallet actions and acknowledgement", () 
   it("closes only after a confirmed accepted wallet change", () => {
     render(<WalletGrid wallets={{ main: 100 }} customWallets={[{ id: "main", label: "Main" }]}
       onCommit={() => ({ ok: true })} onIncrement={() => ({ ok: true })} />);
-    fireEvent.click(screen.getByRole("button", { name: /Main/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Main.*Total balance/ }));
     fireEvent.click(screen.getByRole("button", { name: /^100$/ }));
     expect(screen.queryByRole("heading", { name: "Edit Balance" })).not.toBeInTheDocument();
   });

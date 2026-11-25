@@ -1,3 +1,4 @@
+import { walletSavingsTotals } from "../utils/walletSavings";
 import { readInflowIncome } from "../utils/inflowIncome";
 import { useMemo } from "react";
 import { noDateInflowState } from "../utils/noDateInflows";
@@ -297,7 +298,7 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
   const priorityUnpaidSum = useMemo(() => priorityUnpaidBills.reduce((a, c) => a + (parseFloat(String(c.amount)) || 0), 0), [priorityUnpaidBills]);
   const overdueBills = useMemo(() => activeBills.filter(b => !b.paid && (b.daysLeft ?? 0) < 0), [activeBills]);
   const overdueSum = useMemo(() => overdueBills.reduce((a, c) => a + (parseFloat(String(c.amount)) || 0), 0), [overdueBills]);
-  const cashShortfall = totalUnpaidCommitments - totalLiquid;
+  const cashShortfall = totalUnpaidCommitments - walletSavingsTotals(globalData).available;
 
   const perPayoutSalary = globalData?.settings?.perPayoutSalary ?? 0;
   const baseLivingAllowance = globalData?.settings?.baseLivingAllowance ?? 2500;

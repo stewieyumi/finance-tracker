@@ -201,6 +201,8 @@ export interface MonthlyBudget {
 }
 
 export interface AppSettings {
+  /** Money set aside within existing balances; planning only, not a spending lock. */
+  walletSavings?: Record<string, number>;
   monthlyBudgets?: Record<string, MonthlyBudget | null>;
   theme?: "dark" | "light" | "system";
   paydayDays?: number[];

@@ -1,3 +1,4 @@
+import { walletSavingsTotals } from "../utils/walletSavings";
 import { GuideButton } from "./ContextGuideControls";
 import React, { useState, useMemo } from "react";
 import { X, Sparkles, ShieldCheck, CreditCard, TrendingUp, Target } from "lucide-react";
@@ -29,13 +30,13 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
   onClose,
   globalData,
   selectedMonth,
-  totalLiquid,
   totalUnpaidCommitments
 }) => {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>("overview");
   const [goalMonths, setGoalMonths] = useState(1);
 
-  const safeToSpend = calculateSafeToSpend(totalLiquid, totalUnpaidCommitments);
+  const savingsTotals = walletSavingsTotals(globalData);
+  const safeToSpend = calculateSafeToSpend(savingsTotals.available, totalUnpaidCommitments);
   const now = new Date();
   const currentMonthDate = parseMonthKey(selectedMonth);
   const isCurrentActiveMonth = now.getFullYear() === currentMonthDate.getFullYear() && now.getMonth() === currentMonthDate.getMonth();
@@ -147,7 +148,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
                 ₱{safeToSpend.toLocaleString("en-US", { minimumFractionDigits: 2 })}
               </div>
               <div className="text-[10px] text-faint mt-1 font-mono">
-                Liquid Cash minus all remaining unpaid commitments
+                Cash after savings minus all remaining unpaid commitments
               </div>
             </div>
           </div>

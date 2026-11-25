@@ -241,7 +241,8 @@ export default function App() {
   const [selectedMonth, setSelectedMonth] = useState<string>(() => getMonthKey(new Date()));
 const {
   commitWallet,
-  incrementWallet
+  incrementWallet,
+  setWalletSavings
 } = useWalletActions({
   setGlobalData: syncedSetGlobalData,
   commitTransition: syncedCommitTransition
@@ -1076,7 +1077,7 @@ const copySummaryToClipboard = async () => {
         {cashShortfall > 0 && (
           <div className="warning-material text-xs rounded-2xl px-4 py-3 flex items-center gap-2.5 leading-relaxed">
             <AlertTriangle size={14} className="shrink-0" />
-            <span>Liquid cash is <strong className="font-mono font-semibold">₱{cashShortfall.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> short of covering unpaid commitments{overdueBills.length > 0 ? ` (including ${overdueBills.length} overdue)` : ""}.</span>
+            <span>Cash available after savings is <strong className="font-mono font-semibold">₱{cashShortfall.toLocaleString("en-US", { minimumFractionDigits: 2 })}</strong> short of covering unpaid commitments{overdueBills.length > 0 ? ` (including ${overdueBills.length} overdue)` : ""}.</span>
           </div>
         )}
 
@@ -1331,7 +1332,7 @@ const copySummaryToClipboard = async () => {
           />
         )}
 
-        {activeTab === "wallets" && <WalletsTab onNavigateToExpenses={() => setActiveTab("expenses")} onTransfer={() => openLedger('transfer')} globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} />}
+        {activeTab === "wallets" && <WalletsTab key={dataOwnerSub} onSaveSavings={setWalletSavings} onNavigateToExpenses={() => setActiveTab("expenses")} onTransfer={() => openLedger('transfer')} globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} />}
         {activeTab === "expenses" && (
           <ErrorBoundary>
             <Suspense fallback={<p role="status" className="p-4 text-sm text-muted">Loading expenses…</p>}>

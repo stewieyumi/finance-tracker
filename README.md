@@ -304,6 +304,14 @@ check; these help instructions do not establish a fix.
 
 In Wallets → Add New Account, typing a name shows matching common bank/wallet suggestions (for example, G shows GCash and GoTyme). Choose by touch/mouse or Arrow keys and Enter, dismiss with Escape, or keep a custom name. Selecting a suggestion does not save the wallet.
 
+## Wallet Savings
+
+In Wallets, choose **Savings** under an account to set aside part of its existing balance. **Set all aside** fills the full current balance; **Release savings** fills zero. Press **Save Savings** to confirm. Closing the editor discards its draft. Every wallet and the Wallets overview show the total balance, Savings, and the amount available after savings.
+
+Savings is a planning reserve, not an extra account, transaction, bank lock, or transfer. It reduces Budget Plan funding, daily/weekly guidance, Safe to Spend, commitment-shortfall guidance, and the copied financial summary. Actual expenses, payments, transfers and Quick Expense remain recordable from the real balance. If these reduce the balance below its saved Savings amount, available cash is zero for that wallet and a review note asks you to adjust Savings. New income remains available until you choose to set it aside.
+
+Existing wallets start with no Savings reserve, including wallets previously assigned as a goal/savings destination. Existing goal progress continues to use the actual balance. A Budget Plan's savings target is additional to the amount already set aside in Wallets. Savings persists in the account snapshot, backups and sync; malformed imported amounts are rejected. Saves reject changed balance/reserve snapshots and do not alter wallet balances or transaction history. No release date or bank integration is implied.
+
 ## Financial summary
 
 Dashboard → **Copy Summary** copies a plain-text overview followed by the saved financial details: current wallet balances (including marked archived/unlisted balances), unpaid and settled commitments, pending/received inflow status, actual receipt-month income, category spending, Budget Plan and daily guidance, transfers and fees, savings goal, installment schedules, and saved gigs/tasks. Activity uses the selected month; budget dates and all-date task scope are labeled separately. Current wallet balances are not historical month-end balances.

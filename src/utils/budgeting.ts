@@ -1,3 +1,4 @@
+import { readWalletSavings } from "./walletSavings";
 import { reconcileWalletBalances, validateActiveWalletAssignment } from "./financeHelpers";
 import type { MonthlyBudget, UnifiedFinanceData } from '../types/finance';
 import { MONTH_LIST } from '../constants/config';
@@ -123,7 +124,9 @@ export function budgetCash(data: UnifiedFinanceData, ids?: string[]) {
   for (const id of new Set(selected)) {
     const wallet = wallets.find(candidate => candidate.id === id);
     if (!wallet || !validateActiveWalletAssignment(id, data.settings, data.wallets).ok) { needsReview = true; continue; }
-    const balance = Math.round(wallet.balance * 100);
+    const funds = readWalletSavings(data, id);
+    needsReview ||= funds.needsReview;
+    const balance = Math.round(funds.available * 100);
     if (!Number.isSafeInteger(balance) || !Number.isSafeInteger(cents + balance)) { needsReview = true; continue; }
     cents += balance;
   }

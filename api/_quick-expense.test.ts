@@ -237,3 +237,14 @@ describe("per-run wallet picker", () => {
     expect((await save(token, { action: "wallets" })).status).toBe(401);
   });
 });
+
+// Savings are a planning reserve: the real shortcut still records a purchase.
+it("preserves wallet savings when saving an actual shortcut expense", async () => {
+  const data = base();
+  const withSavings = { ...data, settings: { ...data.settings, walletSavings: { maya: 1000 } } };
+  records.set("finance_data_g_account-a", JSON.stringify({ data: withSavings, revision: 4 }));
+  const token = await connect();
+  expect((await save(token)).status).toBe(200);
+  expect(cloud().data.wallets.maya).toBe(899.75);
+  expect(cloud().data.settings.walletSavings).toEqual({ maya: 1000 });
+});

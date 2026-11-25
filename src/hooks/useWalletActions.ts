@@ -1,3 +1,4 @@
+import { applyWalletSavings } from "../utils/walletSavings";
 import { parseWalletBalance, validateActiveWalletAssignment } from "../utils/financeHelpers";
 import type { UnifiedFinanceData, FinanceTransitionCommitter, WalletMutationOutcome } from "../types/finance";
 
@@ -65,5 +66,8 @@ export function useWalletActions({ setGlobalData, commitTransition }: UseWalletA
     });
   };
 
-  return { commitWallet, incrementWallet };
+  const setWalletSavings = (id: string, amount: number, expected: { balance: unknown; savings: unknown }) =>
+    execute(prev => applyWalletSavings(prev, id, amount, expected));
+
+  return { commitWallet, incrementWallet, setWalletSavings };
 }

@@ -246,3 +246,10 @@ it("renders a review state for an unreadable month log even when no loans are li
   expect(screen.getByText("Review needed")).toBeInTheDocument();
   expect(screen.queryByText("No active loans or installments for this period.")).not.toBeInTheDocument();
 });
+
+it("excludes wallet Savings from Runway's current Safe to Spend without reducing goal balances", () => {
+  const data = createMockData(); data.settings!.walletSavings = { maribank: 40000 };
+  render(<FinancialAnalyticsModal isOpen onClose={vi.fn()} globalData={data} selectedMonth="March 2026" totalLiquid={55000} totalUnpaidCommitments={5000} />);
+  expect(screen.getByText("₱10,000.00")).toBeInTheDocument();
+  expect(data.wallets.maribank).toBe(45000);
+});
