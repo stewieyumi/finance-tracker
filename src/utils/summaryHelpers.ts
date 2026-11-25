@@ -1,4 +1,5 @@
-import { readWalletSavings, walletSavingsTotals } from "./walletSavings";
+import { readFinancialCheckup } from "./financialCheckup";
+import { enabledSavingsWalletIds, readWalletSavings, walletSavingsTotals } from "./walletSavings";
 import { readInflowIncome, type InflowIncomeReport } from "./inflowIncome";
 import {
   BillViewModel,
@@ -7,7 +8,7 @@ import {
 } from "../types/finance";
 import { parseDateKey } from "./dateHelpers";
 import { reconcileWalletBalances, resolveActiveWalletDefault, parseWalletBalance } from "./financeHelpers";
-import { budgetDateKey, budgetMonthRange, effectiveBudget, readBudgetSpending, readDailyBudget } from "./budgeting";
+import { budgetMonthRange, effectiveBudget } from "./budgeting";
 import { reconcileDebt } from "./debtReconciliation";
 import { expenseCents } from "./expenseChanges";
 import { roundMoney } from "./currency";
@@ -87,14 +88,15 @@ export function buildFinancialSummary({
   let finalWalletLines = walletLines.length ? walletLines.join("\n") : "  • No accounts configured";
   if (reconciled.hasMetadataAnomalies) finalWalletLines += "\n  ⚠️ Wallet balances or account assignments need review; totals may be incomplete.";
 
-  const spending = readBudgetSpending(globalData, selectedMonth);
+  const checkup = readFinancialCheckup(globalData, selectedMonth, totalUnpaidCommitments);
+  const spending = checkup.spending;
   const categoryLines = Object.entries(spending.byCategory).filter(([, amount]) => amount > 0)
     .sort(([, a], [, b]) => b - a).map(([category, amount]) => `  • ${category}: ₱${fmt(amount)}`).join("\n") || "  • No dated spending recorded";
   const expenseTotal = roundMoney(spending.spent - spending.byCategory.Commitments - spending.byCategory["Transfer fees"]);
   const effective = effectiveBudget(globalData, selectedMonth);
   const plan = effective.budget;
-  const today = budgetDateKey();
-  const daily = plan ? readDailyBudget(globalData, selectedMonth, plan, today) : undefined;
+  const today = checkup.today;
+  const daily = checkup.daily;
   const range = budgetMonthRange(selectedMonth);
   const planRange = plan?.cashPlan ?? range;
   const planLines = plan && daily ? [
@@ -239,6 +241,20 @@ ${spending.excluded ? `⚠️ ${spending.excluded} spending record(s) need revie
 
 6. BUDGET PLAN
 ${planLines}
+
+FINANCIAL CHECKUP — CURRENT CASH / ${selectedMonth.toUpperCase()} ACTIVITY
+• Available after Savings (active wallets, now): ₱${fmt(checkup.cash.available)}
+• Selected-view unpaid commitments: ${checkup.unpaid === null ? "Needs review" : `₱${fmt(checkup.unpaid)}`}
+• ${checkup.afterCommitments !== null && checkup.afterCommitments < 0 ? "Cash shortfall" : "Cash after those commitments"}: ${checkup.afterCommitments === null ? "Needs review" : `₱${fmt(Math.abs(checkup.afterCommitments))}`} (before extra savings targets, cushion and daily needs)
+• Spending in ${selectedMonth}: ₱${fmt(checkup.spending.spent)}; actual Inflows receipts: ₱${fmt(checkup.income.actual)}
+• Next step: ${checkup.nextAction}${checkup.needsReview ? "\n⚠️ Checkup totals need review." : ""}
+• Wallets with Savings controls enabled: ${enabledSavingsWalletIds(globalData.settings).map(walletLabel).join(", ") || "None"}
+
+EMERGENCY-FUND GOAL — CURRENT SAVINGS
+${checkup.emergency.goal ? `• Target: ₱${fmt(checkup.emergency.goal.target)}; existing Savings counted: ₱${fmt(checkup.emergency.saved)}; remaining: ₱${fmt(checkup.emergency.remaining ?? 0)}
+• Selected Savings wallets: ${checkup.emergency.goal.walletIds.map(walletLabel).join(", ")}
+• Progress: ${fmt(checkup.emergency.percent ?? 0)}%${checkup.emergency.reached ? " — chosen target reached" : ""}
+• This goal tracks existing Savings; no additional money is added or reserved.` : "• No emergency-fund goal set."}${checkup.emergency.needsReview ? "\n⚠️ Emergency-fund Savings or saved goal need review before relying on progress." : ""}
 
 7. COMMITMENT STATUS — SELECTED VIEW
 ${activeBills.map(bill => `  • ${bill.name}: ${bill.paid ? "Settled" : "Unpaid"} · ₱${fmt(bill.amount)} · ${bill.targetMonthForDue}, day ${bill.dueDay} · ${walletLabel(bill.wallet)}`).join("\n") || "  • No commitments in this view"}

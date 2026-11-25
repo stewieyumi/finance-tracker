@@ -1,5 +1,6 @@
+import { useBudgetDate } from "../hooks/useBudgetDate";
 import { readWalletSavings } from "../utils/walletSavings";
-import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import React, { useId, useMemo, useRef, useState } from 'react';
 import type { BudgetCashPlan, FinanceTransitionCommitter, MonthlyBudget, UnifiedFinanceData } from '../types/finance';
 import { applyMonthlyBudget, BUDGET_CATEGORIES, isMonthlyBudget, readBudgetSpending, budgetCash, budgetDateKey, budgetDays, budgetMonthRange, calculateCashGuidance, effectiveBudget, readDailyBudget } from '../utils/budgeting';
 import { formatPHP } from '../utils/currency';
@@ -8,17 +9,7 @@ import { entryDialogStyles } from './ui/dialogStyles';
 interface Props { data: UnifiedFinanceData; month: string; commitTransition?: FinanceTransitionCommitter; onSaved: (message: string) => void; unpaidCommitments?: number; }
 export function MonthlyBudgetPanel({ data, month, commitTransition, onSaved, unpaidCommitments = 0 }: Props) {
   const id = useId();
-  const [today, setToday] = useState(budgetDateKey);
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    const update = () => {
-      clearTimeout(timer); setToday(budgetDateKey());
-      const next = new Date(); next.setHours(24, 0, 0, 50);
-      timer = setTimeout(update, Math.max(50, next.getTime() - Date.now()));
-    };
-    update(); window.addEventListener('focus', update); window.addEventListener('pageshow', update); document.addEventListener('visibilitychange', update);
-    return () => { clearTimeout(timer); window.removeEventListener('focus', update); window.removeEventListener('pageshow', update); document.removeEventListener('visibilitychange', update); };
-  }, []);
+  const today = useBudgetDate();
   const effective = useMemo(() => effectiveBudget(data, month), [data, month]);
   const budget = effective.budget;
   const raw = data.settings?.monthlyBudgets?.[month];

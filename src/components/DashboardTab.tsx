@@ -70,7 +70,7 @@ interface DashboardTabProps {
   recentTransactions: TransactionHistoryItem[];
 
   // Actions
-  onOpenSettings: (tab: "general" | "baselines" | "sync") => void;
+  onOpenSettings: (tab: "general" | "baselines" | "sync" | "wallets") => void;
   onConfigureGoal?: () => void;
   onStartTour?: () => void;
   onUndoPaydaySplit: (executionId: string) => void;
@@ -745,6 +745,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         initialReceipt={distributionDraft} unpaidCommitments={totalUnpaidCommitments} distributionDisabled={!isViewingCurrentMonth}
         paydayDays={globalData.settings?.paydayDays}
         paydayAllocations={paydayAllocations}
+        onConfigureSavings={() => onOpenSettings("wallets")}
         onConfigureBaselines={() => onOpenSettings("baselines")}
         latestExecution={latestExecution}
         onUndoSplit={onUndoPaydaySplit}

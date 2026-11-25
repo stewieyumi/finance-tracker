@@ -6,7 +6,14 @@ for (const theme of ['light', 'dark'] as const) {
     const data = returningData();
     data.settings = { ...data.settings, theme, monthlyBudgets: { [getMonthKey(new Date())]: { limit: 2100 } } };
     data.library.bills = []; data.library.receivables = []; data.library.expenses = [];
-    const { waitForSaved } = await isolatedApp(data); const before = (await storedData(page))!;
+    const { waitForSaved } = await isolatedApp(data);
+    await navigate(page, 'Wallets');
+    await expect(page.getByRole('button', { name: 'Set savings for Test Bank' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Savings settings' }).click();
+    const settings = page.getByRole('dialog', { name: 'App Settings', exact: true });
+    await settings.getByRole('checkbox', { name: 'Savings for Test Bank', exact: true }).check();
+    await settings.getByRole('button', { name: 'Save Settings', exact: true }).click();
+    const before = (await storedData(page))!;
     await navigate(page, 'Wallets');
     const open = () => page.getByRole('button', { name: 'Set savings for Test Bank', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Savings', exact: true });

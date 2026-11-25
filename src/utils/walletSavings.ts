@@ -1,10 +1,21 @@
-import type { UnifiedFinanceData } from '../types/finance';
+import type { AppSettings, UnifiedFinanceData } from '../types/finance';
 import { parseWalletBalance, reconcileWalletBalances, validateActiveWalletAssignment } from './financeHelpers';
 import { expenseCents } from './expenseChanges';
 
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 export function isWalletSavingsMap(value: unknown): value is Record<string, number> {
   return record(value) && Object.entries(value).every(([id, amount]) => id.trim() && expenseCents(amount) !== null);
+}
+
+export function isSavingsWalletIds(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every(id => typeof id === 'string' && id.trim()) && new Set(value).size === value.length;
+}
+
+/** Existing reserves remain visible until released, including profiles from before opt-in. */
+export function enabledSavingsWalletIds(settings?: AppSettings): string[] {
+  const map = record(settings?.walletSavings) ? settings.walletSavings : {};
+  const selected = isSavingsWalletIds(settings?.savingsWalletIds) ? settings.savingsWalletIds : Object.keys(map);
+  return [...new Set([...selected, ...Object.entries(map).filter(([, amount]) => typeof amount === 'number' && amount > 0).map(([id]) => id)])];
 }
 
 /** A planning reserve only: neither a debit nor a separate wallet balance. */
@@ -40,6 +51,7 @@ export function walletSavingsTotals(data: UnifiedFinanceData) {
 
 export function applyWalletSavings(data: UnifiedFinanceData, id: string, amount: number, expected: { balance: unknown; savings: unknown }) {
   const reject = (error: string) => ({ ok: false as const, data, error });
+  if (data.settings?.savingsWalletIds !== undefined && !enabledSavingsWalletIds(data.settings).includes(id)) return reject('Enable Savings for this wallet in Settings → Wallet Defaults first.');
   const route = validateActiveWalletAssignment(id, data.settings, data.wallets);
   if (!route.ok) return reject(route.message);
   const map: unknown = data.settings?.walletSavings;

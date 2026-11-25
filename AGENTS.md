@@ -400,6 +400,12 @@ If another problem is noticed:
 - Do not silently fix it unless it is necessary for the requested work.
 - Treat it as a separate follow-up task.
 
+When adding or changing a user-facing financial feature, update the Dashboard
+Copy Summary to include its relevant saved settings, results and review notes.
+Use the same reporting readers as the UI. Label current balances, reporting
+periods, forecasts and missing information clearly. Include summary regression
+coverage so new financial functionality does not leave the copied report stale.
+
 ## 18. SIMPLICITY RULE
 
 Before adding an abstraction, dependency, service, workflow, or AI agent,

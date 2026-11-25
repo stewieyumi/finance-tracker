@@ -7,9 +7,9 @@ import { readWalletSavings } from "../utils/walletSavings";
 import { formatPHP } from "../utils/currency";
 import { parseWalletBalance } from '../utils/financeHelpers';
 
-interface WalletGridProps { savings?: AppSettings["walletSavings"]; onSaveSavings?: (id: string, amount: number, expected: { balance: unknown; savings: unknown }) => WalletMutationOutcome | void; firstBalanceButtonRef?: React.Ref<HTMLButtonElement>; wallets: WalletState; customWallets?: CustomWallet[]; milestoneWallet?: string; savingsWallet?: string; onCommit: WalletMutationHandler; onIncrement: WalletMutationHandler; }
+interface WalletGridProps { enabledSavingsIds?: string[]; savings?: AppSettings["walletSavings"]; onSaveSavings?: (id: string, amount: number, expected: { balance: unknown; savings: unknown }) => WalletMutationOutcome | void; firstBalanceButtonRef?: React.Ref<HTMLButtonElement>; wallets: WalletState; customWallets?: CustomWallet[]; milestoneWallet?: string; savingsWallet?: string; onCommit: WalletMutationHandler; onIncrement: WalletMutationHandler; }
 
-export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ savings, onSaveSavings, firstBalanceButtonRef, wallets, milestoneWallet, savingsWallet, customWallets, onCommit, onIncrement }) => {
+export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ enabledSavingsIds = [], savings, onSaveSavings, firstBalanceButtonRef, wallets, milestoneWallet, savingsWallet, customWallets, onCommit, onIncrement }) => {
   const [editingWallet, setEditingWallet] = useState<(CustomWallet & { balance: number | null }) | null>(null);
   const [editMode, setEditMode] = useState<"balance" | "savings">("balance");
   const savingsSnapshot = useRef<{ balance: unknown; savings: unknown }>({ balance: undefined, savings: undefined });
@@ -90,13 +90,13 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ savings, onSa
                   <span className="text-sm font-semibold tabular-nums text-strong">{currentBalance === null ? "Invalid balance" : currentBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </span></span>
               </button>
-              <div className="grid min-w-0 grid-cols-2 gap-2 px-3 pb-3 text-xs">
+              {enabledSavingsIds.includes(w.id) && <div className="grid min-w-0 grid-cols-2 gap-2 px-3 pb-3 text-xs">
                 <button type="button" onClick={() => openEdit(w, currentBalance, "savings")} aria-label={`Set savings for ${w.label}`} className="min-h-11 min-w-0 rounded-xl bg-fill px-2 py-2 text-left transition hover:bg-surface-high">
                   <span className="flex items-center gap-1 text-muted"><PiggyBank size={12} aria-hidden="true" /> Savings</span>
                   <span className="privacy-blur mt-1 block break-all font-mono font-semibold text-primary">{funds.savings === null ? "Needs review" : formatPHP(funds.savings)}</span>
                 </button>
                 <div className="min-w-0 px-2 py-2"><span className="text-muted">Available to spend</span><span className="privacy-blur mt-1 block break-all font-mono font-semibold text-primary">{funds.balance === null || funds.savings === null ? "Needs review" : formatPHP(funds.available)}</span></div>
-              </div>
+              </div>}
               {funds.needsReview && <p className="px-3 pb-3 text-xs text-warning">Review this wallet’s savings. Actual spending may have reduced its balance.</p>}
               </div>
             );

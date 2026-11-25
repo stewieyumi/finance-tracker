@@ -35,7 +35,7 @@ const SETTINGS_SECTIONS = {
   },
   wallets: {
     label: "Wallet Defaults", icon: Wallet, color: "bg-blue-700",
-    description: "Choose which wallets handle payments and allocations.",
+    description: "Choose Savings wallets and default payment accounts.",
     keywords: "bill payments expenses routing savings transit living allowance transfer from to destination",
   },
   sync: {
@@ -703,6 +703,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
           {activeTab === "wallets" && (
             <div className="space-y-4">
               <p className="text-xs text-muted">Choose the wallets used for new payments, expenses, and payday allocations.</p>
+              <section aria-labelledby="savings-wallets-heading" className={settingsGroup}>
+                <div className="px-4 py-3"><h3 id="savings-wallets-heading" className="text-sm font-semibold text-primary">Savings wallets</h3><p className="mt-1 text-xs text-muted">Check the wallets that can hold Savings. Then choose how much to set aside in Wallets. Checking a wallet does not move money.</p></div>
+                {globalData.settings?.customWallets?.map(wallet => {
+                  const reserved = globalData.settings?.walletSavings?.[wallet.id] ?? 0;
+                  return <label key={wallet.id} className={settingsRow}><span className="privacy-blur min-w-0 break-words text-sm text-primary">{wallet.label}</span><input type="checkbox" aria-label={`Savings for ${wallet.label}`} checked={form.savingsWalletIds.includes(wallet.id)} disabled={reserved > 0} onChange={event => setForm(prev => ({ ...prev, savingsWalletIds: event.target.checked ? [...prev.savingsWalletIds, wallet.id] : prev.savingsWalletIds.filter(id => id !== wallet.id) }))} />{reserved > 0 && <span className="w-full text-xs text-muted">Release this wallet’s Savings in Wallets before turning this off.</span>}</label>;
+                })}
+                {!globalData.settings?.customWallets?.length && <p className="px-4 py-3 text-xs text-muted">Add a wallet first.</p>}
+              </section>
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-purple-400 uppercase tracking-wider"><ArrowRightLeft size={14} /> Routing Rules</div>
 

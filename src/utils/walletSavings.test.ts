@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BillViewModel, UnifiedFinanceData } from '../types/finance';
-import { applyWalletSavings, isWalletSavingsMap, readWalletSavings, walletSavingsTotals } from './walletSavings';
+import { applyWalletSavings, enabledSavingsWalletIds, isSavingsWalletIds, isWalletSavingsMap, readWalletSavings, walletSavingsTotals } from './walletSavings';
 import { budgetCash, readDailyBudget } from './budgeting';
 import { isValidFinanceBackup } from './validationHelpers';
 import { applySettingsForm, createSettingsForm } from './settingsForm';
@@ -22,6 +22,17 @@ describe('wallet savings planning reserve', () => {
     expect(readWalletSavings(data, 'main')).toEqual({ balance: 1000, savings: 0, available: 1000, needsReview: false });
     expect(budgetCash(data).available).toBe(1100);
     expect(isValidFinanceBackup(data)).toBe(true);
+  });
+  it('opts wallets into Savings controls and retains already-set-aside money until released', () => {
+    const data = seed(); expect(enabledSavingsWalletIds(data.settings)).toEqual([]);
+    data.settings!.savingsWalletIds = ['main']; expect(save(data, 100, 'cash').ok).toBe(false);
+    expect(save(data, 100).ok).toBe(true);
+    const reserved = save(data, 100).data;
+    const form = createSettingsForm(reserved.settings, reserved.wallets); form.savingsWalletIds = [];
+    const settings = applySettingsForm(reserved.settings, form);
+    expect(enabledSavingsWalletIds(settings)).toEqual(['main']);
+    expect(settings.walletSavings).toEqual({ main: 100 });
+    expect(isSavingsWalletIds(['main', 'main'])).toBe(false); expect(isSavingsWalletIds([''])).toBe(false);
   });
   it('sets partial/all savings and releases them without changing wallets, income, expenses or logs', () => {
     const data = seed(); const snapshot = structuredClone(data);
