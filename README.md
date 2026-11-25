@@ -300,9 +300,13 @@ uncertain save. A Safari connectivity check cannot prove native Shortcuts has da
 access. The previously reported iPhone cellular error still needs a physical-device
 check; these help instructions do not establish a fix.
 
+## Wallet name suggestions
+
+In Wallets → Add New Account, typing a name shows matching common bank/wallet suggestions (for example, G shows GCash and GoTyme). Choose by touch/mouse or Arrow keys and Enter, dismiss with Escape, or keep a custom name. Selecting a suggestion does not save the wallet.
+
 ## Cash-based Budget Plan
 
-Dashboard → **Budget Plan** is available without a configured salary:
+Dashboard → **Budget Plan** is available without a configured salary. Its **How to start** section explains which cash to include, the chosen period, unpaid payments, everyday needs and protected savings, with the starting daily formula and a reminder against double subtraction:
 
 - **Budget** asks about chosen wallet cash, dates, usual daily essentials, upcoming commitments, a savings target and an optional cushion. The proposal is editable; saving a plan never moves money.
 - The period limit and optional category limits track dated expenses, actual commitment payments and transfer fees. Transfer principal and unreceived income are excluded. Ambiguous or undated older records are flagged rather than assigned invented payment dates.

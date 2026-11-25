@@ -102,6 +102,18 @@ export function MonthlyBudgetPanel({ data, month, commitTransition, onSaved, unp
       <h3 className="text-sm font-semibold text-primary">{month}</h3>
       {!editing && <button ref={opener} type="button" onClick={open} disabled={!commitTransition} className="min-h-11 rounded-xl bg-fill px-3 text-xs font-semibold text-primary disabled:opacity-50">{budget ? 'Edit budget' : 'Build my budget'}</button>}
     </div>
+    <details open={!budget && !editing} className="rounded-xl border border-subtle bg-surface-low p-3 text-xs leading-relaxed">
+      <summary className="min-h-11 cursor-pointer content-center font-semibold text-primary">How to start</summary>
+      <ol className="list-decimal space-y-2 pl-5 text-muted">
+        <li>Choose wallets containing money you can spend now. Check their current balances first.</li>
+        <li>Choose the last day this money must cover, such as the day before your next income.</li>
+        <li>Reserve unpaid bills due during that period. Paid expenses already reflected in your balances should not be subtracted again.</li>
+        <li>Estimate daily food, transport and other essentials. Add a savings target or cushion if you want to protect some money.</li>
+        <li>Choose Calculate my plan, review the estimate, then Save budget.</li>
+      </ol>
+      <p className="mt-3 font-medium text-primary">Starting daily guide = (available cash − unpaid payments − savings − cushion) ÷ days to cover.</p>
+      <p className="mt-2 text-muted">Food, transport and everyday extras come from that daily amount. Upcoming income stays separate until received. Daily carry-forward can change the amount shown for a particular day.</p>
+    </details>
     {raw != null && !isMonthlyBudget(raw) && <p role="status" className="text-xs text-warning">This saved budget needs review. Open the editor to replace it.</p>}
     {!budget && !editing && <p className="text-xs text-muted">Answer a few questions about daily needs, commitments and savings to get a plan you can adjust.</p>}
     {effective.needsReview && <p role="status" className="text-xs text-warning">Rollover needs review because older spending or wallet balances are incomplete. You can review those records or create a new plan.</p>}
