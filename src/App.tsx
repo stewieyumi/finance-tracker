@@ -1,3 +1,6 @@
+import { Modal } from "./components/ui/Modal";
+import type { ReceivedIncomeDraft } from "./types/finance";
+import { formatPHP } from "./utils/currency";
 import { useAppInstall } from "./hooks/useAppInstall";
 import { deferredScreen } from "./components/ui/deferredScreen";
 import type { ReceiptTransferDraft } from './components/ReceiptReview';
@@ -185,6 +188,8 @@ export default function App() {
   const { updateAvailable } = useAppUpdate();
   const appInstall = useAppInstall();
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [receivedIncomePrompt, setReceivedIncomePrompt] = useState<{ owner: string; receipt: ReceivedIncomeDraft } | null>(null);
+  const [distributionDraft, setDistributionDraft] = useState<{ owner: string; receipt: ReceivedIncomeDraft } | null>(null);
   const [contextGuideOpen, setContextGuideOpen] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
   const [dataOwnerSub, setDataOwnerSub] = useState<string | null>(() =>
@@ -248,7 +253,7 @@ const {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [tourOwnerSub, setTourOwnerSub] = useState<string | null>(null);
   const [highlightQuickExpense, setHighlightQuickExpense] = useState(false);
-  React.useEffect(() => { setTourOwnerSub(null); setHighlightQuickExpense(false); }, [dataOwnerSub]);
+  React.useEffect(() => { setTourOwnerSub(null); setHighlightQuickExpense(false); setReceivedIncomePrompt(null); setDistributionDraft(null); }, [dataOwnerSub]);
   const [showAppleCalendar, setShowAppleCalendar] = useState(false);
   const [showGoalSetupModal, setShowGoalSetupModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>(() =>
@@ -548,6 +553,7 @@ const {
   commitReceivableTransition: syncedCommitTransition,
   selectedMonth,
   showToast,
+  onIncomeReceived: receipt => { if (dataOwnerSub && dataOwnerSub === getFinanceSubject()) setReceivedIncomePrompt({ owner: dataOwnerSub, receipt }); },
   onPaymentsReversed: removeReversedPayments,
 });
 
@@ -714,6 +720,7 @@ const { saveShootEdit } = useShootSaveActions({
 
   const isTourOpen = Boolean(tourOwnerSub && tourOwnerSub === dataOwnerSub && isDataOwnedByActiveSub && !hasValidatedActiveConflict);
   const isModalOpen =
+    Boolean(receivedIncomePrompt && receivedIncomePrompt.owner === dataOwnerSub) ||
     contextGuideOpen ||
     showInstallGuide ||
     isTourOpen ||
@@ -725,9 +732,6 @@ const { saveShootEdit } = useShootSaveActions({
     showLedgerModal;
 
   const isEditing = editingId !== null;
-  const nowForEx = new Date();
-  const currentExecutionKey = `${nowForEx.getFullYear()}-${String(nowForEx.getMonth() + 1).padStart(2, "0")}-${String(nowForEx.getDate()).padStart(2, "0")}`;
-  const hasExecutedToday = globalData.paydaySplitExecutions?.some(ex => typeof ex === "string" ? ex === currentExecutionKey : ex.date === currentExecutionKey);
   const latestExecution = globalData.paydaySplitExecutions?.slice().reverse().find(ex => typeof ex !== "string") as PaydayExecution | undefined;
 
     const { pullProgress } = usePullToRefresh(
@@ -802,7 +806,6 @@ const { saveShootEdit } = useShootSaveActions({
   }, [currentMonth, globalData.logs, globalData.library.bills]);
 
   const {
-   handleExecutePaydaySplit,
    handleUndoPaydaySplit,
  } = usePaydayActions({
    globalData,
@@ -1244,8 +1247,12 @@ const copySummaryToClipboard = async () => {
           </section>
         )}
         {activeTab === "home" && (
-          <DashboardTab
+          <DashboardTab key={dataOwnerSub}
             globalData={dashboardGlobalData}
+            commitBudgetTransition={syncedCommitTransition}
+            onBudgetMessage={message => showToast(message)}
+            distributionDraft={distributionDraft?.owner === dataOwnerSub ? distributionDraft.receipt : undefined}
+            onDistributionClose={() => setDistributionDraft(null)}
             targetMilestoneFund={targetMilestoneFund}
             totalLiquid={totalLiquid}
             fundProgressPercent={fundProgressPercent}
@@ -1258,15 +1265,12 @@ const copySummaryToClipboard = async () => {
             overdueBills={overdueBills}
             overdueSum={overdueSum}
             paydayAllocations={paydayAllocations}
-            remainingBuffer={remainingBuffer}
             isViewingCurrentMonth={isViewingCurrentMonth}
-            hasExecutedToday={hasExecutedToday}
             latestExecution={latestExecution}
             recentTransactions={recentTransactions}
             onOpenSettings={(tab) => { setSettingsInitialTab(tab); setShowSettingsModal(true); }}
             onStartTour={() => setTourOwnerSub(dataOwnerSub)}
             onConfigureGoal={() => setShowGoalSetupModal(true)}
-            onExecutePaydaySplit={handleExecutePaydaySplit}
             onUndoPaydaySplit={handleUndoPaydaySplit}
             onJumpToOverdue={handleJumpToOverdue}
             onCommitWallet={commitWallet}
@@ -1360,6 +1364,16 @@ const copySummaryToClipboard = async () => {
         )}
       </div>
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
+      {receivedIncomePrompt && receivedIncomePrompt.owner === dataOwnerSub && isDataOwnedByActiveSub && !hasValidatedActiveConflict && <Modal isOpen onClose={() => setReceivedIncomePrompt(null)} ariaLabel="Distribute received income" manageFocus>
+        <div className="max-h-[88dvh] w-full max-w-sm space-y-4 overflow-y-auto rounded-3xl border border-subtle bg-surface-modal p-5 text-primary shadow-xl">
+          <h2 className="text-base font-semibold">Distribute this money?</h2>
+          <p className="privacy-blur text-sm">{formatPHP(receivedIncomePrompt.receipt.amount)} received for {receivedIncomePrompt.receipt.name}.</p>
+          <p className="text-xs leading-relaxed text-muted">It is already in your wallet. You can assign it to other wallets now or plan it later.</p>
+          <div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => setReceivedIncomePrompt(null)} className="min-h-11 rounded-xl bg-fill px-3 text-sm font-semibold">Later</button>
+            <button type="button" onClick={() => { setDistributionDraft(receivedIncomePrompt); setReceivedIncomePrompt(null); setSelectedMonth(getMonthKey(new Date())); setActiveTab('home'); }} className="min-h-11 rounded-xl bg-[var(--bg-selection)] px-3 text-sm font-semibold text-white">Distribute</button></div>
+        </div>
+      </Modal>}
+
       {dataOwnerSub && isDataOwnedByActiveSub && <ErrorBoundary message="Guidance is unavailable. Your records are still accessible."><Suspense fallback={null}>
         <ContextualGuides key={dataOwnerSub} subject={dataOwnerSub} onActiveChange={setContextGuideOpen}
           automaticPaused={highlightQuickExpense} paused={isTourOpen || hasValidatedActiveConflict || isEditing || showInstallGuide} />

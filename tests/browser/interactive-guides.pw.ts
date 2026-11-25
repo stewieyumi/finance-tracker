@@ -155,10 +155,10 @@ for (const theme of ['light', 'dark'] as const) {
     const yearly = page.getByRole('dialog', { name: 'Yearly Overview Modal', exact: true });
     await expect(yearly.locator('[data-guide-target=year-choice]')).toBeVisible();
     await yearly.getByRole('button', { name: 'Done', exact: true }).click();
-    await page.getByRole('button', { name: /^Payday Plan/ }).click();
-    await tryStep(page, 'Payday plan', 'Review your payday plan');
-    await expect(page.locator('[data-guide-target=payday-plan]')).toBeFocused();
-    await page.getByRole('button', { name: 'Close payday modal', exact: true }).click();
+    await page.getByRole('button', { name: /^Budget Plan/ }).click();
+    await tryStep(page, 'Budget Plan', 'Review your budget plan');
+    await expect(page.locator('[data-guide-target=budget-content]')).toBeFocused();
+    await page.getByRole('button', { name: 'Close budget plan', exact: true }).click();
     await page.getByRole('button', { name: /^Upcoming/ }).click();
     await tryStep(page, 'Upcoming commitments', 'Review commitments');
     await expect(page.getByRole('button', { name: /Add New Commitment/, exact: true })).toBeVisible();

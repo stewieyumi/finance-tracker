@@ -1,3 +1,4 @@
+import { budgetCash } from "../utils/budgeting";
 import { GuideButton } from "./ContextGuideControls";
 import { formatHistoryDate } from "../utils/transactionDates";
 import { InflowIncomeNotes } from "./InflowIncomeNotes";
@@ -31,10 +32,9 @@ import {
   UnifiedFinanceData,
   TransactionHistoryItem,
   BillViewModel,
-  PaydayExecution
+  PaydayExecution, FinanceTransitionCommitter, ReceivedIncomeDraft
 } from "../types/finance";
 import { calculateSafeToSpend } from "../utils/financialAnalytics";
-import { getPaydayDatesInRange, normalizePaydayDays, parseMonthKey } from "../utils/dateHelpers";
 import { reconcileWalletBalances, validateActiveWalletAssignment } from "../utils/financeHelpers";
 
 import { reconcileDebt } from "../utils/debtReconciliation";
@@ -43,6 +43,10 @@ const carouselSlideClass = "flex w-full shrink-0 snap-center";
 
 interface DashboardTabProps {
   globalData: UnifiedFinanceData;
+  commitBudgetTransition?: FinanceTransitionCommitter;
+  onBudgetMessage?: (message: string) => void;
+  distributionDraft?: ReceivedIncomeDraft;
+  onDistributionClose?: () => void;
   targetMilestoneFund: number;
   totalLiquid: number;
   fundProgressPercent: string;
@@ -57,9 +61,7 @@ interface DashboardTabProps {
   overdueBills: BillViewModel[];
   overdueSum: number;
   paydayAllocations: Record<string, number>;
-  remainingBuffer: number;
   isViewingCurrentMonth: boolean;
-  hasExecutedToday?: boolean;
   latestExecution?: PaydayExecution;
 
   // Transactions
@@ -69,7 +71,6 @@ interface DashboardTabProps {
   onOpenSettings: (tab: "general" | "baselines" | "sync") => void;
   onConfigureGoal?: () => void;
   onStartTour?: () => void;
-  onExecutePaydaySplit: () => void;
   onUndoPaydaySplit: (executionId: string) => void;
   onJumpToOverdue: () => void;
   onCommitWallet?: (walletId: string, amount: number) => void;
@@ -89,6 +90,7 @@ interface DashboardTabProps {
 
 export const DashboardTab: React.FC<DashboardTabProps> = ({
   globalData,
+  commitBudgetTransition, onBudgetMessage, distributionDraft, onDistributionClose,
   targetMilestoneFund,
   totalLiquid,
   fundProgressPercent,
@@ -102,9 +104,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   overdueBills = [],
   overdueSum = 0,
   paydayAllocations = {},
-  remainingBuffer,
   isViewingCurrentMonth,
-  hasExecutedToday = false,
   latestExecution,
 
   recentTransactions = [],
@@ -112,7 +112,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   onOpenSettings,
   onConfigureGoal,
   onStartTour,
-  onExecutePaydaySplit,
   onUndoPaydaySplit,
   onJumpToOverdue,
   onCopySummary,
@@ -141,18 +140,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   const debt = useMemo(() => reconcileDebt(globalData, selectedMonth), [globalData, selectedMonth]);
   const debtLoans = debt.activeLoans;
   const totalDebtPrincipal = debt.remainingScheduled;
-
-  const pdDays = normalizePaydayDays(globalData.settings?.paydayDays);
-  const monthStart = parseMonthKey(selectedMonth);
-  const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
-  const payoutCount = getPaydayDatesInRange(monthStart, monthEnd, pdDays).length;
-  const monthlyNetSalary = (globalData.settings?.perPayoutSalary ?? 0) * payoutCount;
-
-  const formatOrdinal = (n: number) => {
-    const s = ["th", "st", "nd", "rd"];
-    const v = n % 100;
-    return n + (s[(v - 20) % 10] || s[v] || s[0]);
-  };
 
   const unpaidCount = useMemo(() => {
     if (activeBills && activeBills.length > 0) {
@@ -666,47 +653,19 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         </button>
       </div>
 
-      {/* Regular-income planning is optional; irregular payments use Inflows. */}
-      {(globalData.settings?.perPayoutSalary ?? 0) > 0 || latestExecution ? <button
-        type="button"
-        aria-haspopup="dialog"
-        data-guide-target="planning" onClick={() => setShowPaydayModal(true)}
-        className="dashboard-material w-full text-left hover:border-emerald-500/30 rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group active:scale-[0.99] flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
-      >
-        <span className="flex items-center gap-3.5">
-          <span className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-positive shrink-0">
-            <Banknote size={18} />
-          </span>
-          <span className="block">
-            <span className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-positive">
-                Payday Plan
-              </span>
-              {hasExecutedToday && (
-                <span className="text-[10px] font-semibold chip-emerald px-2 py-0.5 rounded-full">
-                  ✓ Distributed
-                </span>
-              )}
-            </span>
-            <span className="block text-xs text-muted mt-0.5 font-medium">
-              Monthly take-home pay • {pdDays.map(formatOrdinal).join(" & ")}
-            </span>
-          </span>
-        </span>
-        <span className="flex w-full shrink-0 items-center justify-between gap-2 sm:w-auto">
-          <span className="font-mono font-bold text-sm sm:text-base text-primary">
-            ₱{monthlyNetSalary.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-          <ArrowRight size={14} className="text-faint group-hover:text-positive group-hover:translate-x-0.5 transition-all" />
-        </span>
-      </button> : <div className="dashboard-material rounded-2xl p-4 sm:p-5">
+      <button type="button" aria-haspopup="dialog" data-guide-target="planning" onClick={() => setShowPaydayModal(true)}
+        className="dashboard-material flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl p-4 text-left transition hover:border-emerald-500/30 sm:p-5">
+        <span className="flex min-w-0 items-center gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-fill text-positive"><Banknote size={18} /></span><span><span className="block text-xs font-bold uppercase tracking-wider text-positive">Budget Plan</span><span className="mt-1 block text-xs text-muted">Wallet cash · daily spending · savings · allocations</span></span></span>
+        <span className="privacy-blur font-mono text-sm font-bold text-primary">₱{budgetCash(globalData).available.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+      </button>
+      {(globalData.settings?.perPayoutSalary ?? 0) <= 0 && (<div className="dashboard-material rounded-2xl p-4 sm:p-5">
         <h2 data-guide-target="planning" className="text-sm font-semibold text-primary">Income at your pace</h2>
         <p className="mt-1 text-xs leading-relaxed text-muted">Track client payments, sales, or other money in Inflows. You do not need a monthly salary.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {onNavigateToOps && <button type="button" onClick={() => onNavigateToOps("inflows")} className="min-h-11 rounded-xl bg-fill px-3 text-xs font-semibold text-primary hover:bg-fill-strong">Track an inflow</button>}
           <button type="button" onClick={() => onOpenSettings("baselines")} className="min-h-11 rounded-xl px-3 text-xs font-medium text-muted hover:bg-fill">Set up regular pay</button>
         </div>
-      </div>}
+      </div>)}
 
       {/* 5. RECENT ACTIVITY */}
       <ErrorBoundary>
@@ -775,20 +734,17 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       />
 
       {/* PAYDAY MODAL */}
-      <PaydayModal
-        isOpen={showPaydayModal}
-        onClose={() => setShowPaydayModal(false)}
+      {(showPaydayModal || distributionDraft) && <PaydayModal key={distributionDraft?.receiptId ?? "manual"}
+        isOpen
+        onClose={() => { setShowPaydayModal(false); onDistributionClose?.(); }}
+        globalData={globalData} selectedMonth={selectedMonth} commitBudgetTransition={commitBudgetTransition} onBudgetMessage={onBudgetMessage}
+        initialReceipt={distributionDraft} unpaidCommitments={totalUnpaidCommitments} distributionDisabled={!isViewingCurrentMonth}
         paydayDays={globalData.settings?.paydayDays}
         paydayAllocations={paydayAllocations}
-        remainingBuffer={remainingBuffer}
-        customWallets={globalData?.settings?.customWallets}
-        walletLabels={globalData?.settings?.walletLabels}
         onConfigureBaselines={() => onOpenSettings("baselines")}
-        onExecutePaydaySplit={onExecutePaydaySplit}
-        disabled={!isViewingCurrentMonth || hasExecutedToday}
         latestExecution={latestExecution}
         onUndoSplit={onUndoPaydaySplit}
-      />
+      />}
 
       <Modal
         isOpen={showGettingStarted}

@@ -214,81 +214,35 @@ describe("DashboardTab", () => {
     expect(defaultProps.onJumpToOverdue).toHaveBeenCalled();
   });
 
-  it("offers inflow tracking instead of a salary plan when regular pay is not configured", () => {
-    render(<DashboardTab {...defaultProps} globalData={{ ...defaultProps.globalData,
-      settings: { ...defaultProps.globalData.settings, perPayoutSalary: 0 } }} />);
-    expect(screen.queryByRole("button", { name: /^Payday Plan/ })).not.toBeInTheDocument();
+  it("offers Budget Plan for irregular incomes while preserving inflow navigation", () => {
+    render(<DashboardTab {...defaultProps} globalData={{ ...defaultProps.globalData, settings: { ...defaultProps.globalData.settings, perPayoutSalary: 0 } }} />);
+    expect(screen.getByRole("button", { name: /^Budget Plan/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Track an inflow" }));
     expect(defaultProps.onNavigateToOps).toHaveBeenCalledWith("inflows");
     fireEvent.click(screen.getByRole("button", { name: "Set up regular pay" }));
     expect(defaultProps.onOpenSettings).toHaveBeenCalledWith("baselines");
+  });
+
+  it("opens Budget Plan on its planning tab and restores focus when closed", () => {
+    render(<DashboardTab {...defaultProps} />);
+    const opener = screen.getByRole("button", { name: /^Budget Plan/ }); opener.focus(); fireEvent.click(opener);
+    const dialog = screen.getByRole("dialog", { name: "Budget Plan" });
+    expect(within(dialog).getByRole("tab", { name: "Budget" })).toHaveAttribute("aria-selected", "true");
+    expect(defaultProps.onExecutePaydaySplit).not.toHaveBeenCalled();
+    fireEvent.keyDown(window, { key: "Escape" }); expect(opener).toHaveFocus();
+  });
+
+  it("uses actual income or existing cash allocation instead of executing a configured salary on open", () => {
+    render(<DashboardTab {...defaultProps} />); fireEvent.click(screen.getByRole("button", { name: /^Budget Plan/ }));
+    fireEvent.click(screen.getByRole("tab", { name: "Auto-Distribute" }));
+    expect(screen.getByLabelText("Which money are you allocating?")).toHaveValue("existing");
     expect(defaultProps.onExecutePaydaySplit).not.toHaveBeenCalled();
   });
 
-  it("shows monthly net salary on the Payday Plan and per-payout allocations in the modal", () => {
-    render(<DashboardTab
-      {...defaultProps}
-      globalData={{
-        ...defaultProps.globalData,
-        settings: {
-          ...defaultProps.globalData.settings,
-          grossPerPayoutSalary: 17000,
-          perPayoutSalary: 15000,
-          paydayDays: [5, 20],
-        },
-      }}
-    />);
-    expect(screen.getByText("Payday Plan")).toBeInTheDocument();
-    expect(screen.getByText("₱30,000.00")).toBeInTheDocument();
-    expect(screen.getByText("Monthly take-home pay • 5th & 20th")).toBeInTheDocument();
-
-    // Click to open modal
-    const paydayCard = screen.getByRole("button", { name: /^Payday Plan/ });
-    paydayCard.focus();
-    fireEvent.click(paydayCard);
-
-    // Payday modal should now be open
-    const modal = screen.getByRole("dialog", { name: "Payday Distribution Modal" });
-    expect(within(modal).getByText("₱2,500.00")).toBeInTheDocument();
-    expect(within(modal).getByText("₱1,000.00")).toBeInTheDocument();
-    expect(within(modal).getByText("Auto-Distribute to Wallets")).toBeInTheDocument();
-    expect(modal).toHaveFocus();
-    fireEvent.keyDown(modal, { key: "Escape" });
-    expect(paydayCard).toHaveFocus();
-  });
-
-  it("invokes onExecutePaydaySplit from inside PaydayModal", () => {
-    render(<DashboardTab {...defaultProps} />);
-    const paydayCard = screen.getByRole("button", { name: /^Payday Plan/ });
-    fireEvent.click(paydayCard);
-
-    const distributeBtn = screen.getByText("Auto-Distribute to Wallets");
-    fireEvent.click(distributeBtn);
-    expect(defaultProps.onExecutePaydaySplit).toHaveBeenCalled();
-  });
-
-  it("invokes onUndoPaydaySplit from inside PaydayModal when previous execution exists", () => {
-    const latestExecution: PaydayExecution = {
-      id: "exec-1",
-      date: "2026-09-15",
-      timestamp: Date.now(),
-      allocations: { main: 2500, savings: 1000 },
-      billContributions: []
-    };
-
-    render(
-      <DashboardTab
-        {...defaultProps}
-        globalData={{ ...defaultProps.globalData, settings: { ...defaultProps.globalData.settings, perPayoutSalary: 0 } }}
-        latestExecution={latestExecution}
-      />
-    );
-
-    const paydayCard = screen.getByRole("button", { name: /^Payday Plan/ });
-    fireEvent.click(paydayCard);
-
-    const undoBtn = screen.getByText("Undo");
-    fireEvent.click(undoBtn);
+  it("keeps historical payday Undo accessible after the rename", () => {
+    render(<DashboardTab {...defaultProps} latestExecution={{ id: "exec-1", date: "2026-09-15", timestamp: 1, allocations: { main: 2500 }, billContributions: [] }} />);
+    fireEvent.click(screen.getByRole("button", { name: /^Budget Plan/ })); fireEvent.click(screen.getByRole("tab", { name: "Auto-Distribute" }));
+    fireEvent.click(screen.getByText("Earlier regular-pay distribution")); fireEvent.click(screen.getByRole("button", { name: "Undo earlier distribution" }));
     expect(defaultProps.onUndoPaydaySplit).toHaveBeenCalledWith("exec-1");
   });
 

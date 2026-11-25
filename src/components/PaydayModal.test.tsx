@@ -1,160 +1,112 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import React from "react";
-import { PaydayModal } from "./PaydayModal";
-import { exportPaydaysToCalendar } from "../utils/calendarExport";
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { PaydayModal } from './PaydayModal';
+import { INITIAL_UNIFIED_DATA } from '../constants/initialData';
+import { applyMonthlyBudget } from '../utils/budgeting';
+import type { UnifiedFinanceData, FinanceTransitionCommitter } from '../types/finance';
 
-vi.mock("../utils/calendarExport", () => ({
-  exportPaydaysToCalendar: vi.fn(),
-}));
+function setup(overrides: Record<string, unknown> = {}) {
+  let data: UnifiedFinanceData = structuredClone(INITIAL_UNIFIED_DATA);
+  data.wallets = { main: 5000, cash: 1000 };
+  data.settings = { ...data.settings, customWallets: [{ id: 'main', label: 'Bank' }, { id: 'cash', label: 'Cash' }], perPayoutSalary: 0 };
+  const commit: FinanceTransitionCommitter = transition => { const result = transition(data); if (result.ok) data = result.data; return result; };
+  const close = vi.fn(), message = vi.fn(), legacyExecute = vi.fn(), undo = vi.fn();
+  const props = { isOpen: true, onClose: close, globalData: data, selectedMonth: 'November 2026', commitBudgetTransition: commit, onBudgetMessage: message,
+    paydayAllocations: {}, remainingBuffer: 0, onConfigureBaselines: vi.fn(), onExecutePaydaySplit: legacyExecute, onUndoSplit: undo, ...overrides };
+  const view = render(<PaydayModal {...props} />);
+  return { ...view, read: () => data, close, message, legacyExecute, undo };
+}
+afterEach(() => vi.useRealTimers());
 
-describe("PaydayModal", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+describe('Budget Plan', () => {
+  it('opens on Budget without requiring salary and supports tab keyboard navigation', () => {
+    const app = setup(); const dialog = screen.getByRole('dialog', { name: 'Budget Plan' });
+    expect(dialog).toHaveFocus(); expect(screen.getByRole('tab', { name: 'Budget' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Build my budget' })).toBeEnabled();
+    fireEvent.keyDown(screen.getByRole('tablist'), { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: 'Auto-Distribute' })).toHaveFocus();
+    expect(screen.getByRole('form', { name: 'Distribute money' })).toBeVisible();
+    expect(app.legacyExecute).not.toHaveBeenCalled();
   });
-
-  const defaultProps = {
-    isOpen: true,
-    onClose: vi.fn(),
-    paydayDays: [15, 30],
-    paydayAllocations: { main: 5000, savings: 3000 },
-    remainingBuffer: 2000,
-    walletLabels: { main: "Main Wallet", savings: "Savings Vault" },
-    onConfigureBaselines: vi.fn(),
-    onExecutePaydaySplit: vi.fn(),
-    onExportCalendar: vi.fn(),
-  };
-
-  it("does not render when isOpen is false", () => {
-    const { container } = render(
-      <PaydayModal {...defaultProps} isOpen={false} />
-    );
-    expect(container.firstChild).toBeNull();
+  it('does not render when closed and closes through its accessible button', () => {
+    const closed = setup({ isOpen: false }); expect(screen.queryByRole('dialog')).not.toBeInTheDocument(); closed.unmount();
+    const app = setup(); fireEvent.click(screen.getByRole('button', { name: 'Close budget plan' })); expect(app.close).toHaveBeenCalledOnce();
   });
-
-  it("renders payday modal with title and allocations", () => {
-    render(<PaydayModal {...defaultProps} />);
-    expect(screen.getByText(/Payday Flow \(15th & 30th\)/i)).toBeInTheDocument();
-    expect(screen.getByText("Main Wallet")).toBeInTheDocument();
-    expect(screen.getByText("₱5,000.00")).toBeInTheDocument();
-    expect(screen.getByText("₱3,000.00")).toBeInTheDocument();
-    expect(screen.getByText("₱2,000.00")).toBeInTheDocument();
+  it('saves a guided cash budget without changing wallets, receipts, or transactions', () => {
+    vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-21T12:00:00Z'));
+    const app = setup(); const before = structuredClone(app.read());
+    fireEvent.click(screen.getByRole('button', { name: 'Build my budget' }));
+    fireEvent.change(screen.getByLabelText('3. Usual daily essentials (₱)'), { target: { value: '200' } });
+    fireEvent.change(screen.getByLabelText('4. Upcoming commitments to reserve (₱)'), { target: { value: '1000' } });
+    fireEvent.change(screen.getByLabelText('5. Savings target for this period (₱)'), { target: { value: '1000' } });
+    expect(screen.getByRole('button', { name: 'Save budget' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Calculate my plan' }));
+    expect(screen.getByText(/Potential savings before optional spending: ₱3,000.00/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save budget' })).toBeEnabled();
+    fireEvent.submit(screen.getByRole('form', { name: 'Edit November 2026 budget' }));
+    expect(app.read().settings!.monthlyBudgets!['November 2026']!.limit).toBe(5000);
+    expect(app.read().wallets).toEqual(before.wallets); expect(app.read().library).toEqual(before.library); expect(app.read().logs).toEqual(before.logs);
   });
-
-  it("renders with dialog accessibility", () => {
-    render(<PaydayModal {...defaultProps} />);
-    const dialog = screen.getByRole("dialog");
-    expect(dialog).toBeInTheDocument();
-    expect(dialog).toHaveAttribute("aria-label", "Payday Distribution Modal");
+  it('can plan to save all available cash with a zero spending cap', () => {
+    vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-21T12:00:00Z'));
+    const app = setup(); fireEvent.click(screen.getByRole('button', { name: 'Build my budget' }));
+    fireEvent.change(screen.getByLabelText('3. Usual daily essentials (₱)'), { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText('5. Savings target for this period (₱)'), { target: { value: '6000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Calculate my plan' }));
+    fireEvent.submit(screen.getByRole('form', { name: 'Edit November 2026 budget' }));
+    expect(app.read().settings!.monthlyBudgets!['November 2026']!.limit).toBe(0);
+    expect(app.read().wallets).toEqual({ main: 5000, cash: 1000 });
   });
-
-  it("triggers onExportCalendar when header export button is clicked", () => {
-    render(<PaydayModal {...defaultProps} />);
-    const exportBtn = screen.getByLabelText("Export Paydays to Calendar");
-    fireEvent.click(exportBtn);
-    expect(defaultProps.onExportCalendar).toHaveBeenCalledWith([15, 30]);
+  it('keeps Cancel and stale-plan failures from overwriting another saved plan', () => {
+    const app = setup(); const before = structuredClone(app.read());
+    fireEvent.click(screen.getByRole('button', { name: 'Build my budget' })); fireEvent.click(screen.getByRole('button', { name: 'Cancel' })); expect(app.read()).toEqual(before);
+    fireEvent.click(screen.getByRole('button', { name: 'Build my budget' }));
+    fireEvent.click(screen.getByText('Spending limit and optional category limits'));
+    fireEvent.change(screen.getByLabelText('Period spending limit (₱)'), { target: { value: '100' } });
+    const current = applyMonthlyBudget(app.read(), 'November 2026', { limit: 200 }, undefined); Object.assign(app.read(), current.data);
+    fireEvent.submit(screen.getByRole('form', { name: 'Edit November 2026 budget' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('This budget changed'); expect(app.read().settings!.monthlyBudgets!['November 2026']!.limit).toBe(200);
   });
-
-  it("triggers onExportCalendar when body export button is clicked", () => {
-    render(<PaydayModal {...defaultProps} />);
-    const bodyExportBtn = screen.getByText("Export Paydays (.ics)");
-    fireEvent.click(bodyExportBtn);
-    expect(defaultProps.onExportCalendar).toHaveBeenCalledWith([15, 30]);
+  it('requires zero unassigned and distributes existing cash with no new income', () => {
+    const app = setup(); const before = structuredClone(app.read()); fireEvent.click(screen.getByRole('tab', { name: 'Auto-Distribute' }));
+    fireEvent.change(screen.getByLabelText('Amount to allocate (₱)'), { target: { value: '1000' } });
+    expect(screen.getByRole('button', { name: 'Distribute existing cash' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Allocate to Cash'), { target: { value: '500' } });
+    fireEvent.change(screen.getByLabelText('Put the remainder in'), { target: { value: 'main' } }); fireEvent.click(screen.getByRole('button', { name: 'Assign remainder' }));
+    fireEvent.submit(screen.getByRole('form', { name: 'Distribute money' }));
+    expect(app.read().wallets).toEqual({ main: 4500, cash: 1500 });
+    expect(app.read().library.receivables).toEqual(before.library.receivables);
+    expect(screen.getByText('Distribution recorded. Unassigned: ₱0.00.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Distribute existing cash' })).not.toBeInTheDocument();
   });
-
-  it("falls back to exportPaydaysToCalendar when onExportCalendar is not provided", () => {
-    render(<PaydayModal {...defaultProps} onExportCalendar={undefined} />);
-    const exportBtn = screen.getByLabelText("Export Paydays to Calendar");
-    fireEvent.click(exportBtn);
-    expect(exportPaydaysToCalendar).toHaveBeenCalledWith([15, 30]);
+  it('uses configured transfer defaults instead of always choosing the first wallet', () => {
+    setup({ globalData: { ...INITIAL_UNIFIED_DATA, wallets: { main: 1000, cash: 500 }, settings: { ...INITIAL_UNIFIED_DATA.settings, customWallets: [{ id: 'main', label: 'Bank' }, { id: 'cash', label: 'Cash' }], transferFromWallet: 'cash', transferToWallet: 'main' } } });
+    fireEvent.click(screen.getByRole('tab', { name: 'Auto-Distribute' }));
+    expect(screen.getByLabelText('From wallet')).toHaveValue('cash');
+    fireEvent.change(screen.getByLabelText('Amount to allocate (₱)'), { target: { value: '100' } });
+    expect(screen.getByLabelText('Put the remainder in')).toHaveValue('main');
   });
-
-  it("calls onConfigureBaselines and onClose when settings button is clicked", () => {
-    const onConfigureBaselines = vi.fn();
-    const onClose = vi.fn();
-    render(
-      <PaydayModal
-        {...defaultProps}
-        onConfigureBaselines={onConfigureBaselines}
-        onClose={onClose}
-      />
-    );
-    const settingsBtn = screen.getByTitle("Configure Baselines & Routing");
-    fireEvent.click(settingsBtn);
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect(onConfigureBaselines).toHaveBeenCalledTimes(1);
+  it('records and allocates actual irregular income and preserves the source balance', () => {
+    const app = setup(); fireEvent.click(screen.getByRole('tab', { name: 'Auto-Distribute' }));
+    fireEvent.change(screen.getByLabelText('Which money are you allocating?'), { target: { value: 'received' } });
+    fireEvent.change(screen.getByLabelText('Where did the income come from?'), { target: { value: 'Freelance client' } });
+    fireEvent.change(screen.getByLabelText('Amount received (₱)'), { target: { value: '1000' } });
+    fireEvent.change(screen.getByLabelText('Allocate to Cash'), { target: { value: '1000' } });
+    fireEvent.submit(screen.getByRole('form', { name: 'Distribute money' }));
+    expect(app.read().wallets).toEqual({ main: 5000, cash: 2000 });
+    expect(app.read().library.receivables[0].name).toBe('Freelance client'); expect(app.legacyExecute).not.toHaveBeenCalled();
   });
-
-  it("calls onExecutePaydaySplit and onClose when distribute button is clicked", () => {
-    const onExecutePaydaySplit = vi.fn();
-    const onClose = vi.fn();
-    render(
-      <PaydayModal
-        {...defaultProps}
-        onExecutePaydaySplit={onExecutePaydaySplit}
-        onClose={onClose}
-      />
-    );
-    const distributeBtn = screen.getByText("Auto-Distribute to Wallets");
-    fireEvent.click(distributeBtn);
-    expect(onExecutePaydaySplit).toHaveBeenCalledTimes(1);
-    expect(onClose).toHaveBeenCalledTimes(1);
+  it('preserves optional payday calendar export for regular-pay users', () => {
+    const exported = vi.fn();
+    setup({ globalData: { ...INITIAL_UNIFIED_DATA, settings: { ...INITIAL_UNIFIED_DATA.settings, perPayoutSalary: 1000 } }, paydayDays: [5, 20], onExportCalendar: exported });
+    fireEvent.click(screen.getByRole('tab', { name: 'Auto-Distribute' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export Paydays (.ics)' }));
+    expect(exported).toHaveBeenCalledWith([5, 20]);
   });
-
-  it("closes on Escape key", () => {
-    const onClose = vi.fn();
-    render(<PaydayModal {...defaultProps} onClose={onClose} />);
-    fireEvent.keyDown(window, { key: "Escape" });
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("closes on backdrop click", () => {
-    const onClose = vi.fn();
-    render(<PaydayModal {...defaultProps} onClose={onClose} />);
-    const dialog = screen.getByRole("dialog");
-    fireEvent.click(dialog);
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("does not close on click inside content", () => {
-    const onClose = vi.fn();
-    render(<PaydayModal {...defaultProps} onClose={onClose} />);
-    fireEvent.click(screen.getByText("Planned wallet allocations for this payout:"));
-    expect(onClose).not.toHaveBeenCalled();
-  });
-
-  it("closes when close button (X) is clicked", () => {
-    const onClose = vi.fn();
-    render(<PaydayModal {...defaultProps} onClose={onClose} />);
-    const closeBtn = screen.getByLabelText("Close payday modal");
-    fireEvent.click(closeBtn);
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it("calls onUndoSplit when Undo is clicked, without calling onClose", () => {
-    const onUndoSplit = vi.fn();
-    const onClose = vi.fn();
-    const latestExecution = {
-      id: "exec-123",
-      date: "2026-03-15",
-      timestamp: 1773532800000,
-      allocations: { main: 5000 },
-      billContributions: [],
-    };
-
-    render(
-      <PaydayModal
-        {...defaultProps}
-        onClose={onClose}
-        latestExecution={latestExecution}
-        onUndoSplit={onUndoSplit}
-      />
-    );
-
-    const undoBtn = screen.getByRole("button", { name: /undo/i });
-    fireEvent.click(undoBtn);
-
-    expect(onUndoSplit).toHaveBeenCalledWith("exec-123");
-    expect(onClose).not.toHaveBeenCalled();
+  it('keeps earlier salary reversals available without silently distributing on open', () => {
+    const app = setup({ latestExecution: { id: 'old', date: '2026-11-15', timestamp: 1, allocations: { main: 100 }, billContributions: [] } });
+    fireEvent.click(screen.getByRole('tab', { name: 'Auto-Distribute' }));
+    fireEvent.click(screen.getByText('Earlier regular-pay distribution')); fireEvent.click(screen.getByRole('button', { name: 'Undo earlier distribution' }));
+    expect(app.undo).toHaveBeenCalledWith('old'); expect(app.legacyExecute).not.toHaveBeenCalled(); expect(app.close).not.toHaveBeenCalled();
   });
 });

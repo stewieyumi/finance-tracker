@@ -2,7 +2,7 @@ import { isInflowMonth, isInflowMoney, noDateInflowState } from "../utils/noDate
 import type { PaymentHistoryAction } from "../utils/paymentHistory";
 import { normalizePaydayDays, isValidDateKey, getMonthKey, getMonthRange, parseDateKey } from "../utils/dateHelpers";
 import {
-  MonthLog,
+  MonthLog, ReceivedIncomeDraft,
   Receivable,
   ReceivableCategory,
   ReceivableFrequency,
@@ -24,6 +24,7 @@ interface UseReceivableActionsParams {
   setGlobalData?: React.Dispatch<React.SetStateAction<UnifiedFinanceData>>;
   commitReceivableTransition?: FinanceTransitionCommitter;
   selectedMonth: string;
+  onIncomeReceived?: (receipt: ReceivedIncomeDraft) => void;
   onPaymentsReversed?: (ids: string[]) => void;
   showToast: (message: string, action?: PaymentHistoryAction) => void;
 }
@@ -446,7 +447,7 @@ export function useReceivableActions({
   commitReceivableTransition,
   selectedMonth,
   showToast,
-  onPaymentsReversed
+  onPaymentsReversed, onIncomeReceived
 }: UseReceivableActionsParams) {
   const executeTransition = <T extends { ok: boolean; data: UnifiedFinanceData }>(
     transition: (prev: UnifiedFinanceData) => T
@@ -477,6 +478,10 @@ export function useReceivableActions({
       description: `₱${change.receipt.amount.toLocaleString()} receipt for ${change.receivable.name}`,
       onClick: () => replayReceipt(change)
     });
+    if (commitReceivableTransition && change.receipt.wallet && change.receipt.walletCredit > 0) {
+      onIncomeReceived?.({ receiptId: change.receipt.id, inflowId: change.receivable.id, month: change.targetMonth,
+        wallet: change.receipt.wallet, amount: change.receipt.walletCredit, name: change.receivable.name });
+    }
   };
 
   const replayReceipt = (change: ReceiptChange, undoneAt?: string) => {
