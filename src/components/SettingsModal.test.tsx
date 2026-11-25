@@ -980,3 +980,14 @@ it("applies the same business preset later without changing financial records or
   expect(updated.logs).toEqual(original.logs);
   expect(data).toEqual(original);
 });
+
+it("opts only checked wallets into Savings controls and keeps funded reserves enabled", () => {
+  const data = createMockData();
+  const wallet = data.settings!.customWallets![0];
+  const { setGlobalData } = renderSettingsModal(data, { initialTab: "wallets" });
+  fireEvent.click(screen.getByRole("checkbox", { name: `Savings for ${wallet.label}` }));
+  fireEvent.click(screen.getByRole("button", { name: "Save Settings" }));
+  const updated = setGlobalData.mock.calls[0][0](data);
+  expect(updated.settings.savingsWalletIds).toEqual([wallet.id]);
+  expect(updated.wallets).toBe(data.wallets); expect(updated.library).toBe(data.library); expect(updated.logs).toBe(data.logs);
+});

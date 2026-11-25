@@ -269,7 +269,7 @@ const {
     return () => window.removeEventListener("hashchange", openQuickExpense);
   }, []);
   const [opsTab, setOpsTab] = useState<"bills" | "inflows" | "gigs">("bills");
-  const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "sync">("general");
+  const [settingsInitialTab, setSettingsInitialTab] = useState<"general" | "baselines" | "sync" | "wallets">("general");
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startupToastTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   React.useEffect(() => () => {
@@ -1332,7 +1332,7 @@ const copySummaryToClipboard = async () => {
           />
         )}
 
-        {activeTab === "wallets" && <WalletsTab key={dataOwnerSub} onSaveSavings={setWalletSavings} onNavigateToExpenses={() => setActiveTab("expenses")} onTransfer={() => openLedger('transfer')} globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("general"); setShowSettingsModal(true); }} />}
+        {activeTab === "wallets" && <WalletsTab key={dataOwnerSub} onSaveSavings={setWalletSavings} onNavigateToExpenses={() => setActiveTab("expenses")} onTransfer={() => openLedger('transfer')} globalData={globalData} setGlobalData={syncedSetGlobalData} onCommit={commitWallet} onIncrement={incrementWallet} onOpenSettings={() => { setSettingsInitialTab("wallets"); setShowSettingsModal(true); }} />}
         {activeTab === "expenses" && (
           <ErrorBoundary>
             <Suspense fallback={<p role="status" className="p-4 text-sm text-muted">Loading expenses…</p>}>

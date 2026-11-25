@@ -200,7 +200,15 @@ export interface MonthlyBudget {
   categoryLimits?: Record<string, number>;
 }
 
+export interface EmergencyFundGoal {
+  target: number;
+  walletIds: string[];
+}
+
 export interface AppSettings {
+  /** Explicit opt-in for Savings controls; existing set-aside amounts remain visible. */
+  savingsWalletIds?: string[];
+  emergencyFundGoal?: EmergencyFundGoal | null;
   /** Money set aside within existing balances; planning only, not a spending lock. */
   walletSavings?: Record<string, number>;
   monthlyBudgets?: Record<string, MonthlyBudget | null>;

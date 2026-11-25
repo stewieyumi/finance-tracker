@@ -11,7 +11,7 @@ describe('wallet Savings controls', () => {
   it('keeps edits local until Save and supports set-all and release without changing balances', () => {
     let current = seed(); const commit = vi.fn(); const increment = vi.fn();
     const onSaveSavings = vi.fn((id, amount, expected) => { const result = applyWalletSavings(current, id, amount, expected); if (result.ok) current = result.data; return result; });
-    const props = () => ({ wallets: current.wallets, savings: current.settings?.walletSavings, customWallets: current.settings?.customWallets, onSaveSavings, onCommit: commit, onIncrement: increment });
+    const props = () => ({ enabledSavingsIds: ['main'], wallets: current.wallets, savings: current.settings?.walletSavings, customWallets: current.settings?.customWallets, onSaveSavings, onCommit: commit, onIncrement: increment });
     const view = render(<WalletGrid {...props()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Set savings for MariBank' }));
     expect(screen.getByRole('dialog', { name: 'Savings' })).toBeVisible();
@@ -34,7 +34,7 @@ describe('wallet Savings controls', () => {
   it('keeps the editor open on excessive savings or a concurrently changed wallet', () => {
     let current = seed();
     const onSaveSavings = (id: string, amount: number, expected: { balance: unknown; savings: unknown }) => applyWalletSavings(current, id, amount, expected);
-    render(<WalletGrid wallets={current.wallets} customWallets={current.settings?.customWallets} onSaveSavings={onSaveSavings} onCommit={vi.fn()} onIncrement={vi.fn()} />);
+    render(<WalletGrid enabledSavingsIds={['main']} wallets={current.wallets} customWallets={current.settings?.customWallets} onSaveSavings={onSaveSavings} onCommit={vi.fn()} onIncrement={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Set savings for MariBank' }));
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Savings amount' }), { target: { value: '1001' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save Savings' }));

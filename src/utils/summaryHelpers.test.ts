@@ -133,6 +133,17 @@ describe('comprehensive copied financial summary', () => {
     expect(text).toContain('Selected wallets: Bank; available now: ₱200.00');
     expect(text).toContain('TOTAL RECORDED SPENDING: ₱360.25');
   });
+  it('includes the checkup, enabled Savings wallets and emergency-goal progress from the same readers as the UI', () => {
+    const data = seed(); data.settings!.walletSavings = { main: 800 }; data.settings!.savingsWalletIds = ['main'];
+    data.settings!.emergencyFundGoal = { target: 1000, walletIds: ['main'] };
+    const text = summary(data);
+    expect(text).toContain('FINANCIAL CHECKUP — CURRENT CASH / NOVEMBER 2026 ACTIVITY');
+    expect(text).toContain('Wallets with Savings controls enabled: Bank');
+    expect(text).toContain('Target: ₱1,000.00; existing Savings counted: ₱800.00; remaining: ₱200.00');
+    expect(text).toContain('Selected Savings wallets: Bank'); expect(text).toContain('Progress: 80.00%');
+    expect(text).toContain('AVAILABLE AFTER SAVINGS: ₱475.00');
+    expect(text).toContain('no additional money is added or reserved');
+  });
   it('preserves unknown expected amounts and confirmed month-only receipt notes', () => {
     const data = seed(); const text = buildFinancialSummary({ globalData: data, selectedMonth: month, totalLiquid: 1275,
       activeBills: [], activeReceivables: [{ ...inflows[0], amount: 0, amountReceived: 0, amountUnspecified: true }],

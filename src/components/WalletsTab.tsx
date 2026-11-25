@@ -5,7 +5,7 @@ import { Plus, Archive, Edit2, CreditCard, Info, ArrowRightLeft } from 'lucide-r
 import { UnifiedFinanceData, CustomWallet, WalletMutationHandler, WalletMutationOutcome } from '../types/finance';
 import { formatPHP } from '../utils/currency';
 import { getWalletForBill, reconcileWalletBalances, parseWalletBalance, validateActiveWalletAssignment } from '../utils/financeHelpers';
-import { readWalletSavings, walletSavingsTotals } from "../utils/walletSavings";
+import { enabledSavingsWalletIds, readWalletSavings, walletSavingsTotals } from "../utils/walletSavings";
 import { WalletGrid } from './WalletGrid';
 
 interface WalletsTabProps {
@@ -33,7 +33,7 @@ const WALLET_NAME_SUGGESTIONS = [
   "CIMB", "Tonik", "Cash On-Hand"
 ];
 
-export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalData, onCommit, onIncrement, onSaveSavings, onTransfer, onNavigateToExpenses }) => {
+export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalData, onCommit, onIncrement, onSaveSavings, onOpenSettings, onTransfer, onNavigateToExpenses }) => {
   const [showAdd, setShowAdd] = useState(false);
   const formId = useId();
   const returnFocusId = useRef<string | null>(null);
@@ -255,7 +255,8 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
           </div>
         </details>
       )}
-      <WalletGrid savings={globalData.settings?.walletSavings} onSaveSavings={onSaveSavings} firstBalanceButtonRef={firstBalanceButtonRef} wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} savingsWallet={globalData.settings?.savingsWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
+      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-muted">Enable Savings only for the wallets you use to set money aside.</p>{onOpenSettings && <button type="button" onClick={onOpenSettings} className="min-h-11 rounded-xl bg-fill px-3 text-xs font-semibold text-primary">Savings settings</button>}</div>
+      <WalletGrid enabledSavingsIds={enabledSavingsWalletIds(globalData.settings)} savings={globalData.settings?.walletSavings} onSaveSavings={onSaveSavings} firstBalanceButtonRef={firstBalanceButtonRef} wallets={globalData.wallets} milestoneWallet={globalData.settings?.milestoneWallet} savingsWallet={globalData.settings?.savingsWallet} customWallets={customWallets} onCommit={onCommit} onIncrement={onIncrement} />
       <div className="rounded-2xl bg-surface p-3 sm:p-4">
         <div className="flex items-center justify-between mb-4"><h2 data-guide-target="accounts" className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2"><CreditCard size={14} className="text-emerald-400" /> Account Management</h2></div>
         <p id={`${formId}-help`} className="mb-4 text-xs text-muted">A wallet is where you keep money, such as cash, GCash, or a bank account. Add it here, then tap its balance above to update it.</p>

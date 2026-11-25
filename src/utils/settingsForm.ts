@@ -1,3 +1,4 @@
+import { enabledSavingsWalletIds } from "./walletSavings";
 import { AppSettings, Deduction, WalletState } from "../types/finance";
 import {
   calculateNetSalary,
@@ -17,6 +18,7 @@ export const EXPENSE_CATEGORIES = [
 ] as const;
 
 export interface SettingsForm {
+  savingsWalletIds: string[];
   goalName: string;
   targetFund: number;
   paydayDays: number[];
@@ -82,6 +84,7 @@ export function createSettingsForm(
   };
 
   return {
+    savingsWalletIds: enabledSavingsWalletIds(settings),
     goalName: settings?.goalName || "",
     targetFund: settings?.targetFund || 0,
     paydayDays: settings?.paydayDays ? [...settings.paydayDays] : [],
@@ -133,6 +136,7 @@ export function applySettingsForm(
 
   return {
     ...(settings || {}),
+    savingsWalletIds: [...new Set([...(form.savingsWalletIds ?? []), ...Object.entries(settings?.walletSavings ?? {}).filter(([, amount]) => amount > 0).map(([id]) => id)])],
     targetFund: Number(form.targetFund),
     paydayDays: form.paydayDays,
     grossPerPayoutSalary: gross,
