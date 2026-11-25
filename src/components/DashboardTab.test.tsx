@@ -151,9 +151,16 @@ describe("DashboardTab", () => {
     expect(screen.getByLabelText("Go to slide 4")).toBeInTheDocument();
   });
 
-  it("shows liquid cash in a wallet shortcut", () => {
+  it("keeps owned cash visible while excluding wallet Savings from Safe to Spend", () => {
+    const data = { ...defaultProps.globalData, settings: { ...defaultProps.globalData.settings, walletSavings: { main: 4000 } } };
+    render(<DashboardTab {...defaultProps} globalData={data} />);
+    expect(screen.getByRole("button", { name: /Wallets.*Total cash/ })).toHaveTextContent("Savings ₱4,000.00 · Available ₱3,000.00");
+    expect(screen.getByRole("button", { name: "Safe to Spend, View Runway and Details" })).toHaveTextContent("₱0.00");
+  });
+
+  it("shows total cash in a wallet shortcut", () => {
     render(<DashboardTab {...defaultProps} />);
-    const walletCard = screen.getByRole("button", { name: /Wallets.*liquid cash across 2 wallets/i });
+    const walletCard = screen.getByRole("button", { name: /Wallets.*total cash across 2 wallets/i });
     expect(walletCard).toHaveTextContent("₱7,000.00");
     fireEvent.click(walletCard);
     expect(defaultProps.onNavigateToWallets).toHaveBeenCalled();

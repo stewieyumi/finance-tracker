@@ -1,3 +1,5 @@
+import { formatPHP } from "../utils/currency";
+import { walletSavingsTotals } from "../utils/walletSavings";
 import { budgetCash } from "../utils/budgeting";
 import { GuideButton } from "./ContextGuideControls";
 import { formatHistoryDate } from "../utils/transactionDates";
@@ -134,7 +136,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const selectedYear = selectedMonth.split(" ")[1] || "2026";
-  const safeToSpend = calculateSafeToSpend(totalLiquid, totalUnpaidCommitments);
+  const savingsTotals = useMemo(() => walletSavingsTotals(globalData), [globalData]);
+  const safeToSpend = calculateSafeToSpend(savingsTotals.available, totalUnpaidCommitments);
   const reconciled = useMemo(() => reconcileWalletBalances(globalData), [globalData]);
 
   const debt = useMemo(() => reconcileDebt(globalData, selectedMonth), [globalData, selectedMonth]);
@@ -382,13 +385,13 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                       ₱{safeToSpend.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </div>
                     <p className="text-xs text-muted mt-0.5 sm:mt-1 font-medium">
-                      Liquid cash minus all remaining unpaid commitments
+                      Cash after savings minus all remaining unpaid commitments
                     </p>
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-2 border-t border-inverse/[0.04] text-[11px] text-faint">
                     <span className="font-mono">
-                      Liquid: ₱{totalLiquid.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      After savings: ₱{savingsTotals.available.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </span>
                     <span className="font-mono">
                       Commitments: ₱{totalUnpaidCommitments.toLocaleString("en-US", { minimumFractionDigits: 2 })}
@@ -567,9 +570,10 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           ₱{totalLiquid.toLocaleString("en-US", { minimumFractionDigits: 2 })}
         </span>
         <span className="mt-2 block text-xs text-muted">
-          Liquid cash across {Object.keys(globalData.wallets || {}).length} wallets
+          Total cash across {Object.keys(globalData.wallets || {}).length} wallets
           {!reconciled.isComplete && " • ⚠️ Corrupted balances detected"}
         </span>
+        {(savingsTotals.savings > 0 || savingsTotals.needsReview) && <span className="privacy-blur mt-2 block text-xs text-muted">Savings {formatPHP(savingsTotals.savings)} · Available {formatPHP(savingsTotals.available)}{savingsTotals.needsReview ? " · Savings need review" : ""}</span>}
       </button>
 
       <section aria-labelledby="dashboard-goals">

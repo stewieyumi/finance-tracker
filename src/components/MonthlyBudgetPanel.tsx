@@ -1,3 +1,4 @@
+import { readWalletSavings } from "../utils/walletSavings";
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { BudgetCashPlan, FinanceTransitionCommitter, MonthlyBudget, UnifiedFinanceData } from '../types/finance';
 import { applyMonthlyBudget, BUDGET_CATEGORIES, isMonthlyBudget, readBudgetSpending, budgetCash, budgetDateKey, budgetDays, budgetMonthRange, calculateCashGuidance, effectiveBudget, readDailyBudget } from '../utils/budgeting';
@@ -57,7 +58,7 @@ export function MonthlyBudgetPanel({ data, month, commitTransition, onSaved, unp
   };
   const close = () => { setEditing(false); setError(''); requestAnimationFrame(() => opener.current?.focus()); };
   const fingerprint = (current: UnifiedFinanceData, plan: BudgetCashPlan) => ({
-    wallets: JSON.stringify(plan.walletIds.map(wallet => [wallet, current.wallets[wallet]])),
+    wallets: JSON.stringify(plan.walletIds.map(wallet => [wallet, current.wallets[wallet], current.settings?.walletSavings?.[wallet]])),
     spending: JSON.stringify(readBudgetSpending(current, month, { ...plan, walletIds: plan.walletIds })),
   });
   const save = (next: MonthlyBudget | undefined) => {
@@ -111,8 +112,8 @@ export function MonthlyBudgetPanel({ data, month, commitTransition, onSaved, unp
         <li>Estimate daily food, transport and other essentials. Add a savings target or cushion if you want to protect some money.</li>
         <li>Choose Calculate my plan, review the estimate, then Save budget.</li>
       </ol>
-      <p className="mt-3 font-medium text-primary">Starting daily guide = (available cash − unpaid payments − savings − cushion) ÷ days to cover.</p>
-      <p className="mt-2 text-muted">Food, transport and everyday extras come from that daily amount. Upcoming income stays separate until received. Daily carry-forward can change the amount shown for a particular day.</p>
+      <p className="mt-3 font-medium text-primary">Starting daily guide = (available cash − unpaid payments − extra savings target − cushion) ÷ days to cover.</p>
+      <p className="mt-2 text-muted">Money already set aside as Savings in Wallets is excluded from available cash. Food, transport and everyday extras come from that daily amount. Upcoming income stays separate until received. Daily carry-forward can change the amount shown for a particular day.</p>
     </details>
     {raw != null && !isMonthlyBudget(raw) && <p role="status" className="text-xs text-warning">This saved budget needs review. Open the editor to replace it.</p>}
     {!budget && !editing && <p className="text-xs text-muted">Answer a few questions about daily needs, commitments and savings to get a plan you can adjust.</p>}
@@ -151,10 +152,11 @@ export function MonthlyBudgetPanel({ data, month, commitTransition, onSaved, unp
       event.preventDefault(); save({ limit: Number(limit), rollover, ...(cashPlan ? { cashPlan } : {}), categoryLimits: Object.fromEntries(Object.entries(categories).filter(([, amount]) => amount.trim() !== '').map(([category, amount]) => [category, Number(amount)])) });
     }}>
       <fieldset className="min-w-0"><legend className="mb-2 text-xs font-semibold text-primary">1. Which wallets fund your everyday spending?</legend>
-        <div className="space-y-1">{allCash.wallets.map(wallet => <label key={wallet.id} className="flex min-h-11 min-w-0 items-center justify-between gap-2 rounded-xl bg-fill px-3 text-xs">
-          <span className="flex min-w-0 items-center gap-2"><input type="checkbox" checked={walletIds.includes(wallet.id)} onChange={event => { setWalletIds(current => event.target.checked ? [...current, wallet.id] : current.filter(value => value !== wallet.id)); invalidateProposal(); }} /><span className="privacy-blur break-words">{wallet.label}</span></span><span className="privacy-blur shrink-0 font-mono">{formatPHP(wallet.balance)}</span>
+        <div className="space-y-1">{allCash.wallets.map(wallet => <label key={wallet.id} className="grid min-h-11 min-w-0 grid-cols-1 gap-1 rounded-xl bg-fill px-3 py-2 text-xs sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-2">
+          <span className="flex min-w-0 items-center gap-2"><input type="checkbox" checked={walletIds.includes(wallet.id)} onChange={event => { setWalletIds(current => event.target.checked ? [...current, wallet.id] : current.filter(value => value !== wallet.id)); invalidateProposal(); }} /><span className="privacy-blur break-words">{wallet.label}</span></span><span className="privacy-blur min-w-0 break-all font-mono sm:text-right">Available {formatPHP(readWalletSavings(data, wallet.id).available)}</span>
         </label>)}</div>
-        <p className="privacy-blur mt-2 text-xs text-muted">Selected liquid cash: {formatPHP(budgetCash(data, walletIds).available)}</p>
+        <p className="privacy-blur mt-2 text-xs text-muted">Selected cash available after savings: {formatPHP(budgetCash(data, walletIds).available)}</p>
+        <p className="mt-1 text-xs text-muted">Wallet savings are already excluded. The savings target below is extra money you want to set aside during this period.</p>
       </fieldset>
       <fieldset className="min-w-0"><legend className="mb-2 text-xs font-semibold text-primary">2. How long should this money last?</legend><div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
         <div><label htmlFor={`${id}-start`} className="mb-1 block text-xs text-muted">Start date</label><input id={`${id}-start`} type="date" required value={startDate} onChange={event => { setStartDate(event.target.value); invalidateProposal(); }} className={inputClass} /></div>

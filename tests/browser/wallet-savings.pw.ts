@@ -1,0 +1,80 @@
+import { test, expect, returningData, storedData, navigate } from './fixtures';
+import { getMonthKey } from '../../src/utils/dateHelpers';
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`wallet Savings reserve, planning and actual spending in ${theme}`, async ({ page, isolatedApp }, info) => {
+    const data = returningData();
+    data.settings = { ...data.settings, theme, monthlyBudgets: { [getMonthKey(new Date())]: { limit: 2100 } } };
+    data.library.bills = []; data.library.receivables = []; data.library.expenses = [];
+    const { waitForSaved } = await isolatedApp(data); const before = (await storedData(page))!;
+    await navigate(page, 'Wallets');
+    const open = () => page.getByRole('button', { name: 'Set savings for Test Bank', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Savings', exact: true });
+    await open(); await dialog.getByRole('spinbutton', { name: 'Savings amount' }).fill('600');
+    await dialog.getByRole('button', { name: 'Close balance editor' }).click();
+    expect(await storedData(page)).toEqual(before);
+    await open(); await dialog.getByRole('spinbutton', { name: 'Savings amount' }).fill('2001');
+    await dialog.getByRole('button', { name: 'Save Savings' }).click();
+    await expect(dialog.getByRole('alert')).toContainText('between zero');
+    expect(await storedData(page)).toEqual(before);
+    await dialog.getByRole('button', { name: 'Set all aside' }).click();
+    await dialog.getByRole('button', { name: 'Save Savings' }).click();
+    await expect(dialog).toHaveCount(0);
+    const reserved = (await storedData(page))!;
+    expect(reserved.settings?.walletSavings).toEqual({ main: 2000 });
+    expect(reserved.wallets).toEqual(before.wallets); expect(reserved.library).toEqual(before.library); expect(reserved.logs).toEqual(before.logs);
+    await waitForSaved(); await page.reload(); await navigate(page, 'Wallets'); await open();
+    await expect(dialog.getByRole('spinbutton', { name: 'Savings amount' })).toHaveValue('2000');
+    await dialog.getByRole('button', { name: 'Close balance editor' }).click();
+    await navigate(page, 'Dashboard');
+    const walletCard = page.getByRole('button', { name: /^Wallets.*Total cash/ });
+    await expect(walletCard).toContainText('Savings ₱2,000.00 · Available ₱100.00');
+    await page.getByRole('button', { name: /^Budget Plan/ }).click();
+    const budget = page.getByRole('dialog', { name: 'Budget Plan', exact: true });
+    await expect(budget.getByText('Left today', { exact: true }).locator('..')).toContainText('₱100.00');
+    await budget.getByRole('button', { name: 'Edit budget', exact: true }).click();
+    await expect(budget.getByText(/Selected cash available after savings:/)).toContainText('₱100.00');
+    await page.getByRole('button', { name: 'Close budget plan' }).click();
+    await navigate(page, 'Expenses'); await page.getByRole('button', { name: /^Manual\b/ }).click();
+    const expense = page.getByRole('dialog', { name: 'Log Expense', exact: true });
+    await expense.getByRole('spinbutton', { name: 'Amount (₱)', exact: true }).fill('150');
+    await expense.getByRole('textbox', { name: 'Merchant / Name' }).fill('Actual lunch');
+    await expense.getByRole('button', { name: 'Save & Deduct', exact: true }).click();
+    await expect(expense).toHaveCount(0);
+    const spent = (await storedData(page))!;
+    expect(spent.wallets.main).toBe(1850); expect(spent.settings?.walletSavings?.main).toBe(2000);
+    await navigate(page, 'Wallets'); await expect(page.getByText('Review this wallet’s savings. Actual spending may have reduced its balance.')).toBeVisible();
+    await open(); await dialog.getByRole('button', { name: 'Release savings' }).click();
+    await dialog.getByRole('button', { name: 'Save Savings' }).click();
+    expect((await storedData(page))!.settings?.walletSavings?.main).toBe(0);
+    await open(); await dialog.getByRole('spinbutton', { name: 'Savings amount' }).fill('500');
+    await dialog.getByRole('button', { name: 'Save Savings' }).click();
+    await page.screenshot({ path: info.outputPath(`wallet-savings-${theme}.png`) });
+    expect((await storedData(page))!.wallets).toEqual(spent.wallets);
+  });
+
+  test(`Savings editor fits compact, tablet and desktop screens in ${theme}`, async ({ page, isolatedApp }, info) => {
+    test.skip(info.project.name === 'phone', 'Viewport matrix runs once per theme.');
+    const data = returningData(); data.wallets.main = 12345678.90; data.settings = { ...data.settings, theme, walletSavings: { main: 1000 } };
+    await isolatedApp(data); await navigate(page, 'Wallets'); const before = await storedData(page);
+    for (const [width, height] of [[320, 568], [320, 320], [844, 390], [768, 1024], [1920, 1080]]) {
+      await page.setViewportSize({ width, height });
+      await page.getByRole('button', { name: 'Set savings for Test Bank' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Savings', exact: true });
+      const box = await dialog.boundingBox(); expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(-1); expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+      expect(box!.y).toBeGreaterThanOrEqual(-1); expect(box!.y + box!.height).toBeLessThanOrEqual(height + 1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+      await dialog.getByRole('button', { name: 'Save Savings' }).scrollIntoViewIfNeeded();
+      await expect(dialog.getByRole('button', { name: 'Save Savings' })).toBeInViewport();
+      await dialog.getByRole('button', { name: 'Close balance editor' }).click();
+      await navigate(page, 'Dashboard'); await page.getByRole('button', { name: /^Budget Plan/ }).click();
+      const budget = page.getByRole('dialog', { name: 'Budget Plan', exact: true });
+      await budget.getByRole('button', { name: 'Build my budget', exact: true }).click();
+      expect(await budget.getByRole('form').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+      await budget.getByRole('button', { name: 'Close budget plan' }).click();
+      await navigate(page, 'Wallets');
+    }
+    expect(await storedData(page)).toEqual(before);
+  });
+}

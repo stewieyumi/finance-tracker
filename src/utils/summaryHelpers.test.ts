@@ -45,7 +45,7 @@ describe('comprehensive copied financial summary', () => {
     const data = seed(); const before = structuredClone(data); const text = summary(data);
     expect(text).toContain('AT A GLANCE\nYou have ₱1,275.00');
     expect(text).toContain('Inflows receipts total ₱600.00 and recorded spending totals ₱360.25');
-    expect(text).toContain('Cash after these unpaid commitments: ₱875.00');
+    expect(text).toContain('Cash after savings and these unpaid commitments: ₱875.00');
     expect(text).toContain('Old bank [archived]: ₱50.00'); expect(text).toContain('extra [unlisted]: ₱25.00');
     expect(text).toContain('Month Income Collected: ₱600.00 (actual Inflows receipts)');
     expect(text).toContain('Historical income — date unverified: ₱100.00');
@@ -122,6 +122,16 @@ describe('comprehensive copied financial summary', () => {
     expect(text).toContain('Bank → Cash: ₱500.00; fee needs review');
     expect(text).toContain('Some manual income or transfer records need review');
     expect(text).not.toContain('₱NaN');
+  });
+  it('reports savings inside total balances and excludes them from the spending outlook', () => {
+    const data = seed(); data.settings!.walletSavings = { main: 800 };
+    const text = summary(data);
+    expect(text).toContain('TOTAL WALLET CASH: ₱1,275.00');
+    expect(text).toContain('SAVINGS WITHIN THESE BALANCES: ₱800.00');
+    expect(text).toContain('AVAILABLE AFTER SAVINGS: ₱475.00');
+    expect(text).toContain('Cash after savings and these unpaid commitments: ₱75.00');
+    expect(text).toContain('Selected wallets: Bank; available now: ₱200.00');
+    expect(text).toContain('TOTAL RECORDED SPENDING: ₱360.25');
   });
   it('preserves unknown expected amounts and confirmed month-only receipt notes', () => {
     const data = seed(); const text = buildFinancialSummary({ globalData: data, selectedMonth: month, totalLiquid: 1275,

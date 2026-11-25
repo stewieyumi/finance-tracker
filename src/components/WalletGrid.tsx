@@ -1,24 +1,30 @@
 import React, { useState, useId, useRef } from 'react';
 import { Modal } from './ui/Modal';
-import { Plus, X, CreditCard, CheckCircle2 } from 'lucide-react';
+import { Plus, X, CreditCard, CheckCircle2, PiggyBank } from 'lucide-react';
 import { entryDialogStyles } from './ui/dialogStyles';
-import { WalletState, CustomWallet, WalletMutationHandler, WalletMutationOutcome } from '../types/finance';
+import { WalletState, CustomWallet, WalletMutationHandler, WalletMutationOutcome, AppSettings } from '../types/finance';
+import { readWalletSavings } from "../utils/walletSavings";
+import { formatPHP } from "../utils/currency";
 import { parseWalletBalance } from '../utils/financeHelpers';
 
-interface WalletGridProps { firstBalanceButtonRef?: React.Ref<HTMLButtonElement>; wallets: WalletState; customWallets?: CustomWallet[]; milestoneWallet?: string; savingsWallet?: string; onCommit: WalletMutationHandler; onIncrement: WalletMutationHandler; }
+interface WalletGridProps { savings?: AppSettings["walletSavings"]; onSaveSavings?: (id: string, amount: number, expected: { balance: unknown; savings: unknown }) => WalletMutationOutcome | void; firstBalanceButtonRef?: React.Ref<HTMLButtonElement>; wallets: WalletState; customWallets?: CustomWallet[]; milestoneWallet?: string; savingsWallet?: string; onCommit: WalletMutationHandler; onIncrement: WalletMutationHandler; }
 
-export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ firstBalanceButtonRef, wallets, milestoneWallet, savingsWallet, customWallets, onCommit, onIncrement }) => {
+export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ savings, onSaveSavings, firstBalanceButtonRef, wallets, milestoneWallet, savingsWallet, customWallets, onCommit, onIncrement }) => {
   const [editingWallet, setEditingWallet] = useState<(CustomWallet & { balance: number | null }) | null>(null);
+  const [editMode, setEditMode] = useState<"balance" | "savings">("balance");
+  const savingsSnapshot = useRef<{ balance: unknown; savings: unknown }>({ balance: undefined, savings: undefined });
   const [editValue, setEditValue] = useState("");
   const [error, setError] = useState("");
 
   const balanceFormId = useId();
   const balanceInputRef = useRef<HTMLInputElement>(null);
 
-  const openEdit = (wallet: CustomWallet, currentBalance: number | null) => {
+  const openEdit = (wallet: CustomWallet, currentBalance: number | null, mode: "balance" | "savings" = "balance") => {
+    setEditMode(mode);
+    savingsSnapshot.current = { balance: wallets[wallet.id], savings: savings?.[wallet.id] };
     setError("");
     setEditingWallet({ ...wallet, balance: currentBalance });
-    setEditValue(currentBalance === null || currentBalance === 0 ? "" : String(currentBalance));
+    setEditValue(mode === "savings" ? String(savings?.[wallet.id] ?? 0) : currentBalance === null || currentBalance === 0 ? "" : String(currentBalance));
   };
 
   const finishChange = (outcome: WalletMutationOutcome | void) => {
@@ -34,6 +40,11 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ firstBalanceB
     e.preventDefault();
     if (!editingWallet) return;
     const cleaned = editValue.replace(/,/g, "").trim();
+    if (editMode === "savings") {
+      if (!onSaveSavings) { setError("Savings changes are unavailable until your account is ready."); return; }
+      finishChange(onSaveSavings(editingWallet.id, Number(cleaned || 0), savingsSnapshot.current));
+      return;
+    }
     const parsed = parseWalletBalance(cleaned === "" && editingWallet.balance !== null ? 0 : cleaned);
     if (!parsed.isValid) {
       setError("Enter the correct balance before saving.");
@@ -45,11 +56,12 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ firstBalanceB
   return (
     <>
       <div className="rounded-2xl bg-surface p-3 sm:p-4">
-        <div className="mb-2 px-1 text-sm font-semibold text-primary">Liquid Cash Wallets</div>
+        <div className="mb-2 px-1 text-sm font-semibold text-primary">Wallet balances</div>
         <div className="overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle">
           {(customWallets || []).map((w, index) => {
             const parsed = parseWalletBalance(wallets[w.id]);
             const currentBalance = parsed.isValid ? parsed.balance : null;
+            const funds = readWalletSavings({ wallets, settings: { walletSavings: savings } }, w.id);
             const isMilestoneWallet = w.id === milestoneWallet;
             const isSavingsWallet = w.id === savingsWallet;
 
@@ -65,6 +77,7 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ firstBalanceB
             const displayColor = `${w.color || "text-strong"} font-bold`;
 
             return (
+              <div key={w.id}>
               <button ref={index === 0 ? firstBalanceButtonRef : undefined} data-guide-interactive="open" key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`wallet-balance-row group relative flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-high ${roleClasses}`}>
                 <span className="flex min-w-0 items-center gap-2">
                   <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full bg-current ${w.color || "text-muted"}`} />
@@ -72,11 +85,20 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ firstBalanceB
                   {isMilestoneWallet && <span className="sr-only">Goal wallet</span>}
                   {isSavingsWallet && <span className="sr-only">Savings wallet</span>}
                 </span>
-                <span className="privacy-blur flex shrink-0 items-baseline gap-0.5">
+                <span className="flex min-w-0 shrink-0 flex-col items-end gap-0.5"><span className="text-[10px] text-muted">Total balance</span><span className="privacy-blur flex items-baseline gap-0.5">
                   <span className="text-[10px] text-faint font-mono">₱</span>
                   <span className="text-sm font-semibold tabular-nums text-strong">{currentBalance === null ? "Invalid balance" : currentBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </span>
+                </span></span>
               </button>
+              <div className="grid min-w-0 grid-cols-2 gap-2 px-3 pb-3 text-xs">
+                <button type="button" onClick={() => openEdit(w, currentBalance, "savings")} aria-label={`Set savings for ${w.label}`} className="min-h-11 min-w-0 rounded-xl bg-fill px-2 py-2 text-left transition hover:bg-surface-high">
+                  <span className="flex items-center gap-1 text-muted"><PiggyBank size={12} aria-hidden="true" /> Savings</span>
+                  <span className="privacy-blur mt-1 block break-all font-mono font-semibold text-primary">{funds.savings === null ? "Needs review" : formatPHP(funds.savings)}</span>
+                </button>
+                <div className="min-w-0 px-2 py-2"><span className="text-muted">Available to spend</span><span className="privacy-blur mt-1 block break-all font-mono font-semibold text-primary">{funds.balance === null || funds.savings === null ? "Needs review" : formatPHP(funds.available)}</span></div>
+              </div>
+              {funds.needsReview && <p className="px-3 pb-3 text-xs text-warning">Review this wallet’s savings. Actual spending may have reduced its balance.</p>}
+              </div>
             );
           })}
           {(!customWallets || customWallets.length === 0) && <div className="col-span-2 py-4 text-center text-faint text-xs italic">No wallets yet. Add a wallet below, then tap it to set its current balance.</div>}
@@ -88,25 +110,29 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ firstBalanceB
           <div className={`${entryDialogStyles.card} max-w-sm`}>
             <div className={entryDialogStyles.header}>
               <div className="flex items-center gap-3">
-                <div className={entryDialogStyles.icon}><CreditCard size={18} /></div>
-                <div><h3 id={`${balanceFormId}-title`} className="text-sm font-bold text-strong leading-tight">Edit Balance</h3><p className="text-[11px] text-muted font-medium">{editingWallet.label}</p></div>
+                <div className={entryDialogStyles.icon}>{editMode === "savings" ? <PiggyBank size={18} /> : <CreditCard size={18} />}</div>
+                <div><h3 id={`${balanceFormId}-title`} className="text-sm font-bold text-strong leading-tight">{editMode === "savings" ? "Savings" : "Edit Balance"}</h3><p className="text-[11px] text-muted font-medium">{editingWallet.label}</p></div>
               </div>
               <button type="button" aria-label="Close balance editor" onClick={() => setEditingWallet(null)} className={entryDialogStyles.close}><X size={16}/></button>
             </div>
-            <p id={`${balanceFormId}-help`} className="mb-4 text-xs text-muted">Set the current balance to match your bank, e-wallet, or cash on hand. Quick Add Income adds money to the existing balance.</p>
+            <p id={`${balanceFormId}-help`} className="mb-4 text-xs text-muted">{editMode === "savings" ? "Set aside part or all of this wallet for savings. This reduces spending guidance without moving money or blocking actual expenses and transfers." : "Set the current balance to match your bank, e-wallet, or cash on hand. Quick Add Income adds money to the existing balance."}</p>
             <form onSubmit={handleSave} className="space-y-6">
               <div className="relative flex items-center justify-center bg-surface-lowest border border-strong rounded-2xl p-5 focus-within:border-blue-500/50 transition-colors shadow-inner">
                 <span className="absolute left-5 text-faint font-mono text-xl">₱</span>
-                <input ref={balanceInputRef} aria-label="Balance" aria-describedby={`${balanceFormId}-help${error ? ` ${balanceFormId}-error` : ''}`} aria-invalid={Boolean(error)} type="number" inputMode="decimal" step="0.01" value={editValue} onChange={e => { setEditValue(e.target.value); setError(""); }} className="bg-transparent text-center text-3xl font-bold font-mono outline-none w-full text-strong" placeholder="0.00" />
+                <input ref={balanceInputRef} aria-label={editMode === "savings" ? "Savings amount" : "Balance"} aria-describedby={`${balanceFormId}-help${error ? ` ${balanceFormId}-error` : ''}`} aria-invalid={Boolean(error)} type="number" inputMode="decimal" step="0.01" value={editValue} onChange={e => { setEditValue(e.target.value); setError(""); }} className="bg-transparent text-center text-3xl font-bold font-mono outline-none w-full text-strong" placeholder="0.00" />
               </div>
               {error && <p id={`${balanceFormId}-error`} role="alert" className="text-sm text-primary">{error}</p>}
-              <div>
+              {editMode === "savings" ? <>
+                <dl className="grid min-w-0 grid-cols-2 gap-3 text-xs"><div><dt className="text-muted">Total balance</dt><dd className="privacy-blur mt-1 break-all font-mono text-primary">{editingWallet.balance === null ? "Needs review" : formatPHP(editingWallet.balance)}</dd></div><div><dt className="text-muted">Available after savings</dt><dd className="privacy-blur mt-1 break-all font-mono text-primary">{editingWallet.balance === null || !Number.isFinite(Number(editValue)) ? "—" : formatPHP(Math.max(0, editingWallet.balance - Math.max(0, Number(editValue))))}</dd></div></dl>
+                <div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => { setEditValue(String(Math.max(0, editingWallet.balance ?? 0))); setError(""); }} className="min-h-11 rounded-xl bg-fill px-3 text-xs font-semibold text-primary">Set all aside</button><button type="button" onClick={() => { setEditValue("0"); setError(""); }} className="min-h-11 rounded-xl bg-fill px-3 text-xs font-semibold text-primary">Release savings</button></div>
+                <p className="text-xs text-muted">New money stays available. You can change this amount whenever needed.</p>
+              </> : <div>
                 <div className="text-[10px] uppercase tracking-wider font-semibold text-faint mb-2.5 text-center">Quick Add Income</div>
                 <div className="grid grid-cols-3 gap-2">
                   {[100, 500, 1000].map(amt => <button key={amt} type="button" onClick={() => finishChange(onIncrement(editingWallet.id, amt))} className="min-h-11 py-3 chip-blue rounded-xl text-xs font-mono font-bold transition active:scale-95 flex items-center justify-center gap-1 shadow-sm"><Plus size={12} />{amt}</button>)}
                 </div>
-              </div>
-              <button type="submit" className={`${entryDialogStyles.primary} w-full`}><CheckCircle2 size={16} /> Save Balance</button>
+              </div>}
+              <button type="submit" className={`${entryDialogStyles.primary} w-full`}><CheckCircle2 size={16} /> {editMode === "savings" ? "Save Savings" : "Save Balance"}</button>
             </form>
           </div>
         </Modal>

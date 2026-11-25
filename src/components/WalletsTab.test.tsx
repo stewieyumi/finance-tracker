@@ -242,3 +242,13 @@ it("offers wallet creation if there is no balance row to open", () => {
   fireEvent.click(screen.getByRole("button", { name: "Add your first wallet" }));
   expect(screen.getByRole("form", { name: "Add wallet" })).toBeVisible(); expect(setGlobalData).not.toHaveBeenCalled();
 });
+
+it("requires releasing Savings before archiving a wallet whose balance fell to zero", () => {
+  const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+  const data = makeData(); data.wallets.w_del = 0; data.settings!.walletSavings = { w_del: 100 };
+  const setGlobalData = vi.fn();
+  render(<WalletsTab globalData={data} setGlobalData={setGlobalData} onCommit={vi.fn()} onIncrement={vi.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Archive Delete Me account" }));
+  expect(alert).toHaveBeenCalledWith("Release this wallet’s savings before archiving it.");
+  expect(setGlobalData).not.toHaveBeenCalled(); alert.mockRestore();
+});

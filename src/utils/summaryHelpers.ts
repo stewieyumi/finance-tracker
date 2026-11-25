@@ -1,3 +1,4 @@
+import { readWalletSavings, walletSavingsTotals } from "./walletSavings";
 import { readInflowIncome, type InflowIncomeReport } from "./inflowIncome";
 import {
   BillViewModel,
@@ -70,6 +71,7 @@ export function buildFinancialSummary({
     totalUnpaidCommitments;
 
   const reconciled = reconcileWalletBalances(globalData);
+  const savingsTotals = walletSavingsTotals(globalData);
   const walletLabel = (id?: string | null) => {
     if (!id) return "No wallet recorded";
     return [...reconciled.activeWallets, ...reconciled.archivedWallets, ...reconciled.unlistedWallets].find(wallet => wallet.id === id)?.label || id;
@@ -78,7 +80,10 @@ export function buildFinancialSummary({
     ...reconciled.activeWallets,
     ...reconciled.archivedWallets,
     ...reconciled.unlistedWallets
-  ].map(wallet => `  • ${wallet.label}${wallet.status === "active" ? "" : ` [${wallet.status}]`}: ${wallet.isValid ? `₱${fmt(wallet.balance)}` : "Balance needs review"}`);
+  ].map(wallet => {
+    const funds = readWalletSavings(globalData, wallet.id);
+    return `  • ${wallet.label}${wallet.status === "active" ? "" : ` [${wallet.status}]`}: ${wallet.isValid ? `₱${fmt(wallet.balance)}` : "Balance needs review"}; savings ${funds.savings === null ? "needs review" : `₱${fmt(funds.savings)}`}; available ₱${fmt(funds.available)}${funds.needsReview ? " — savings/balance need review" : ""}`;
+  });
   let finalWalletLines = walletLines.length ? walletLines.join("\n") : "  • No accounts configured";
   if (reconciled.hasMetadataAnomalies) finalWalletLines += "\n  ⚠️ Wallet balances or account assignments need review; totals may be incomplete.";
 
@@ -191,15 +196,19 @@ Activity period: ${range.startDate} to ${range.endDate}. Saved records only; dat
 
 AT A GLANCE
 You have ₱${fmt(totalLiquid)} in recorded wallet cash now. In ${selectedMonth}, Inflows receipts total ₱${fmt(incomeReport.actual)} and recorded spending totals ₱${fmt(spending.spent)}.
+Savings set aside within those balances: ₱${fmt(savingsTotals.savings)}. Cash available after savings: ₱${fmt(savingsTotals.available)}.
 There are ₱${fmt(totalUnpaidCommitments)} in unpaid commitments and ₱${fmt(totalPendingAmount)} in expected inflows for the selected view. Expected money is not available cash.
-${totalLiquid < totalUnpaidCommitments ? `Cash is ₱${fmt(roundMoney(totalUnpaidCommitments - totalLiquid))} short of these unpaid commitments.` : `Cash after these unpaid commitments: ₱${fmt(roundMoney(totalLiquid - totalUnpaidCommitments))}, before savings, cushion and everyday spending.`}
+${savingsTotals.available < totalUnpaidCommitments ? `Cash available after savings is ₱${fmt(roundMoney(totalUnpaidCommitments - savingsTotals.available))} short of these unpaid commitments.` : `Cash after savings and these unpaid commitments: ₱${fmt(roundMoney(savingsTotals.available - totalUnpaidCommitments))}, before any extra savings target, cushion and everyday spending.`}
 ${plan && daily ? `Your budget has ₱${fmt(Math.abs(roundMoney(plan.limit - daily.spending.spent)))} ${daily.spending.spent > plan.limit ? "over its spending limit" : "of unspent allowance"}.${daily.ended || daily.future ? " See the plan dates below." : ` Today's everyday spending guide has ₱${fmt(daily.remainingToday)} left.`}` : "No budget plan is set for this month."}
-${spending.excluded || incomeReport.needsReview || !reconciled.isComplete ? "⚠️ Some records need review; see the notes below." : ""}
+${spending.excluded || incomeReport.needsReview || savingsTotals.needsReview ? "⚠️ Some records need review; see the notes below." : ""}
 
 1. LIQUID CASH BREAKDOWN
 ${finalWalletLines}
 ----------------------------------------
-TOTAL LIQUID CASH: ₱${fmt(totalLiquid)}
+TOTAL WALLET CASH: ₱${fmt(totalLiquid)}
+SAVINGS WITHIN THESE BALANCES: ₱${fmt(savingsTotals.savings)}
+AVAILABLE AFTER SAVINGS: ₱${fmt(savingsTotals.available)}
+Savings are a planning reserve; they do not move money or block recording actual spending.${savingsTotals.needsReview ? "\n⚠️ Wallet savings need review before relying on available cash." : ""}
 
 2. UNPAID COMMITMENTS (${unpaid.length} pending, ${overdueBills.length} overdue)
 ${billLines}
