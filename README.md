@@ -304,6 +304,12 @@ check; these help instructions do not establish a fix.
 
 In Wallets → Add New Account, typing a name shows matching common bank/wallet suggestions (for example, G shows GCash and GoTyme). Choose by touch/mouse or Arrow keys and Enter, dismiss with Escape, or keep a custom name. Selecting a suggestion does not save the wallet.
 
+## Financial summary
+
+Dashboard → **Copy Summary** copies a plain-text overview followed by the saved financial details: current wallet balances (including marked archived/unlisted balances), unpaid and settled commitments, pending/received inflow status, actual receipt-month income, category spending, Budget Plan and daily guidance, transfers and fees, savings goal, installment schedules, and saved gigs/tasks. Activity uses the selected month; budget dates and all-date task scope are labeled separately. Current wallet balances are not historical month-end balances.
+
+The report reuses the existing spending, income, daily-budget and debt readers. Transfers are separate from spending; their fees count. Manual ledger income is listed separately rather than added to Inflows receipts, avoiding an unsupported assumption that they represent different money. Planned savings and unspent allowance are not labeled as new cash. Unknown dates, incomplete history and invalid records retain review notes. Copying reads the current in-app snapshot and does not save or alter financial records.
+
 ## Cash-based Budget Plan
 
 Dashboard → **Budget Plan** is available without a configured salary. Its **How to start** section explains which cash to include, the chosen period, unpaid payments, everyday needs and protected savings, with the starting daily formula and a reminder against double subtraction:

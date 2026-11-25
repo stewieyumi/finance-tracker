@@ -5,7 +5,12 @@ import {
   UnifiedFinanceData
 } from "../types/finance";
 import { parseDateKey } from "./dateHelpers";
-import { reconcileWalletBalances } from "./financeHelpers";
+import { reconcileWalletBalances, resolveActiveWalletDefault, parseWalletBalance } from "./financeHelpers";
+import { budgetDateKey, budgetMonthRange, effectiveBudget, readBudgetSpending, readDailyBudget } from "./budgeting";
+import { reconcileDebt } from "./debtReconciliation";
+import { expenseCents } from "./expenseChanges";
+import { roundMoney } from "./currency";
+import { transactionDay } from "./transactionDates";
 
 interface BuildSummaryParams {
   activeBills: BillViewModel[];
@@ -45,7 +50,8 @@ export function buildFinancialSummary({
 
   const fmt = (n: number | string) =>
     Number(n || 0).toLocaleString("en-US", {
-      minimumFractionDigits: 2
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     });
 
   const totalPendingAmount = pending.reduce((acc, r) => {
@@ -64,13 +70,68 @@ export function buildFinancialSummary({
     totalUnpaidCommitments;
 
   const reconciled = reconcileWalletBalances(globalData);
-  const walletLines = reconciled.activeWallets.map(cw => {
-    return `  • ${cw.label}: ₱${fmt(cw.balance)}`;
-  });
+  const walletLabel = (id?: string | null) => {
+    if (!id) return "No wallet recorded";
+    return [...reconciled.activeWallets, ...reconciled.archivedWallets, ...reconciled.unlistedWallets].find(wallet => wallet.id === id)?.label || id;
+  };
+  const walletLines = [
+    ...reconciled.activeWallets,
+    ...reconciled.archivedWallets,
+    ...reconciled.unlistedWallets
+  ].map(wallet => `  • ${wallet.label}${wallet.status === "active" ? "" : ` [${wallet.status}]`}: ${wallet.isValid ? `₱${fmt(wallet.balance)}` : "Balance needs review"}`);
   let finalWalletLines = walletLines.length ? walletLines.join("\n") : "  • No accounts configured";
-  if (!reconciled.isComplete) {
-    finalWalletLines += `\n  ⚠️ Note: ${reconciled.invalidWalletIds.length} corrupted balance(s) detected (${reconciled.invalidWalletIds.join(", ")})`;
-  }
+  if (reconciled.hasMetadataAnomalies) finalWalletLines += "\n  ⚠️ Wallet balances or account assignments need review; totals may be incomplete.";
+
+  const spending = readBudgetSpending(globalData, selectedMonth);
+  const categoryLines = Object.entries(spending.byCategory).filter(([, amount]) => amount > 0)
+    .sort(([, a], [, b]) => b - a).map(([category, amount]) => `  • ${category}: ₱${fmt(amount)}`).join("\n") || "  • No dated spending recorded";
+  const expenseTotal = roundMoney(spending.spent - spending.byCategory.Commitments - spending.byCategory["Transfer fees"]);
+  const effective = effectiveBudget(globalData, selectedMonth);
+  const plan = effective.budget;
+  const today = budgetDateKey();
+  const daily = plan ? readDailyBudget(globalData, selectedMonth, plan, today) : undefined;
+  const range = budgetMonthRange(selectedMonth);
+  const planRange = plan?.cashPlan ?? range;
+  const planLines = plan && daily ? [
+    `• Plan period: ${planRange.startDate} to ${planRange.endDate}${effective.carriedFrom ? ` (carried from ${effective.carriedFrom}${effective.projected ? "; projected" : ""})` : ""}`,
+    `• Spending limit: ₱${fmt(plan.limit)}; recorded spending in plan: ₱${fmt(daily.spending.spent)}`,
+    `• ${daily.spending.spent > plan.limit ? "Over limit" : "Unspent allowance"}: ₱${fmt(Math.abs(roundMoney(plan.limit - daily.spending.spent)))}`,
+    `• Rollover: ${plan.rollover ? "On (unused allowance only; no new money)" : "Off"}`,
+    ...(plan.cashPlan ? [
+      `• Selected wallets: ${plan.cashPlan.walletIds.map(walletLabel).join(", ")}; available now: ₱${fmt(daily.funding.available)}`,
+      `• Usual daily essentials: ₱${fmt(plan.cashPlan.dailyEssentials)}`,
+      `• Savings target: ₱${fmt(plan.cashPlan.savingsTarget)}; cushion: ₱${fmt(plan.cashPlan.cushion)} (planned amounts, not transfers)`,
+    ] : ["• Wallet scope: all wallets"]),
+    `• Unpaid-payment reserve remaining: ₱${fmt(daily.reserveLeft)}`,
+    ...(daily.ended ? ["• This plan has ended; no current daily allowance."] : daily.future ? ["• This plan has not started; no current daily allowance."] : [
+      `• Today (${today}): allowance ₱${fmt(daily.todayCap)}; everyday spending ₱${fmt(daily.todaySpent)}; left ₱${fmt(daily.remainingToday)}${daily.todaySpent > daily.todayCap ? `; over today's allowance by ₱${fmt(roundMoney(daily.todaySpent - daily.todayCap))}` : ""}`,
+      `• Average remaining per day: ₱${fmt(daily.averageRemaining)} across ${daily.daysLeft} day(s); next 7 days: ₱${fmt(daily.nextSevenDays)}`,
+    ]),
+    ...Object.entries(plan.categoryLimits ?? {}).map(([category, limit]) => `  • ${category}: ₱${fmt(daily.spending.byCategory[category])} spent / ₱${fmt(limit)} limit${daily.spending.byCategory[category] > limit ? " — over limit" : ""}`),
+    ...(daily.spending.excluded || daily.funding.needsReview ? ["⚠️ Budget spending or selected wallets need review; guidance may be incomplete."] : []),
+    "Budget allowances are guidance, not additional wallet cash."
+  ].join("\n") : `• No budget set for ${selectedMonth}.${effective.needsReview ? " Previous rollover history needs review." : ""}`;
+  const ledgerIds = new Map<string, number>();
+  for (const row of globalData.library.manualTransactions ?? []) ledgerIds.set(row.id, (ledgerIds.get(row.id) ?? 0) + 1);
+  const ledger = (globalData.library.manualTransactions ?? []).filter(row => {
+    const day = transactionDay(row.date);
+    return !!row.id && ledgerIds.get(row.id) === 1 && day >= range.startDate && day <= range.endDate && expenseCents(row.amount) !== null;
+  });
+  const transfers = ledger.filter(row => row.type === "transfer");
+  const transferLines = transfers.map(row => `  • ${transactionDay(row.date)}: ${walletLabel(row.wallet)} → ${walletLabel(row.destinationWallet)}: ₱${fmt(row.amount)}${row.transferFee !== undefined ? expenseCents(row.transferFee) === null ? "; fee needs review" : `; fee ₱${fmt(row.transferFee)}` : ""}${row.postingMode === "history-only" ? " [history only]" : ""}`).join("\n") || "  • No transfers recorded";
+  const ledgerNeedsReview = (globalData.library.manualTransactions ?? []).some(row => (row.type === "transfer" || row.type === "income") &&
+    (!transactionDay(row.date) || (transactionDay(row.date) >= range.startDate && transactionDay(row.date) <= range.endDate &&
+      (!row.id || ledgerIds.get(row.id) !== 1 || expenseCents(row.amount) === null || (row.transferFee !== undefined && expenseCents(row.transferFee) === null)))));
+  const ledgerIncomeLines = ledger.filter(row => row.type === "income").map(row => `  • ${transactionDay(row.date)}: ${row.title}: ₱${fmt(row.amount)} [${row.postingMode === "wallet" ? "wallet entry" : "history only"}]`).join("\n") || "  • None";
+  const debt = reconcileDebt(globalData, selectedMonth);
+  const debtLines = debt.loans.map(loan => `  • ${loan.name}${loan.archived ? " [archived]" : ""}: ${loan.paidInstallments}/${loan.totalMonths} installments; ₱${fmt(loan.totalPaid)} paid; ${loan.remainingScheduled === null ? "remaining schedule unknown" : `₱${fmt(loan.remainingScheduled)} remaining scheduled`}${loan.approximate || loan.status === "incomplete" ? " — history needs review / estimate" : ""}`).join("\n") || "  • No installment plans";
+  const gigs = globalData.library.shoots ?? [];
+  const gigLines = gigs.map(gig => `  • ${gig.title}: ${gig.date || "Date not set"} · ${gig.completed ? "Done" : gig.status}${gig.category ? ` · ${gig.category}` : ""}`).join("\n") || "  • No gigs/tasks saved";
+  const milestoneId = globalData.settings?.milestoneWallet || resolveActiveWalletDefault(globalData.settings, globalData.wallets);
+  const milestone = milestoneId ? parseWalletBalance(globalData.wallets[milestoneId]) : undefined;
+  const goalLine = targetMilestoneFund > 0
+    ? `${globalData.settings?.goalName?.trim() || "Savings goal"}: ${milestone?.isValid ? `₱${fmt(milestone.balance)} / ₱${fmt(targetMilestoneFund)} (${fundProgressPercent}%)` : "Wallet balance needs review"} · ${walletLabel(milestoneId)}`
+    : "No savings goal set";
 
   const billLines =
     unpaid
@@ -125,7 +186,15 @@ export function buildFinancialSummary({
   return `========================================
 FINANCIAL STATUS REPORT: ${selectedMonth.toUpperCase()}
 Generated: ${new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}
+Activity period: ${range.startDate} to ${range.endDate}. Saved records only; dates use your device time zone. Wallet balances are current, not historical month-end balances.
 ========================================
+
+AT A GLANCE
+You have ₱${fmt(totalLiquid)} in recorded wallet cash now. In ${selectedMonth}, Inflows receipts total ₱${fmt(incomeReport.actual)} and recorded spending totals ₱${fmt(spending.spent)}.
+There are ₱${fmt(totalUnpaidCommitments)} in unpaid commitments and ₱${fmt(totalPendingAmount)} in expected inflows for the selected view. Expected money is not available cash.
+${totalLiquid < totalUnpaidCommitments ? `Cash is ₱${fmt(roundMoney(totalUnpaidCommitments - totalLiquid))} short of these unpaid commitments.` : `Cash after these unpaid commitments: ₱${fmt(roundMoney(totalLiquid - totalUnpaidCommitments))}, before savings, cushion and everyday spending.`}
+${plan && daily ? `Your budget has ₱${fmt(Math.abs(roundMoney(plan.limit - daily.spending.spent)))} ${daily.spending.spent > plan.limit ? "over its spending limit" : "of unspent allowance"}.${daily.ended || daily.future ? " See the plan dates below." : ` Today's everyday spending guide has ₱${fmt(daily.remainingToday)} left.`}` : "No budget plan is set for this month."}
+${spending.excluded || incomeReport.needsReview || !reconciled.isComplete ? "⚠️ Some records need review; see the notes below." : ""}
 
 1. LIQUID CASH BREAKDOWN
 ${finalWalletLines}
@@ -143,12 +212,46 @@ ${recLines}
 TOTAL PENDING INFLOWS: ₱${fmt(totalPendingAmount)}${pending.some(r => r.amountUnspecified) ? " (excludes inflows with no amount)" : ""}
 
 4. GOAL TRACKING & NET OUTLOOK
-• ${targetMilestoneFund > 0
-    ? `${globalData.settings?.goalName?.trim() || "Savings goal"}: ₱${fmt(globalData.wallets[globalData.settings?.milestoneWallet || "main"])} / ₱${fmt(targetMilestoneFund)} (${fundProgressPercent}%)`
-    : "No savings goal set"}
+• ${goalLine}
 • Month Income Collected: ₱${fmt(incomeReport.actual)} (actual Inflows receipts)${incomeReport.confirmedMonthOnly ? `
 • Included with confirmed receipt month: ₱${fmt(incomeReport.confirmedMonthOnly)} (exact day unknown)` : ""}${incomeReport.historicalDateUnverified > 0 ? `
 • Historical income — date unverified: ₱${fmt(incomeReport.historicalDateUnverified)} (saved under this period; excluded from actual income)` : ""}${incomeReport.needsReview ? "\n• Income history needs review. Check receipt details before relying on this total." : ""}
-• Net Projected Position: ₱${fmt(netPosition)} ${netPosition >= 0 ? "(Surplus)" : "(Shortfall)"}
+• Net Projected Position: ₱${fmt(netPosition)} ${netPosition >= 0 ? "(Surplus)" : "(Shortfall)"} (cash + expected inflows − unpaid commitments; not spendable cash)
+
+5. RECORDED SPENDING — ${selectedMonth.toUpperCase()}
+• Expenses (including manual ledger expenses): ₱${fmt(expenseTotal)}
+• Paid commitments by actual payment date: ₱${fmt(spending.byCategory.Commitments)}
+• Transfer fees: ₱${fmt(spending.byCategory["Transfer fees"])}
+TOTAL RECORDED SPENDING: ₱${fmt(spending.spent)}
+Category breakdown:
+${categoryLines}
+Transfers between your wallets are excluded; their fees are included. Reversed payments are excluded.
+${spending.excluded ? `⚠️ ${spending.excluded} spending record(s) need review and were excluded (missing dates, older confirmations, or duplicate/invalid records).` : ""}
+
+6. BUDGET PLAN
+${planLines}
+
+7. COMMITMENT STATUS — SELECTED VIEW
+${activeBills.map(bill => `  • ${bill.name}: ${bill.paid ? "Settled" : "Unpaid"} · ₱${fmt(bill.amount)} · ${bill.targetMonthForDue}, day ${bill.dueDay} · ${walletLabel(bill.wallet)}`).join("\n") || "  • No commitments in this view"}
+Status follows the selected schedule; actual payment-date spending is reported separately above.
+
+8. INFLOW STATUS — SELECTED VIEW
+${activeReceivables.map(inflow => `  • ${inflow.name}: ${inflow.collected ? "Received" : inflow.amountReceived > 0 ? "Partial" : "Pending"} · ${inflow.amountUnspecified ? "Expected amount not set" : `₱${fmt(inflow.amountReceived)} collected of ₱${fmt(inflow.amount)}`} · ${inflow.targetMonthForDue}`).join("\n") || "  • No inflows in this view"}
+Actual receipt-month income above includes archived inflows. Scheduled totals can differ from receipt-month totals.
+Separate manual ledger income (not added to Inflows receipt total; may describe the same money):
+${ledgerIncomeLines}
+
+9. WALLET TRANSFERS — ${selectedMonth.toUpperCase()}
+${transferLines}
+${ledgerNeedsReview ? "⚠️ Some manual income or transfer records need review; invalid or duplicate amounts/dates are not included in the lists." : ""}
+
+10. INSTALLMENT PLANS — AS OF SELECTED PERIOD
+• Known remaining scheduled: ₱${fmt(debt.remainingScheduled)}; recorded installment payments to date: ₱${fmt(debt.totalPaid)}
+${debtLines}
+${!debt.isComplete || debt.approximate ? "⚠️ Some installment schedules or older payment history need review; remaining scheduled amounts are not a lender payoff quote." : "Remaining scheduled amounts describe saved installment plans, not a lender payoff quote."}
+
+11. ${globalData.settings?.gigsLabel?.toUpperCase() || "GIGS & TASKS"} — ALL SAVED DATES
+${gigs.filter(gig => gig.completed).length}/${gigs.length} completed
+${gigLines}
 ========================================`;
 }

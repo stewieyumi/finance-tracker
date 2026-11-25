@@ -16,7 +16,6 @@ import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { QUICK_EXPENSE_HASH } from "./constants/config";
 import { getMonthKey, getAdjacentMonth, getDaysUntil, parseMonthKey } from "./utils/dateHelpers";
 import { UnifiedFinanceData, WalletState, EditFormData, TransactionHistoryItem, PaydayExecution, FinanceTransitionCommitter } from "./types/finance";
-import { buildFinancialSummary } from "./utils/summaryHelpers";
 import {
   getWalletForBill,
   getEffectiveBillAmount,
@@ -821,21 +820,25 @@ const { saveShootEdit } = useShootSaveActions({
  });
 
 const copySummaryToClipboard = async () => {
-  const text = buildFinancialSummary({
-    activeBills,
-    activeReceivables,
-    globalData,
-    selectedMonth,
-    totalLiquid,
-    totalUnpaidCommitments,
-    overdueBills,
-    targetMilestoneFund,
-    fundProgressPercent,
-    incomeReport
-  });
-
   try {
-    await navigator.clipboard.writeText(text);
+    const summary = import("./utils/summaryHelpers").then(({ buildFinancialSummary }) => new Blob([buildFinancialSummary({
+      activeBills,
+      activeReceivables,
+      globalData,
+      selectedMonth,
+      totalLiquid,
+      totalUnpaidCommitments,
+      overdueBills,
+      targetMilestoneFund,
+      fundProgressPercent,
+      incomeReport
+    })], { type: "text/plain" }));
+    // Start the write during the click gesture; Safari can resolve the report afterward.
+    if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+      await navigator.clipboard.write([new ClipboardItem({ "text/plain": summary })]);
+    } else {
+      await navigator.clipboard.writeText(await (await summary).text());
+    }
     showToast("📋 Detailed summary copied to clipboard!");
   } catch {
     showToast("Could not copy summary");
