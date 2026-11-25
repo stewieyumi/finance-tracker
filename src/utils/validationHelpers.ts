@@ -1,3 +1,4 @@
+import { isMonthlyBudgetMap } from "./budgeting";
 import { UnifiedFinanceData } from "../types/finance";
 
 /**
@@ -61,6 +62,8 @@ export function isValidFinanceBackup(data: unknown): data is UnifiedFinanceData 
 
   return (data.expenseRevisions === undefined || (isRecord(data.expenseRevisions)
       && Object.entries(data.expenseRevisions).every(([id, revision]) => id.trim() !== '' && typeof revision === 'string' && revision.trim() !== ''))) &&
+    (data.settings.monthlyBudgets === undefined || isMonthlyBudgetMap(data.settings.monthlyBudgets)) &&
+    (data.budgetDistributionIds === undefined || (Array.isArray(data.budgetDistributionIds) && data.budgetDistributionIds.every(id => typeof id === 'string' && id.trim() !== '') && new Set(data.budgetDistributionIds).size === data.budgetDistributionIds.length)) &&
     Object.values(data.wallets).every(isMoney) &&
     Object.values(data.logs).every(isRecord) &&
     data.library.bills.every(bill => isIdentifiedRecord(bill) && isMoney(bill.amount)) &&

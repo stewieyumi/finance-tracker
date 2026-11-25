@@ -245,7 +245,7 @@ uses the actual saved theme. Browser auth/cloud are simulated as described above
 
 First visits to 22 registered areas show a short spotlight guide: the five main
 tabs, Operations sections, six Settings sections, four Runway views, Yearly,
-Upcoming, Payday, Transaction History, and goal setup. A Guide button replays the
+Upcoming, Budget Plan, Transaction History, and goal setup. A Guide button replays the
 current area's introduction. Skip, Escape, Back, and Done operate only the guide;
 they do not activate the highlighted financial or account controls.
 
@@ -299,6 +299,19 @@ Apple's device-settings instructions. It never sends a test expense or retries a
 uncertain save. A Safari connectivity check cannot prove native Shortcuts has data
 access. The previously reported iPhone cellular error still needs a physical-device
 check; these help instructions do not establish a fix.
+
+## Cash-based Budget Plan
+
+Dashboard → **Budget Plan** is available without a configured salary:
+
+- **Budget** asks about chosen wallet cash, dates, usual daily essentials, upcoming commitments, a savings target and an optional cushion. The proposal is editable; saving a plan never moves money.
+- The period limit and optional category limits track dated expenses, actual commitment payments and transfer fees. Transfer principal and unreceived income are excluded. Ambiguous or undated older records are flagged rather than assigned invented payment dates.
+- Daily pacing starts when a cash plan is reviewed, preserving earlier spending in its selected reporting range. Unused allowance carries into later days; overspending reduces later allowances. The view also shows the next seven days and areas to review against user-set limits. Caps inform the user; they do not prevent recording real expenses.
+- Monthly rollover derives unused allowance from the latest eligible plan, including spending in skipped months. Daily guidance is capped to existing cash; carried allowance is never another wallet credit. Future carry-forward views are labeled as projections that change with spending. An explicit next plan replaces that inherited allowance. Removing a plan stores a stop marker so older plans do not silently reappear.
+- **Auto-Distribute** distinguishes new income received from money already logged in a wallet. New income is recorded as one received inflow before atomic transfers; existing-cash distribution records transfers only. Keeping money in the source is not a second credit. Every peso must be assigned: **Unassigned = ₱0.00** before execution.
+- A successful Inflows receipt offers **Later** or **Distribute**. The latter prefills the already-received amount; it never credits that receipt again. Optional regular-pay presets/calendar export and reversal of earlier salary distributions remain available.
+
+Guidance uses the user's cash and estimates, not a guaranteed forecast. Savings are a planning target until the user records actual transfers. Invalid/archived wallet routes, changed balances/receipts and repeated distribution IDs are rejected. Budget fields and idempotency markers travel through the existing account-scoped sync and backup flow.
 
 ## Delete Finance Tracker account
 

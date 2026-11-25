@@ -58,8 +58,8 @@ for (const theme of ['light', 'dark'] as const) {
     await page.getByRole('button', { name: 'Close analytics modal' }).click();
     await page.getByRole('button', { name: 'Yearly', exact: true }).click(); await finishGuide(page, 'Yearly overview');
     await page.getByRole('dialog', { name: 'Yearly Overview Modal' }).getByRole('button', { name: 'Done', exact: true }).click();
-    await page.getByRole('button', { name: /^Payday Plan/ }).click(); await finishGuide(page, 'Payday plan');
-    await page.getByRole('button', { name: 'Close payday modal' }).click();
+    await page.getByRole('button', { name: /^Budget Plan/ }).click(); await finishGuide(page, 'Budget Plan');
+    await page.getByRole('button', { name: 'Close budget plan' }).click();
     await page.getByRole('button', { name: /^Upcoming/ }).click(); await finishGuide(page, 'Upcoming commitments');
     await page.getByRole('button', { name: 'Close upcoming modal' }).click();
     await page.getByRole('button', { name: 'Configure savings goal' }).click(); await finishGuide(page, 'Savings goal');

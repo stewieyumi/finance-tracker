@@ -48,7 +48,7 @@ for (const theme of ['light', 'dark'] as const) {
     await page.keyboard.press('Escape');
     expect(await storedData(page)).toEqual(snapshot);
     await expect(page.getByRole('heading', { name: 'Income at your pace' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Payday Plan/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^Budget Plan/ })).toBeVisible();
     await app.waitForSaved();
     await page.reload();
     await expect(page.getByRole('button', { name: 'Get Started', exact: true })).toHaveCount(0);

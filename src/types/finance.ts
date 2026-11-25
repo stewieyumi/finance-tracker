@@ -170,7 +170,38 @@ export interface CustomWallet {
   color?: string;
 }
 
+export interface ReceivedIncomeDraft {
+  receiptId: string;
+  inflowId: string;
+  month: string;
+  wallet: string;
+  amount: number;
+  name: string;
+}
+
+export interface BudgetCashPlan {
+  pacingStartDate?: string;
+  walletIds: string[];
+  startDate: string;
+  endDate: string;
+  dailyEssentials: number;
+  savingsTarget: number;
+  commitmentsReserve: number;
+  cushion: number;
+  baselineSpent: number;
+  baselineCommitments: number;
+  baselineDailyFlexible: Record<string, number>;
+}
+
+export interface MonthlyBudget {
+  rollover?: boolean;
+  cashPlan?: BudgetCashPlan;
+  limit: number;
+  categoryLimits?: Record<string, number>;
+}
+
 export interface AppSettings {
+  monthlyBudgets?: Record<string, MonthlyBudget | null>;
   theme?: "dark" | "light" | "system";
   paydayDays?: number[];
   targetFund?: number;
@@ -211,6 +242,8 @@ export interface PaydayExecution {
 }
 
 export interface UnifiedFinanceData {
+  /** Durable idempotency markers for explicit cash/income distributions. */
+  budgetDistributionIds?: string[];
   /** Last acknowledged expense change, retained after deletion to reject stale replay. */
   expenseRevisions?: Record<string, string>;
   settings?: AppSettings;

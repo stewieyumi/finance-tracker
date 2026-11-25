@@ -98,8 +98,8 @@ for (const [width, height] of profiles) for (const theme of ['light', 'dark'] as
     await page.getByRole('button', { name: 'Close analytics modal' }).click();
     await openCheck(page.getByRole('button', { name: 'Yearly', exact: true }), 'Yearly Overview Modal');
     await dialog('Yearly Overview Modal').getByRole('button', { name: 'Done', exact: true }).click();
-    await openCheck(page.getByRole('button', { name: /^Payday Plan/ }), 'Payday Distribution Modal');
-    await page.getByRole('button', { name: 'Close payday modal' }).click();
+    await openCheck(page.getByRole('button', { name: /^Budget Plan/ }), 'Budget Plan');
+    await page.getByRole('button', { name: 'Close budget plan' }).click();
     await openCheck(page.getByRole('button', { name: /^Upcoming/ }), 'Upcoming Commitments Modal');
     await page.getByRole('button', { name: 'Close upcoming modal' }).click();
     await openCheck(page.getByRole('button', { name: 'Quick Add', exact: true }), 'Quick Add Menu');

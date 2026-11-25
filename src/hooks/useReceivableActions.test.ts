@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useReceivableActions } from "./useReceivableActions";
 import { INITIAL_UNIFIED_DATA } from "../constants/initialData";
-import { UnifiedFinanceData, ReceivableViewModel } from "../types/finance";
+import { UnifiedFinanceData, ReceivableViewModel, FinanceTransitionCommitter } from "../types/finance";
 
 const createTestData = (): UnifiedFinanceData => ({
   ...INITIAL_UNIFIED_DATA,
@@ -595,5 +595,33 @@ describe("useReceivableActions - payment mutations", () => {
     expect(state.wallets.old_wallet).toBe(500);
     expect(state.logs["September 2026"].recsCollected?.["rec-archived-rev"]?.amountReceived).toBe(0);
     expect(state.logs["September 2026"].recsCollected?.["rec-archived-rev"]?.collected).toBe(false);
+  });
+});
+
+
+describe("received-income guidance callback", () => {
+  it("offers distribution only after an authoritative positive receipt, using its actual credited amount", () => {
+    const rec = createReceivable(); let data = createTestData();
+    const offered = vi.fn();
+    const commit: FinanceTransitionCommitter = transition => { const result = transition(data); if (result.ok) data = result.data; return result; };
+    const { result } = renderHook(() => useReceivableActions({ globalData: data, commitReceivableTransition: commit, selectedMonth: "September 2026", showToast: vi.fn(), onIncomeReceived: offered }));
+    act(() => result.current.addPayment(rec, 5000));
+    expect(offered).toHaveBeenCalledTimes(1);
+    expect(offered.mock.calls[0][0]).toMatchObject({ amount: 1000, wallet: "maya", inflowId: rec.id, month: "September 2026" });
+    expect(data.wallets.maya).toBe(6000);
+    act(() => result.current.toggleReceivableStatus({ ...rec, amountReceived: 1000, collected: true }));
+    expect(offered).toHaveBeenCalledTimes(1);
+    expect(data.wallets.maya).toBe(5000);
+  });
+  it("does not offer distribution after failure or an unacknowledged setter-only save", () => {
+    const offered = vi.fn(); const data = createTestData();
+    const reject = (() => ({ ok: false as const, data, error: "Account changed" })) as unknown as FinanceTransitionCommitter;
+    const first = renderHook(() => useReceivableActions({ globalData: data, commitReceivableTransition: reject, selectedMonth: "September 2026", showToast: vi.fn(), onIncomeReceived: offered }));
+    act(() => first.result.current.addPayment(createReceivable(), 100));
+    expect(offered).not.toHaveBeenCalled(); first.unmount();
+    const harness = createStateHarness(createTestData());
+    const second = renderHook(() => useReceivableActions({ globalData: harness.state, setGlobalData: harness.setGlobalData, selectedMonth: "September 2026", showToast: vi.fn(), onIncomeReceived: offered }));
+    act(() => second.result.current.addPayment(createReceivable(), 100));
+    expect(offered).not.toHaveBeenCalled();
   });
 });
