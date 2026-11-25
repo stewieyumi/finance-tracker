@@ -1,3 +1,4 @@
+import { WalletNameInput } from "./WalletNameInput";
 import { GuideButton } from "./ContextGuideControls";
 import React, { useState, useId, useEffect, useRef } from 'react';
 import { Plus, Archive, Edit2, CreditCard, Info, ArrowRightLeft } from 'lucide-react';
@@ -279,12 +280,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
           <form aria-label={editingId ? "Edit wallet" : "Add wallet"} aria-describedby={`${formId}-help`} onSubmit={handleAddOrEdit} className="bg-surface border border-subtle rounded-xl p-4 space-y-4 shadow-inner">
             <div>
               <label htmlFor={`${formId}-name`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">Account Name</label>
-              <input id={`${formId}-name`} ref={nameInputRef} aria-invalid={Boolean(nameError)} aria-describedby={nameError ? `${formId}-name-error` : `${formId}-balance-help`} type="text" list={`${formId}-suggestions`} placeholder="e.g., BPI, GCash, Vault..." value={walletName} onChange={e => { setWalletName(e.target.value); setNameError(''); }} autoFocus className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs text-strong outline-none focus:border-emerald-500" required />
-              <datalist id={`${formId}-suggestions`}>
-                {WALLET_NAME_SUGGESTIONS.map(name => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
+              <WalletNameInput id={`${formId}-name`} ref={nameInputRef} aria-invalid={Boolean(nameError)} aria-describedby={nameError ? `${formId}-name-error` : `${formId}-balance-help`} type="text" suggestions={WALLET_NAME_SUGGESTIONS} placeholder="e.g., BPI, GCash, Vault..." value={walletName} onValueChange={value => { setWalletName(value); setNameError(''); }} autoFocus className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-base text-strong outline-none focus:border-emerald-500 sm:text-xs" required />
               <p id={`${formId}-balance-help`} className="mt-1 text-xs text-muted">{editingId ? 'Updating the name or color keeps the current balance.' : 'New wallets start at ₱0. Set the current balance from the wallet list after saving.'}</p>
               {nameError && <p id={`${formId}-name-error`} role="alert" className="mt-1 text-xs text-negative">{nameError}</p>}
             </div>

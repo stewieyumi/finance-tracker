@@ -300,9 +300,19 @@ uncertain save. A Safari connectivity check cannot prove native Shortcuts has da
 access. The previously reported iPhone cellular error still needs a physical-device
 check; these help instructions do not establish a fix.
 
+## Wallet name suggestions
+
+In Wallets → Add New Account, typing a name shows matching common bank/wallet suggestions (for example, G shows GCash and GoTyme). Choose by touch/mouse or Arrow keys and Enter, dismiss with Escape, or keep a custom name. Selecting a suggestion does not save the wallet.
+
+## Financial summary
+
+Dashboard → **Copy Summary** copies a plain-text overview followed by the saved financial details: current wallet balances (including marked archived/unlisted balances), unpaid and settled commitments, pending/received inflow status, actual receipt-month income, category spending, Budget Plan and daily guidance, transfers and fees, savings goal, installment schedules, and saved gigs/tasks. Activity uses the selected month; budget dates and all-date task scope are labeled separately. Current wallet balances are not historical month-end balances.
+
+The report reuses the existing spending, income, daily-budget and debt readers. Transfers are separate from spending; their fees count. Manual ledger income is listed separately rather than added to Inflows receipts, avoiding an unsupported assumption that they represent different money. Planned savings and unspent allowance are not labeled as new cash. Unknown dates, incomplete history and invalid records retain review notes. Copying reads the current in-app snapshot and does not save or alter financial records.
+
 ## Cash-based Budget Plan
 
-Dashboard → **Budget Plan** is available without a configured salary:
+Dashboard → **Budget Plan** is available without a configured salary. Its **How to start** section explains which cash to include, the chosen period, unpaid payments, everyday needs and protected savings, with the starting daily formula and a reminder against double subtraction:
 
 - **Budget** asks about chosen wallet cash, dates, usual daily essentials, upcoming commitments, a savings target and an optional cushion. The proposal is editable; saving a plan never moves money.
 - The period limit and optional category limits track dated expenses, actual commitment payments and transfer fees. Transfer principal and unreceived income are excluded. Ambiguous or undated older records are flagged rather than assigned invented payment dates.
