@@ -70,6 +70,27 @@ export default function ReceivableAddModal({
 
         <form aria-describedby={`${formId}-help`} onSubmit={onSubmit} className="space-y-4">
           <p id={`${formId}-help`} className="text-xs text-muted">Amount and date are optional. Leave them blank and edit later.</p>
+            <div>
+              <label htmlFor={`${formId}-amount`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
+                {newReceivable.frequency === "Bi-monthly" ? "Amount per payday (₱)" : "Amount (₱)"}
+              </label>
+              <div className="relative"><span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-lg text-faint">₱</span>
+              <input id={`${formId}-amount`}
+                aria-describedby={`${formId}-help`}
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                value={newReceivable.amount}
+                onChange={(e) => onChange({ ...newReceivable, amount: e.target.value })}
+                min="0.01"
+                placeholder="—"
+                className={entryDialogStyles.amount}
+              /></div>
+              {newReceivable.frequency === "Bi-monthly" && (
+                <p className="mt-1 text-xs text-muted">Monthly total: {newReceivable.amount.trim() ? formatPHP(roundMoney(Number(newReceivable.amount)) * 2) : "—"}</p>
+              )}
+            </div>
+
           <div>
             <label htmlFor={`${formId}-name`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
               Inflow Name
@@ -86,26 +107,6 @@ export default function ReceivableAddModal({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor={`${formId}-amount`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
-                {newReceivable.frequency === "Bi-monthly" ? "Amount per payday (₱)" : "Amount (₱)"}
-              </label>
-              <input id={`${formId}-amount`}
-                aria-describedby={`${formId}-help`}
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                value={newReceivable.amount}
-                onChange={(e) => onChange({ ...newReceivable, amount: e.target.value })}
-                min="0.01"
-                placeholder="—"
-                className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-strong outline-none focus:border-emerald-500"
-              />
-              {newReceivable.frequency === "Bi-monthly" && (
-                <p className="mt-1 text-xs text-muted">Monthly total: {newReceivable.amount.trim() ? formatPHP(roundMoney(Number(newReceivable.amount)) * 2) : "—"}</p>
-              )}
-            </div>
-
             <div>
               <label htmlFor={`${formId}-category`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
                 Category
@@ -266,7 +267,7 @@ export default function ReceivableAddModal({
           <div className="flex items-center gap-2 pt-4 border-t border-inverse/[0.04]">
             <button
               type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20 transition active:scale-[0.98]"
+              className={`${entryDialogStyles.primary} w-full`}
             >
               <Plus size={16} /> Add Inflow
             </button>

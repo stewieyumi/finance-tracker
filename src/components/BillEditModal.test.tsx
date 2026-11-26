@@ -201,4 +201,25 @@ describe("BillEditModal", () => {
     fireEvent.click(dialog);
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
+
+  it.each(["monthOnly", "default"] as const)("keeps an empty %s amount draft blank and accepts a replacement", scope => {
+    let latest: EditFormData = {};
+    function Harness() {
+      const [form, setForm] = React.useState(defaultEditForm);
+      latest = form;
+      return <BillEditModal editingId="bill-1" activeBills={mockBills} selectedMonth="August 2026"
+        editForm={form} setEditForm={setForm} editScope={scope} onScopeChange={vi.fn()}
+        onCancel={vi.fn()} onDeleteBill={vi.fn()} onResetMonthOverride={vi.fn()} onSaveEdit={vi.fn()}
+        customWallets={mockWallets} defaultWallet="main" />;
+    }
+    render(<Harness />);
+    const input = screen.getByRole("spinbutton", { name: "Amount (₱)" });
+    fireEvent.change(input, { target: { value: "" } });
+    expect(input).toHaveValue(null); expect(latest.amount).toBeUndefined();
+    expect(latest[scope === "monthOnly" ? "monthAmount" : "baseAmount"]).toBeUndefined();
+    fireEvent.change(input, { target: { value: "237.05" } });
+    expect(input).toHaveValue(237.05); expect(latest.amount).toBe(237.05);
+    expect(latest[scope === "monthOnly" ? "monthAmount" : "baseAmount"]).toBe(237.05);
+  });
+
 });

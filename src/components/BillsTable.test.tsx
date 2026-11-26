@@ -315,4 +315,16 @@ describe("BillsTable - list and edit wiring", () => {
     fireEvent.click(screen.getByTestId("bill-mobile-row-paid-bill"));
     expect(onToggleStatus).not.toHaveBeenCalled();
   });
+
+  it("does not restore zero or another scope's amount when returning to a cleared draft", () => {
+    const bill = createBill();
+    const form: EditFormData = { ...bill, amount: undefined, monthAmount: undefined, baseAmount: undefined };
+    const setEditForm = vi.fn();
+    renderBillsTable([bill], { editingId: bill.id, editForm: form, setEditForm });
+    fireEvent.click(screen.getByRole("button", { name: "Default Base" }));
+    expect(setEditForm.mock.calls.at(-1)![0]({ ...form, amount: 123 })).toMatchObject({ amount: undefined });
+    fireEvent.click(screen.getByRole("button", { name: "September Only" }));
+    expect(setEditForm.mock.calls.at(-1)![0]({ ...form, amount: 237 })).toMatchObject({ amount: undefined });
+  });
+
 });
