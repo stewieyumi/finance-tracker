@@ -1,3 +1,4 @@
+import { reviewBudgetSetup } from './budgetSetupHelpers';
 import { test, expect, navigate, returningData, storedData } from './fixtures';
 import type { Locator, Page } from '@playwright/test';
 
@@ -27,14 +28,13 @@ for (const theme of ['light', 'dark'] as const) {
     const dialog = await openBudget(page);
     await expect(dialog.getByRole('tab', { name: 'Budget', exact: true })).toHaveAttribute('aria-selected', 'true');
     await dialog.getByRole('button', { name: 'Build my budget' }).click();
-    await dialog.getByLabel('3. Usual daily essentials (₱)', { exact: true }).fill('200');
-    await dialog.getByLabel('4. Upcoming commitments to reserve (₱)', { exact: true }).fill('1000');
-    await dialog.getByLabel('5. Savings target for this period (₱)', { exact: true }).fill('1000');
-    await dialog.getByRole('button', { name: 'Calculate my plan' }).click();
-    await expect(dialog).toContainText('Potential savings before optional spending: ₱3,000.00');
-    await dialog.getByText('Spending limit and optional category limits', { exact: true }).click();
-    await checkFit(page, dialog);
-    await dialog.getByRole('button', { name: 'Save budget', exact: true }).click();
+    const setup = await reviewBudgetSetup(page, { essentials: '200', commitments: '1000', savings: '1000' });
+    await expect(page.getByRole('dialog')).toHaveCount(1);
+    await expect(setup).toContainText('Potential savings before optional spending: ₱3,000.00');
+    await setup.getByText('Adjust spending and category limits', { exact: true }).click();
+    await checkFit(page, setup);
+    await setup.getByRole('button', { name: 'Save budget', exact: true }).click();
+    await expect(dialog).toBeVisible();
     await expect.poll(async () => (await storedData(page))?.settings?.monthlyBudgets?.['November 2026']?.limit).toBe(5000);
     await expect(dialog).toContainText('Today’s allowance');
     expect((await storedData(page))?.wallets).toEqual(data.wallets);
@@ -103,12 +103,12 @@ for (const theme of ['light', 'dark'] as const) {
       await page.setViewportSize(size);
       const dialog = await openBudget(page);
       await dialog.getByRole('button', { name: 'Build my budget' }).click();
-      await dialog.getByLabel('3. Usual daily essentials (₱)', { exact: true }).fill('0');
-      await dialog.getByRole('button', { name: 'Calculate my plan' }).click();
-      await dialog.getByText('Spending limit and optional category limits', { exact: true }).click();
-      await checkFit(page, dialog);
+      const setup = await reviewBudgetSetup(page);
+      await setup.getByText('Adjust spending and category limits', { exact: true }).click();
+      await checkFit(page, setup);
       await page.screenshot({ path: info.outputPath(`budget-form-${size.width}x${size.height}-${theme}.png`) });
-      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await setup.getByRole('button', { name: 'Close budget setup', exact: true }).click();
+      await expect(dialog).toBeVisible();
       await dialog.getByRole('tab', { name: 'Auto-Distribute' }).click();
       await dialog.getByLabel('Which money are you allocating?', { exact: true }).selectOption('received');
       await checkFit(page, dialog);
