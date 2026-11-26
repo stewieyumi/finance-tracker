@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Edit2, Plus, Save, Trash2, X } from "lucide-react";
 import {
   EditFormData,
@@ -41,6 +41,7 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
   onSave,
   selectedMonth,
 }) => {
+  const amountRef = useRef<HTMLInputElement>(null);
   const currentGross =
     editForm.grossAmount !== undefined
       ? editForm.grossAmount
@@ -130,6 +131,8 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
       onClose={onCancel}
       variant="floating"
       ariaLabel="Edit Inflow"
+      manageFocus
+      initialFocusRef={amountRef}
     >
       <div className={`${entryDialogStyles.card} max-w-md mx-auto`}>
         <div className={entryDialogStyles.header}>
@@ -143,6 +146,8 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
+            aria-label="Cancel inflow edit"
             onClick={onCancel}
             className={entryDialogStyles.close}
           >
@@ -151,6 +156,29 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
         </div>
 
         <div className="space-y-4">
+            <div>
+              <label
+                htmlFor="gross-amount-input"
+                className="text-[10px] text-faint uppercase font-semibold mb-1.5 block"
+              >
+                {editForm.frequency === "Bi-monthly" ? "Gross Monthly Amount (₱)" : "Gross Amount (₱)"}
+              </label>
+              <div className="relative"><span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-lg text-faint">₱</span>
+              <input
+                ref={amountRef}
+                id="gross-amount-input"
+                aria-label="Gross Amount"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0"
+                value={editForm.amountUnspecified ? "" : editForm.grossAmount !== undefined ? editForm.grossAmount : (editForm.amount ?? "")}
+                onChange={(e) => handleGrossChange(e.target.value)}
+                placeholder="—"
+                className={entryDialogStyles.amount}
+              /></div>
+            </div>
+
           <div>
             <label className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
               Inflow Name
@@ -165,27 +193,6 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
 
           {/* GROSS & DEDUCTIONS SECTION */}
           <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 space-y-4">
-            <div>
-              <label
-                htmlFor="gross-amount-input"
-                className="text-[10px] text-faint uppercase font-semibold mb-1.5 block"
-              >
-                {editForm.frequency === "Bi-monthly" ? "Gross Monthly Amount (₱)" : "Gross Amount (₱)"}
-              </label>
-              <input
-                id="gross-amount-input"
-                aria-label="Gross Amount"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0"
-                value={editForm.amountUnspecified ? "" : editForm.grossAmount !== undefined ? editForm.grossAmount : (editForm.amount ?? "")}
-                onChange={(e) => handleGrossChange(e.target.value)}
-                placeholder="—"
-                className="w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-strong outline-none focus:border-emerald-500"
-              />
-            </div>
-
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-[10px] text-faint uppercase font-semibold block">
@@ -500,7 +507,7 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
 
             <button
               onClick={handleSave}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20 transition active:scale-[0.98]"
+              className={`${entryDialogStyles.primary} flex-1`}
             >
               <Save size={16} /> Save Changes
             </button>

@@ -105,8 +105,8 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
 
   const handleScopeChange = (scope: "monthOnly" | "default") => {
     setEditScope(scope);
-    if (scope === "default") setEditForm(prev => ({ ...prev, amount: prev.baseAmount !== undefined ? prev.baseAmount : prev.amount }));
-    else setEditForm(prev => ({ ...prev, amount: typeof prev.monthAmount === "number" ? prev.monthAmount : parseFloat(String(prev.monthAmount || 0)) }));
+    if (scope === "default") setEditForm(prev => ({ ...prev, amount: Object.hasOwn(prev, "baseAmount") ? prev.baseAmount : prev.amount }));
+    else setEditForm(prev => ({ ...prev, amount: prev.monthAmount === undefined || prev.monthAmount === "" ? undefined : Number(prev.monthAmount) }));
   };
 
 

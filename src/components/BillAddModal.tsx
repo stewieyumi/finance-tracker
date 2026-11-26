@@ -68,6 +68,12 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
       <p id={`${formId}-help`} className="mb-4 text-xs text-muted">Adding a commitment sets up what you owe. Money is deducted when you record a payment.</p>
       <form aria-describedby={`${formId}-help`} onSubmit={onSubmit} className="space-y-4">
         <div>
+          <label htmlFor={`${formId}-amount`} className="mb-1.5 block text-[10px] font-semibold uppercase text-faint">Amount (₱)</label>
+          <div className="relative"><span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-lg text-faint">₱</span>
+            <input id={`${formId}-amount`} type="number" inputMode="decimal" step="0.01" value={newBill.amount} onChange={e => setNewBill({ ...newBill, amount: e.target.value })} placeholder="0.00" className={entryDialogStyles.amount} required />
+          </div>
+        </div>
+        <div>
           <label htmlFor={`${formId}-name`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
             Commitment Name
           </label>
@@ -85,24 +91,6 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor={`${formId}-amount`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
-              Amount (₱)
-            </label>
-            <input id={`${formId}-amount`}
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              value={newBill.amount}
-              onChange={(e) =>
-                setNewBill({ ...newBill, amount: e.target.value })
-              }
-              placeholder="0.00"
-              className="min-h-11 w-full bg-surface-input border border-strong rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-strong outline-none focus:border-blue-500"
-              required
-            />
-          </div>
-
           <div>
             <label htmlFor={`${formId}-wallet`} className="text-[10px] text-faint uppercase font-semibold mb-1.5 block">
               Pay from wallet
@@ -217,7 +205,7 @@ export const BillAddModal: React.FC<BillAddModalProps> = ({
         <div className="flex items-center gap-2 pt-4 border-t border-inverse/[0.04]">
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 transition active:scale-[0.98]"
+            className={`${entryDialogStyles.primary} w-full`}
           >
             <Plus size={16} /> Add Commitment
           </button>

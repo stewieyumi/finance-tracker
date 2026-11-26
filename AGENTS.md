@@ -334,6 +334,11 @@ practical.
 Preserve intentional accent colors unless the product owner requests
 otherwise.
 
+Use the existing Wallets-style `entryDialogStyles` as the standard for money-entry
+dialogs. Bill and inflow Add/Edit dialogs should use a prominent full-width peso
+amount field, compact rounded card, and shared primary save button. Keep optional
+amounts optional and preserve each form’s financial validation and calculations.
+
 Preserve:
 
 - Layout
