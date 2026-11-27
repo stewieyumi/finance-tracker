@@ -1,6 +1,6 @@
 import React, { useState, useId, useRef } from 'react';
 import { Modal } from './ui/Modal';
-import { Plus, X, CreditCard, CheckCircle2, PiggyBank } from 'lucide-react';
+import { Plus, X, CreditCard, CheckCircle2, PiggyBank, Pencil } from 'lucide-react';
 import { entryDialogStyles } from './ui/dialogStyles';
 import { WalletState, CustomWallet, WalletMutationHandler, WalletMutationOutcome, AppSettings } from '../types/finance';
 import { readWalletSavings } from "../utils/walletSavings";
@@ -55,9 +55,9 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ enabledSaving
 
   return (
     <>
-      <div className="rounded-2xl bg-surface p-3 sm:p-4">
-        <div className="mb-2 px-1 text-sm font-semibold text-primary">Wallet balances</div>
-        <div className="overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle">
+      <section aria-label="Wallet balances">
+        <div className="mb-3 px-1 text-sm font-semibold text-primary">Your wallets</div>
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {(customWallets || []).map((w, index) => {
             const parsed = parseWalletBalance(wallets[w.id]);
             const currentBalance = parsed.isValid ? parsed.balance : null;
@@ -77,33 +77,36 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ enabledSaving
             const displayColor = `${w.color || "text-strong"} font-bold`;
 
             return (
-              <div key={w.id}>
-              <button ref={index === 0 ? firstBalanceButtonRef : undefined} data-guide-interactive="open" key={w.id} onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`wallet-balance-row group relative flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-high ${roleClasses}`}>
-                <span className="flex min-w-0 items-center gap-2">
-                  <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full bg-current ${w.color || "text-muted"}`} />
-                  <span className="privacy-blur truncate text-sm font-medium text-primary">{w.label}</span>
+              <article key={w.id} className="wallet-account-card dashboard-material relative min-w-0 overflow-hidden rounded-3xl border border-subtle">
+                <button type="button" ref={index === 0 ? firstBalanceButtonRef : undefined} data-guide-interactive="open" onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`wallet-balance-row group relative flex min-h-40 w-full min-w-0 flex-col items-start gap-5 rounded-3xl p-5 text-left transition-colors hover:bg-fill ${roleClasses}`}>
+                  <span aria-hidden="true" className={`wallet-card-art pointer-events-none absolute inset-0 ${w.color || "text-muted"}`} />
+                  <span className="relative flex w-full min-w-0 items-center gap-3">
+                    <span aria-hidden="true" className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-current/10 bg-fill ${w.color || "text-muted"}`}><CreditCard size={19} /></span>
+                    <span className="privacy-blur min-w-0 break-words text-sm font-semibold text-primary">{w.label}</span>
+                    <Pencil size={13} aria-hidden="true" className="ml-auto shrink-0 text-faint" />
+                  </span>
                   {isMilestoneWallet && <span className="sr-only">Goal wallet</span>}
                   {isSavingsWallet && <span className="sr-only">Savings wallet</span>}
-                </span>
-                <span className="flex min-w-0 shrink-0 flex-col items-end gap-0.5"><span className="text-[10px] text-muted">Total balance</span><span className="privacy-blur flex items-baseline gap-0.5">
-                  <span className="text-[10px] text-faint font-mono">₱</span>
-                  <span className="text-sm font-semibold tabular-nums text-strong">{currentBalance === null ? "Invalid balance" : currentBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </span></span>
-              </button>
-              {enabledSavingsIds.includes(w.id) && <div className="grid min-w-0 grid-cols-2 gap-2 px-3 pb-3 text-xs">
-                <button type="button" onClick={() => openEdit(w, currentBalance, "savings")} aria-label={`Set savings for ${w.label}`} className="min-h-11 min-w-0 rounded-xl bg-fill px-2 py-2 text-left transition hover:bg-surface-high">
-                  <span className="flex items-center gap-1 text-muted"><PiggyBank size={12} aria-hidden="true" /> Savings</span>
-                  <span className="privacy-blur mt-1 block break-all font-mono font-semibold text-primary">{funds.savings === null ? "Needs review" : formatPHP(funds.savings)}</span>
+                  <span className="relative block w-full min-w-0">
+                    <span className="block text-[10px] font-medium uppercase tracking-wider text-muted">Total balance</span>
+                    <span className="privacy-blur mt-1 block break-all font-mono text-2xl font-bold tracking-tight text-strong">{currentBalance === null ? "Invalid balance" : formatPHP(currentBalance)}</span>
+                  </span>
+                  <span aria-hidden="true" className="relative text-[10px] text-muted">Tap to edit balance</span>
                 </button>
-                <div className="min-w-0 px-2 py-2"><span className="text-muted">Available to spend</span><span className="privacy-blur mt-1 block break-all font-mono font-semibold text-primary">{funds.balance === null || funds.savings === null ? "Needs review" : formatPHP(funds.available)}</span></div>
-              </div>}
-              {funds.needsReview && <p className="px-3 pb-3 text-xs text-warning">Review this wallet’s savings. Actual spending may have reduced its balance.</p>}
-              </div>
+                {enabledSavingsIds.includes(w.id) && <div className="relative mx-5 mb-4 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,130px),1fr))] gap-2 border-t border-subtle pt-3 text-xs">
+                  <button type="button" onClick={() => openEdit(w, currentBalance, "savings")} aria-label={`Set savings for ${w.label}`} className="min-h-11 min-w-0 rounded-xl bg-fill px-2 py-2 text-left transition hover:bg-surface-high">
+                    <span className="flex items-center gap-1 text-muted"><PiggyBank size={12} aria-hidden="true" /> Savings</span>
+                    <span className="privacy-blur mt-1 block break-all font-mono font-semibold text-primary">{funds.savings === null ? "Needs review" : formatPHP(funds.savings)}</span>
+                  </button>
+                  <div className="min-w-0 px-2 py-2"><span className="text-muted">Available to spend</span><span className="privacy-blur mt-1 block break-all font-mono font-semibold text-primary">{funds.balance === null || funds.savings === null ? "Needs review" : formatPHP(funds.available)}</span></div>
+                </div>}
+                {funds.needsReview && <p className="px-5 pb-4 text-xs text-warning">Review this wallet’s savings. Actual spending may have reduced its balance.</p>}
+              </article>
             );
           })}
-          {(!customWallets || customWallets.length === 0) && <div className="col-span-2 py-4 text-center text-faint text-xs italic">No wallets yet. Add a wallet below, then tap it to set its current balance.</div>}
+          {(!customWallets || customWallets.length === 0) && <div className="col-span-full py-4 text-center text-faint text-xs italic">No wallets yet. Add a wallet below, then tap it to set its current balance.</div>}
         </div>
-      </div>
+      </section>
 
       {editingWallet && (
         <Modal isOpen onClose={() => setEditingWallet(null)} ariaLabelledBy={`${balanceFormId}-title`} manageFocus initialFocusRef={balanceInputRef} className="z-[200]">

@@ -14,10 +14,13 @@ import { reconcileDebt } from "../utils/debtReconciliation";
 import { formatPHP } from "../utils/currency";
 import { Modal } from "./ui/Modal";
 
+const debtColors = ["bg-rose-500", "bg-amber-500", "bg-cyan-500", "bg-violet-500", "bg-emerald-500"];
+
 type AnalyticsTab = "overview" | "cashflow" | "debt" | "goals";
 
 interface FinancialAnalyticsModalProps {
   isOpen: boolean;
+  initialTab?: "overview" | "debt";
   onClose: () => void;
   globalData: UnifiedFinanceData;
   selectedMonth: string;
@@ -27,12 +30,13 @@ interface FinancialAnalyticsModalProps {
 
 export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = ({
   isOpen,
+  initialTab = "overview",
   onClose,
   globalData,
   selectedMonth,
   totalUnpaidCommitments
 }) => {
-  const [activeTab, setActiveTab] = useState<AnalyticsTab>("overview");
+  const [activeTab, setActiveTab] = useState<AnalyticsTab>(initialTab);
   const [goalMonths, setGoalMonths] = useState(1);
 
   const savingsTotals = walletSavingsTotals(globalData);
@@ -196,15 +200,39 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
 
         {activeTab === "debt" && (
           <div className="space-y-2.5">
-            <dl className="grid grid-cols-2 gap-3 rounded-xl bg-surface-sunken p-3 text-xs">
-              <div><dt className="text-muted">{debt.isComplete ? "Recorded paid" : "Known paid"}</dt><dd className="mt-1 font-mono text-primary">{formatPHP(debt.totalPaid)}</dd></div>
-              <div><dt className="text-muted">Remaining scheduled payments</dt><dd className="mt-1 font-mono text-primary">{debt.isComplete ? formatPHP(debt.remainingScheduled) : "Review needed"}</dd></div>
-            </dl>
-            <p className="text-xs text-muted">
-              {debt.approximate && "Includes legacy timing estimates. "}
-              Estimates use your current installment schedule; older payment dates and past schedule edits may be incomplete.
-              {debt.upcomingLoans.length > 0 && ` ${debt.upcomingLoans.length} upcoming ${debt.upcomingLoans.length === 1 ? "loan" : "loans"} excluded from active debt.`}
+            <section aria-label="Debt overview" className="debt-summary-card min-w-0 overflow-hidden rounded-3xl border border-subtle p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="flex items-center gap-2 font-semibold text-primary"><CreditCard size={15} aria-hidden="true" /> Your installment debt</span>
+                <span className="text-muted">{debtLoans.length} active · {debt.completedLoans.length} completed</span>
+              </div>
+              <dl className="mt-5">
+                <dt className="text-xs text-muted">Remaining scheduled payments</dt>
+                <dd className="privacy-blur mt-1 break-all font-mono text-3xl font-bold tracking-tight text-strong">{debt.isComplete ? formatPHP(debt.remainingScheduled) : "Review needed"}</dd>
+              </dl>
+              <dl className="mt-5 grid min-w-0 grid-cols-2 gap-4 border-t border-subtle pt-4 text-xs">
+                <div className="min-w-0"><dt className="text-muted">Scheduled in {selectedMonth}</dt><dd className="privacy-blur mt-1 break-all font-mono text-base font-semibold text-primary">{debt.monthlyScheduled === null ? "Review needed" : formatPHP(debt.monthlyScheduled)}</dd></div>
+                <div className="min-w-0"><dt className="text-muted">Last planned payment</dt><dd className="mt-1 break-words text-sm font-semibold text-primary">{debt.scheduledFinish ?? (debt.finishStatus === "past-due" ? "Overdue schedule" : debt.finishStatus === "review" ? "Review needed" : "No payments left")}</dd></div>
+              </dl>
+            </section>
+            <p className="text-xs leading-relaxed text-muted">
+              Monthly scheduled amounts include payments already settled. The last planned payment includes upcoming plans and assumes the saved schedule is met; it is not a lender payoff quote.
+              {debt.finishStatus === "past-due" && " An ended plan still has unpaid installments. Review its payments before estimating a finish date."}
+              {debt.approximate && " Includes legacy timing estimates."}
+              {!debt.isComplete && " Some schedules or payment history need review."}
             </p>
+            {debt.upcomingLoans.length > 0 && <p className="rounded-xl bg-surface-sunken p-3 text-xs text-muted">{debt.upcomingLoans.length} upcoming {debt.upcomingLoans.length === 1 ? "plan" : "plans"} · <span className="privacy-blur font-mono">{debt.upcomingScheduled === null ? "Review needed" : formatPHP(debt.upcomingScheduled)}</span> scheduled separately from active debt.</p>}
+            {debt.isComplete && debt.remainingScheduled > 0 && (
+              <section aria-label="Active debt breakdown" className="rounded-2xl border border-subtle p-4">
+                <h4 className="text-xs font-semibold text-primary">Debt breakdown</h4>
+                <div aria-hidden="true" className="mt-3 flex h-2 overflow-hidden rounded-full bg-fill">
+                  {debtLoans.map((loan, index) => <span key={loan.id} className={debtColors[index % debtColors.length]} style={{ width: `${(loan.remainingScheduled ?? 0) / debt.remainingScheduled * 100}%` }} />)}
+                </div>
+                <ul className="mt-3 grid min-w-0 gap-2 text-xs sm:grid-cols-2">
+                  {debtLoans.map((loan, index) => <li key={loan.id} className="flex min-w-0 items-start gap-2"><span aria-hidden="true" className={`mt-1 h-2 w-2 shrink-0 rounded-full ${debtColors[index % debtColors.length]}`} /><span className="privacy-blur min-w-0 break-words text-secondary">{loan.name}</span><span className="ml-auto shrink-0 font-mono text-muted">{((loan.remainingScheduled ?? 0) / debt.remainingScheduled * 100).toFixed(1)}%</span></li>)}
+                </ul>
+              </section>
+            )}
+            <p className="text-xs text-muted">{debt.isComplete ? "Recorded paid" : "Known paid"}: <span className="privacy-blur font-mono text-primary">{formatPHP(debt.totalPaid)}</span>{debt.approximate ? " · Includes estimates" : ""}</p>
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-secondary flex items-center gap-1.5">
                 <CreditCard size={13} className="text-violet-accent" />
@@ -220,11 +248,11 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
                 {debt.isComplete ? "No active loans or installments for this period." : "Debt history needs review before confirming the balance."}
               </div>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div className="space-y-2">
                 {debtLoans.map(loan => (
                   <div key={loan.id} className="bg-surface-sunken border border-subtle rounded-xl p-3 space-y-2">
-                    <div className="flex justify-between items-center text-xs">
-                      <div>
+                    <div className="flex flex-wrap justify-between items-start gap-3 text-xs">
+                      <div className="min-w-0 flex-1 break-words">
                         <span className="privacy-blur font-semibold text-strong">{loan.name}{loan.archived && " · Archived"}</span>
                         <span className="text-[10px] text-faint block font-mono">
                           {loan.monthlyAmount === null ? "Scheduled amount needs review" : `${formatPHP(loan.monthlyAmount)}/mo`} • Ends {loan.endMonth}

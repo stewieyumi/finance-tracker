@@ -336,6 +336,14 @@ describe("DashboardTab", () => {
     expect(defaultProps.onOpenLedger).toHaveBeenCalled();
   });
 
+  it("opens the Debt tab directly from the active debt card", () => {
+    render(<DashboardTab {...defaultProps} />);
+    fireEvent.click(screen.getByLabelText('Go to slide 3'));
+    fireEvent.click(screen.getByRole('button', { name: 'Active Debt, View Debt Runway' }));
+    expect(defaultProps.onOpenAnalytics).toHaveBeenCalledWith('debt');
+    expect(screen.queryByText('100% Debt-Free')).not.toBeInTheDocument();
+  });
+
   it("navigates all slides with pagination dots and has no side-arrow controls", () => {
     render(<DashboardTab {...defaultProps} />);
     for (const number of [1, 2, 3, 4, 3, 2, 1]) {

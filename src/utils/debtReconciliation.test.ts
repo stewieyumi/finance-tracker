@@ -180,3 +180,48 @@ it.each([null, [], "bad"])("does not call an unreadable root log map debt-free: 
   const d = data(); d.logs = logs as unknown as UnifiedFinanceData["logs"];
   expect(reconcileDebt(d, "February 2026", now).isComplete).toBe(false);
 });
+
+
+describe("debt overview reporting", () => {
+  it("uses selected-month overrides, including settled installments, without changing records", () => {
+    const d = add(data(), "January 2026", payment({ amount: 80, walletDebit: 80 }));
+    d.logs["January 2026"].billOverrides = { loan: 150.25 };
+    const before = structuredClone(d);
+    expect(reconcileDebt(d, "January 2026", now)).toMatchObject({ monthlyScheduled: 150.25, remainingScheduled: 200, totalPaid: 80, scheduledFinish: "March 2026", finishStatus: "scheduled" });
+    expect(d).toEqual(before);
+  });
+  it("includes archived active debt and keeps upcoming plans separate while including their finish", () => {
+    const d = data(); d.library.archivedBills = [{ ...loan, id: "archived", amount: 50 }];
+    d.library.bills.push({ ...loan, id: "future", amount: 200, startMonth: "December 2026", endMonth: "January 2027" });
+    expect(reconcileDebt(d, "February 2026", now)).toMatchObject({ monthlyScheduled: 150, remainingScheduled: 450, upcomingScheduled: 400, scheduledFinish: "January 2027" });
+    expect(reconcileDebt(d, "December 2026", now).monthlyScheduled).toBe(200);
+  });
+  it("shows overdue schedules rather than a promised debt-free date", () => {
+    expect(reconcileDebt(data(), "November 2026", now)).toMatchObject({ monthlyScheduled: 0, scheduledFinish: null, finishStatus: "past-due" });
+  });
+  it("does not claim all debt is cleared when only upcoming plans exist", () => {
+    const d = data({ ...loan, startMonth: "December 2026", endMonth: "January 2027" });
+    expect(reconcileDebt(d, "November 2026", now)).toMatchObject({ activeLoans: [], remainingScheduled: 0, upcomingScheduled: 200, scheduledFinish: "January 2027", finishStatus: "scheduled" });
+  });
+  it("suppresses monthly totals and finish dates for incomplete schedules and duplicate IDs", () => {
+    const d = data(); d.library.bills.push({ ...loan });
+    expect(reconcileDebt(d, "January 2026", now)).toMatchObject({ monthlyScheduled: null, scheduledFinish: null, finishStatus: "review", upcomingScheduled: null });
+    expect(reconcileDebt(data({ ...loan, endMonth: undefined }), "January 2026", now).finishStatus).toBe("review");
+  });
+  it("rejects malformed selected-month amounts even when a captured payment settles it", () => {
+    const d = add(data(), "January 2026", payment());
+    d.logs["January 2026"].billOverrides = { loan: NaN };
+    expect(reconcileDebt(d, "January 2026", now).monthlyScheduled).toBeNull();
+  });
+  it("reports completed plans and empty records without a fabricated finish date", () => {
+    const d = add(data({ ...loan, endMonth: "January 2026" }), "January 2026", payment());
+    expect(reconcileDebt(d, "February 2026", now)).toMatchObject({ monthlyScheduled: 0, remainingScheduled: 0, scheduledFinish: null, finishStatus: "none" });
+    d.library.bills = []; d.logs = {};
+    expect(reconcileDebt(d, "February 2026", now).finishStatus).toBe("none");
+  });
+  it("guards aggregate scheduled amounts against money overflow", () => {
+    const d = data({ ...loan, amount: 80000000000000, endMonth: "January 2026" });
+    d.library.bills.push({ ...d.library.bills[0], id: "second" });
+    expect(reconcileDebt(d, "January 2026", now).monthlyScheduled).toBeNull();
+  });
+});
