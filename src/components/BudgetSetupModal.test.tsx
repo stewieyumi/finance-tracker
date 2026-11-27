@@ -33,8 +33,8 @@ it('validates wallets, date range and daily needs before a review or save is ava
   for (const checkbox of screen.getAllByRole('checkbox')) fireEvent.click(checkbox);
   next(); expect(screen.getByRole('alert')).toHaveTextContent('Choose at least one');
   fireEvent.click(screen.getByRole('checkbox', { name: /Bank/ })); next();
-  fireEvent.change(screen.getByLabelText('Last day to cover'), { target: { value: '2026-10-01' } }); next(); expect(screen.getByRole('alert')).toHaveTextContent('Choose valid dates');
-  fireEvent.change(screen.getByLabelText('Last day to cover'), { target: { value: '2026-11-30' } }); next(); next();
+  fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-10-01' } }); next(); expect(screen.getByRole('alert')).toHaveTextContent('End date comes before start date');
+  fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-11-30' } }); next(); next();
   expect(screen.getByRole('alert')).toHaveTextContent('Enter your daily essentials'); expect(screen.queryByRole('button', { name: 'Save budget' })).not.toBeInTheDocument(); expect(app.read()).toEqual(before);
 });
 it('explains a shortfall and never offers Save until the plan is affordable', () => {
@@ -79,4 +79,27 @@ it('preserves an existing cash plan when only manual limits are adjusted', () =>
   fireEvent.click(screen.getByText('Already know your spending limit?')); fireEvent.click(screen.getByRole('button', { name: 'Enter a manual limit' }));
   fireEvent.change(screen.getByLabelText('Period spending limit (₱)'), { target: { value: '3800' } }); fireEvent.click(screen.getByRole('button', { name: 'Save budget' }));
   expect(app.read().settings?.monthlyBudgets?.['November 2026']?.cashPlan).toEqual(cashPlan); expect(app.read().settings?.monthlyBudgets?.['November 2026']?.limit).toBe(3800); expect(app.read().wallets).toEqual(before.wallets);
+});
+
+it('explains the reversed dates from the reported screenshot and clears the error after correcting the month', () => {
+  const app = setup(); const before = structuredClone(app.read()); next();
+  const start = screen.getByLabelText('Start date'), end = screen.getByLabelText('End date');
+  expect(start.compareDocumentPosition(end) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  fireEvent.change(start, { target: { value: '2026-12-28' } }); fireEvent.change(end, { target: { value: '2026-12-01' } });
+  expect(screen.getByRole('alert')).toHaveTextContent('End date comes before start date'); expect(end).toHaveAttribute('aria-invalid', 'true');
+  expect(screen.getByRole('status', { name: 'Selected budget dates' })).toHaveTextContent('Starts December 28, 2026Ends December 1, 2026');
+  next(); expect(screen.getByRole('heading', { name: 'How long should it last?' })).toBeVisible();
+  fireEvent.change(start, { target: { value: '2026-11-28' } });
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument(); expect(screen.getByRole('status', { name: 'Selected budget dates' })).toHaveTextContent('4 days in this period');
+  next(); expect(screen.getByLabelText('Usual daily essentials (₱)')).toBeVisible(); expect(app.read()).toEqual(before);
+});
+it.each([
+  ['2026-11-01', '2026-11-20', 'already ended'],
+  ['2026-11-21', '2027-11-22', 'up to 366 days'],
+])('explains why the date range %s to %s is unavailable', (start, end, message) => {
+  setup(); next(); fireEvent.change(screen.getByLabelText('Start date'), { target: { value: start } }); fireEvent.change(screen.getByLabelText('End date'), { target: { value: end } }); expect(screen.getByRole('alert')).toHaveTextContent(message);
+});
+it('allows a one-day period without an ordering error', () => {
+  setup(); next(); fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2026-11-21' } }); fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-11-21' } });
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument(); expect(screen.getByRole('status', { name: 'Selected budget dates' })).toHaveTextContent('1 day in this period'); next(); expect(screen.getByLabelText('Usual daily essentials (₱)')).toBeVisible();
 });
