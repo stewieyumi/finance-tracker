@@ -1,3 +1,4 @@
+import { BudgetSetupModal } from "./BudgetSetupModal";
 import { FinancialCheckupPanel } from "./FinancialCheckupPanel";
 import { exportPaydaysToCalendar } from "../utils/calendarExport";
 import { GuideButton } from './ContextGuideControls';
@@ -25,7 +26,10 @@ export const PaydayModal: React.FC<PaydayModalProps> = ({ isOpen, onClose, globa
   latestExecution, onUndoSplit, onConfigureBaselines, onConfigureSavings, paydayDays, onExportCalendar }) => {
   const id = useId();
   const [tab, setTab] = useState<'budget' | 'distribute' | 'checkup'>(initialReceipt ? 'distribute' : 'budget');
+  const [settingUp, setSettingUp] = useState(false);
   if (!isOpen) return null;
+  const closeSetup = () => { setSettingUp(false); requestAnimationFrame(() => document.getElementById(`${id}-build-budget`)?.focus()); };
+  if (settingUp && globalData && selectedMonth) return <BudgetSetupModal key={selectedMonth} data={globalData} month={selectedMonth} unpaidCommitments={unpaidCommitments ?? 0} commitTransition={commitBudgetTransition} onSaved={onBudgetMessage} onClose={closeSetup} />;
   return <Modal isOpen onClose={onClose} manageFocus ariaLabel="Budget Plan">
     <div data-guide-screen="payday" className={`${entryDialogStyles.card} max-w-lg !overflow-hidden flex flex-col space-y-4`}>
       <div className="flex shrink-0 items-center justify-between gap-3"><h2 className="text-base font-semibold text-primary">Budget Plan</h2>
@@ -42,7 +46,7 @@ export const PaydayModal: React.FC<PaydayModalProps> = ({ isOpen, onClose, globa
       </div>
       <div data-guide-target="budget-content" tabIndex={-1} className="min-h-0 overflow-y-auto overscroll-contain">
         <div id={`${id}-budget-panel`} role="tabpanel" aria-labelledby={`${id}-budget`} hidden={tab !== 'budget'}>
-          {globalData && selectedMonth ? <MonthlyBudgetPanel key={selectedMonth} data={globalData} month={selectedMonth} commitTransition={commitBudgetTransition} onSaved={onBudgetMessage} unpaidCommitments={unpaidCommitments} /> : <p className="text-xs text-muted">Open your account to create a budget.</p>}
+          {globalData && selectedMonth ? <MonthlyBudgetPanel key={selectedMonth} data={globalData} month={selectedMonth} commitTransition={commitBudgetTransition} setupButtonId={`${id}-build-budget`} onSetup={() => setSettingUp(true)} /> : <p className="text-xs text-muted">Open your account to create a budget.</p>}
         </div>
         <div id={`${id}-checkup-panel`} role="tabpanel" aria-labelledby={`${id}-checkup`} hidden={tab !== 'checkup'}>
           {globalData && selectedMonth && <FinancialCheckupPanel key={selectedMonth} data={globalData} month={selectedMonth} unpaidCommitments={unpaidCommitments ?? 0} commitTransition={commitBudgetTransition} onSaved={onBudgetMessage} onConfigureSavings={onConfigureSavings ? () => { onClose(); onConfigureSavings(); } : undefined} onBuildBudget={() => { setTab('budget'); document.getElementById(`${id}-budget`)?.focus(); }} />}

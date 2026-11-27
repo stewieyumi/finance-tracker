@@ -20,10 +20,13 @@ for (const theme of ['light', 'dark'] as const) test(`wallet prefix suggestions 
   await navigate(page, 'Dashboard'); await page.getByRole('button', { name: /^Budget Plan/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Budget Plan', exact: true });
   await expect(dialog.getByText('How to start', { exact: true })).toBeVisible();
+  await dialog.getByText('How to start', { exact: true }).click();
   await expect(dialog).toContainText('Paid expenses already reflected in your balances should not be subtracted again.');
   await expect(dialog).toContainText('Starting daily guide =');
   await dialog.getByRole('button', { name: 'Build my budget' }).click();
-  await expect(dialog.getByRole('form', { name: /Edit .* budget/ })).toBeVisible();
+  const setup = page.getByRole('dialog', { name: 'Budget setup', exact: true });
+  await expect(setup.getByRole('heading', { name: 'Which money can you use?' })).toBeVisible();
+  await setup.getByRole('button', { name: 'Close budget setup' }).click();
   await dialog.getByRole('button', { name: 'Close budget plan' }).click();
   expect(await storedData(page)).toEqual(snapshot);
 });

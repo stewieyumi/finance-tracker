@@ -40,8 +40,10 @@ for (const theme of ['light', 'dark'] as const) {
     const budget = page.getByRole('dialog', { name: 'Budget Plan', exact: true });
     await expect(budget.getByText('Left today', { exact: true }).locator('..')).toContainText('₱100.00');
     await budget.getByRole('button', { name: 'Edit budget', exact: true }).click();
-    await expect(budget.getByText(/Selected cash available after savings:/)).toContainText('₱100.00');
-    await page.getByRole('button', { name: 'Close budget plan' }).click();
+    const setup = page.getByRole('dialog', { name: 'Budget setup', exact: true });
+    await expect(setup.getByText('Selected cash available after Savings').locator('..')).toContainText('₱100.00');
+    await setup.getByRole('button', { name: 'Close budget setup' }).click();
+    await budget.getByRole('button', { name: 'Close budget plan' }).click();
     await navigate(page, 'Expenses'); await page.getByRole('button', { name: /^Manual\b/ }).click();
     const expense = page.getByRole('dialog', { name: 'Log Expense', exact: true });
     await expense.getByRole('spinbutton', { name: 'Amount (₱)', exact: true }).fill('150');
@@ -78,7 +80,9 @@ for (const theme of ['light', 'dark'] as const) {
       await navigate(page, 'Dashboard'); await page.getByRole('button', { name: /^Budget Plan/ }).click();
       const budget = page.getByRole('dialog', { name: 'Budget Plan', exact: true });
       await budget.getByRole('button', { name: 'Build my budget', exact: true }).click();
-      expect(await budget.getByRole('form').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+      const setup = page.getByRole('dialog', { name: 'Budget setup', exact: true });
+      expect(await setup.getByRole('form').evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+      await setup.getByRole('button', { name: 'Close budget setup' }).click();
       await budget.getByRole('button', { name: 'Close budget plan' }).click();
       await navigate(page, 'Wallets');
     }
