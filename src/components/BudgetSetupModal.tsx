@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Check, Wallet, X } from 'lucide-react';
 import type { BudgetCashPlan, FinanceTransitionCommitter, MonthlyBudget, UnifiedFinanceData } from '../types/finance';
 import { applyMonthlyBudget, BUDGET_CATEGORIES, budgetCash, budgetDateKey, budgetDays, budgetMonthRange, calculateCashGuidance, effectiveBudget, isMonthlyBudget, readBudgetSpending, readDailyBudget } from '../utils/budgeting';
 import { expenseCents } from '../utils/expenseChanges';
-import { isValidDateKey } from '../utils/dateHelpers';
+import { isValidDateKey, parseDateKey } from '../utils/dateHelpers';
 import { readWalletSavings } from '../utils/walletSavings';
 import { formatPHP } from '../utils/currency';
 import { Modal } from './ui/Modal';
@@ -82,10 +82,16 @@ export function BudgetSetupModal({ data, month, unpaidCommitments, commitTransit
     setCategories(current => ({ ...current, Commitments: String(Math.round((baseline.byCategory.Commitments + Number(commitments)) * 100) / 100) }));
     return true;
   };
+  const datesValid = isValidDateKey(startDate) && isValidDateKey(endDate);
+  const dateIssue = !datesValid ? 'Choose a valid start date and end date.'
+    : startDate > endDate ? 'End date comes before start date. Move the end later, or correct the start date.'
+    : endDate < today ? 'This period has already ended. Choose today or a later end date.'
+    : budgetDays(startDate, endDate) > 366 ? 'Choose a period of up to 366 days.' : '';
+  const dateLabel = (date: string) => parseDateKey(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const advance = () => {
     setError('');
     if (step === 0 && (!walletIds.length || selectedCash.needsReview)) { setError('Choose at least one available wallet. Review any flagged balance or Savings amount in Wallets first.'); return; }
-    if (step === 1 && (!isValidDateKey(startDate) || !isValidDateKey(endDate) || budgetDays(startDate, endDate) < 1 || budgetDays(startDate, endDate) > 366 || endDate < today)) { setError('Choose valid dates, up to one year apart, with a last day that has not passed.'); return; }
+    if (step === 1 && dateIssue) return;
     if (step === 2 && (essentials.trim() === '' || expenseCents(Number(essentials)) === null)) { setError('Enter your daily essentials, or 0 if none, with at most two decimal places.'); return; }
     if (step === 3 && expenseCents(Number(commitments)) === null) { setError('Enter a nonnegative payment reserve with at most two decimal places.'); return; }
     if (step === 4 && !calculate()) return;
@@ -105,7 +111,7 @@ export function BudgetSetupModal({ data, month, unpaidCommitments, commitTransit
     <div className="grid min-w-0 gap-3 sm:grid-cols-2">{BUDGET_CATEGORIES.map((category, index) => <div key={category} className="min-w-0"><label htmlFor={`${id}-category-${index}`} className="mb-1 block text-xs text-muted">{category} limit (₱)</label><input id={`${id}-category-${index}`} type="number" inputMode="decimal" min="0" step="0.01" value={categories[category] ?? ''} onChange={event => setCategories(current => ({ ...current, [category]: event.target.value }))} className={inputClass} /></div>)}</div>
   </>;
   const titles = ['Which money can you use?', 'How long should it last?', 'What do you need each day?', 'What payments must come first?', 'Want to set anything extra aside?', 'Here’s your spending guide'];
-  const descriptions = ['Choose the wallets that cover everyday spending. Money already set aside as Savings is excluded.', 'Choose the last day this cash needs to cover. A regular payday is optional.', 'Estimate food, transport and other everyday essentials. This helps check whether the plan is realistic.', 'Keep enough for unpaid bills and installments you expect to pay during these dates.', 'This is additional to Savings already set aside in Wallets. Enter 0 or leave blank if none.', 'Review your estimates. Saving a plan moves no money.'];
+  const descriptions = ['Choose the wallets that cover everyday spending. Money already set aside as Savings is excluded.', 'Choose when this plan starts and the last day it needs to cover. A regular payday is optional.', 'Estimate food, transport and other everyday essentials. This helps check whether the plan is realistic.', 'Keep enough for unpaid bills and installments you expect to pay during these dates.', 'This is additional to Savings already set aside in Wallets. Enter 0 or leave blank if none.', 'Review your estimates. Saving a plan moves no money.'];
   return <Modal isOpen onClose={onClose} manageFocus initialFocusRef={heading} ariaLabel="Budget setup">
     <form aria-label="Budget setup questions" onSubmit={event => { event.preventDefault(); if (manual || step === 5) save(draft); else advance(); }} className={`${entryDialogStyles.card} max-w-lg !overflow-hidden flex min-h-0 flex-col gap-4`}>
       <header className="flex shrink-0 items-center justify-between gap-3"><div className="flex items-center gap-3"><span className={entryDialogStyles.icon}><Wallet size={18} /></span><div><p className="text-xs text-muted">Budget setup · {month}</p><p className="text-sm font-semibold text-primary">{manual ? 'Manual spending limit' : `Step ${step + 1} of ${STEPS.length} · ${STEPS[step]}`}</p></div></div><button type="button" onClick={onClose} aria-label="Close budget setup" className={entryDialogStyles.close}><X size={18} /></button></header>
@@ -120,7 +126,13 @@ export function BudgetSetupModal({ data, month, unpaidCommitments, commitTransit
             <p className="text-xs text-muted">Expected income stays separate until received. If a balance is out of date, update it in Wallets first.</p>
             <details><summary className="min-h-11 cursor-pointer content-center text-xs text-muted">Already know your spending limit?</summary><button type="button" onClick={manualLimit} className="min-h-11 rounded-xl bg-fill px-3 text-sm font-semibold text-primary">Enter a manual limit</button></details>
           </>}
-          {step === 1 && <><label htmlFor={`${id}-end`} className="block text-sm font-semibold text-primary">Last day to cover</label><input id={`${id}-end`} type="date" required value={endDate} onChange={event => { setEndDate(event.target.value); change(); }} className={inputClass} /><label htmlFor={`${id}-start`} className="block text-xs text-muted">Budget period starts</label><input id={`${id}-start`} type="date" required value={startDate} onChange={event => { setStartDate(event.target.value); change(); }} className={inputClass} /><p className="text-xs text-muted">Daily guidance paces current cash from today, or the start date if later. You can choose a week, month, or another period of up to a year.</p></>}
+          {step === 1 && <>
+            <label htmlFor={`${id}-start`} className="block text-sm font-semibold text-primary">Start date</label><input id={`${id}-start`} type="date" required value={startDate} onChange={event => { setStartDate(event.target.value); change(); }} aria-describedby={`${id}-date-help${dateIssue ? ` ${id}-date-error` : ''}`} aria-invalid={!isValidDateKey(startDate)} className={inputClass} />
+            <label htmlFor={`${id}-end`} className="block text-sm font-semibold text-primary">End date</label><input id={`${id}-end`} type="date" required value={endDate} onChange={event => { setEndDate(event.target.value); change(); }} aria-describedby={`${id}-date-help${dateIssue ? ` ${id}-date-error` : ''}`} aria-invalid={Boolean(dateIssue)} className={inputClass} />
+            {datesValid && <div role="status" aria-label="Selected budget dates" className="rounded-xl bg-fill p-3 text-sm text-primary"><p>Starts {dateLabel(startDate)}</p><p>Ends {dateLabel(endDate)}</p>{!dateIssue && <p className="mt-1 text-xs text-muted">{budgetDays(startDate, endDate)} {budgetDays(startDate, endDate) === 1 ? 'day' : 'days'} in this period</p>}</div>}
+            <p id={`${id}-date-help`} className="text-xs text-muted">Choose the start first, then the last day this money must cover. Daily guidance begins today, or on your start date if later.</p>
+            {dateIssue && <p id={`${id}-date-error`} role="alert" className="rounded-xl bg-fill p-3 text-sm text-negative">{dateIssue}</p>}
+          </>}
           {step === 2 && <>{moneyInput('essentials', 'Usual daily essentials (₱)', essentials, setEssentials)}<p className="text-xs text-muted">An estimate is fine. Enter 0 if you have no daily essentials to budget for.</p></>}
           {step === 3 && <>{moneyInput('commitments', 'Upcoming payments to reserve (₱)', commitments, setCommitments)}<div className="rounded-xl bg-fill p-3"><p className="privacy-blur text-xs text-muted">Your {month} view lists {formatPHP(unpaidCommitments)} in unpaid commitments across wallets. Check which ones belong in this period before using that amount.</p><button type="button" disabled={expenseCents(unpaidCommitments) === null} onClick={() => { setCommitments(String(unpaidCommitments)); change(); }} className="mt-2 min-h-11 rounded-xl px-3 text-sm font-semibold text-primary">Use listed unpaid amount</button></div><p className="text-xs text-muted">Already-paid items are reflected in your balances. Enter 0 if no upcoming payments need a reserve.</p></>}
           {step === 4 && <>{moneyInput('savings', 'Extra savings target (₱)', savings, setSavings)}<details open={Number(cushion) > 0}><summary className="min-h-11 cursor-pointer content-center text-sm text-primary">Optional cushion for surprises</summary>{moneyInput('cushion', 'Extra cushion (₱)', cushion, setCushion)}<p className="mt-2 text-xs text-muted">Keep this amount outside your daily spending allowance.</p></details></>}

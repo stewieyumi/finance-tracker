@@ -60,4 +60,24 @@ for (const theme of ['light', 'dark'] as const) {
     }
     expect(await storedData(page)).toEqual(before);
   });
+  test(`budget dates explain reversed months and recover after correction in ${theme}`, async ({ page, isolatedApp }, info) => {
+    await page.clock.setFixedTime(new Date('2026-11-27T04:00:00Z'));
+    const data = returningData(); data.settings = { ...data.settings, theme }; await isolatedApp(data); const before = await storedData(page);
+    await page.getByRole('button', { name: /^Budget Plan/ }).click(); await page.getByRole('button', { name: 'Build my budget', exact: true }).click();
+    const setup = page.getByRole('dialog', { name: 'Budget setup', exact: true }); await setup.getByRole('button', { name: 'Continue', exact: true }).click();
+    const start = setup.getByLabel('Start date', { exact: true }), end = setup.getByLabel('End date', { exact: true });
+    expect((await start.boundingBox())!.y).toBeLessThan((await end.boundingBox())!.y);
+    await start.fill('2026-12-28'); await end.fill('2026-12-01');
+    await expect(setup.getByRole('alert')).toContainText('End date comes before start date'); await expect(end).toHaveAttribute('aria-invalid', 'true');
+    await expect(setup.getByRole('status', { name: 'Selected budget dates' })).toContainText('December 28, 2026');
+    await expect(setup.getByRole('status', { name: 'Selected budget dates' })).toContainText('December 1, 2026');
+    await setup.getByRole('button', { name: 'Continue', exact: true }).click(); await expect(setup.getByRole('heading', { name: 'How long should it last?' })).toBeVisible();
+    await page.screenshot({ path: info.outputPath(`reversed-dates-${theme}.png`) });
+    await start.fill('2026-11-28'); await expect(setup.getByRole('alert')).toHaveCount(0); await expect(end).toHaveAttribute('aria-invalid', 'false');
+    await expect(setup.getByRole('status', { name: 'Selected budget dates' })).toContainText('4 days in this period');
+    await page.screenshot({ path: info.outputPath(`corrected-dates-${theme}.png`) });
+    await setup.getByRole('button', { name: 'Continue', exact: true }).click(); await expect(setup.getByLabel('Usual daily essentials (₱)', { exact: true })).toBeVisible();
+    await setup.getByRole('button', { name: 'Close budget setup' }).click(); expect(await storedData(page)).toEqual(before);
+  });
+
 }
