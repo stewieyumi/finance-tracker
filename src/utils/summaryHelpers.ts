@@ -271,7 +271,11 @@ ${transferLines}
 ${ledgerNeedsReview ? "⚠️ Some manual income or transfer records need review; invalid or duplicate amounts/dates are not included in the lists." : ""}
 
 10. INSTALLMENT PLANS — AS OF SELECTED PERIOD
-• Known remaining scheduled: ₱${fmt(debt.remainingScheduled)}; recorded installment payments to date: ₱${fmt(debt.totalPaid)}
+• ${debt.isComplete ? "Remaining scheduled" : "Known remaining scheduled"}: ₱${fmt(debt.remainingScheduled)}; recorded installment payments to date: ₱${fmt(debt.totalPaid)}
+• Scheduled in ${selectedMonth}: ${debt.monthlyScheduled === null ? "Review needed" : `₱${fmt(debt.monthlyScheduled)}`} (includes settled payments)
+• Last planned payment: ${debt.scheduledFinish ?? (debt.finishStatus === "past-due" ? "Overdue schedule — unpaid installments in an ended plan" : debt.finishStatus === "review" ? "Review needed" : "No payments left")}; includes upcoming plans, assuming the saved schedule is met.
+• Upcoming plans: ${debt.upcomingLoans.length}; ${debt.upcomingScheduled === null ? "remaining schedule needs review" : `₱${fmt(debt.upcomingScheduled)} remaining scheduled separately from active debt`}
+• Active debt breakdown: ${debt.isComplete && debt.remainingScheduled > 0 ? debt.activeLoans.map(loan => `${loan.name}: ${((loan.remainingScheduled ?? 0) / debt.remainingScheduled * 100).toFixed(1)}%`).join("; ") : debt.isComplete ? "No active scheduled balance" : "Review needed"}
 ${debtLines}
 ${!debt.isComplete || debt.approximate ? "⚠️ Some installment schedules or older payment history need review; remaining scheduled amounts are not a lender payoff quote." : "Remaining scheduled amounts describe saved installment plans, not a lender payoff quote."}
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { FinancialAnalyticsModal } from "./FinancialAnalyticsModal";
 import { UnifiedFinanceData } from "../types/finance";
@@ -103,7 +103,7 @@ describe("FinancialAnalyticsModal", () => {
     expect(
       screen.getByText(/Active Debt Freedom Runway/i)
     ).toBeInTheDocument();
-    expect(screen.getByText("MacBook Pro")).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Active debt breakdown" })).getByText("MacBook Pro")).toBeInTheDocument();
   });
 
   it("switches to Goals tab and displays goal info and Monthly Deposit Needed", () => {
@@ -225,7 +225,7 @@ it("shows review-needed debt rather than claiming debt-free for a corrupt schedu
   render(<FinancialAnalyticsModal isOpen={true} onClose={vi.fn()} globalData={data} selectedMonth="March 2026" totalLiquid={0} totalUnpaidCommitments={0} />);
   fireEvent.click(screen.getByRole("button", { name: "Debt" }));
   expect(screen.getByText("Review loan history")).toBeInTheDocument();
-  expect(screen.getAllByText("Review needed")).toHaveLength(2);
+  expect(within(screen.getByRole("region", { name: "Debt overview" })).getAllByText("Review needed")).toHaveLength(3);
 });
 
 it("does not display an invalid scheduled amount as a zero-price installment", () => {
@@ -243,7 +243,7 @@ it("renders a review state for an unreadable month log even when no loans are li
   render(<FinancialAnalyticsModal isOpen={true} onClose={vi.fn()} globalData={data} selectedMonth="March 2026" totalLiquid={0} totalUnpaidCommitments={0} />);
   fireEvent.click(screen.getByRole("button", { name: "Debt" }));
   expect(screen.getByText("Debt history needs review before confirming the balance.")).toBeInTheDocument();
-  expect(screen.getByText("Review needed")).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Debt overview" })).toHaveTextContent("Review needed");
   expect(screen.queryByText("No active loans or installments for this period.")).not.toBeInTheDocument();
 });
 
@@ -252,4 +252,16 @@ it("excludes wallet Savings from Runway's current Safe to Spend without reducing
   render(<FinancialAnalyticsModal isOpen onClose={vi.fn()} globalData={data} selectedMonth="March 2026" totalLiquid={55000} totalUnpaidCommitments={5000} />);
   expect(screen.getByText("₱10,000.00")).toBeInTheDocument();
   expect(data.wallets.maribank).toBe(45000);
+});
+
+
+it("opens Debt directly and shows the saved schedule outlook and breakdown", () => {
+  const d = createMockData();
+  d.library.bills[0].endMonth = 'December 2027';
+  render(<FinancialAnalyticsModal isOpen initialTab="debt" onClose={vi.fn()} globalData={d} selectedMonth="March 2026" totalLiquid={55000} totalUnpaidCommitments={5000} />);
+  const overview = screen.getByRole('region', { name: 'Debt overview' });
+  expect(overview).toHaveTextContent('Scheduled in March 2026₱5,000.00');
+  expect(overview).toHaveTextContent('Last planned paymentDecember 2027');
+  expect(screen.getByRole('region', { name: 'Active debt breakdown' })).toHaveTextContent('MacBook Pro100.0%');
+  expect(screen.getByText(/not a lender payoff quote/)).toBeInTheDocument();
 });

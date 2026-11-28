@@ -84,7 +84,7 @@ interface DashboardTabProps {
   onNavigateToWallets?: () => void;
   onNavigateToOps?: (tab?: "bills" | "inflows" | "gigs") => void;
   onNavigateToExpenses?: () => void;
-  onOpenAnalytics?: () => void;
+  onOpenAnalytics?: (tab?: "overview" | "debt") => void;
   onOpenYearlyModal?: () => void;
   onOpenLedger?: () => void;
   activeBills?: BillViewModel[];
@@ -415,7 +415,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     if (activeSlide !== 2) {
                       scrollToSlide(2);
                     } else if (onOpenAnalytics) {
-                      onOpenAnalytics();
+                      onOpenAnalytics("debt");
                     }
                   }}
                   onKeyDown={(e) => {
@@ -424,7 +424,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                       if (activeSlide !== 2) {
                         scrollToSlide(2);
                       } else if (onOpenAnalytics) {
-                        onOpenAnalytics();
+                        onOpenAnalytics("debt");
                       }
                     }
                   }}
@@ -449,18 +449,18 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     <div className="text-2xl sm:text-3xl font-bold font-mono text-strong tracking-tight">
                       {!debt.isComplete ? "Review needed" : debtLoans.length > 0
                         ? `₱${totalDebtPrincipal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`
-                        : "100% Debt-Free"}
+                        : "₱0.00"}
                     </div>
                     <p className="text-xs text-muted mt-0.5 sm:mt-1 font-medium">
                       {!debt.isComplete ? "Some records need review before calculating debt" : debtLoans.length > 0
                         ? "Remaining scheduled payments, including archived debt"
-                        : "No active installment debt obligations"}
+                        : debt.upcomingLoans.length > 0 ? `${debt.upcomingLoans.length} upcoming plans tracked separately` : "No active installment debt obligations"}
                     </p>
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-2 border-t border-inverse/[0.04] text-[11px]">
                     <span className="text-faint font-mono">
-                      {debt.completedLoans.length} completed • {debt.totalPaid.toLocaleString("en-PH", { style: "currency", currency: "PHP" })} {!debt.isComplete ? "known paid" : debt.approximate ? "estimated paid" : "recorded paid"}
+                      {debt.monthlyScheduled === null ? "Monthly schedule needs review" : `${debt.monthlyScheduled.toLocaleString("en-PH", { style: "currency", currency: "PHP" })} scheduled this month`}
                     </span>
                     {onOpenAnalytics && (
                       <span className="font-medium text-violet-accent flex items-center gap-1 group-hover:text-violet-accent transition">

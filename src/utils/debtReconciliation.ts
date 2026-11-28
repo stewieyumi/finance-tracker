@@ -27,6 +27,11 @@ export interface DebtReconciliation {
   remainingScheduled: number;
   isComplete: boolean;
   approximate: boolean;
+  /** Full scheduled installment amount in the selected month, including settled payments. */
+  monthlyScheduled: number | null;
+  scheduledFinish: string | null;
+  finishStatus: "scheduled" | "past-due" | "review" | "none";
+  upcomingScheduled: number | null;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -137,6 +142,8 @@ export function reconcileDebt(
     }
   }
   const loans: ReconciledDebtLoan[] = [];
+  let monthlyCents = 0;
+  let monthlyValid = validPeriod && !invalidLogs;
   for (const id of loanIds) {
     const { bill, archived } = records.find(record => record.bill.id === id && record.bill.type === "Loan / Installment")!;
     const issues: string[] = [];
@@ -205,6 +212,12 @@ export function reconcileDebt(
     }
     if (!Number.isSafeInteger(paidCents) || !Number.isSafeInteger(remainingCents)) issue("Debt totals exceed the supported money range.");
     const status = issues.length ? "incomplete" : paidInstallments === count ? "completed" : start! > period ? "upcoming" : "active";
+    if (issues.length) monthlyValid = false;
+    if (selected !== null && start !== null && end !== null && selected >= start && selected <= end) {
+      const scheduled = moneyCents(logs[selectedMonth]?.billOverrides?.[id] ?? bill.amount);
+      if (scheduled === null) monthlyValid = false;
+      else monthlyCents += scheduled;
+    }
     loans.push({
       id, name: bill.name, monthlyAmount: base === null ? null : base / 100,
       startMonth: bill.startMonth, endMonth: bill.endMonth, totalMonths: Math.max(0, count),
@@ -218,13 +231,25 @@ export function reconcileDebt(
   const paid = loans.reduce((sum, loan) => sum + Math.round(loan.totalPaid * 100), 0);
   const remaining = activeLoans.reduce((sum, loan) => sum + Math.round((loan.remainingScheduled ?? 0) * 100), 0);
   const safeTotals = Number.isSafeInteger(paid) && Number.isSafeInteger(remaining);
+  const isComplete = validPeriod && !invalidLogs && safeTotals && loans.every(loan => loan.issues.length === 0);
+  const outstanding = loans.filter(loan => loan.status !== "completed");
+  const upcomingLoans = loans.filter(loan => loan.status === "upcoming");
+  const upcomingCents = upcomingLoans.reduce((sum, loan) => sum + Math.round((loan.remainingScheduled ?? 0) * 100), 0);
+  const ends = outstanding.map(loan => monthIndex(loan.endMonth)!);
+  const finishStatus: DebtReconciliation["finishStatus"] = !isComplete ? "review"
+    : outstanding.length === 0 ? "none"
+    : ends.some(end => end < period) ? "past-due" : "scheduled";
   return {
     loans, activeLoans,
     completedLoans: loans.filter(loan => loan.status === "completed"),
-    upcomingLoans: loans.filter(loan => loan.status === "upcoming"),
+    upcomingLoans,
     totalPaid: safeTotals ? paid / 100 : 0,
     remainingScheduled: safeTotals ? remaining / 100 : 0,
-    isComplete: validPeriod && !invalidLogs && safeTotals && loans.every(loan => loan.issues.length === 0),
-    approximate: loans.some(loan => loan.approximate)
+    isComplete,
+    approximate: loans.some(loan => loan.approximate),
+    monthlyScheduled: monthlyValid && Number.isSafeInteger(monthlyCents) ? monthlyCents / 100 : null,
+    scheduledFinish: finishStatus === "scheduled" ? monthKey(Math.max(...ends)) : null,
+    finishStatus,
+    upcomingScheduled: isComplete && Number.isSafeInteger(upcomingCents) ? upcomingCents / 100 : null
   };
 }

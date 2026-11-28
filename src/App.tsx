@@ -249,7 +249,7 @@ const {
 });
   const [showDatePickerModal, setShowDatePickerModal] = useState(false);
   const [showYearlyModal, setShowYearlyModal] = useState(false);
-  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState<false | "overview" | "debt">(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [tourOwnerSub, setTourOwnerSub] = useState<string | null>(null);
   const [highlightQuickExpense, setHighlightQuickExpense] = useState(false);
@@ -726,7 +726,7 @@ const { saveShootEdit } = useShootSaveActions({
     isTourOpen ||
     showDatePickerModal ||
     showYearlyModal ||
-    showAnalyticsModal ||
+    !!showAnalyticsModal ||
     showSettingsModal ||
     showAppleCalendar ||
     showLedgerModal;
@@ -749,7 +749,7 @@ const { saveShootEdit } = useShootSaveActions({
     onToggleDatePicker: () => setShowDatePickerModal(prev => !prev),
     onToggleDebug: () => { setSettingsInitialTab("sync"); setShowSettingsModal(true); },
     onToggleYearly: () => setShowYearlyModal(prev => !prev),
-    onToggleAnalytics: () => setShowAnalyticsModal(prev => !prev),
+    onToggleAnalytics: () => setShowAnalyticsModal(prev => prev ? false : "overview"),
     onManualSync: forceManualSync,
     onPullData: () => {
       if (isEditing) {
@@ -1150,7 +1150,7 @@ const copySummaryToClipboard = async () => {
                 <option value="CUSTOM_DATE_JUMP" className="bg-surface-modal font-semibold text-blue-400">Select Month...</option>
               </select>
             </div>
-            <button onClick={() => setShowAnalyticsModal(true)} className="flex items-center gap-1.5 warning-material hover:brightness-95 px-3 py-1.5 rounded-xl text-xs transition font-medium"><Sparkles size={13} /><span>Runway</span></button>
+            <button onClick={() => setShowAnalyticsModal("overview")} className="flex items-center gap-1.5 warning-material hover:brightness-95 px-3 py-1.5 rounded-xl text-xs transition font-medium"><Sparkles size={13} /><span>Runway</span></button>
             <button onClick={() => setShowYearlyModal(true)} className="flex items-center gap-1.5 dashboard-material text-positive hover:border-default px-3 py-1.5 rounded-xl text-xs transition font-medium"><BarChart2 size={13} /><span>Yearly</span></button>
           </div>
         </div>
@@ -1224,7 +1224,7 @@ const copySummaryToClipboard = async () => {
         {showAnalyticsModal && (
           <ErrorBoundary>
             <Suspense fallback={deferredModalFallback}>
-              <FinancialAnalyticsModal isOpen={showAnalyticsModal} onClose={() => setShowAnalyticsModal(false)} globalData={globalData} selectedMonth={selectedMonth} totalLiquid={totalLiquid} totalUnpaidCommitments={totalUnpaidCommitments} />
+              <FinancialAnalyticsModal isOpen={!!showAnalyticsModal} initialTab={showAnalyticsModal} onClose={() => setShowAnalyticsModal(false)} globalData={globalData} selectedMonth={selectedMonth} totalLiquid={totalLiquid} totalUnpaidCommitments={totalUnpaidCommitments} />
             </Suspense>
           </ErrorBoundary>
         )}
@@ -1284,7 +1284,7 @@ const copySummaryToClipboard = async () => {
             onNavigateToWallets={() => setActiveTab("wallets")}
             onNavigateToOps={(tab = "bills") => { setActiveTab("operations"); setOpsTab(tab); }}
             onNavigateToExpenses={() => setActiveTab("expenses")}
-            onOpenAnalytics={() => setShowAnalyticsModal(true)}
+            onOpenAnalytics={(tab = "overview") => setShowAnalyticsModal(tab)}
             onOpenYearlyModal={() => setShowYearlyModal(true)}
             onOpenLedger={() => setShowTransactionHistoryModal(true)}
             activeBills={activeBills}
