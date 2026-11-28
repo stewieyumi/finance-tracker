@@ -8,11 +8,13 @@ import {
   Calendar,
   Receipt,
   Search,
-  BookOpen
+  BookOpen,
+  Download
 } from "lucide-react";
 import { TransactionHistoryItem } from "../types/finance";
 import { formatMonthYear } from "../utils/dateHelpers";
 import { compareTransactionsNewestFirst, confirmedTransactionMonth, formatHistoryDate, formatTransactionDateTime, transactionDay, transactionMonth } from "../utils/transactionDates";
+import { downloadTransactionCsv } from "../utils/transactionCsv";
 import { Modal } from "./ui/Modal";
 
 export interface TransactionHistoryModalProps {
@@ -42,6 +44,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [displayLimit, setDisplayLimit] = useState<number>(PAGE_SIZE);
 
+  const [exportError, setExportError] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const invalidRange = Boolean(fromDate && toDate && fromDate > toDate);
@@ -165,6 +168,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
       className="!justify-start"
     >
       <div data-guide-screen="history" ref={historyPanelRef} className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-2xl mx-auto shadow-2xl mt-auto sm:mb-auto shrink-0 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
+        {exportError && <p role="alert" className="px-4 pt-3 text-xs text-negative">{exportError}</p>}
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-inverse/[0.06]">
           <div className="flex min-w-0 items-center gap-2">
@@ -183,6 +187,10 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1"><GuideButton screen="history" name="Transaction history" />
+            <button type="button" aria-label="Export filtered transactions as CSV" title="Export all filtered records as CSV" disabled={!filteredTransactions.length} onClick={() => {
+              setExportError("");
+              try { downloadTransactionCsv(filteredTransactions, walletLabels); } catch { setExportError("CSV download could not start. Please try again."); }
+            }} className="flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-xl bg-fill px-2 text-xs font-semibold text-primary hover:bg-fill-strong disabled:opacity-50"><Download size={14} aria-hidden="true" /><span className="hidden min-[375px]:inline">CSV</span></button>
             {onOpenManualLedger && (
               <button
                 type="button"

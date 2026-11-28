@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
+import * as csv from "../utils/transactionCsv";
 import { TransactionHistoryModal } from "./TransactionHistoryModal";
 import { TransactionHistoryItem } from "../types/finance";
 
@@ -308,4 +309,20 @@ describe("TransactionHistoryModal", () => {
     fireEvent.click(dialog);
     expect(onClose).toHaveBeenCalledTimes(2);
   });
+});
+
+it("exports every filtered result beyond pagination and disables export for invalid dates", () => {
+  const rows = Array.from({ length: 55 }, (_, index) => ({ ...mockTransactions[0], id: `csv-${index}`, title: `CSV Match ${index}` }));
+  const download = vi.spyOn(csv, "downloadTransactionCsv").mockImplementation(() => {});
+  try {
+    render(<TransactionHistoryModal isOpen onClose={vi.fn()} transactions={[...rows, mockTransactions[1]]} />);
+    fireEvent.change(screen.getByRole("textbox", { name: "Search transactions" }), { target: { value: "CSV Match" } });
+    fireEvent.click(screen.getByRole("button", { name: "Export filtered transactions as CSV" }));
+    expect(download).toHaveBeenCalledOnce();
+    expect(download.mock.calls[0][0]).toHaveLength(55);
+    expect(download.mock.calls[0][0].map(row => row.id).sort()).toEqual(rows.map(row => row.id).sort());
+    fireEvent.change(screen.getByLabelText("From date"), { target: { value: "2026-11-30" } });
+    fireEvent.change(screen.getByLabelText("To date"), { target: { value: "2026-11-01" } });
+    expect(screen.getByRole("button", { name: "Export filtered transactions as CSV" })).toBeDisabled();
+  } finally { download.mockRestore(); }
 });
