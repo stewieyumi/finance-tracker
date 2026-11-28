@@ -134,3 +134,29 @@ for (const theme of ['light', 'dark'] as const) {
   });
 
 }
+
+test('Budget Plan downloads on demand and delayed loading can be dismissed by navigation', async ({ page, isolatedApp }) => {
+  const requests: string[] = [];
+  page.on('request', request => { if (/\/assets\/PaydayModal-[^/]+\.js$/.test(new URL(request.url()).pathname)) requests.push(request.url()); });
+  await isolatedApp(returningData());
+  expect(requests).toEqual([]);
+  const before = await storedData(page);
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/assets/PaydayModal-*.js', async route => { await gate; await route.continue(); });
+  await page.getByRole('button', { name: /^Budget Plan/ }).click();
+  await expect.poll(() => requests.length).toBe(1);
+  await expect(page.getByRole('status').filter({ hasText: 'Loading Budget Plan' })).toBeAttached();
+  await navigate(page, 'Operations');
+  await expect(page.getByRole('button', { name: 'Commitments', exact: true })).toBeVisible();
+  const loaded = page.waitForResponse(response => /\/assets\/PaydayModal-[^/]+\.js$/.test(new URL(response.url()).pathname));
+  release();
+  await loaded;
+  await expect(page.getByRole('dialog', { name: 'Budget Plan', exact: true })).toHaveCount(0);
+  await navigate(page, 'Dashboard');
+  const dialog = await openBudget(page);
+  await expect(dialog.getByRole('tab', { name: 'Budget', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await dialog.getByRole('button', { name: 'Close budget plan' }).click();
+  expect(requests).toHaveLength(1);
+  expect(await storedData(page)).toEqual(before);
+});

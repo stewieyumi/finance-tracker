@@ -230,25 +230,25 @@ describe("DashboardTab", () => {
     expect(defaultProps.onOpenSettings).toHaveBeenCalledWith("baselines");
   });
 
-  it("opens Budget Plan on its planning tab and restores focus when closed", () => {
+  it("opens Budget Plan on its planning tab and restores focus when closed", async () => {
     render(<DashboardTab {...defaultProps} />);
     const opener = screen.getByRole("button", { name: /^Budget Plan/ }); opener.focus(); fireEvent.click(opener);
-    const dialog = screen.getByRole("dialog", { name: "Budget Plan" });
+    const dialog = await screen.findByRole("dialog", { name: "Budget Plan" });
     expect(within(dialog).getByRole("tab", { name: "Budget" })).toHaveAttribute("aria-selected", "true");
     expect(defaultProps.onExecutePaydaySplit).not.toHaveBeenCalled();
     fireEvent.keyDown(window, { key: "Escape" }); expect(opener).toHaveFocus();
   });
 
-  it("uses actual income or existing cash allocation instead of executing a configured salary on open", () => {
+  it("uses actual income or existing cash allocation instead of executing a configured salary on open", async () => {
     render(<DashboardTab {...defaultProps} />); fireEvent.click(screen.getByRole("button", { name: /^Budget Plan/ }));
-    fireEvent.click(screen.getByRole("tab", { name: "Auto-Distribute" }));
+    fireEvent.click(await screen.findByRole("tab", { name: "Auto-Distribute" }));
     expect(screen.getByLabelText("Which money are you allocating?")).toHaveValue("existing");
     expect(defaultProps.onExecutePaydaySplit).not.toHaveBeenCalled();
   });
 
-  it("keeps historical payday Undo accessible after the rename", () => {
+  it("keeps historical payday Undo accessible after the rename", async () => {
     render(<DashboardTab {...defaultProps} latestExecution={{ id: "exec-1", date: "2026-09-15", timestamp: 1, allocations: { main: 2500 }, billContributions: [] }} />);
-    fireEvent.click(screen.getByRole("button", { name: /^Budget Plan/ })); fireEvent.click(screen.getByRole("tab", { name: "Auto-Distribute" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Budget Plan/ })); fireEvent.click(await screen.findByRole("tab", { name: "Auto-Distribute" }));
     fireEvent.click(screen.getByText("Earlier regular-pay distribution")); fireEvent.click(screen.getByRole("button", { name: "Undo earlier distribution" }));
     expect(defaultProps.onUndoPaydaySplit).toHaveBeenCalledWith("exec-1");
   });

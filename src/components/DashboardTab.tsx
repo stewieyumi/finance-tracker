@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { MilestoneProgressBar } from "./MilestoneProgressBar";
-import { PaydayModal } from "./PaydayModal";
+import { deferredScreen } from "./ui/deferredScreen";
 import { QuickAddModal, QuickAddAction } from "./QuickAddModal";
 import { UpcomingModal } from "./UpcomingModal";
 import { Modal } from "./ui/Modal";
@@ -40,6 +40,9 @@ import { calculateSafeToSpend } from "../utils/financialAnalytics";
 import { getSafeWalletBalance, reconcileWalletBalances, resolveActiveWalletDefault, validateActiveWalletAssignment } from "../utils/financeHelpers";
 
 import { reconcileDebt } from "../utils/debtReconciliation";
+
+const PaydayModal = deferredScreen(() => import("./PaydayModal")
+  .then(module => ({ default: module.PaydayModal })), "Budget Plan");
 
 const carouselSlideClass = "flex w-full shrink-0 snap-center";
 
