@@ -238,9 +238,9 @@ it("explains legacy amounts, later confirmations and incomplete history without 
   expect(result).toMatchObject({ totalPaid: 280, remainingScheduled: 0, isComplete: true });
   expect(result.loans[0]).toMatchObject({ status: "completed", paidInstallments: 3, approximate: true });
   expect(result.loans[0].estimateNotes).toEqual([
-    "January 2026: Marked paid without a detailed payment record; paid amount uses the saved installment amount.",
-    "February 2026: Confirmed as paid later; original payment date is unknown. The saved payment amount is used.",
-    "March 2026: This older payment has incomplete paid/undo history. The saved payment amount is used.",
+    "Paid for January 2026 · ₱80.00 · exact date unknown · saved installment amount.",
+    "Paid for February 2026 · ₱100.00 · exact date unknown · saved amount.",
+    expect.stringMatching(/^Paid for March 2026 · ₱100\.00 · recorded date: .* · saved amount · paid\/undo history incomplete\.$/),
   ]);
   expect(d).toEqual(before);
 });
@@ -252,4 +252,31 @@ it("keeps record conflicts distinct from estimates and leaves complete recorded 
   const result = reconcileDebt(d, "November 2026", now).loans[0];
   expect(result.status).toBe("incomplete"); expect(result.estimateNotes).toEqual([]);
   expect(result.issues).toContain("Paid status and settlement records disagree.");
+});
+
+
+it("keeps a known payment date and does not imply a later payment happened in the installment month", () => {
+  const d = data(); d.logs["January 2026"] = { billsPaid: ["loan"], paymentDates: { loan: "2026-03-15T12:00:00Z" } };
+  const before = structuredClone(d);
+  const earlier = reconcileDebt(d, "February 2026", now);
+  expect(earlier.totalPaid).toBe(0); expect(earlier.loans[0].paidInstallments).toBe(0);
+  expect(earlier.loans[0].estimateNotes[0]).toMatch(/^Paid mark for January 2026 · ₱100\.00 · recorded date:/);
+  expect(earlier.loans[0].estimateNotes[0]).toContain("not counted as paid in this report");
+  expect(earlier.loans[0].estimateNotes[0]).not.toContain("exact date unknown");
+  const paid = reconcileDebt(d, "March 2026", now);
+  expect(paid.totalPaid).toBe(100); expect(paid.loans[0].paidInstallments).toBe(1);
+  expect(paid.loans[0].estimateNotes[0]).toMatch(/^Paid for January 2026 · ₱100\.00 · recorded date:/);
+  expect(d).toEqual(before);
+});
+
+it.each([
+  { label: "future", entry: payment({ paidAt: "2026-12-15T12:00:00Z", statusHistory: undefined, historyComplete: undefined }) },
+  { label: "reversed", entry: payment({ reversedAt: "2026-03-15T12:00:00Z", statusHistory: undefined, historyComplete: undefined }) },
+])("does not describe a $label older payment as paid within the reporting cutoff", ({ entry }) => {
+  const d = add(data(), "January 2026", entry); const before = structuredClone(d);
+  const result = reconcileDebt(d, "November 2026", now);
+  expect(result.totalPaid).toBe(0); expect(result.loans[0].paidInstallments).toBe(0);
+  expect(result.loans[0].estimateNotes[0]).toMatch(/^Payment record for January 2026 · ₱100\.00 · recorded date:/);
+  expect(result.loans[0].estimateNotes[0]).toContain("not counted as paid in this report");
+  expect(d).toEqual(before);
 });

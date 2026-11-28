@@ -296,10 +296,10 @@ it("shows exact history reasons separately for estimated and conflicting plans w
   const summary = screen.getByText("Payment history details (2)");
   fireEvent.click(summary);
   const details = within(summary.closest("details")!);
-  expect(details.getByText("Estimated history", { exact: true })).toBeVisible();
+  expect(details.getByText("Historical payments", { exact: true })).toBeVisible();
   expect(details.getByText("History needs review", { exact: true })).toBeVisible();
-  expect(details.getByText(/January 2026: Marked paid without a detailed payment record/)).toBeVisible();
+  expect(details.getByText(/Paid for January 2026 · ₱100.00 · exact date unknown/)).toBeVisible();
   expect(details.getByText(/Review: The loan schedule needs review/)).toBeVisible();
-  expect(details.getByText(/does not establish the original payment date/)).toBeVisible();
+  expect(details.getByText(/Existing Paid months need no repeat payment or wallet deduction/)).toBeVisible();
   expect(data).toEqual(before);
 });
