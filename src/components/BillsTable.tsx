@@ -20,6 +20,7 @@ interface BillsTableProps {
   activeBills: BillViewModel[];
   jumpToBillId?: string;
   selectedMonth: string;
+  onPayAhead?: () => void;
   onConfirmPriorBillPayments?: (billId: string, months: string[]) => void;
   onToggleStatus: (bill: BillViewModel, skipWalletMutation?: boolean) => void;
   onAddBill: (bill: { name: string; amount: number; dueDay: string; type: BillType; startMonth: string; endMonth: string; wallet?: string }) => Bill | null;
@@ -39,7 +40,7 @@ interface BillsTableProps {
 }
 
 export const BillsTable: React.FC<BillsTableProps> = React.memo(({
-  activeBills, selectedMonth, jumpToBillId, onToggleStatus, onAddBill, onDeleteBill, onSaveEdit, onResetMonthOverride,
+  activeBills, selectedMonth, onPayAhead, jumpToBillId, onToggleStatus, onAddBill, onDeleteBill, onSaveEdit, onResetMonthOverride,
   editingId, setEditingId, editForm, setEditForm, customWallets, defaultWallet = "main", highlightOverdue = false,
   onExportMonthCalendar, onConfirmPriorBillPayments
 }) => {
@@ -117,7 +118,10 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
           <h2 data-guide-target="filters" className="min-w-0 text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
             <Calendar size={13} className="shrink-0 text-blue-400" /> {selectedMonth} Commitments
           </h2>
-          <span className="hidden shrink-0 text-[10px] text-faint font-mono sm:inline">{activeBills.filter(b => b.paid).length}/{activeBills.length} Paid</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="hidden text-[10px] text-faint font-mono sm:inline">{activeBills.filter(b => b.paid).length}/{activeBills.length} Paid</span>
+            {onPayAhead && <button type="button" onClick={onPayAhead} className="min-h-11 rounded-xl bg-fill px-3 text-xs font-semibold text-primary transition hover:bg-fill-strong">Pay ahead</button>}
+          </div>
         </div>
         <div role="group" aria-label="Commitment controls" className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto] items-center gap-1 sm:gap-2">
           <input

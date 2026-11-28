@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BillViewModel, ReceivableViewModel, UnifiedFinanceData } from '../types/finance';
+import { applyBillStatusToggle } from '../hooks/useBillActions';
 import { reconcileDebt } from './debtReconciliation';
 import { buildFinancialSummary } from './summaryHelpers';
 import { reconcileWalletBalances } from './financeHelpers';
@@ -188,4 +189,19 @@ it('explains the source month and amount of historical estimates instead of comb
   expect(text).not.toContain('history needs review / estimate');
   expect(text).toContain('They cannot independently verify older payments.');
   expect(data).toEqual(before);
+});
+
+it('reports an early next-month payment in actual-date spending and keeps the due-month record distinct', () => {
+  vi.setSystemTime(new Date(2026, 10, 30, 12));
+  const data = seed(); data.logs = {}; data.library.expenses = []; data.library.manualTransactions = []; data.library.receivables = [];
+  const bill: BillViewModel = { id: 'early', name: 'December Internet', amount: 150, baseAmount: 150, dueDay: '1', wallet: 'main', type: 'Bill', startMonth: 'December 2026', paid: false, daysLeft: 1, isOverridden: false, targetMonthForDue: 'December 2026' };
+  data.library.bills = [bill];
+  const result = applyBillStatusToggle(data, bill, 'December 2026');
+  expect(result.ok).toBe(true); if (!result.ok) return;
+  const report = (period: string) => buildFinancialSummary({ globalData: result.data, selectedMonth: period, totalLiquid: reconcileWalletBalances(result.data).totalLiquid, activeBills: period === 'December 2026' ? [{ ...bill, paid: true }] : [], activeReceivables: [], totalUnpaidCommitments: 0, overdueBills: [], targetMilestoneFund: 1000, fundProgressPercent: '0' });
+  expect(report('November 2026')).toContain('Paid commitments by actual payment date: ₱150.00');
+  expect(report('November 2026')).toContain('Bills paid ahead count as spending on their actual payment date; their due-month commitment is settled separately.');
+  expect(report('December 2026')).toContain('Paid commitments by actual payment date: ₱0.00');
+  expect(report('December 2026')).toContain('COMMITMENT STATUS — SELECTED VIEW');
+  expect(result.data.logs['December 2026'].billsPaid).toEqual(['early']);
 });

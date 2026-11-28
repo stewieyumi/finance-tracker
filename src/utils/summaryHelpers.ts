@@ -241,6 +241,7 @@ TOTAL RECORDED SPENDING: ₱${fmt(spending.spent)}
 Category breakdown:
 ${categoryLines}
 Transfers between your wallets are excluded; their fees are included. Reversed payments are excluded.
+Bills paid ahead count as spending on their actual payment date; their due-month commitment is settled separately.
 ${spending.excluded ? `⚠️ ${spending.excluded} spending record(s) need review and were excluded (missing dates, older confirmations, or duplicate/invalid records).` : ""}
 
 6. BUDGET PLAN
