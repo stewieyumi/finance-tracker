@@ -183,8 +183,8 @@ it('explains the source month and amount of historical estimates instead of comb
   data.library.bills.push({ id: 'legacy-loan', name: 'Older installment', amount: 100, dueDay: '15', type: 'Loan / Installment', startMonth: 'January 2026', endMonth: 'March 2026' });
   data.logs['January 2026'] = { billsPaid: ['legacy-loan'], billOverrides: { 'legacy-loan': 80 } };
   const before = structuredClone(data); const text = summary(data);
-  expect(text).toContain('Older installment: 1/3 installments; ₱80.00 paid; ₱200.00 remaining scheduled — Estimated history');
-  expect(text).toContain('Estimate: January 2026: Marked paid without a detailed payment record; paid amount uses the saved installment amount.');
+  expect(text).toContain('Older installment: 1/3 installments; ₱80.00 paid; ₱200.00 remaining scheduled — Historical payments');
+  expect(text).toContain('Historical entry: Paid for January 2026 · ₱80.00 · exact date unknown · saved installment amount.');
   expect(text).not.toContain('history needs review / estimate');
   expect(text).toContain('They cannot independently verify older payments.');
   expect(data).toEqual(before);

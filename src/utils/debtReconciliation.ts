@@ -1,5 +1,7 @@
 import type { BillSettlement, UnifiedFinanceData } from "../types/finance";
 import { MONTH_LIST } from "../constants/config";
+import { formatPHP } from "./currency";
+import { formatTransactionDateTime } from "./transactionDates";
 
 export interface ReconciledDebtLoan {
   id: string;
@@ -165,8 +167,7 @@ export function reconcileDebt(
     let paidInstallments = 0;
     let approximate = false;
     const estimateNotes: string[] = [];
-    const estimate = (month: string, reason: string) => {
-      const note = `${month}: ${reason}`;
+    const estimate = (note: string) => {
       if (!estimateNotes.includes(note)) estimateNotes.push(note);
     };
     if (issues.length === 0) {
@@ -195,8 +196,9 @@ export function reconcileDebt(
             const state = paymentAt(row, occurrence ?? start!, cutoff, issue);
             approximate ||= state.approximate;
             if (state.approximate) {
-              if (row.priorConfirmation) estimate(key, "Confirmed as paid later; original payment date is unknown. The saved payment amount is used.");
-              if (!Array.isArray(row.statusHistory) || row.historyComplete !== true) estimate(key, "This older payment has incomplete paid/undo history. The saved payment amount is used.");
+              const dateNote = row.priorConfirmation ? "exact date unknown" : timestamp(row.paidAt) === null ? "payment date needs review" : `recorded date: ${formatTransactionDateTime(row.paidAt)}`;
+              const statusNote = !Array.isArray(row.statusHistory) || row.historyComplete !== true ? " · paid/undo history incomplete" : "";
+              estimate(`${state.paid ? "Paid for" : "Payment record for"} ${key} · ${formatPHP(amount / 100)} · ${dateNote} · saved amount${statusNote}${state.paid ? "" : " · not counted as paid in this report"}.`);
             }
             if (state.paid) { active++; paidCents += amount; }
           }
@@ -207,11 +209,12 @@ export function reconcileDebt(
           if (currentPaid !== !!log?.billsPaid?.includes(id)) issue("Paid status and settlement records disagree.");
         } else if (log?.billsPaid?.includes(id)) {
           approximate = true;
-          estimate(key, "Marked paid without a detailed payment record; paid amount uses the saved installment amount.");
           const dated = log.paymentDates?.[id];
           const time = dated === undefined ? monthStart(occurrence ?? start!) : timestamp(dated);
           if (time === null) issue("A legacy payment date needs review.");
           settled = time !== null && time < cutoff;
+          const dateNote = dated === undefined ? "exact date unknown" : time === null ? "payment date needs review" : `recorded date: ${formatTransactionDateTime(dated)}`;
+          estimate(`${settled ? "Paid for" : "Paid mark for"} ${key} · ${expected === null ? "amount needs review" : formatPHP(expected / 100)} · ${dateNote} · saved installment amount${settled ? "" : " · not counted as paid in this report"}.`);
           if (settled && expected !== null) paidCents += expected;
           if (expected === null) issue("A legacy payment amount needs review.");
         }

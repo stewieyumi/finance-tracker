@@ -132,9 +132,9 @@ export function buildFinancialSummary({
   const ledgerIncomeLines = ledger.filter(row => row.type === "income").map(row => `  • ${transactionDay(row.date)}: ${row.title}: ₱${fmt(row.amount)} [${row.postingMode === "wallet" ? "wallet entry" : "history only"}]`).join("\n") || "  • None";
   const debt = reconcileDebt(globalData, selectedMonth);
   const debtLines = debt.loans.map(loan => [
-    `  • ${loan.name}${loan.archived ? " [archived]" : ""}: ${loan.paidInstallments}/${loan.totalMonths} installments; ₱${fmt(loan.totalPaid)} paid; ${loan.remainingScheduled === null ? "remaining schedule unknown" : `₱${fmt(loan.remainingScheduled)} remaining scheduled`}${loan.status === "incomplete" ? " — History needs review" : loan.approximate ? " — Estimated history" : ""}`,
+    `  • ${loan.name}${loan.archived ? " [archived]" : ""}: ${loan.paidInstallments}/${loan.totalMonths} installments; ₱${fmt(loan.totalPaid)} paid; ${loan.remainingScheduled === null ? "remaining schedule unknown" : `₱${fmt(loan.remainingScheduled)} remaining scheduled`}${loan.status === "incomplete" ? " — History needs review" : loan.approximate ? " — Historical payments" : ""}`,
     ...loan.issues.map(issue => `    Review: ${issue}`),
-    ...loan.estimateNotes.map(note => `    Estimate: ${note}`),
+    ...loan.estimateNotes.map(note => `    Historical entry: ${note}`),
   ].join("\n")).join("\n") || "  • No installment plans";
   const gigs = globalData.library.shoots ?? [];
   const gigLines = gigs.map(gig => `  • ${gig.title}: ${gig.date || "Date not set"} · ${gig.completed ? "Done" : gig.status}${gig.category ? ` · ${gig.category}` : ""}`).join("\n") || "  • No gigs/tasks saved";
@@ -281,7 +281,7 @@ ${ledgerNeedsReview ? "⚠️ Some manual income or transfer records need review
 • Upcoming plans: ${debt.upcomingLoans.length}; ${debt.upcomingScheduled === null ? "remaining schedule needs review" : `₱${fmt(debt.upcomingScheduled)} remaining scheduled separately from active debt`}
 • Active debt breakdown: ${debt.isComplete && debt.remainingScheduled > 0 ? debt.activeLoans.map(loan => `${loan.name}: ${((loan.remainingScheduled ?? 0) / debt.remainingScheduled * 100).toFixed(1)}%`).join("; ") : debt.isComplete ? "No active scheduled balance" : "Review needed"}
 ${debtLines}
-${!debt.isComplete ? "⚠️ Some installment schedules or payment records need correction; review the reasons listed above.\n" : ""}${debt.approximate ? "Older payment estimates are kept separate from history conflicts. Confirming paid months does not recover original payment dates.\n" : ""}Remaining scheduled amounts describe saved installment plans, not a lender payoff quote. They cannot independently verify older payments.
+${!debt.isComplete ? "⚠️ Some installment schedules or payment records need correction; review the reasons listed above.\n" : ""}${debt.approximate ? "Historical Paid entries count toward paid installments using saved months and amounts. Unknown exact dates stay unknown; wallets are not charged again.\n" : ""}Remaining scheduled amounts describe saved installment plans, not a lender payoff quote. They cannot independently verify older payments.
 
 11. ${globalData.settings?.gigsLabel?.toUpperCase() || "GIGS & TASKS"} — ALL SAVED DATES
 ${gigs.filter(gig => gig.completed).length}/${gigs.length} completed
