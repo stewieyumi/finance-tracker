@@ -591,9 +591,21 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       </section>
 
       <section aria-labelledby="dashboard-quick-actions" className="dashboard-material rounded-2xl p-4 sm:p-5">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 id="dashboard-quick-actions" className="text-sm font-semibold text-primary" data-guide-target="quick-actions">Quick Actions</h2>
-          <button type="button" onClick={() => setShowQuickAdd(true)} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-fill px-2.5 text-xs font-medium text-primary transition hover:bg-fill-strong">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 id="dashboard-quick-actions" className="text-sm font-semibold text-primary" data-guide-target="quick-actions">Quick Actions</h2>
+            {gettingStartedSteps.length > 0 && (
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                onClick={() => setShowGettingStarted(true)}
+                className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg px-1.5 text-[11px] font-medium text-muted transition hover:bg-fill hover:text-primary"
+              >
+                <CircleHelp size={13} aria-hidden="true" /> Getting Started
+              </button>
+            )}
+          </div>
+          <button type="button" onClick={() => setShowQuickAdd(true)} className="ml-auto inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg bg-fill px-2.5 text-xs font-medium text-primary transition hover:bg-fill-strong">
             <Plus size={14} aria-hidden="true" /> Quick Add
           </button>
         </div>
@@ -611,16 +623,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             </button>
           ))}
         </div>
-        {gettingStartedSteps.length > 0 && (
-          <button
-            type="button"
-            aria-haspopup="dialog"
-            onClick={() => setShowGettingStarted(true)}
-            className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-xs font-medium text-muted transition hover:bg-fill hover:text-primary"
-          >
-            <CircleHelp size={15} aria-hidden="true" /> Getting Started
-          </button>
-        )}
       </section>
 
       {/* 2. UPCOMING COMMITMENTS */}
