@@ -114,6 +114,12 @@ for (const theme of ['light', 'dark'] as const) {
     const fold = dialog.locator('details').filter({ hasText: 'Deductions' });
     await expect(fold).not.toHaveAttribute('open', ''); await expect(fold.locator('summary')).toContainText('-₱100.00');
     await expect(dialog.getByLabel('Deduction value')).toBeHidden();
+    await expect(dialog.getByTestId('receivable-gross-display')).toBeHidden();
+    await expect(dialog.getByTestId('receivable-net-display')).toBeHidden();
+    await fold.locator('summary').scrollIntoViewIfNeeded();
+    const category = await dialog.getByLabel('Category', { exact: true }).boundingBox();
+    const deductions = await fold.boundingBox();
+    expect(deductions!.y).toBeGreaterThan(category!.y + category!.height);
     await page.screenshot({ path: info.outputPath(`deductions-collapsed-${theme}.png`) });
     await fold.locator('summary').click(); await dialog.getByLabel('Deduction value').fill('20');
     await expect(dialog.getByTestId('receivable-net-display')).toHaveText('₱800.00');

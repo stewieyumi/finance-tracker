@@ -26,9 +26,6 @@
   --text-negative: #fda4af;
   --text-info: #93c5fd;
   --text-violet-accent: #d8b4fe;
-  --wallet-goal: #86baff;
-  --wallet-savings: #75ddbb;
-  --wallet-shared: #c7a7ff;
 
   /* Granular surfaces */
   --bg-surface: #202020;
@@ -79,9 +76,6 @@
   --text-negative: #be123c;
   --text-info: #1d4ed8;
   --text-violet-accent: #7040ae;
-  --wallet-goal: #005bc4;
-  --wallet-savings: #047857;
-  --wallet-shared: #7040ae;
 
   --bg-surface: #ffffff;
   --bg-surface-low: #f2f2f7;
@@ -180,15 +174,11 @@
     background: radial-gradient(ellipse at 100% 0%, color-mix(in srgb, var(--text-negative) 15%, transparent), transparent 75%), var(--bg-surface-low);
   }
 
-  .wallet-role-goal { --wallet-role-color: var(--wallet-goal); }
-  .wallet-role-savings { --wallet-role-color: var(--wallet-savings); }
-  .wallet-role-shared { --wallet-role-color: var(--wallet-shared); }
-
   .wallet-role::after {
     content: "";
     position: absolute;
     inset: 3px;
-    border: 1px solid color-mix(in srgb, var(--wallet-role-color) 32%, transparent);
+    border: 1px solid color-mix(in srgb, var(--text-strong) 40%, transparent);
     border-radius: 21px;
     pointer-events: none;
   }
@@ -199,7 +189,6 @@
     border-radius: 24px;
   }
 
-  .wallet-role:focus-visible::after { opacity: 0; }
 }
 
 @layer base {

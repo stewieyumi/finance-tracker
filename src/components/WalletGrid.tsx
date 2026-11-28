@@ -65,20 +65,13 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ enabledSaving
             const isMilestoneWallet = w.id === milestoneWallet;
             const isSavingsWallet = w.id === savingsWallet;
 
-            const roleClasses =
-              isMilestoneWallet && isSavingsWallet
-                ? "wallet-role wallet-role-shared"
-                : isMilestoneWallet
-                  ? "wallet-role wallet-role-goal"
-                  : isSavingsWallet
-                    ? "wallet-role wallet-role-savings"
-                    : "";
+            const roleClass = isMilestoneWallet || isSavingsWallet ? "wallet-role" : "";
 
             const displayColor = `${w.color || "text-strong"} font-bold`;
 
             return (
-              <article key={w.id} className="wallet-account-card dashboard-material relative min-w-0 overflow-hidden rounded-3xl border border-subtle">
-                <button type="button" ref={index === 0 ? firstBalanceButtonRef : undefined} data-guide-interactive="open" onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className={`wallet-balance-row group relative flex min-h-40 w-full min-w-0 flex-col items-start gap-5 rounded-3xl p-5 text-left transition-colors hover:bg-fill ${roleClasses}`}>
+              <article key={w.id} className={`wallet-account-card dashboard-material relative min-w-0 overflow-hidden rounded-3xl border border-subtle ${roleClass}`}>
+                <button type="button" ref={index === 0 ? firstBalanceButtonRef : undefined} data-guide-interactive="open" onClick={() => openEdit({ ...w, color: displayColor }, currentBalance)} className="wallet-balance-row group relative flex min-h-40 w-full min-w-0 flex-col items-start gap-5 rounded-3xl p-5 text-left transition-colors hover:bg-fill">
                   <span aria-hidden="true" className={`wallet-card-art pointer-events-none absolute inset-0 ${w.color || "text-muted"}`} />
                   <span className="relative flex w-full min-w-0 items-center gap-3">
                     <span aria-hidden="true" className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-current/10 bg-fill ${w.color || "text-muted"}`}><CreditCard size={19} /></span>

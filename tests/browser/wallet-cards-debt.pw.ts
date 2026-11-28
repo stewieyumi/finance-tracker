@@ -29,6 +29,7 @@ for (const [width, height] of [[320, 320], [375, 400], [320, 568], [360, 640], [
     for (const box of boxes) { expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(width + 1); }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: info.outputPath(`wallets-${theme}-${width}.png`), fullPage: true });
+    await cards.first().screenshot({ path: info.outputPath(`wallet-card-${theme}-${width}.png`) });
     const balance = page.getByRole('button', { name: /^Test Bank.*Total balance/ });
     await balance.focus(); await page.keyboard.press("Enter");
     await page.getByRole('dialog', { name: 'Edit Balance', exact: true }).getByRole('button', { name: 'Close balance editor' }).click();
