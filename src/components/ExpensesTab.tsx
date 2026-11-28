@@ -2,11 +2,12 @@ import { GuideButton } from "./ContextGuideControls";
 import { useTransactionListHeight } from "../hooks/useTransactionListHeight";
 import { compareTransactionsNewestFirst, formatTransactionDateTime } from "../utils/transactionDates";
 import { formatPHP, roundMoney } from "../utils/currency";
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Camera, ScanLine, Plus, Receipt, Trash2, CheckCircle2, Upload, X, Edit2 } from "lucide-react";
 import { UnifiedFinanceData, Expense, ExpenseCategory, FinanceTransitionCommitter } from "../types/finance";
 import { getDefaultExpenseWalletId, parseWalletBalance } from "../utils/financeHelpers";
 import type { PaymentHistoryAction } from "../utils/paymentHistory";
+import { readFrequentExpenses } from "../utils/frequentExpenses";
 import { expenseMoneyIsLocked } from "../utils/expenseChanges";
 import { isValidDateKey, getMonthKey, parseMonthKey } from "../utils/dateHelpers";
 import { useExpenseActions } from "../hooks/useExpenseActions";
@@ -173,6 +174,8 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
     setSaveError("");
   };
 
+  const today = getLocalToday();
+  const frequentExpenses = useMemo(() => readFrequentExpenses(globalData, today), [globalData, today]);
   const expenses = [...(globalData.library?.expenses || [])].sort(compareTransactionsNewestFirst);
   const duplicate = showForm ? findPossibleDuplicateExpense(expenses.filter(expense => expense.id !== editingExpense?.id), form) : undefined;
 
@@ -392,6 +395,21 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
               )}
 
               <fieldset disabled={isScanning} className="space-y-3">
+                {!editingExpense && !form.merchant.trim() && !form.amount.trim() && !importNote && frequentExpenses.length > 0 && <div role="group" aria-label="Frequent expenses" className="rounded-2xl bg-fill p-3">
+                  <p className="text-xs font-semibold text-primary">Use a frequent expense</p>
+                  <p className="mt-1 text-xs text-muted">Tap to fill, then review before saving.</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2">{frequentExpenses.map(expense => {
+                    const walletLabel = allWallets.find(wallet => wallet.id === expense.wallet)?.label || expense.wallet;
+                    return <button key={expense.key} type="button" aria-label={`Use ${expense.merchant}, ${formatPHP(expense.amount)}, ${walletLabel}`} onClick={() => {
+                      hasDraft.current = true; setSaveError("");
+                      setForm(current => ({ ...current, merchant: expense.merchant, amount: String(expense.amount), category: expense.category, wallet: expense.wallet }));
+                      expensePanelRef.current?.closest<HTMLElement>('[role="dialog"]')?.focus({ preventScroll: true });
+                    }} className="privacy-blur min-h-11 min-w-0 rounded-xl border border-subtle bg-surface-elevated p-2 text-left text-xs transition hover:bg-fill-strong">
+                      <span className="block break-words font-semibold text-primary">{expense.merchant}</span>
+                      <span className="mt-1 block break-words text-muted"><span className="font-mono">{formatPHP(expense.amount)}</span> · {walletLabel}</span>
+                    </button>;
+                  })}</div>
+                </div>}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2 min-w-0">
                     <label htmlFor={`${expenseFormId}-amount`} className="text-[10px] text-faint uppercase font-semibold mb-1 block">Amount (₱)</label>

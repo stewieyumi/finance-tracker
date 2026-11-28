@@ -308,3 +308,49 @@ describe("expense draft dismissal", () => {
     expect(screen.getByPlaceholderText("e.g. Starbucks, Laundry...")).toHaveValue("Current draft");
   });
 });
+
+it("prefills a repeat purchase without saving, keeps the chosen date, and clears it on cancel", () => {
+  vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 10, 28, 12));
+  try {
+    const data = createTestData(); data.wallets.cash = 500;
+    data.library.expenses = [
+      { id: "coffee-1", merchant: "Coffee", amount: 50, category: "Food & Dining", wallet: "maya", date: "2026-11-20" },
+      { id: "coffee-2", merchant: "Coffee", amount: 60.25, category: "Food & Dining", wallet: "cash", date: "2026-11-27" },
+    ];
+    const save = vi.fn(); render(<ExpensesTab globalData={data} setGlobalData={save} showToast={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /^Manual/ }));
+    const form = screen.getByRole("form", { name: "Log Expense" });
+    fireEvent.change(within(form).getByLabelText("Date"), { target: { value: "2026-11-26" } });
+    fireEvent.click(within(form).getByRole("button", { name: /^Use Coffee,/ }));
+    expect(screen.getByRole("dialog", { name: "Log Expense" })).toHaveFocus();
+    expect(within(form).getByLabelText("Merchant / Name")).toHaveValue("Coffee");
+    expect(within(form).getByLabelText("Amount (₱)")).toHaveValue(60.25);
+    expect(within(form).getByLabelText("Deduct From")).toHaveValue("cash");
+    expect(within(form).getByLabelText("Category")).toHaveValue("Food & Dining");
+    expect(within(form).getByLabelText("Date")).toHaveValue("2026-11-26");
+    expect(screen.queryByRole("group", { name: "Frequent expenses" })).not.toBeInTheDocument();
+    expect(save).not.toHaveBeenCalled();
+    fireEvent.click(within(form).getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Manual/ }));
+    expect(screen.getByLabelText("Merchant / Name")).toHaveValue("");
+    expect(screen.getByLabelText("Amount (₱)")).toHaveValue(null);
+    expect(screen.getByLabelText("Date")).toHaveValue("2026-11-28");
+    expect(screen.getByRole("group", { name: "Frequent expenses" })).toBeInTheDocument();
+    expect(save).not.toHaveBeenCalled();
+  } finally { vi.useRealTimers(); }
+});
+
+it("keeps frequent prefills out of an existing draft and expense editing", () => {
+  vi.useFakeTimers(); vi.setSystemTime(new Date(2026, 10, 28, 12));
+  try {
+    const data = createTestData(); data.library.expenses = ["a", "b"].map(id => ({ id, merchant: "Coffee", amount: 50, category: "Food & Dining", wallet: "maya", date: "2026-11-27" }));
+    render(<ExpensesTab globalData={data} setGlobalData={vi.fn()} showToast={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /^Manual/ }));
+    fireEvent.change(screen.getByLabelText("Merchant / Name"), { target: { value: "My draft" } });
+    expect(screen.queryByRole("group", { name: "Frequent expenses" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Edit expense at Coffee" })[0]);
+    expect(screen.getByRole("form", { name: "Edit Expense" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Frequent expenses" })).not.toBeInTheDocument();
+  } finally { vi.useRealTimers(); }
+});
