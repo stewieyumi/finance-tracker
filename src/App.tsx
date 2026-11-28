@@ -6,12 +6,13 @@ import { deferredScreen } from "./components/ui/deferredScreen";
 import type { ReceiptTransferDraft } from './components/ReceiptReview';
 import { formatTransactionDateTime as formatDateTime } from "./utils/transactionDates";
 import { PaymentHistoryMenu } from "./components/PaymentHistoryMenu";
+import { ConnectionStatus } from "./components/ConnectionStatus";
 import { recordPaymentAction, type PaymentHistory, type PaymentHistoryAction } from "./utils/paymentHistory";
 import React, { useState, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AppUpdateBanner } from "./components/AppUpdateBanner";
 import { GoogleLogin, googleLogout } from "@react-oauth/google";
-import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, WifiOff, Eye, EyeOff, Bell } from "lucide-react";
+import { Calendar, Settings, Cloud, Copy, Download, Upload, AlertTriangle, History, ArrowDownLeft, Receipt, CheckCircle2, BarChart2, Sparkles, RefreshCw, Eye, EyeOff, Bell } from "lucide-react";
 import { INITIAL_UNIFIED_DATA } from "./constants/initialData";
 import { QUICK_EXPENSE_HASH } from "./constants/config";
 import { getMonthKey, getAdjacentMonth, getDaysUntil, parseMonthKey } from "./utils/dateHelpers";
@@ -1112,18 +1113,16 @@ const copySummaryToClipboard = async () => {
         )}
 
         <div className="flex flex-col gap-3.5 pb-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-1">
-              <h1 className="text-2xl font-bold tracking-tight text-strong">
+          <div className="flex flex-col gap-2 min-[375px]:flex-row min-[375px]:items-center min-[375px]:justify-between">
+            <div className="flex min-w-0 items-center gap-1">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-strong">
                 {{ home: "Dashboard", operations: "Plan", wallets: "Wallets", expenses: "Expenses", account: "Account" }[activeTab]}
               </h1>
-              <span id="page-guide-slot" className="inline-flex shrink-0" />
-              <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium no-privacy-blur transition-all ${!isOnline || syncNeedsSignIn ? "chip-amber" : isSyncing ? "chip-blue" : "chip-emerald"}`}>
-                {!isOnline ? <><WifiOff size={10} className="text-amber-400" /><span>Offline</span></> : syncNeedsSignIn ? <span>Sync paused</span> : isSyncing ? <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" /><span>Syncing...</span></> : <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span>Live</span></>}
-              </div>
+              <span id="page-guide-slot" className="inline-flex h-8 w-8 shrink-0" />
+              <ConnectionStatus isOnline={isOnline} syncNeedsSignIn={syncNeedsSignIn} isSyncing={isSyncing} />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1 self-end min-[375px]:self-auto sm:gap-2">
               <div className="hidden md:flex items-center gap-2 mr-2 pr-4 border-r border-inverse/[0.08]">
                 <div className="relative">
                   <button onClick={() => setShowShortcutsHelp(prev => !prev)} className="text-xs font-medium text-muted hover:text-primary bg-fill/80 hover:bg-fill-strong border border-strong px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm">
@@ -1172,17 +1171,17 @@ const copySummaryToClipboard = async () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-surface-elevated border border-inverse/[0.08] px-3 py-1.5 rounded-xl text-xs shadow-md">
-              <Calendar size={13} className="text-blue-400 cursor-pointer" onClick={() => setShowDatePickerModal(true)} />
-              <select value={selectedMonth} onChange={(e) => { if (e.target.value === "CUSTOM_DATE_JUMP") setShowDatePickerModal(true); else setSelectedMonth(e.target.value); }} className="bg-transparent text-strong font-semibold outline-none cursor-pointer">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1 sm:flex sm:flex-wrap sm:gap-2">
+            <div className="flex min-w-0 items-center gap-1 bg-surface-elevated border border-inverse/[0.08] px-2 py-1.5 rounded-xl text-[10px] shadow-md min-[375px]:text-[11px] sm:gap-1.5 sm:px-3 sm:text-xs">
+              <Calendar size={13} className="shrink-0 text-blue-400 cursor-pointer" onClick={() => setShowDatePickerModal(true)} />
+              <select value={selectedMonth} onChange={(e) => { if (e.target.value === "CUSTOM_DATE_JUMP") setShowDatePickerModal(true); else setSelectedMonth(e.target.value); }} className="min-w-0 w-full bg-transparent text-strong font-semibold outline-none cursor-pointer sm:w-auto">
                 {dropdownMonths.map(m => <option key={m} value={m} className="bg-surface-modal">{m}</option>)}
                 <option disabled>──────────</option>
                 <option value="CUSTOM_DATE_JUMP" className="bg-surface-modal font-semibold text-blue-400">Select Month...</option>
               </select>
             </div>
-            <button onClick={() => setShowAnalyticsModal("overview")} className="flex items-center gap-1.5 warning-material hover:brightness-95 px-3 py-1.5 rounded-xl text-xs transition font-medium"><Sparkles size={13} /><span>Runway</span></button>
-            <button onClick={() => setShowYearlyModal(true)} className="flex items-center gap-1.5 dashboard-material text-positive hover:border-default px-3 py-1.5 rounded-xl text-xs transition font-medium"><BarChart2 size={13} /><span>Yearly</span></button>
+            <button onClick={() => setShowAnalyticsModal("overview")} className="flex items-center gap-1 warning-material hover:brightness-95 px-2 py-1.5 rounded-xl text-[11px] transition font-medium sm:gap-1.5 sm:px-3 sm:text-xs"><Sparkles size={13} /><span>Runway</span></button>
+            <button onClick={() => setShowYearlyModal(true)} aria-label="Yearly" title="Yearly overview" className="flex items-center gap-1 dashboard-material text-positive hover:border-default px-2 py-1.5 rounded-xl text-[11px] transition font-medium sm:gap-1.5 sm:px-3 sm:text-xs"><BarChart2 size={13} aria-hidden="true" /><span className="hidden min-[375px]:inline">Yearly</span></button>
           </div>
         </div>
 
