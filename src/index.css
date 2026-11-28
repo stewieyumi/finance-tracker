@@ -334,3 +334,29 @@ input::-webkit-inner-spin-button {
 .google-sign-in-frame iframe {
   color-scheme: only light;
 }
+
+/* Keep wallet controls and totals outside the mobile card scroller. */
+@media (max-width: 639px) {
+  .wallet-card-stack {
+    height: var(--wallet-stack-height, auto);
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    align-content: start;
+    grid-auto-rows: max-content;
+    padding: 12px;
+    scroll-padding-block: 12px;
+    scroll-snap-type: y proximity;
+    perspective: 1100px;
+  }
+  .wallet-card-stack .wallet-account-card {
+    scroll-snap-align: start;
+    transform: rotateX(var(--wallet-roll, 0deg));
+    transform-origin: center;
+    backface-visibility: hidden;
+    will-change: transform;
+  }
+}
+@media (max-width: 639px) and (prefers-reduced-motion: reduce) {
+  .wallet-card-stack { scroll-behavior: auto; scroll-snap-type: none; }
+  .wallet-card-stack .wallet-account-card { transform: none; will-change: auto; }
+}

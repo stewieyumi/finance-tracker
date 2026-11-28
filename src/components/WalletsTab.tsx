@@ -4,7 +4,7 @@ import React, { useState, useId, useEffect, useRef } from 'react';
 import { Plus, Archive, Edit2, CreditCard, Info, ArrowRightLeft } from 'lucide-react';
 import { UnifiedFinanceData, CustomWallet, WalletMutationHandler, WalletMutationOutcome } from '../types/finance';
 import { formatPHP } from '../utils/currency';
-import { getWalletForBill, reconcileWalletBalances, parseWalletBalance, validateActiveWalletAssignment } from '../utils/financeHelpers';
+import { getWalletForBill, reconcileWalletBalances, getSafeWalletBalance, parseWalletBalance, validateActiveWalletAssignment } from '../utils/financeHelpers';
 import { enabledSavingsWalletIds, readWalletSavings, walletSavingsTotals } from "../utils/walletSavings";
 import { WalletGrid } from './WalletGrid';
 
@@ -175,20 +175,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
           else addWalletButtonRef.current?.click();
         }} className="mt-3 min-h-11 rounded-xl bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-500">{hasFundedWallet ? "Record your first expense" : customWallets.length ? "Set starting balance" : "Add your first wallet"}</button>
       </section>}
-      <section aria-labelledby="wallets-total" className="rounded-2xl border border-subtle bg-surface-elevated p-4 shadow-sm sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="wallets-total" className="text-sm font-semibold text-muted">Total Wallet Balance</h2>
-          {onTransfer && <button data-guide-interactive="open" data-guide-target="transfer" type="button" onClick={onTransfer} disabled={customWallets.length < 2}
-            className="flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 text-sm font-medium text-primary transition hover:bg-fill-strong disabled:cursor-not-allowed disabled:opacity-50">
-            <ArrowRightLeft size={16} aria-hidden="true" /> Transfer
-          </button>}
-        </div>
-        <p className="privacy-blur mt-1 break-words font-mono text-2xl font-bold text-strong">{formatPHP(totalWalletBalance)}</p>
-        <dl className="mt-3 grid min-w-0 grid-cols-2 gap-3 text-xs"><div><dt className="text-muted">Savings</dt><dd className="privacy-blur mt-1 break-all font-mono font-semibold text-primary">{formatPHP(savingsTotals.savings)}</dd></div><div><dt className="text-muted">Available to spend</dt><dd className="privacy-blur mt-1 break-all font-mono font-semibold text-primary">{formatPHP(savingsTotals.available)}</dd></div></dl>
-        <p className="mt-2 text-xs text-muted">Savings stay within your wallet balances. Setting money aside does not move it.</p>
-        {savingsTotals.needsReview && <p role="status" className="mt-2 text-xs text-warning">Review wallet savings and balances before using the spending guidance.</p>}
-        {onTransfer && customWallets.length < 2 && <p className="mt-2 text-xs text-muted">Add another wallet to enable transfers.</p>}
-      </section>
+
       {!reconciled.isComplete && (
         <div role="alert" className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-negative">
           <div className="flex items-center gap-2 font-semibold">
@@ -264,7 +251,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
           <div className="mb-4 overflow-hidden rounded-xl bg-surface-low divide-y divide-subtle">
             {customWallets.map(w => (
               <div key={w.id} className="flex min-h-12 items-center justify-between px-3 py-2">
-                <div className="flex items-center gap-2.5"><div className={`w-2.5 h-2.5 rounded-full bg-current ${w.color || 'text-emerald-400'} shadow-[0_0_8px_currentColor]`} /><span className="privacy-blur text-xs font-semibold text-primary">{w.label}</span></div>
+                <div className="flex min-w-0 flex-1 items-center gap-2.5"><div className={`h-2.5 w-2.5 shrink-0 rounded-full bg-current ${w.color || 'text-emerald-400'} shadow-[0_0_8px_currentColor]`} /><div className="min-w-0"><span className="privacy-blur block break-words text-xs font-semibold text-primary">{w.label}</span><span className="privacy-blur mt-1 block break-all font-mono text-xs text-muted">{parseWalletBalance(globalData.wallets[w.id]).isValid ? formatPHP(getSafeWalletBalance(globalData.wallets[w.id])) : "Balance needs review"}</span></div></div>
                 <div className="flex items-center gap-1">
                   <button id={`${formId}-edit-${w.id}`} type="button" onClick={() => openEdit(w.id, w.label, w.color || COLORS[2])} aria-label={`Edit ${w.label} account`} className="grid min-h-11 min-w-11 place-items-center text-faint hover:text-amber-400 p-1.5 transition rounded-lg hover:bg-amber-500/10"><Edit2 size={14} /></button>
                   <button onClick={() => handleArchive(w.id, w.label)} aria-label={`Archive ${w.label} account`} className="grid min-h-11 min-w-11 place-items-center text-faint hover:text-rose-400 p-1.5 transition rounded-lg hover:bg-rose-500/10"><Archive size={14} /></button>
@@ -303,6 +290,20 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
         ) : (
           <button ref={addWalletButtonRef} data-guide-interactive="open" data-guide-target="add-wallet" id={`${formId}-add`} type="button" onClick={() => { returnFocusId.current = `${formId}-add`; setNameError(''); setShowAdd(true); setEditingId(null); setWalletName(""); setWalletColor(COLORS[2]); }} className="w-full py-3.5 border border-dashed border-inverse/[0.15] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-muted hover:text-emerald-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-2"><Plus size={15} /> Add New Account</button>
         )}
+      <section aria-labelledby="wallets-total" className="rounded-2xl border border-subtle bg-surface-elevated p-4 shadow-sm sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="wallets-total" className="text-sm font-semibold text-muted">Total Wallet Balance</h2>
+          {onTransfer && <button data-guide-interactive="open" data-guide-target="transfer" type="button" onClick={onTransfer} disabled={customWallets.length < 2}
+            className="flex min-h-11 items-center gap-2 rounded-xl bg-fill px-3 text-sm font-medium text-primary transition hover:bg-fill-strong disabled:cursor-not-allowed disabled:opacity-50">
+            <ArrowRightLeft size={16} aria-hidden="true" /> Transfer
+          </button>}
+        </div>
+        <p className="privacy-blur mt-1 break-words font-mono text-2xl font-bold text-strong">{formatPHP(totalWalletBalance)}</p>
+        <dl className="mt-3 grid min-w-0 grid-cols-2 gap-3 text-xs"><div><dt className="text-muted">Savings</dt><dd className="privacy-blur mt-1 break-all font-mono font-semibold text-primary">{formatPHP(savingsTotals.savings)}</dd></div><div><dt className="text-muted">Available to spend</dt><dd className="privacy-blur mt-1 break-all font-mono font-semibold text-primary">{formatPHP(savingsTotals.available)}</dd></div></dl>
+        <p className="mt-2 text-xs text-muted">Savings stay within your wallet balances. Setting money aside does not move it.</p>
+        {savingsTotals.needsReview && <p role="status" className="mt-2 text-xs text-warning">Review wallet savings and balances before using the spending guidance.</p>}
+        {onTransfer && customWallets.length < 2 && <p className="mt-2 text-xs text-muted">Add another wallet to enable transfers.</p>}
+      </section>
       </div>
     </div>
   );

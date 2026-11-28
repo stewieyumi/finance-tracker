@@ -1,4 +1,4 @@
-import React, { useState, useId, useRef } from 'react';
+import React, { useState, useId, useRef, useEffect } from 'react';
 import { Modal } from './ui/Modal';
 import { Plus, X, CreditCard, CheckCircle2, PiggyBank, Pencil } from 'lucide-react';
 import { entryDialogStyles } from './ui/dialogStyles';
@@ -15,6 +15,39 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ enabledSaving
   const savingsSnapshot = useRef<{ balance: unknown; savings: unknown }>({ balance: undefined, savings: undefined });
   const [editValue, setEditValue] = useState("");
   const [error, setError] = useState("");
+
+  const cardStackRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const stack = cardStackRef.current;
+    if (!stack || typeof window.matchMedia !== "function") return;
+    const mobile = window.matchMedia("(max-width: 639px)");
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const cards = Array.from(stack.querySelectorAll<HTMLElement>(".wallet-account-card"));
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      if (!mobile.matches || !cards.length) { stack.style.removeProperty("--wallet-stack-height"); cards.forEach(card => card.style.removeProperty("--wallet-roll")); return; }
+      const tallest = Math.max(0, ...cards.map(card => card.offsetHeight));
+      const height = Math.max(tallest + 24, Math.min((window.visualViewport?.height ?? window.innerHeight) * 0.62, 520));
+      stack.style.setProperty("--wallet-stack-height", `${height}px`);
+      const bounds = stack.getBoundingClientRect();
+      for (const card of cards) {
+        const box = card.getBoundingClientRect();
+        // Fully visible cards stay flat. Only entering/leaving cards roll slightly.
+        const edge = Math.min(0, box.top - bounds.top - 12) + Math.max(0, box.bottom - bounds.bottom + 12);
+        const turn = reduced.matches ? 0 : Math.max(-1, Math.min(1, edge / Math.max(1, card.offsetHeight))) * 6;
+        card.style.setProperty("--wallet-roll", `${turn}deg`);
+      }
+    };
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(measure); };
+    const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(schedule);
+    cards.forEach(card => observer?.observe(card));
+    stack.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule); window.visualViewport?.addEventListener("resize", schedule);
+    mobile.addEventListener("change", schedule); reduced.addEventListener("change", schedule);
+    schedule();
+    return () => { cancelAnimationFrame(frame); observer?.disconnect(); stack.removeEventListener("scroll", schedule); window.removeEventListener("resize", schedule); window.visualViewport?.removeEventListener("resize", schedule); mobile.removeEventListener("change", schedule); reduced.removeEventListener("change", schedule); };
+  }, [customWallets]);
 
   const balanceFormId = useId();
   const balanceInputRef = useRef<HTMLInputElement>(null);
@@ -57,7 +90,7 @@ export const WalletGrid: React.FC<WalletGridProps> = React.memo(({ enabledSaving
     <>
       <section aria-label="Wallet balances">
         <div className="mb-3 px-1 text-sm font-semibold text-primary">Your wallets</div>
-        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div ref={cardStackRef} role="region" aria-label="Wallet cards" tabIndex={0} className="wallet-card-stack grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {(customWallets || []).map((w, index) => {
             const parsed = parseWalletBalance(wallets[w.id]);
             const currentBalance = parsed.isValid ? parsed.balance : null;
