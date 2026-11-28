@@ -71,3 +71,28 @@ test("connection details support hover, keyboard, touch hold and offline updates
   await context.setOffline(false);
   await expect(live).toBeVisible(); await expect(tooltip).toHaveText("Live");
 });
+
+
+test("narrow month labels fit wider fonts", async ({ page, isolatedApp }, info) => {
+  test.skip(info.project.name !== "phone", "Narrow touch layout only.");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.clock.setFixedTime(new Date("2026-09-28T04:00:00Z"));
+  await isolatedApp(returningData());
+  const month = page.getByRole("combobox").first();
+  const before = await storedData(page);
+  for (const family of ["Arial", "Verdana", "sans-serif", "system-ui"]) {
+    await month.evaluate((el, family) => {
+      (el as HTMLElement).style.fontFamily = family;
+      (el as HTMLElement).style.fontSize = "12px";
+    }, family);
+    expect(await month.evaluate(el => {
+      const select = el as HTMLSelectElement;
+      const context = document.createElement("canvas").getContext("2d")!;
+      context.font = getComputedStyle(select).font;
+      return context.measureText(select.selectedOptions[0].text).width + 16 <= select.clientWidth;
+    }), `Month label fits ${family} at 12px`).toBe(true);
+    for (const name of ["Runway", "Yearly"]) await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
+  }
+  await page.screenshot({ path: info.outputPath("narrow-header-wider-fonts.png") });
+  expect(await storedData(page)).toEqual(before);
+});

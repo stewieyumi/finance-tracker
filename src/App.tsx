@@ -1181,7 +1181,7 @@ const copySummaryToClipboard = async () => {
               </select>
             </div>
             <button onClick={() => setShowAnalyticsModal("overview")} className="flex items-center gap-1 warning-material hover:brightness-95 px-2 py-1.5 rounded-xl text-[11px] transition font-medium sm:gap-1.5 sm:px-3 sm:text-xs"><Sparkles size={13} /><span>Runway</span></button>
-            <button onClick={() => setShowYearlyModal(true)} className="flex items-center gap-1 dashboard-material text-positive hover:border-default px-2 py-1.5 rounded-xl text-[11px] transition font-medium sm:gap-1.5 sm:px-3 sm:text-xs"><BarChart2 size={13} /><span>Yearly</span></button>
+            <button onClick={() => setShowYearlyModal(true)} aria-label="Yearly" title="Yearly overview" className="flex items-center gap-1 dashboard-material text-positive hover:border-default px-2 py-1.5 rounded-xl text-[11px] transition font-medium sm:gap-1.5 sm:px-3 sm:text-xs"><BarChart2 size={13} aria-hidden="true" /><span className="hidden min-[375px]:inline">Yearly</span></button>
           </div>
         </div>
 
