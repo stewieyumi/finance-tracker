@@ -26,7 +26,14 @@ for (const width of [320, 360, 375, 390, 430, 568, 768, 1024, 1280, 1920]) for (
       for (const box of boxes) expect(box.y + box.height / 2).toBeCloseTo(boxes[0].y + boxes[0].height / 2, 0);
       if (width >= 375) expect(heading!.y + heading!.height / 2).toBeCloseTo(boxes[0].y + boxes[0].height / 2, 0);
       else expect(heading!.y + heading!.height).toBeLessThanOrEqual(boxes[0].y);
-      const month = await page.getByRole("combobox").first().boundingBox();
+      const monthControl = page.getByRole("combobox").first();
+      const month = await monthControl.boundingBox();
+      if (width < 640) expect(await monthControl.evaluate(el => {
+        const select = el as HTMLSelectElement;
+        const context = document.createElement("canvas").getContext("2d")!;
+        context.font = getComputedStyle(select).font;
+        return context.measureText(select.selectedOptions[0].text).width + 16 <= select.clientWidth;
+      })).toBe(true);
       for (const name of ["Runway", "Yearly"]) {
         const box = (await page.getByRole("button", { name, exact: true }).boundingBox())!;
         expect(box.y + box.height / 2).toBeCloseTo(month!.y + month!.height / 2, 0);

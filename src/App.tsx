@@ -1172,7 +1172,7 @@ const copySummaryToClipboard = async () => {
           </div>
 
           <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1 sm:flex sm:flex-wrap sm:gap-2">
-            <div className="flex min-w-0 items-center gap-1 bg-surface-elevated border border-inverse/[0.08] px-2 py-1.5 rounded-xl text-[11px] shadow-md sm:gap-1.5 sm:px-3 sm:text-xs">
+            <div className="flex min-w-0 items-center gap-1 bg-surface-elevated border border-inverse/[0.08] px-2 py-1.5 rounded-xl text-[10px] shadow-md min-[375px]:text-[11px] sm:gap-1.5 sm:px-3 sm:text-xs">
               <Calendar size={13} className="shrink-0 text-blue-400 cursor-pointer" onClick={() => setShowDatePickerModal(true)} />
               <select value={selectedMonth} onChange={(e) => { if (e.target.value === "CUSTOM_DATE_JUMP") setShowDatePickerModal(true); else setSelectedMonth(e.target.value); }} className="min-w-0 w-full bg-transparent text-strong font-semibold outline-none cursor-pointer sm:w-auto">
                 {dropdownMonths.map(m => <option key={m} value={m} className="bg-surface-modal">{m}</option>)}
