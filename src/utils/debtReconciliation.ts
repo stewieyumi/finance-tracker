@@ -227,7 +227,8 @@ export function reconcileDebt(
       archived, status, approximate, issues
     });
   }
-  const activeLoans = loans.filter(loan => loan.status === "active" || loan.status === "incomplete");
+  const activeLoans = loans.filter(loan => loan.status === "active" || loan.status === "incomplete")
+    .sort((a, b) => (b.remainingScheduled ?? -1) - (a.remainingScheduled ?? -1));
   const paid = loans.reduce((sum, loan) => sum + Math.round(loan.totalPaid * 100), 0);
   const remaining = activeLoans.reduce((sum, loan) => sum + Math.round((loan.remainingScheduled ?? 0) * 100), 0);
   const safeTotals = Number.isSafeInteger(paid) && Number.isSafeInteger(remaining);

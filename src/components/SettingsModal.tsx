@@ -281,7 +281,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, initialTab
             <h3 className="text-lg font-bold tracking-tight text-strong">App Settings</h3>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <GuideButton screen={`settings-${activeTab}`} name="Settings" compact />
+            <GuideButton screen={`settings-${activeTab}`} name="Settings" />
             <button
               onClick={handleCancel}
               aria-label="Close settings modal"

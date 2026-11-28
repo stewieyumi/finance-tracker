@@ -1,6 +1,6 @@
-import { Modal } from "./components/ui/Modal";
 import type { ReceivedIncomeDraft } from "./types/finance";
-import { formatPHP } from "./utils/currency";
+import { readIncomeReminders } from "./utils/incomeReminders";
+import type { AppNotification } from "./types/finance";
 import { useAppInstall } from "./hooks/useAppInstall";
 import { deferredScreen } from "./components/ui/deferredScreen";
 import type { ReceiptTransferDraft } from './components/ReceiptReview';
@@ -187,7 +187,8 @@ export default function App() {
   const { updateAvailable } = useAppUpdate();
   const appInstall = useAppInstall();
   const [showInstallGuide, setShowInstallGuide] = useState(false);
-  const [receivedIncomePrompt, setReceivedIncomePrompt] = useState<{ owner: string; receipt: ReceivedIncomeDraft } | null>(null);
+  const [incomeReminderToast, setIncomeReminderToast] = useState<{ owner: string; notification: AppNotification } | null>(null);
+  const announcedIncomeReminders = useRef<{ owner: string | null; ids: Set<string> }>({ owner: null, ids: new Set() });
   const [distributionDraft, setDistributionDraft] = useState<{ owner: string; receipt: ReceivedIncomeDraft } | null>(null);
   const [contextGuideOpen, setContextGuideOpen] = useState(false);
   const [showShortcutsHelp, setShowShortcutsHelp] = useState<boolean>(false);
@@ -253,7 +254,7 @@ const {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [tourOwnerSub, setTourOwnerSub] = useState<string | null>(null);
   const [highlightQuickExpense, setHighlightQuickExpense] = useState(false);
-  React.useEffect(() => { setTourOwnerSub(null); setHighlightQuickExpense(false); setReceivedIncomePrompt(null); setDistributionDraft(null); }, [dataOwnerSub]);
+  React.useEffect(() => { setTourOwnerSub(null); setHighlightQuickExpense(false); setIncomeReminderToast(null); setDistributionDraft(null); }, [dataOwnerSub]);
   const [showAppleCalendar, setShowAppleCalendar] = useState(false);
   const [showGoalSetupModal, setShowGoalSetupModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>(() =>
@@ -553,7 +554,6 @@ const {
   commitReceivableTransition: syncedCommitTransition,
   selectedMonth,
   showToast,
-  onIncomeReceived: receipt => { if (dataOwnerSub && dataOwnerSub === getFinanceSubject()) setReceivedIncomePrompt({ owner: dataOwnerSub, receipt }); },
   onPaymentsReversed: removeReversedPayments,
 });
 
@@ -720,7 +720,6 @@ const { saveShootEdit } = useShootSaveActions({
 
   const isTourOpen = Boolean(tourOwnerSub && tourOwnerSub === dataOwnerSub && isDataOwnedByActiveSub && !hasValidatedActiveConflict);
   const isModalOpen =
-    Boolean(receivedIncomePrompt && receivedIncomePrompt.owner === dataOwnerSub) ||
     contextGuideOpen ||
     showInstallGuide ||
     isTourOpen ||
@@ -732,6 +731,36 @@ const { saveShootEdit } = useShootSaveActions({
     showLedgerModal;
 
   const isEditing = editingId !== null;
+  React.useEffect(() => {
+    if (!dataOwnerSub || !isDataOwnedByActiveSub) { announcedIncomeReminders.current = { owner: null, ids: new Set() }; setIncomeReminderToast(null); return; }
+    if (hasValidatedActiveConflict) return;
+    const received = notifications.filter(item => item.type === "received_income");
+    if (announcedIncomeReminders.current.owner !== dataOwnerSub) {
+      announcedIncomeReminders.current = { owner: dataOwnerSub, ids: new Set(received.map(item => item.id)) };
+      return; // Previously received income stays in the bell without another popup on launch.
+    }
+    if (isModalOpen || isEditing || showNotificationModal || toastMessage || document.visibilityState === "hidden") return;
+    const fresh = received.filter(item => !announcedIncomeReminders.current.ids.has(item.id));
+    if (!fresh.length) return;
+    fresh.forEach(item => announcedIncomeReminders.current.ids.add(item.id));
+    setIncomeReminderToast({ owner: dataOwnerSub, notification: fresh[0] });
+  }, [notifications, dataOwnerSub, isDataOwnedByActiveSub, hasValidatedActiveConflict, isModalOpen, isEditing, showNotificationModal, toastMessage]);
+  React.useEffect(() => {
+    if (!incomeReminderToast) return;
+    const timer = setTimeout(() => setIncomeReminderToast(null), 12000);
+    return () => clearTimeout(timer);
+  }, [incomeReminderToast]);
+
+  const openIncomeDistribution = (receipt: ReceivedIncomeDraft) => {
+    if (!dataOwnerSub || dataOwnerSub !== getFinanceSubject() || !isDataOwnedByActiveSub || hasValidatedActiveConflict) return;
+    const current = readIncomeReminders(globalData).notifications.find(item => item.incomeReceipt?.receiptId === receipt.receiptId);
+    if (!current?.incomeReceipt) { setIncomeReminderToast(null); showToast("This receipt changed. Review the inflow before distributing it."); return; }
+    handleDismissNotification(current.id);
+    setIncomeReminderToast(null); setShowNotificationModal(false);
+    setDistributionDraft({ owner: dataOwnerSub, receipt: current.incomeReceipt });
+    setSelectedMonth(getMonthKey(new Date())); setActiveTab("home");
+  };
+
   const latestExecution = globalData.paydaySplitExecutions?.slice().reverse().find(ex => typeof ex !== "string") as PaydayExecution | undefined;
 
     const { pullProgress } = usePullToRefresh(
@@ -785,6 +814,7 @@ const { saveShootEdit } = useShootSaveActions({
 
   const currentMonth = getMonthKey(new Date());
   const isViewingCurrentMonth = selectedMonth === currentMonth;
+  const currentDay = new Date().toDateString();
   const upcomingBills = useMemo(() => {
     return [currentMonth, getAdjacentMonth(currentMonth, 1)].flatMap(month => {
       const date = parseMonthKey(month);
@@ -803,7 +833,7 @@ const { saveShootEdit } = useShootSaveActions({
         }];
       });
     }).sort((a, b) => a.daysLeft - b.daysLeft);
-  }, [currentMonth, globalData.logs, globalData.library.bills]);
+  }, [currentMonth, currentDay, globalData.logs, globalData.library.bills]);
 
   const {
    handleUndoPaydaySplit,
@@ -1082,11 +1112,12 @@ const copySummaryToClipboard = async () => {
         )}
 
         <div className="flex flex-col gap-3.5 pb-2">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
               <h1 className="text-2xl font-bold tracking-tight text-strong">
                 {{ home: "Dashboard", operations: "Plan", wallets: "Wallets", expenses: "Expenses", account: "Account" }[activeTab]}
               </h1>
+              <span id="page-guide-slot" className="inline-flex shrink-0" />
               <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium no-privacy-blur transition-all ${!isOnline || syncNeedsSignIn ? "chip-amber" : isSyncing ? "chip-blue" : "chip-emerald"}`}>
                 {!isOnline ? <><WifiOff size={10} className="text-amber-400" /><span>Offline</span></> : syncNeedsSignIn ? <span>Sync paused</span> : isSyncing ? <><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" /><span>Syncing...</span></> : <><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /><span>Live</span></>}
               </div>
@@ -1234,7 +1265,10 @@ const copySummaryToClipboard = async () => {
           notifications={notifications}
           onDismiss={handleDismissNotification}
           onClearAll={handleClearAllNotifications}
-          onNavigate={handleNotificationNavigate}
+          onNavigate={(route, receipt) => {
+            if (route === "budget/distribute") { if (receipt) openIncomeDistribution(receipt); }
+            else handleNotificationNavigate(route);
+          }}
         />
 
         {activeTab === "home" && (!isModalOpen || showInstallGuide) && ((!appInstall.added && !appInstall.dismissed) || showInstallGuide) && !isEditing && !hasValidatedActiveConflict && (
@@ -1368,15 +1402,12 @@ const copySummaryToClipboard = async () => {
         )}
       </div>
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
-      {receivedIncomePrompt && receivedIncomePrompt.owner === dataOwnerSub && isDataOwnedByActiveSub && !hasValidatedActiveConflict && <Modal isOpen onClose={() => setReceivedIncomePrompt(null)} ariaLabel="Distribute received income" manageFocus>
-        <div className="max-h-[88dvh] w-full max-w-sm space-y-4 overflow-y-auto rounded-3xl border border-subtle bg-surface-modal p-5 text-primary shadow-xl">
-          <h2 className="text-base font-semibold">Distribute this money?</h2>
-          <p className="privacy-blur text-sm">{formatPHP(receivedIncomePrompt.receipt.amount)} received for {receivedIncomePrompt.receipt.name}.</p>
-          <p className="text-xs leading-relaxed text-muted">It is already in your wallet. You can assign it to other wallets now or plan it later.</p>
-          <div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => setReceivedIncomePrompt(null)} className="min-h-11 rounded-xl bg-fill px-3 text-sm font-semibold">Later</button>
-            <button type="button" onClick={() => { setDistributionDraft(receivedIncomePrompt); setReceivedIncomePrompt(null); setSelectedMonth(getMonthKey(new Date())); setActiveTab('home'); }} className="min-h-11 rounded-xl bg-[var(--bg-selection)] px-3 text-sm font-semibold text-white">Distribute</button></div>
-        </div>
-      </Modal>}
+      {incomeReminderToast && incomeReminderToast.owner === dataOwnerSub && isDataOwnedByActiveSub && !hasValidatedActiveConflict && !isModalOpen && !isEditing && !showNotificationModal && !toastMessage && notifications.some(item => item.id === incomeReminderToast.notification.id) && (
+        <section role="status" aria-label="Income reminder" className="fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 rounded-2xl border border-subtle bg-surface-elevated p-4 text-primary shadow-xl sm:inset-x-auto sm:right-6 sm:top-12 sm:bottom-auto sm:max-w-sm">
+          <div className="flex items-start justify-between gap-3"><div><h2 className="text-sm font-semibold">New inflow received</h2><p className="privacy-blur mt-1 text-xs leading-relaxed text-muted">{incomeReminderToast.notification.message}</p></div><button type="button" aria-label="Close income reminder" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-fill" onClick={() => setIncomeReminderToast(null)}>×</button></div>
+          <button type="button" className="mt-3 min-h-11 rounded-xl bg-fill px-3 text-xs font-semibold text-primary hover:bg-fill-strong" onClick={() => openIncomeDistribution(incomeReminderToast.notification.incomeReceipt!)}>Distribute</button>
+        </section>
+      )}
 
       {dataOwnerSub && isDataOwnedByActiveSub && <ErrorBoundary message="Guidance is unavailable. Your records are still accessible."><Suspense fallback={null}>
         <ContextualGuides key={dataOwnerSub} subject={dataOwnerSub} onActiveChange={setContextGuideOpen}

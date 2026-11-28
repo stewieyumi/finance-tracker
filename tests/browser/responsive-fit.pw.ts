@@ -69,6 +69,12 @@ for (const [width, height] of profiles) for (const theme of ['light', 'dark'] as
         }
       }
       if (!modal && !await page.getByRole('dialog').count()) {
+        const inlineGuide = page.locator('h1').locator('..').locator('[data-guide-replay]');
+        await expect(inlineGuide).toHaveCount(1);
+        const help = await inlineGuide.boundingBox();
+        const title = await page.locator('h1').boundingBox();
+        if (help && title && Math.abs(help.y + help.height / 2 - title.y - title.height / 2) > 2) issues.push(`${label}: guide is not inline with page title`);
+        if (help && (help.width > 32 || help.height > 32)) issues.push(`${label}: guide takes more than its compact header slot`);
         const last = page.locator('[data-guide-screen]').filter({ visible: true }).last().locator('button:not(:disabled)').filter({ visible: true }).last();
         if (await last.count()) {
           await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
@@ -118,6 +124,8 @@ for (const [width, height] of profiles) for (const theme of ['light', 'dark'] as
     await page.screenshot({ path: testInfo.outputPath('expense.png') });
     await dialog('Log Expense').getByRole('button', { name: 'Cancel', exact: true }).click();
     await navigate(page, 'Operations'); await check('Commitments');
+    await openCheck(page.getByRole('button', { name: 'Next 7 Days, view commitments', exact: true }), 'Next 7 Days');
+    await page.getByRole('button', { name: 'Close next 7 days' }).click();
     await openCheck(page.getByRole('button', { name: /Add New Commitment/i }), 'Add New Commitment');
     await page.getByRole('button', { name: 'Cancel new commitment' }).click();
     await page.getByRole('button', { name: 'Inflows', exact: true }).click(); await check('Inflows');

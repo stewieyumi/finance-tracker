@@ -161,13 +161,14 @@ it('copies the same debt totals, schedule, upcoming plans and breakdown as the o
   const d = seed();
   d.library.bills = [
     { id: 'debt-a', name: 'Phone', amount: 100, dueDay: '15', type: 'Loan / Installment', startMonth: 'November 2026', endMonth: 'December 2026' },
+    { id: 'debt-more', name: 'Cameras', amount: 200, dueDay: '15', type: 'Loan / Installment', startMonth: 'November 2026', endMonth: 'December 2026' },
     { id: 'debt-b', name: 'Laptop', amount: 200, dueDay: '15', type: 'Loan / Installment', startMonth: 'December 2026', endMonth: 'January 2027' }
   ];
   const debt = reconcileDebt(d, month); const text = summary(d);
   expect(text).toContain(`Scheduled in November 2026: ₱${debt.monthlyScheduled!.toFixed(2)} (includes settled payments)`);
   expect(text).toContain(`Last planned payment: ${debt.scheduledFinish}`);
   expect(text).toContain('Upcoming plans: 1; ₱400.00 remaining scheduled separately from active debt');
-  expect(text).toContain('Active debt breakdown: Phone: 100.0%');
+  expect(text).toContain('Active debt breakdown: Cameras: 66.7%; Phone: 33.3%');
   expect(text).toContain('not a lender payoff quote');
   d.library.bills[0].startMonth = 'January 2026'; d.library.bills[0].endMonth = 'March 2026';
   expect(summary(d)).toContain('Overdue schedule — unpaid installments in an ended plan');

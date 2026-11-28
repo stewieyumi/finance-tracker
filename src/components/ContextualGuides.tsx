@@ -81,7 +81,9 @@ export function ContextualGuides({ subject, paused, automaticPaused = false, onA
       handoff.current = null;
       if (!active.root.isConnected || document.getElementById("root")?.inert) return;
       if (!task || !target || target !== actionTarget(active.root, task)) {
-        active.root.querySelector<HTMLButtonElement>("[data-guide-replay]")?.focus({ preventScroll: true });
+        const replay = active.root.querySelector<HTMLButtonElement>("[data-guide-replay]") ??
+          Array.from(document.querySelectorAll<HTMLButtonElement>("[data-guide-replay]")).find(button => button.dataset.guideReplay === active.screen && visible(button));
+        replay?.focus({ preventScroll: true });
         return;
       }
       target.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });

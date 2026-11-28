@@ -1,5 +1,5 @@
-import { WalletNameInput } from "./WalletNameInput";
 import { GuideButton } from "./ContextGuideControls";
+import { WalletNameInput } from "./WalletNameInput";
 import React, { useState, useId, useEffect, useRef } from 'react';
 import { Plus, Archive, Edit2, CreditCard, Info, ArrowRightLeft } from 'lucide-react';
 import { UnifiedFinanceData, CustomWallet, WalletMutationHandler, WalletMutationOutcome } from '../types/finance';
@@ -165,7 +165,7 @@ export const WalletsTab: React.FC<WalletsTabProps> = ({ globalData, setGlobalDat
 
   return (
     <div data-guide-screen="wallets" className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
-        <div className="flex justify-end"><GuideButton screen="wallets" name="Wallets" /></div>
+      <GuideButton screen="wallets" name="Wallets" inPageHeader />
       {onNavigateToExpenses && (globalData.library.expenses?.length ?? 0) === 0 && <section aria-label="Your first steps" className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4">
         <h2 className="text-sm font-semibold text-primary">One wallet, then one expense</h2>
         <p className="mt-1 text-xs leading-relaxed text-muted">Use an existing wallet or add your own. Tap its balance and enter what you have today. Then record a purchase you made after that starting balance.</p>

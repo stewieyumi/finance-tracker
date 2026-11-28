@@ -68,29 +68,44 @@ for (const theme of ['light', 'dark'] as const) {
     expect((await storedData(page))?.settings?.monthlyBudgets).toEqual(after?.settings?.monthlyBudgets);
   });
 
-  test(`receiving income offers Later or existing-cash distribution without double credit in ${theme}`, async ({ page, isolatedApp }) => {
-    await page.clock.setFixedTime(new Date('2026-11-21T08:00:00Z'));
+  test(`received income waits two minutes, stays in notifications, and distributes existing cash once in ${theme}`, async ({ page, isolatedApp }, info) => {
+    await page.clock.install({ time: new Date('2026-11-21T08:00:00Z') });
     const data = returningData(); data.settings = { ...data.settings, theme, perPayoutSalary: 0 };
-    data.library.receivables = [{ id: 'first', name: 'First client', amount: 1000, date: '2026-11-21', frequency: 'By Date', wallet: 'main' }, { id: 'second', name: 'Second client', amount: 500, date: '2026-11-21', frequency: 'By Date', wallet: 'main' }];
+    data.library.bills = [];
+    data.library.receivables = [{ id: 'first', name: 'First client', amount: 1000, date: '2026-11-21', frequency: 'By Date', wallet: 'main' }];
     const app = await isolatedApp(data);
     await navigate(page, 'Operations'); await page.getByRole('button', { name: 'Inflows', exact: true }).click();
     await page.getByRole('button', { name: 'Mark First client as received', exact: true }).filter({ visible: true }).click();
-    const prompt = page.getByRole('dialog', { name: 'Distribute received income', exact: true });
-    await expect(prompt).toBeVisible();
-    expect((await storedData(page))?.wallets.main).toBe(3000);
-    await prompt.getByRole('button', { name: 'Later', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Distribute received income', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('status', { name: 'Income reminder' })).toHaveCount(0);
     expect((await storedData(page))?.wallets).toEqual({ main: 3000, cash: 100 });
-    await page.getByRole('button', { name: 'Mark Second client as received', exact: true }).filter({ visible: true }).click();
-    await prompt.getByRole('button', { name: 'Distribute', exact: true }).click();
+    await page.clock.fastForward(119000);
+    await expect(page.getByRole('status', { name: 'Income reminder' })).toHaveCount(0);
+    await page.clock.fastForward(2000);
+    const reminder = page.getByRole('status', { name: 'Income reminder' });
+    await expect(reminder).toContainText('New inflow received');
+    await expect(reminder).toContainText('was already added to your wallet');
+    await page.screenshot({ path: info.outputPath(`income-reminder-${theme}.png`) });
+    await page.clock.fastForward(12001); await expect(reminder).toHaveCount(0);
+    await app.waitForSaved(); await page.reload();
+    await expect(page.getByRole('status', { name: 'Income reminder' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Notifications', exact: true }).click();
+    const notices = page.getByRole('dialog', { name: 'Notification Center', exact: true });
+    await expect(notices).toContainText('Inflow received: First client');
+    await page.screenshot({ path: info.outputPath(`received-income-notification-${theme}.png`) });
+    await notices.getByRole('button', { name: 'Distribute', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Budget Plan', exact: true });
     await expect(dialog.getByRole('tab', { name: 'Auto-Distribute' })).toHaveAttribute('aria-selected', 'true');
     await expect(dialog.getByLabel('Which money are you allocating?', { exact: true })).toHaveValue('existing');
     await expect(dialog.getByLabel('Which money are you allocating?', { exact: true })).toBeDisabled();
-    await expect(dialog.getByLabel('Amount to allocate (₱)', { exact: true })).toHaveValue('500');
-    await dialog.getByLabel('Allocate to Test Cash', { exact: true }).fill('500');
+    await expect(dialog.getByLabel('Amount to allocate (₱)', { exact: true })).toHaveValue('1000');
+    await dialog.getByLabel('Allocate to Test Cash', { exact: true }).fill('1000');
     await dialog.getByRole('button', { name: 'Distribute existing cash', exact: true }).click();
-    expect((await storedData(page))?.wallets).toEqual({ main: 3000, cash: 600 });
-    expect((await storedData(page))?.library.receivables).toHaveLength(2);
+    expect((await storedData(page))?.wallets).toEqual({ main: 2000, cash: 1100 });
+    expect((await storedData(page))?.library.receivables).toHaveLength(1);
+    await dialog.getByRole('button', { name: 'Close budget plan' }).click();
+    await page.getByRole('button', { name: 'Notifications', exact: true }).click();
+    await expect(notices).not.toContainText('Inflow received: First client');
     await app.waitForSaved();
   });
   test(`budget forms fit compact portrait and landscape in ${theme}`, async ({ page, isolatedApp }, info) => {

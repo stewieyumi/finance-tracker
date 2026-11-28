@@ -165,11 +165,10 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
       className="!justify-start"
     >
       <div data-guide-screen="history" ref={historyPanelRef} className="bg-surface-elevated border border-inverse/[0.08] rounded-t-3xl sm:rounded-3xl w-full max-w-2xl mx-auto shadow-2xl mt-auto sm:mb-auto shrink-0 animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-4">
-        <div className="flex justify-end"><GuideButton screen="history" name="Transaction history" /></div>
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-inverse/[0.06]">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="w-8 h-8 shrink-0 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
               <History size={18} />
             </div>
             <div>
@@ -183,7 +182,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1"><GuideButton screen="history" name="Transaction history" />
             {onOpenManualLedger && (
               <button
                 type="button"
@@ -192,7 +191,7 @@ export const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = (
                 className="px-2.5 py-1.5 bg-inverse/[0.05] hover:bg-inverse/[0.1] text-secondary rounded-xl text-xs font-semibold transition border border-inverse/[0.06] flex items-center gap-1.5"
               >
                 <BookOpen size={13} className="text-purple-400" />
-                <span className="hidden sm:inline">Manage</span> Ledger
+                <span className="hidden min-[375px]:inline"><span className="hidden sm:inline">Manage </span>Ledger</span>
               </button>
             )}
             <button

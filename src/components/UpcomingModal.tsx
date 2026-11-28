@@ -53,15 +53,15 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
       ariaLabel="Upcoming Commitments Modal"
     >
       <div data-guide-screen="upcoming" className={`${entryDialogStyles.card} max-w-md space-y-4`}>
-        <div className="flex justify-end"><GuideButton screen="upcoming" name="Upcoming commitments" /></div>
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-subtle">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <Calendar size={16} className="text-amber-400" />
             <h3 data-guide-target="upcoming-list" className="text-sm font-bold uppercase tracking-wider text-strong">
               Upcoming Commitments
             </h3>
           </div>
+          <div className="flex shrink-0 items-center gap-1"><GuideButton screen="upcoming" name="Upcoming commitments" />
           <button
             onClick={onClose}
             aria-label="Close upcoming modal"
@@ -70,6 +70,7 @@ export const UpcomingModal: React.FC<UpcomingModalProps> = ({
           >
             <X size={16} />
           </button>
+          </div>
         </div>
 
         {/* Urgency Summary Cards */}

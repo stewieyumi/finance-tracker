@@ -208,6 +208,31 @@ describe("BillsTable - list and edit wiring", () => {
     expect(screen.getAllByText("Second Half Bill").length).toBeGreaterThan(0);
   });
 
+  it("shows All as one unpaid-first list across due-date halves while retaining sort and filters", () => {
+    const bills = [
+      createBill({ id: "paid-early", name: "Paid early", dueDay: "5", amount: 1000, paid: true }),
+      createBill({ id: "unpaid-late", name: "Unpaid late", dueDay: "25", amount: 200 }),
+      createBill({ id: "paid-late", name: "Paid late", dueDay: "20", amount: 50, paid: true }),
+      createBill({ id: "unpaid-early", name: "Unpaid early", dueDay: "10", amount: 400 }),
+    ];
+    const onToggleStatus = vi.fn(); renderBillsTable(bills, { onToggleStatus });
+    const mobileOrder = () => screen.getAllByTestId(/^bill-mobile-row-/).map(row => row.dataset.commitmentId);
+    const desktopOrder = () => screen.getAllByRole('row').map(row => row.dataset.commitmentId).filter(Boolean);
+    const expectOrder = (ids: string[]) => { expect(mobileOrder()).toEqual(ids); expect(desktopOrder()).toEqual(ids); };
+    expectOrder(['unpaid-late', 'unpaid-early', 'paid-early', 'paid-late']);
+    expect(screen.queryByText('Days 1–15')).not.toBeInTheDocument();
+    expect(screen.queryByText('Days 16–31')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Sort commitments' }), { target: { value: 'amountDesc' } });
+    expectOrder(['unpaid-early', 'unpaid-late', 'paid-early', 'paid-late']);
+    fireEvent.click(screen.getByRole('button', { name: '1–15' })); expectOrder(['paid-early', 'unpaid-early']);
+    fireEvent.click(screen.getByRole('button', { name: '16–31' })); expectOrder(['unpaid-late', 'paid-late']);
+    fireEvent.click(screen.getByRole('button', { name: 'All' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hide paid commitments' })); expectOrder(['unpaid-early', 'unpaid-late']);
+    fireEvent.change(screen.getByPlaceholderText('Search...'), { target: { value: 'late' } }); expectOrder(['unpaid-late']);
+    expect(onToggleStatus).not.toHaveBeenCalled();
+    expect(bills.map(bill => bill.id)).toEqual(['paid-early', 'unpaid-late', 'paid-late', 'unpaid-early']);
+  });
+
   it("pays from the mobile card and opens the editor from Edit", () => {
     const bill = createBill({
       id: "bill-mobile-test",

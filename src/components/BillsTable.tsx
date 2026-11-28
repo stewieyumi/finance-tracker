@@ -226,7 +226,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
       </div>
 
      {activeBills.length === 0 ? <p className="rounded-xl bg-surface-low px-4 py-5 text-center text-sm text-muted">No commitments scheduled for {selectedMonth}. Add a bill, subscription, or installment to get started.</p> : <BillsList
-       filteredBills={filteredBills}
+       filteredBills={sortedBills}
        firstHalfBills={firstHalfBills}
        secondHalfBills={secondHalfBills}
        payPeriod={payPeriod}
