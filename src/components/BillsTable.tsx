@@ -112,24 +112,27 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
 
   return (
     <div ref={tableRef} className="bg-surface border border-border-default rounded-2xl p-4 sm:p-5 shadow-lg">
-      <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
-        <h2 data-guide-target="filters" className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 shrink-0">
-          <Calendar size={13} className="text-blue-400" /> {selectedMonth} Commitments
-        </h2>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          <span className="text-[10px] text-faint font-mono hidden sm:inline">{activeBills.filter(b => b.paid).length}/{activeBills.length} Paid</span>
+      <div className="mb-3.5 flex flex-col gap-3">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <h2 data-guide-target="filters" className="min-w-0 text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+            <Calendar size={13} className="shrink-0 text-blue-400" /> {selectedMonth} Commitments
+          </h2>
+          <span className="hidden shrink-0 text-[10px] text-faint font-mono sm:inline">{activeBills.filter(b => b.paid).length}/{activeBills.length} Paid</span>
+        </div>
+        <div role="group" aria-label="Commitment controls" className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto] items-center gap-1 sm:gap-2">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search..."
-            className="h-7 w-20 sm:w-28 px-2.5 rounded-xl border border-border-default bg-inverse/[0.04] text-[11px] text-strong placeholder:text-faint outline-none focus:border-blue-500/50 transition-all"
+            aria-label="Search commitments"
+            className="h-7 min-w-0 w-full px-2.5 rounded-xl border border-border-default bg-inverse/[0.04] text-[11px] text-strong placeholder:text-faint outline-none focus:border-blue-500/50 transition-all"
           />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as BillSortOption)}
             aria-label="Sort commitments"
-            className="h-7 px-2 rounded-xl border border-border-default bg-inverse/[0.04] text-[11px] text-muted outline-none focus:border-blue-500/50 cursor-pointer max-w-[100px] truncate"
+            className="h-7 min-w-0 w-full px-2 rounded-xl border border-border-default bg-inverse/[0.04] text-[11px] text-muted outline-none focus:border-blue-500/50 cursor-pointer truncate"
           >
             <option value="default">Sort</option>
             <option value="dueSoon">Due Soon</option>
@@ -140,7 +143,7 @@ export const BillsTable: React.FC<BillsTableProps> = React.memo(({
             <option value="unpaidFirst">Unpaid First</option>
           </select>
           <div className="relative" ref={dropdownRef}>
-            <button onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-blue-600/20 border-blue-500/50 text-blue-400" : "bg-inverse/[0.04] border-border-default text-muted hover:text-primary"}`}>
+            <button aria-label={`Filter commitments: ${selectedFilter}`} aria-expanded={showFilterDropdown} title="Filter commitments" onClick={() => setShowFilterDropdown(prev => !prev)} className={`h-7 px-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 transition ${selectedFilter !== "All" ? "bg-blue-600/20 border-blue-500/50 text-blue-400" : "bg-inverse/[0.04] border-border-default text-muted hover:text-primary"}`}>
               <Filter size={11} className={selectedFilter !== "All" ? "text-blue-400" : "text-muted"} />
               <span className="text-[11px] hidden sm:inline">{selectedFilter === "All" ? "Filter" : selectedFilter}</span>
               <ChevronDown size={10} className="text-faint" />

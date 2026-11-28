@@ -37,7 +37,7 @@ import {
   PaydayExecution, FinanceTransitionCommitter, ReceivedIncomeDraft
 } from "../types/finance";
 import { calculateSafeToSpend } from "../utils/financialAnalytics";
-import { reconcileWalletBalances, validateActiveWalletAssignment } from "../utils/financeHelpers";
+import { getSafeWalletBalance, reconcileWalletBalances, resolveActiveWalletDefault, validateActiveWalletAssignment } from "../utils/financeHelpers";
 
 import { reconcileDebt } from "../utils/debtReconciliation";
 
@@ -139,6 +139,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   const savingsTotals = useMemo(() => walletSavingsTotals(globalData), [globalData]);
   const safeToSpend = calculateSafeToSpend(savingsTotals.available, totalUnpaidCommitments);
   const reconciled = useMemo(() => reconcileWalletBalances(globalData), [globalData]);
+  const milestoneWalletId = globalData.settings?.milestoneWallet || resolveActiveWalletDefault(globalData.settings, globalData.wallets);
+  const milestoneBalance = getSafeWalletBalance(globalData.wallets[milestoneWalletId], 0);
 
   const debt = useMemo(() => reconcileDebt(globalData, selectedMonth), [globalData, selectedMonth]);
   const debtLoans = debt.activeLoans;
@@ -580,7 +582,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         <h2 id="dashboard-goals" className="mb-2 px-1 text-sm font-semibold text-primary">Goals</h2>
         <ErrorBoundary>
           <MilestoneProgressBar
-            currentBalance={globalData?.wallets?.[globalData?.settings?.milestoneWallet || "maribank"] || 0}
+            currentBalance={milestoneBalance}
             targetFund={targetMilestoneFund}
             goalName={globalData?.settings?.goalName}
             onConfigureGoal={onConfigureGoal}
