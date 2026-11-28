@@ -15,6 +15,8 @@ export interface ReconciledDebtLoan {
   archived: boolean;
   status: "active" | "completed" | "upcoming" | "incomplete";
   approximate: boolean;
+  /** Reporting-only explanations of older payment estimates, never verification. */
+  estimateNotes: string[];
   issues: string[];
 }
 
@@ -162,6 +164,11 @@ export function reconcileDebt(
     let remainingCents = 0;
     let paidInstallments = 0;
     let approximate = false;
+    const estimateNotes: string[] = [];
+    const estimate = (month: string, reason: string) => {
+      const note = `${month}: ${reason}`;
+      if (!estimateNotes.includes(note)) estimateNotes.push(note);
+    };
     if (issues.length === 0) {
       const months = new Set(Array.from({ length: count }, (_, i) => monthKey(start! + i)));
       for (const [key, log] of Object.entries(logs)) {
@@ -187,6 +194,10 @@ export function reconcileDebt(
             if (amount === null) { issue("A recorded payment amount needs review."); continue; }
             const state = paymentAt(row, occurrence ?? start!, cutoff, issue);
             approximate ||= state.approximate;
+            if (state.approximate) {
+              if (row.priorConfirmation) estimate(key, "Confirmed as paid later; original payment date is unknown. The saved payment amount is used.");
+              if (!Array.isArray(row.statusHistory) || row.historyComplete !== true) estimate(key, "This older payment has incomplete paid/undo history. The saved payment amount is used.");
+            }
             if (state.paid) { active++; paidCents += amount; }
           }
           if (active > 1) issue("Multiple payments settle the same installment.");
@@ -196,6 +207,7 @@ export function reconcileDebt(
           if (currentPaid !== !!log?.billsPaid?.includes(id)) issue("Paid status and settlement records disagree.");
         } else if (log?.billsPaid?.includes(id)) {
           approximate = true;
+          estimate(key, "Marked paid without a detailed payment record; paid amount uses the saved installment amount.");
           const dated = log.paymentDates?.[id];
           const time = dated === undefined ? monthStart(occurrence ?? start!) : timestamp(dated);
           if (time === null) issue("A legacy payment date needs review.");
@@ -224,7 +236,7 @@ export function reconcileDebt(
       paidInstallments, totalPaid: issues.length ? 0 : paidCents / 100,
       remainingScheduled: issues.length ? null : remainingCents / 100,
       progressPercent: count > 0 ? Math.min(100, paidInstallments / count * 100) : 0,
-      archived, status, approximate, issues
+      archived, status, approximate, estimateNotes, issues
     });
   }
   const activeLoans = loans.filter(loan => loan.status === "active" || loan.status === "incomplete")

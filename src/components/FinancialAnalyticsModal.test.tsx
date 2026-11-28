@@ -217,7 +217,8 @@ it("retains completed archived loans in cumulative paid totals but excludes them
   expect(screen.getByText("0 Active Installments")).toBeInTheDocument();
   expect(screen.getByText("Completed loans (1)")).toBeInTheDocument();
   expect(screen.getByText(/Includes legacy timing estimates/)).toBeInTheDocument();
-  expect(screen.getByText(/MacBook Pro · Archived/)).toBeInTheDocument();
+  const completed = screen.getByText("Completed loans (1)").closest("details")!;
+  expect(within(completed).getByText(/MacBook Pro · Archived/)).toBeInTheDocument();
 });
 
 it("shows review-needed debt rather than claiming debt-free for a corrupt schedule", () => {
@@ -280,4 +281,25 @@ it("resolves an unset milestoneWallet to the active default wallet on the Goals 
   fireEvent.click(screen.getByRole("button", { name: "Goals" }));
   expect(screen.getByText(/Goal Vault Balance/i)).toBeInTheDocument();
   expect(screen.getByText("₱80,000.00")).toBeInTheDocument();
+});
+
+
+it("shows exact history reasons separately for estimated and conflicting plans without modifying records", () => {
+  const data = createMockData();
+  data.library.bills = [
+    { id: "old", name: "Older plan", amount: 100, dueDay: "15", type: "Loan / Installment", startMonth: "January 2026", endMonth: "March 2026" },
+    { id: "broken", name: "Check schedule", amount: 100, dueDay: "15", type: "Loan / Installment" },
+  ];
+  data.logs = { "January 2026": { billsPaid: ["old"] } };
+  const before = structuredClone(data);
+  render(<FinancialAnalyticsModal isOpen initialTab="debt" onClose={vi.fn()} globalData={data} selectedMonth="November 2026" totalLiquid={1000} totalUnpaidCommitments={0} />);
+  const summary = screen.getByText("Payment history details (2)");
+  fireEvent.click(summary);
+  const details = within(summary.closest("details")!);
+  expect(details.getByText("Estimated history", { exact: true })).toBeVisible();
+  expect(details.getByText("History needs review", { exact: true })).toBeVisible();
+  expect(details.getByText(/January 2026: Marked paid without a detailed payment record/)).toBeVisible();
+  expect(details.getByText(/Review: The loan schedule needs review/)).toBeVisible();
+  expect(details.getByText(/does not establish the original payment date/)).toBeVisible();
+  expect(data).toEqual(before);
 });

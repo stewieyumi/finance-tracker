@@ -235,6 +235,24 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
               </section>
             )}
             <p className="text-xs text-muted">{debt.isComplete ? "Recorded paid" : "Known paid"}: <span className="privacy-blur font-mono text-primary">{formatPHP(debt.totalPaid)}</span>{debt.approximate ? " · Includes estimates" : ""}</p>
+            {debt.loans.some(loan => loan.approximate || loan.issues.length > 0) && (
+              <details className="rounded-xl border border-subtle bg-surface-sunken p-3 text-xs">
+                <summary className="cursor-pointer font-semibold text-primary">Payment history details ({debt.loans.filter(loan => loan.approximate || loan.issues.length > 0).length})</summary>
+                <p className="mt-3 leading-relaxed text-muted">Estimated history uses older saved records. It does not mean a payment is unpaid. Remaining amounts come from the saved schedule and cannot independently verify those payments.</p>
+                <ul className="mt-3 space-y-3">
+                  {debt.loans.filter(loan => loan.approximate || loan.issues.length > 0).map(loan => (
+                    <li key={loan.id} className="min-w-0 rounded-xl border border-subtle bg-surface-low p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2"><span className="privacy-blur min-w-0 break-words font-semibold text-primary">{loan.name}{loan.archived && " · Archived"}</span><span className={loan.issues.length ? "text-warning" : "text-muted"}>{loan.issues.length ? "History needs review" : "Estimated history"}</span></div>
+                      <ul className="privacy-blur mt-2 list-disc space-y-1 break-words pl-4 leading-relaxed text-secondary">
+                        {loan.issues.map(issue => <li key={issue}>Review: {issue}</li>)}
+                        {loan.estimateNotes.map(note => <li key={note}>{note}</li>)}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 leading-relaxed text-muted">For missing paid months, use Plan → Commitments → Edit → Review prior payments. Confirm only months you know were paid. This leaves wallets unchanged and does not establish the original payment date. For history conflicts, compare the saved schedule and payments with your records before changing them.</p>
+              </details>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-secondary flex items-center gap-1.5">
                 <CreditCard size={13} className="text-violet-accent" />

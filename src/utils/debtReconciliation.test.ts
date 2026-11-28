@@ -225,3 +225,31 @@ describe("debt overview reporting", () => {
     expect(reconcileDebt(d, "January 2026", now).monthlyScheduled).toBeNull();
   });
 });
+
+
+it("explains legacy amounts, later confirmations and incomplete history without changing balances or totals", () => {
+  const d = data();
+  d.logs["January 2026"] = { billsPaid: ["loan"], billOverrides: { loan: 80 } };
+  const at = "2026-11-10T12:00:00Z";
+  add(d, "February 2026", payment({ id: "prior", paidAt: at, priorConfirmation: true, wallet: null, walletDebit: 0, statusHistory: [{ paid: true, at }] }));
+  add(d, "March 2026", payment({ id: "older", paidAt: "2026-03-15T12:00:00Z", statusHistory: undefined, historyComplete: undefined }));
+  const before = structuredClone(d);
+  const result = reconcileDebt(d, "November 2026", now);
+  expect(result).toMatchObject({ totalPaid: 280, remainingScheduled: 0, isComplete: true });
+  expect(result.loans[0]).toMatchObject({ status: "completed", paidInstallments: 3, approximate: true });
+  expect(result.loans[0].estimateNotes).toEqual([
+    "January 2026: Marked paid without a detailed payment record; paid amount uses the saved installment amount.",
+    "February 2026: Confirmed as paid later; original payment date is unknown. The saved payment amount is used.",
+    "March 2026: This older payment has incomplete paid/undo history. The saved payment amount is used.",
+  ]);
+  expect(d).toEqual(before);
+});
+
+it("keeps record conflicts distinct from estimates and leaves complete recorded history unflagged", () => {
+  const d = add(data(), "January 2026", payment());
+  expect(reconcileDebt(d, "November 2026", now).loans[0]).toMatchObject({ approximate: false, issues: [], estimateNotes: [] });
+  d.logs["January 2026"].billsPaid = [];
+  const result = reconcileDebt(d, "November 2026", now).loans[0];
+  expect(result.status).toBe("incomplete"); expect(result.estimateNotes).toEqual([]);
+  expect(result.issues).toContain("Paid status and settlement records disagree.");
+});
