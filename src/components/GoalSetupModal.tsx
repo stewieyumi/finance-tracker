@@ -7,6 +7,10 @@ import {
   applySettingsForm,
   SettingsForm,
 } from "../utils/settingsForm";
+import { readGoalProgress } from "../utils/goalProgress";
+import { formatPHP } from "../utils/currency";
+import { expenseCents } from "../utils/expenseChanges";
+import { validateActiveWalletAssignment } from "../utils/financeHelpers";
 import { Modal } from "./ui/Modal";
 
 export interface GoalSetupModalProps {
@@ -22,6 +26,8 @@ export const GoalSetupModal: React.FC<GoalSetupModalProps> = ({
   globalData,
   setGlobalData,
 }) => {
+  const [source, setSource] = useState<"balance" | "savings">(globalData.settings?.milestoneSource === "savings" ? "savings" : "balance");
+  const [error, setError] = useState("");
   const prevIsOpenRef = useRef(false);
   const [form, setForm] = useState<SettingsForm>(() =>
     createSettingsForm(globalData?.settings, globalData?.wallets)
@@ -30,6 +36,7 @@ export const GoalSetupModal: React.FC<GoalSetupModalProps> = ({
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
       setForm(createSettingsForm(globalData?.settings, globalData?.wallets));
+      setSource(globalData.settings?.milestoneSource === "savings" ? "savings" : "balance"); setError("");
     }
     prevIsOpenRef.current = isOpen;
   }, [isOpen, globalData?.settings, globalData?.wallets]);
@@ -43,7 +50,11 @@ export const GoalSetupModal: React.FC<GoalSetupModalProps> = ({
 
   if (!isOpen) return null;
 
+  const preview = readGoalProgress({ ...globalData, settings: { ...globalData.settings, milestoneWallet: form.milestoneWallet, milestoneSource: source } }, form.targetFund);
   const handleSave = () => {
+    const wallet = validateActiveWalletAssignment(form.milestoneWallet, globalData.settings, globalData.wallets);
+    if (!wallet.ok) { setError(wallet.message); return; }
+    if (expenseCents(form.targetFund) === null) { setError("Enter a nonnegative goal amount with at most two decimal places."); return; }
     setGlobalData(prev => {
       const currentForm = createSettingsForm(prev.settings, prev.wallets);
       const mergedForm: SettingsForm = {
@@ -54,7 +65,7 @@ export const GoalSetupModal: React.FC<GoalSetupModalProps> = ({
       };
       return {
         ...prev,
-        settings: applySettingsForm(prev.settings, mergedForm),
+        settings: { ...applySettingsForm(prev.settings, mergedForm), milestoneSource: source },
         updatedAt: Date.now(),
       };
     });
@@ -154,7 +165,17 @@ export const GoalSetupModal: React.FC<GoalSetupModalProps> = ({
                 ))}
               </select>
             </div>
+            <div className="grid gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] sm:items-center">
+              <label htmlFor="goal-setup-source" className="text-sm font-medium text-primary">Track progress from</label>
+              <select id="goal-setup-source" value={source} onChange={event => { setSource(event.target.value as "balance" | "savings"); setError(""); }} className="min-h-11 min-w-0 rounded-lg border border-strong bg-surface-input px-3 py-2 text-sm text-primary">
+                <option value="balance">Whole wallet balance</option><option value="savings">Savings in this wallet</option>
+              </select>
+            </div>
           </div>
+          <p className="mt-3 text-sm text-primary">Current progress: <span className="privacy-blur font-mono font-semibold">{formatPHP(preview.amount)}</span></p>
+          {source === "savings" && <p className="mt-2 text-xs text-muted">Uses only the Savings amount set aside in this wallet. Set or update it in Wallets; other wallets and spending money are excluded.</p>}
+          {preview.needsReview && <p className="mt-2 text-xs text-warning">Review the selected wallet and its Savings amount.</p>}
+          {error && <p role="alert" className="mt-2 text-sm text-negative">{error}</p>}
           <p className="mt-3 px-1 text-xs leading-relaxed text-muted">The linked wallet shows your progress toward the target. Saving a goal does not move money.</p>
         </div>
 

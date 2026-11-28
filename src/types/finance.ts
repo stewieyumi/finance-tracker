@@ -217,6 +217,8 @@ export interface AppSettings {
   targetFund?: number;
   goalName?: string;
   milestoneWallet?: string;
+  /** Track the selected wallet balance by default, or only its existing Savings reserve. */
+  milestoneSource?: "balance" | "savings";
   inflowsLabel?: string;
   gigsLabel?: string;
   inflowCategories?: string[];

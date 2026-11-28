@@ -7,7 +7,8 @@ import {
   UnifiedFinanceData
 } from "../types/finance";
 import { parseDateKey } from "./dateHelpers";
-import { reconcileWalletBalances, resolveActiveWalletDefault, parseWalletBalance } from "./financeHelpers";
+import { readGoalProgress } from "./goalProgress";
+import { reconcileWalletBalances } from "./financeHelpers";
 import { budgetMonthRange, effectiveBudget } from "./budgeting";
 import { reconcileDebt } from "./debtReconciliation";
 import { expenseCents } from "./expenseChanges";
@@ -44,7 +45,6 @@ export function buildFinancialSummary({
   totalUnpaidCommitments,
   overdueBills,
   targetMilestoneFund,
-  fundProgressPercent,
   incomeReport = readInflowIncome(globalData, selectedMonth)
 }: BuildSummaryParams): string {
   const unpaid = activeBills.filter(b => !b.paid);
@@ -138,10 +138,9 @@ export function buildFinancialSummary({
   ].join("\n")).join("\n") || "  • No installment plans";
   const gigs = globalData.library.shoots ?? [];
   const gigLines = gigs.map(gig => `  • ${gig.title}: ${gig.date || "Date not set"} · ${gig.completed ? "Done" : gig.status}${gig.category ? ` · ${gig.category}` : ""}`).join("\n") || "  • No gigs/tasks saved";
-  const milestoneId = globalData.settings?.milestoneWallet || resolveActiveWalletDefault(globalData.settings, globalData.wallets);
-  const milestone = milestoneId ? parseWalletBalance(globalData.wallets[milestoneId]) : undefined;
+  const goal = readGoalProgress(globalData, targetMilestoneFund);
   const goalLine = targetMilestoneFund > 0
-    ? `${globalData.settings?.goalName?.trim() || "Savings goal"}: ${milestone?.isValid ? `₱${fmt(milestone.balance)} / ₱${fmt(targetMilestoneFund)} (${fundProgressPercent}%)` : "Wallet balance needs review"} · ${walletLabel(milestoneId)}`
+    ? `${globalData.settings?.goalName?.trim() || "Savings goal"}: ₱${fmt(goal.amount)} / ₱${fmt(targetMilestoneFund)} (${goal.percent}%) · ${goal.walletLabel} · ${goal.source === "savings" ? "Savings only" : "Wallet balance"}${goal.needsReview ? " — linked wallet or Savings needs review" : ""}; observes existing money, no extra reserve or transfer`
     : "No savings goal set";
 
   const billLines =

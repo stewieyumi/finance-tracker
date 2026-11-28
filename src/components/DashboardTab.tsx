@@ -37,7 +37,8 @@ import {
   PaydayExecution, FinanceTransitionCommitter, ReceivedIncomeDraft
 } from "../types/finance";
 import { calculateSafeToSpend } from "../utils/financialAnalytics";
-import { getSafeWalletBalance, reconcileWalletBalances, resolveActiveWalletDefault, validateActiveWalletAssignment } from "../utils/financeHelpers";
+import { readGoalProgress } from "../utils/goalProgress";
+import { reconcileWalletBalances, validateActiveWalletAssignment } from "../utils/financeHelpers";
 
 import { reconcileDebt } from "../utils/debtReconciliation";
 
@@ -142,8 +143,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   const savingsTotals = useMemo(() => walletSavingsTotals(globalData), [globalData]);
   const safeToSpend = calculateSafeToSpend(savingsTotals.available, totalUnpaidCommitments);
   const reconciled = useMemo(() => reconcileWalletBalances(globalData), [globalData]);
-  const milestoneWalletId = globalData.settings?.milestoneWallet || resolveActiveWalletDefault(globalData.settings, globalData.wallets);
-  const milestoneBalance = getSafeWalletBalance(globalData.wallets[milestoneWalletId], 0);
+  const goal = readGoalProgress(globalData, targetMilestoneFund);
+  const milestoneBalance = goal.amount;
 
   const debt = useMemo(() => reconcileDebt(globalData, selectedMonth), [globalData, selectedMonth]);
   const debtLoans = debt.activeLoans;
@@ -590,6 +591,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
             goalName={globalData?.settings?.goalName}
             onConfigureGoal={onConfigureGoal}
           />
+          <p className="mt-2 px-1 text-xs text-muted">{goal.source === "savings" ? "Savings only" : "Wallet balance"} · {goal.walletLabel}</p>
+          {goal.needsReview && <p className="mt-1 px-1 text-xs text-warning">Review the linked wallet and Savings before relying on this progress.</p>}
         </ErrorBoundary>
       </section>
 

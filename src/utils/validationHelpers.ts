@@ -64,6 +64,7 @@ export function isValidFinanceBackup(data: unknown): data is UnifiedFinanceData 
 
   return (data.expenseRevisions === undefined || (isRecord(data.expenseRevisions)
       && Object.entries(data.expenseRevisions).every(([id, revision]) => id.trim() !== '' && typeof revision === 'string' && revision.trim() !== ''))) &&
+    (data.settings.milestoneSource === undefined || data.settings.milestoneSource === "balance" || data.settings.milestoneSource === "savings") &&
     (data.settings.savingsWalletIds === undefined || isSavingsWalletIds(data.settings.savingsWalletIds)) &&
     (data.settings.emergencyFundGoal == null || isEmergencyFundGoal(data.settings.emergencyFundGoal)) &&
     (data.settings.walletSavings === undefined || isWalletSavingsMap(data.settings.walletSavings)) &&

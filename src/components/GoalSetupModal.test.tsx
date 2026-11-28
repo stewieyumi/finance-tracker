@@ -86,7 +86,7 @@ describe("GoalSetupModal", () => {
 
     expect(screen.getByDisplayValue("Japan ADB Milestone")).toBeInTheDocument();
     expect(screen.getByDisplayValue("85000")).toBeInTheDocument();
-    const select = screen.getByRole("combobox") as HTMLSelectElement;
+    const select = screen.getByRole("combobox", { name: /linked wallet/i }) as HTMLSelectElement;
     expect(select.value).toBe("main");
   });
 
@@ -103,7 +103,7 @@ describe("GoalSetupModal", () => {
 
     const goalNameInput = screen.getByDisplayValue("Vacation Fund");
     const targetAmountInput = screen.getByDisplayValue("20000");
-    const select = screen.getByRole("combobox") as HTMLSelectElement;
+    const select = screen.getByRole("combobox", { name: /linked wallet/i }) as HTMLSelectElement;
 
     fireEvent.change(goalNameInput, { target: { value: "New Camera Lens" } });
     fireEvent.change(targetAmountInput, { target: { value: "45000" } });
@@ -134,7 +134,7 @@ describe("GoalSetupModal", () => {
     fireEvent.change(screen.getByDisplayValue("20000"), {
       target: { value: "100000" },
     });
-    fireEvent.change(screen.getByRole("combobox"), {
+    fireEvent.change(screen.getByRole("combobox", { name: /linked wallet/i }), {
       target: { value: "gcash" },
     });
 
@@ -363,4 +363,16 @@ describe("GoalSetupModal", () => {
     expect(screen.getByDisplayValue("Active Unsaved Draft")).toBeInTheDocument();
     expect(screen.queryByDisplayValue("Initial Goal")).not.toBeInTheDocument();
   });
+});
+
+it("links a specific wallet's existing Savings without moving or reserving money again", () => {
+  const data = createMockData(); data.settings!.walletSavings = { bpi: 750, main: 100 };
+  const setter = vi.fn();
+  render(<GoalSetupModal isOpen onClose={vi.fn()} globalData={data} setGlobalData={setter} />);
+  fireEvent.change(screen.getByLabelText("Track progress from"), { target: { value: "savings" } });
+  expect(screen.getByText("₱750.00")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Save Goal" }));
+  const next = setter.mock.calls[0][0](data) as UnifiedFinanceData;
+  expect(next.settings!.milestoneWallet).toBe("bpi"); expect(next.settings!.milestoneSource).toBe("savings");
+  expect(next.wallets).toBe(data.wallets); expect(next.settings!.walletSavings).toEqual(data.settings!.walletSavings);
 });

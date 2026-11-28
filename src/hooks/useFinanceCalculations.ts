@@ -1,3 +1,4 @@
+import { readGoalProgress } from "../utils/goalProgress";
 import { walletSavingsTotals } from "../utils/walletSavings";
 import { readInflowIncome } from "../utils/inflowIncome";
 import { useMemo } from "react";
@@ -17,8 +18,7 @@ import {
   computeBaselineScale,
   getReceivableStatus,
   reconcileWalletBalances,
-  resolveActiveWalletDefault,
-  getSafeWalletBalance
+  resolveActiveWalletDefault
 } from "../utils/financeHelpers";
 import {
   parseMonthKey,
@@ -284,12 +284,8 @@ const activeReceivables = useMemo<ReceivableViewModel[]>(() => {
   const reconciledBalances = useMemo(() => reconcileWalletBalances(globalData), [globalData]);
   const totalLiquid = reconciledBalances.totalLiquid;
   const targetMilestoneFund = globalData?.settings?.targetFund ?? globalData?.targetFund ?? DEFAULT_TARGET_FUND;
-  const fundProgressPercent = useMemo(() => {
-    if (targetMilestoneFund <= 0) return "0.0";
-    const milestoneKey = globalData?.settings?.milestoneWallet || resolveActiveWalletDefault(globalData?.settings, globalData?.wallets);
-    const balance = getSafeWalletBalance(globalData?.wallets?.[milestoneKey], 0);
-    return ((balance / targetMilestoneFund) * 100).toFixed(1);
-  }, [globalData?.wallets, globalData?.settings, targetMilestoneFund]);
+  const fundProgressPercent = useMemo(() => readGoalProgress(globalData, targetMilestoneFund).percent,
+    [globalData.wallets, globalData.settings, targetMilestoneFund]);
   const totalPendingReceivables = useMemo(() => activeReceivables.filter(r => !r.collected && !r.amountUnspecified).reduce((a, c) => a + Math.max(0, (parseFloat(String(c.amount)) || 0) - (parseFloat(String(c.amountReceived)) || 0)), 0), [activeReceivables]);
   const incomeReport = useMemo(() => readInflowIncome(globalData, selectedMonth), [globalData, selectedMonth]);
   const monthIncomeCollected = incomeReport.actual;

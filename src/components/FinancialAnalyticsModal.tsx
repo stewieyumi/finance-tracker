@@ -4,14 +4,13 @@ import React, { useState, useMemo } from "react";
 import { X, Sparkles, ShieldCheck, CreditCard, TrendingUp, Target } from "lucide-react";
 import { parseMonthKey } from "../utils/dateHelpers";
 import { UnifiedFinanceData } from "../types/finance";
-import { DEFAULT_TARGET_FUND } from "../constants/config";
 import {
   calculateCashflowMomentum,
   calculateSafeToSpend,
   calculateMonthlyDepositNeeded
 } from "../utils/financialAnalytics";
 import { reconcileDebt } from "../utils/debtReconciliation";
-import { getSafeWalletBalance, resolveActiveWalletDefault } from "../utils/financeHelpers";
+import { readGoalProgress } from "../utils/goalProgress";
 import { formatPHP } from "../utils/currency";
 import { Modal } from "./ui/Modal";
 
@@ -48,11 +47,10 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
   const totalDaysInMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0).getDate();
   const remainingDays = isCurrentActiveMonth ? Math.max(1, totalDaysInMonth - now.getDate() + 1) : totalDaysInMonth;
 
-  const milestoneWalletKey = globalData.settings?.milestoneWallet || resolveActiveWalletDefault(globalData.settings, globalData.wallets);
-  const goalBalance = milestoneWalletKey ? getSafeWalletBalance(globalData?.wallets?.[milestoneWalletKey], 0) : 0;
-  const targetFund = globalData?.settings?.targetFund ?? globalData?.targetFund ?? DEFAULT_TARGET_FUND;
-  const walletLabel = globalData.settings?.customWallets?.find(wallet => wallet.id === milestoneWalletKey)?.label
-    || globalData.settings?.walletLabels?.[milestoneWalletKey] || milestoneWalletKey;
+  const goal = readGoalProgress(globalData);
+  const goalBalance = goal.amount;
+  const targetFund = goal.target;
+  const walletLabel = goal.walletLabel;
   const monthlyDepositNeeded = calculateMonthlyDepositNeeded(targetFund, goalBalance, goalMonths);
 
   const debt = useMemo(() => reconcileDebt(globalData, selectedMonth), [globalData, selectedMonth]);
@@ -317,6 +315,8 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
 
         {activeTab === "goals" && targetFund > 0 && (
           <div className="space-y-4">
+            <p className="text-xs text-muted">Tracking {goal.source === "savings" ? "Savings only" : "wallet balance"} in {walletLabel}. Linking a goal does not move or set aside money.</p>
+            {goal.needsReview && <p role="status" className="text-xs text-warning">Review the linked wallet and Savings before relying on this progress.</p>}
             <div className="bg-surface-sunken border border-subtle rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-400">
@@ -341,7 +341,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                 <div className="bg-surface border border-subtle rounded-xl p-3">
                   <div className="text-[10px] text-faint uppercase font-semibold">
-                    {walletLabel} Balance
+                    {walletLabel} {goal.source === "savings" ? "Savings" : "Balance"}
                   </div>
                   <div className="text-base font-bold font-mono text-strong mt-0.5">
                     ₱{goalBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}

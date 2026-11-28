@@ -205,3 +205,11 @@ it('reports an early next-month payment in actual-date spending and keeps the du
   expect(report('December 2026')).toContain('COMMITMENT STATUS — SELECTED VIEW');
   expect(result.data.logs['December 2026'].billsPaid).toEqual(['early']);
 });
+
+it("reports only the selected wallet's Savings and ignores a stale caller percentage", () => {
+  const data = seed(); data.settings!.milestoneSource = 'savings'; data.settings!.walletSavings = { cash: 75, main: 100 };
+  const before = structuredClone(data); const report = summary(data);
+  expect(report).toContain('Emergency fund: ₱75.00 / ₱1,000.00 (7.5%) · Cash · Savings only');
+  expect(report).toContain('observes existing money, no extra reserve or transfer');
+  expect(data).toEqual(before);
+});

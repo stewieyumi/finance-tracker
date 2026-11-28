@@ -1,0 +1,31 @@
+import { test, expect, navigate, returningData, storedData } from './fixtures';
+for (const theme of ['light', 'dark'] as const) test(`a goal links to one wallet's Savings across all reports in ${theme}`, async ({ page, isolatedApp }, info) => {
+  if (page.viewportSize()!.width < 640) await page.setViewportSize({ width: 320, height: 568 });
+  const data = returningData(); data.wallets = { main: 4250, cash: 1500 };
+  data.settings = { ...data.settings, theme, milestoneWallet: 'main', targetFund: 10000, goalName: 'Safety fund', savingsWalletIds: ['main', 'cash'], walletSavings: { main: 2000, cash: 300 } };
+  await page.addInitScript(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (value: string) => { (window as typeof window & { goalSummary?: string }).goalSummary = value; } } }));
+  const app = await isolatedApp(data); const before = await storedData(page);
+  await page.getByRole('button', { name: 'Configure savings goal', exact: true }).click();
+  const setup = page.getByRole('dialog', { name: 'Goal Configuration Modal', exact: true });
+  await setup.getByLabel('Linked Wallet (Tracks Progress)', { exact: true }).selectOption('cash');
+  await setup.getByLabel('Track progress from', { exact: true }).selectOption('savings');
+  await expect(setup.getByText('₱300.00', { exact: true })).toBeVisible();
+  for (const input of await setup.locator('input,select').all()) { await input.scrollIntoViewIfNeeded(); const box = await input.boundingBox(); expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width); }
+  await page.screenshot({ path: info.outputPath(`goal-source-${theme}.png`) });
+  await setup.getByRole('button', { name: 'Save Goal', exact: true }).click();
+  const goals = page.getByRole('region', { name: 'Goals', exact: true });
+  await expect(goals).toContainText('300.00'); await expect(goals).toContainText('3.0%'); await expect(goals).toContainText('Savings only');
+  const saved = await storedData(page); expect(saved!.wallets).toEqual(before!.wallets); expect(saved!.settings!.walletSavings).toEqual(before!.settings!.walletSavings);
+  await page.getByRole('button', { name: 'Runway', exact: true }).click();
+  const analytics = page.getByRole('dialog', { name: 'Financial Intelligence Modal', exact: true }); await analytics.getByRole('button', { name: 'Goals', exact: true }).click();
+  await expect(analytics.getByText('Test Cash Savings', { exact: true }).locator('..')).toContainText('₱300.00');
+  await analytics.getByRole('button', { name: 'Close analytics modal', exact: true }).click();
+  await page.getByRole('button', { name: 'Copy Summary', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => (window as typeof window & { goalSummary?: string }).goalSummary)).toContain('Safety fund: ₱300.00 / ₱10,000.00 (3.0%) · Test Cash · Savings only');
+  await navigate(page, 'Wallets'); await page.getByRole('button', { name: 'Set savings for Test Cash', exact: true }).click();
+  const savings = page.getByRole('dialog', { name: 'Savings', exact: true }); await savings.getByLabel('Savings amount', { exact: true }).fill('450'); await savings.getByRole('button', { name: 'Save Savings', exact: true }).click();
+  await navigate(page, 'Dashboard'); await expect(goals).toContainText('450.00'); await expect(goals).toContainText('4.5%');
+  await app.waitForSaved(); await page.reload(); await expect(goals).toContainText('450.00');
+  expect((await storedData(page))!.wallets).toEqual(before!.wallets);
+  expect((await storedData(page))!.settings!.milestoneSource).toBe('savings');
+});
