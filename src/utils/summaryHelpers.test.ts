@@ -99,7 +99,8 @@ describe('comprehensive copied financial summary', () => {
     const text = summary(data);
     expect(text).toContain('Bank: Balance needs review');
     expect(text).toContain('Budget spending or selected wallets need review');
-    expect(text).toContain('Laptop plan'); expect(text).toContain('history needs review / estimate');
+    expect(text).toContain('Laptop plan'); expect(text).toContain('History needs review');
+    expect(text).toContain('Review: The loan schedule needs review');
     expect(text).not.toContain('₱NaN');
   });
   it('keeps all-wallet monthly spending distinct from a selected-wallet budget with its own date range', () => {
@@ -174,4 +175,17 @@ it('copies the same debt totals, schedule, upcoming plans and breakdown as the o
   expect(summary(d)).toContain('Overdue schedule — unpaid installments in an ended plan');
   d.library.bills[0].endMonth = undefined;
   expect(summary(d)).toContain('Scheduled in November 2026: Review needed');
+});
+
+
+it('explains the source month and amount of historical estimates instead of combining them with conflicts', () => {
+  const data = seed();
+  data.library.bills.push({ id: 'legacy-loan', name: 'Older installment', amount: 100, dueDay: '15', type: 'Loan / Installment', startMonth: 'January 2026', endMonth: 'March 2026' });
+  data.logs['January 2026'] = { billsPaid: ['legacy-loan'], billOverrides: { 'legacy-loan': 80 } };
+  const before = structuredClone(data); const text = summary(data);
+  expect(text).toContain('Older installment: 1/3 installments; ₱80.00 paid; ₱200.00 remaining scheduled — Estimated history');
+  expect(text).toContain('Estimate: January 2026: Marked paid without a detailed payment record; paid amount uses the saved installment amount.');
+  expect(text).not.toContain('history needs review / estimate');
+  expect(text).toContain('They cannot independently verify older payments.');
+  expect(data).toEqual(before);
 });
