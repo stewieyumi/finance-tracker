@@ -1,0 +1,25 @@
+import { readFile } from 'node:fs/promises';
+import { test, expect, navigate, returningData, storedData } from './fixtures';
+for (const theme of ['light', 'dark'] as const) test(`exports the full filtered history as safe CSV in ${theme}`, async ({ page, isolatedApp }, info) => {
+  const data = returningData(); data.settings!.theme = theme;
+  data.library.expenses = Array.from({ length: 55 }, (_, index) => ({ id: `csv-${index}`, merchant: `CSV Lunch ${index}`, amount: 10, category: 'Food & Dining', wallet: 'main', date: '2026-11-20' }));
+  data.library.expenses.push({ id: 'other', merchant: 'Excluded dinner', amount: 90, category: 'Other', wallet: 'cash', date: '2026-11-21' });
+  await isolatedApp(data); await navigate(page, 'Account');
+  await page.getByRole('button', { name: 'View Full History', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Transaction History', exact: true });
+  const before = await storedData(page);
+  await dialog.getByRole('textbox', { name: 'Search transactions', exact: true }).fill('CSV Lunch');
+  await expect(dialog.getByRole('button', { name: /Load More/ })).toBeVisible();
+  const button = dialog.getByRole('button', { name: 'Export filtered transactions as CSV', exact: true });
+  await button.scrollIntoViewIfNeeded();
+  const box = await button.boundingBox(); expect(box).toBeTruthy(); expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  const downloaded = page.waitForEvent('download'); await button.click(); const download = await downloaded;
+  expect(download.suggestedFilename()).toMatch(/^finance-tracker-transactions-\d{4}-\d{2}-\d{2}\.csv$/);
+  const csv = await readFile((await download.path())!, 'utf8');
+  expect(csv).toContain('CSV Lunch 54'); expect(csv).not.toContain('Excluded dinner');
+  expect(csv.split('\r\n').filter(Boolean)).toHaveLength(56);
+  expect(csv).toContain('"Test Bank",-10.00');
+  expect(await storedData(page)).toEqual(before);
+  expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  await page.screenshot({ path: info.outputPath(`history-csv-${theme}.png`) });
+});
