@@ -410,4 +410,20 @@ describe("DashboardTab", () => {
     expect(screen.getByText("Income history needs review. Check receipt details before relying on this total.")).toBeInTheDocument();
   });
 
+  it("resolves milestone goal progress from the active default wallet when milestoneWallet is unset", () => {
+    const data = structuredClone(INITIAL_UNIFIED_DATA);
+    data.wallets = { cw_primary: 4250 };
+    data.settings = {
+      ...data.settings,
+      milestoneWallet: undefined,
+      defaultWallet: "cw_primary",
+      goalName: "Emergency Fund",
+      customWallets: [{ id: "cw_primary", label: "Primary Bank" }],
+    };
+    render(<DashboardTab {...defaultProps} globalData={data} targetMilestoneFund={10000} />);
+    const goalsSection = screen.getByRole("region", { name: "Goals" });
+    expect(within(goalsSection).getByText("4,250.00")).toBeInTheDocument();
+    expect(within(goalsSection).getByText("42.5%")).toBeInTheDocument();
+  });
+
 });

@@ -35,7 +35,9 @@ export function BudgetSetupModal({ data, month, unpaidCommitments, commitTransit
   const [cashPlan, setCashPlan] = useState<BudgetCashPlan>();
   const [proposal, setProposal] = useState<ReturnType<typeof calculateCashGuidance>>(null);
   const [error, setError] = useState('');
-  const expected = useRef(data.settings?.monthlyBudgets?.[month]);
+  const initialSavedBudget = data.settings?.monthlyBudgets?.[month];
+  const [hasSavedBudget] = useState(() => initialSavedBudget != null);
+  const expected = useRef(initialSavedBudget);
   const reviewed = useRef<{ wallets: string; spending: string; day: string } | undefined>(undefined);
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus(); }, [step, manual]);
@@ -147,7 +149,7 @@ export function BudgetSetupModal({ data, month, unpaidCommitments, commitTransit
             <button type="button" onClick={calculate} className="min-h-11 rounded-xl bg-fill px-3 text-xs font-semibold text-primary">Recalculate plan</button>
           </>}
         </>}
-        {(manual || step === 5) && <><label className="flex min-h-11 items-center gap-2 text-xs text-primary"><input type="checkbox" checked={rollover} onChange={event => setRollover(event.target.checked)} />Carry unused allowance into the next month</label>{expected.current != null && <button type="button" onClick={() => save(undefined)} className="min-h-11 rounded-xl px-3 text-xs text-negative">Remove budget</button>}</>}
+        {(manual || step === 5) && <><label className="flex min-h-11 items-center gap-2 text-xs text-primary"><input type="checkbox" checked={rollover} onChange={event => setRollover(event.target.checked)} />Carry unused allowance into the next month</label>{hasSavedBudget && <button type="button" onClick={() => save(undefined)} className="min-h-11 rounded-xl px-3 text-xs text-negative">Remove budget</button>}</>}
         {error && <p role="alert" className="rounded-xl bg-fill p-3 text-sm text-negative">{error}</p>}
       </div>
       <footer className="flex shrink-0 flex-wrap gap-2 border-t border-subtle pt-3">

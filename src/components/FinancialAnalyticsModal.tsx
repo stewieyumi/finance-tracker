@@ -11,6 +11,7 @@ import {
   calculateMonthlyDepositNeeded
 } from "../utils/financialAnalytics";
 import { reconcileDebt } from "../utils/debtReconciliation";
+import { getSafeWalletBalance, resolveActiveWalletDefault } from "../utils/financeHelpers";
 import { formatPHP } from "../utils/currency";
 import { Modal } from "./ui/Modal";
 
@@ -47,8 +48,8 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
   const totalDaysInMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0).getDate();
   const remainingDays = isCurrentActiveMonth ? Math.max(1, totalDaysInMonth - now.getDate() + 1) : totalDaysInMonth;
 
-  const milestoneWalletKey = globalData.settings?.milestoneWallet || (globalData.wallets.main === undefined ? 'maribank' : 'main');
-  const goalBalance = globalData?.wallets?.[milestoneWalletKey] || 0;
+  const milestoneWalletKey = globalData.settings?.milestoneWallet || resolveActiveWalletDefault(globalData.settings, globalData.wallets);
+  const goalBalance = milestoneWalletKey ? getSafeWalletBalance(globalData?.wallets?.[milestoneWalletKey], 0) : 0;
   const targetFund = globalData?.settings?.targetFund ?? globalData?.targetFund ?? DEFAULT_TARGET_FUND;
   const walletLabel = globalData.settings?.customWallets?.find(wallet => wallet.id === milestoneWalletKey)?.label
     || globalData.settings?.walletLabels?.[milestoneWalletKey] || milestoneWalletKey;

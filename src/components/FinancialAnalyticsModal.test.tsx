@@ -265,3 +265,19 @@ it("opens Debt directly and shows the saved schedule outlook and breakdown", () 
   expect(screen.getByRole('region', { name: 'Active debt breakdown' })).toHaveTextContent('MacBook Pro100.0%');
   expect(screen.getByText(/not a lender payoff quote/)).toBeInTheDocument();
 });
+
+it("resolves an unset milestoneWallet to the active default wallet on the Goals tab", () => {
+  const data = createMockData();
+  data.wallets = { cw_goal: 20000 };
+  data.settings = {
+    ...data.settings,
+    milestoneWallet: undefined,
+    defaultWallet: "cw_goal",
+    targetFund: 100000,
+    customWallets: [{ id: "cw_goal", label: "Goal Vault" }],
+  };
+  render(<FinancialAnalyticsModal isOpen onClose={vi.fn()} globalData={data} selectedMonth="March 2026" totalLiquid={20000} totalUnpaidCommitments={0} />);
+  fireEvent.click(screen.getByRole("button", { name: "Goals" }));
+  expect(screen.getByText(/Goal Vault Balance/i)).toBeInTheDocument();
+  expect(screen.getByText("₱80,000.00")).toBeInTheDocument();
+});

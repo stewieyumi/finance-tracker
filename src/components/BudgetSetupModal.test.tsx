@@ -103,3 +103,18 @@ it('allows a one-day period without an ordering error', () => {
   setup(); next(); fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2026-11-21' } }); fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-11-21' } });
   expect(screen.queryByRole('alert')).not.toBeInTheDocument(); expect(screen.getByRole('status', { name: 'Selected budget dates' })).toHaveTextContent('1 day in this period'); next(); expect(screen.getByLabelText('Usual daily essentials (₱)')).toBeVisible();
 });
+
+
+it('keeps the opening budget snapshot for removal when saved data changes during editing', () => {
+  const data = seed(); data.settings!.monthlyBudgets = { 'November 2026': { limit: 100 } };
+  const app = setup(data);
+  fireEvent.click(screen.getByText('Already know your spending limit?'));
+  fireEvent.click(screen.getByRole('button', { name: 'Enter a manual limit' }));
+  app.read().settings!.monthlyBudgets!['November 2026'] = { limit: 250 };
+  const changed = structuredClone(app.read());
+  fireEvent.click(screen.getByRole('button', { name: 'Remove budget' }));
+  expect(screen.getByRole('alert')).toHaveTextContent('This budget changed');
+  expect(app.read()).toEqual(changed);
+  expect(app.saved).not.toHaveBeenCalled();
+  expect(app.close).not.toHaveBeenCalled();
+});
