@@ -40,7 +40,7 @@ export const AccountTab: React.FC<AccountTabProps> = ({
 }) => {
   return (
     <div data-guide-screen="account" className="space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
-        <div className="flex justify-end"><GuideButton screen="account" name="Account" /></div>
+      <GuideButton screen="account" name="Account" inPageHeader />
       <div className="flex flex-col items-center justify-center rounded-2xl bg-surface p-4 text-center sm:p-5">
         <div className="mb-4 flex w-full flex-col items-center gap-3 rounded-xl bg-surface-low p-4">
           {googleUser ? (

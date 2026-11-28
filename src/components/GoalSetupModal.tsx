@@ -71,7 +71,6 @@ export const GoalSetupModal: React.FC<GoalSetupModalProps> = ({
       <div data-guide-screen="goal"
         className="flex max-h-[88dvh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-subtle bg-surface-elevated shadow-2xl"
       >
-        <div className="flex justify-end"><GuideButton screen="goal" name="Savings goal" /></div>
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-subtle px-5 py-4 sm:px-6">
           <div className="flex items-center gap-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--bg-selection)] text-white">
@@ -82,6 +81,7 @@ export const GoalSetupModal: React.FC<GoalSetupModalProps> = ({
               <p className="mt-0.5 text-xs text-muted">Choose what to save for and where to track it.</p>
             </div>
           </div>
+          <div className="flex shrink-0 items-center gap-1"><GuideButton screen="goal" name="Savings goal" />
           <button
             type="button"
             onClick={handleCancel}
@@ -91,6 +91,7 @@ export const GoalSetupModal: React.FC<GoalSetupModalProps> = ({
           >
             <X size={18} />
           </button>
+          </div>
         </header>
 
         <div className="min-h-0 overflow-y-auto px-5 py-4 sm:px-6">

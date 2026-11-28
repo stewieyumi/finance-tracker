@@ -222,7 +222,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
   return (
     <>
       <div data-guide-screen="expenses" ref={expenseLayoutRef} className="space-y-5 sm:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]">
-        <div className="flex justify-end"><GuideButton screen="expenses" name="Expenses" /></div>
+      <GuideButton screen="expenses" name="Expenses" inPageHeader />
 
         <section aria-labelledby="expenses-month" className="rounded-2xl border border-subtle bg-surface-elevated p-4 shadow-sm sm:p-5">
           <div className="flex items-start justify-between gap-3">

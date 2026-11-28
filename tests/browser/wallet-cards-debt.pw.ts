@@ -39,7 +39,10 @@ for (const [width, height] of [[320, 320], [375, 400], [320, 568], [360, 640], [
     const hero = modal.getByRole('region', { name: 'Debt overview' });
     await expect(hero).toContainText('₱800.00'); await expect(hero).toContainText('Scheduled in November 2026₱300.00');
     await expect(hero).toContainText('Last planned paymentJuly 2027');
-    await expect(modal.getByRole('region', { name: 'Active debt breakdown' })).toContainText('25.0%');
+    const breakdown = modal.getByRole('region', { name: 'Active debt breakdown' });
+    await expect(breakdown.getByRole('listitem').first()).toContainText('Laptop installment');
+    await expect(breakdown.getByRole('listitem').first()).toContainText('75.0%');
+    await expect(breakdown.getByRole('listitem').last()).toContainText('25.0%');
     await expect(modal).toContainText('1 upcoming plan'); await expect(modal).toContainText('₱1,000.00');
     const modalBox = await modal.boundingBox(); expect(modalBox!.x).toBeGreaterThanOrEqual(0); expect(modalBox!.x + modalBox!.width).toBeLessThanOrEqual(width + 1);
     expect(await modal.locator('[data-guide-screen]').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
@@ -49,7 +52,7 @@ for (const [width, height] of [[320, 320], [375, 400], [320, 568], [360, 640], [
     await expect.poll(() => page.evaluate(() => (window as typeof window & { debtSummary?: string }).debtSummary)).toContain('INSTALLMENT PLANS');
     const text = await page.evaluate(() => (window as typeof window & { debtSummary?: string }).debtSummary);
     expect(text).toContain('Scheduled in November 2026: ₱300.00'); expect(text).toContain('Last planned payment: July 2027');
-    expect(text).toContain('Upcoming plans: 1; ₱1,000.00'); expect(text).toContain('Phone installment: 25.0%');
+    expect(text).toContain('Upcoming plans: 1; ₱1,000.00'); expect(text).toContain('Active debt breakdown: Laptop installment with a longer name: 75.0%; Phone installment: 25.0%');
     expect(await storedData(page)).toEqual(before);
   });
 }

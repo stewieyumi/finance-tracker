@@ -113,9 +113,8 @@ const fallbackStartMonth = getMonthKey(new Date());
       ariaLabel="Yearly Overview Modal"
     >
       <div data-guide-screen="yearly" className="bg-surface-elevated border border-inverse/[0.09] rounded-3xl p-5 sm:p-6 w-full max-w-lg space-y-5 shadow-2xl max-h-[88vh] overflow-y-auto">
-        <div className="flex justify-end"><GuideButton screen="yearly" name="Yearly overview" /></div>
         <div className="flex items-center justify-between pb-3 border-b border-inverse/[0.06]">
-          <div className="flex items-center gap-2.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Calendar size={16} className="text-blue-400" />
             <h3 className="text-sm font-bold uppercase tracking-wider text-strong">
               Yearly Overview
@@ -151,6 +150,7 @@ const fallbackStartMonth = getMonthKey(new Date());
             </div>
           </div>
 
+          <div className="flex shrink-0 items-center gap-1"><GuideButton screen="yearly" name="Yearly overview" />
           <button
             onClick={onClose}
             className="text-faint hover:text-strong p-1 rounded-lg transition"
@@ -158,6 +158,7 @@ const fallbackStartMonth = getMonthKey(new Date());
           >
             <X size={16} />
           </button>
+          </div>
         </div>
 
         <div data-guide-target="year-summary" className="grid grid-cols-2 gap-3">

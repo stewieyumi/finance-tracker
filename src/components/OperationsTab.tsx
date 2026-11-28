@@ -141,7 +141,7 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
       data-guide-screen={`operations-${opsTab}`} id="operations-section"
       className="space-y-4 sm:space-y-5 animate-in fade-in zoom-in-95 duration-400 ease-out"
     >
-      <div className="flex justify-end"><GuideButton screen={`operations-${opsTab}`} name={opsTab === "bills" ? "Commitments" : opsTab === "inflows" ? "Inflows" : "Gigs and tasks"} /></div>
+      <GuideButton screen={`operations-${opsTab}`} name={opsTab === "bills" ? "Commitments" : opsTab === "inflows" ? "Inflows" : "Gigs and tasks"} inPageHeader />
       <nav data-guide-target="sections" aria-label="Plan sections" className="grid grid-cols-3 gap-1 rounded-xl bg-fill p-1">
         {([
           ["bills", "Commitments"],
@@ -167,11 +167,11 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
         <UpcomingBillsCard bills={upcomingBills} onSelect={bill => {
           onSelectMonth(bill.month);
           setBillJump(previous => ({ id: bill.id, sequence: (previous?.sequence ?? 0) + 1 }));
-        }} action={
-          <a href="#plan-commitments" className="rounded-lg bg-fill px-3 py-2 text-xs font-medium text-primary hover:bg-fill-strong">
-            View All
-          </a>
-        } />
+        }} onViewAll={() => {
+          const section = document.getElementById("plan-commitments");
+          section?.scrollIntoView({ block: "start" });
+          section?.focus({ preventScroll: true });
+        }} />
       )}
 
       {opsTab === "bills" && (

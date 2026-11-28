@@ -19,7 +19,7 @@ interface NotificationModalProps {
   notifications: AppNotification[];
   onDismiss: (id: string) => void;
   onClearAll: () => void;
-  onNavigate: (route: "operations/bills" | "operations/inflows" | "expenses") => void;
+  onNavigate: (route: NonNullable<AppNotification["actionRoute"]>, receipt?: AppNotification["incomeReceipt"]) => void;
 }
 
 export const NotificationModal: React.FC<NotificationModalProps> = ({
@@ -46,6 +46,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
           wrapper: "bg-amber-500/10 border-amber-500/20",
           border: "border-amber-500/30 hover:border-amber-500/50",
         };
+      case "received_income":
       case "pending_receivable":
         return {
           icon: <ArrowDownLeft size={16} className="text-emerald-400" />,
@@ -75,6 +76,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
         return "View Inflows";
       case "expenses":
         return "Log Expenses";
+      case "budget/distribute":
+        return "Distribute";
       default:
         return "View Details";
     }
@@ -164,7 +167,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <h4 className="text-xs font-semibold text-strong leading-tight">
+                      <h4 className="privacy-blur text-xs font-semibold text-strong leading-tight">
                         {n.title}
                       </h4>
                       <button
@@ -178,14 +181,14 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                       </button>
                     </div>
 
-                    <p className="text-xs text-secondary mt-1 leading-relaxed">
+                    <p className="privacy-blur text-xs text-secondary mt-1 leading-relaxed">
                       {n.message}
                     </p>
 
                     {n.actionRoute && (
                       <button
                         type="button"
-                        onClick={() => onNavigate(n.actionRoute!)}
+                        onClick={() => n.incomeReceipt ? onNavigate(n.actionRoute!, n.incomeReceipt) : onNavigate(n.actionRoute!)}
                         className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition"
                       >
                         <span>{getActionLabel(n.actionRoute)}</span>

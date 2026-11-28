@@ -74,14 +74,14 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
       <div data-guide-screen={`runway-${activeTab}`}
         className="bg-surface-elevated border border-subtle rounded-3xl p-5 sm:p-6 w-full max-w-2xl space-y-5 shadow-2xl max-h-[88vh] overflow-y-auto"
       >
-        <div className="flex justify-end"><GuideButton screen={`runway-${activeTab}`} name="Runway and analytics" /></div>
         <div className="flex items-center justify-between pb-3 border-b border-subtle">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <Sparkles size={16} className="text-amber-400" />
             <h3 data-guide-target="analytics-content" className="text-sm font-bold uppercase tracking-wider text-strong">
               Financial Intelligence & Runway ({selectedMonth})
             </h3>
           </div>
+          <div className="flex shrink-0 items-center gap-1"><GuideButton screen={`runway-${activeTab}`} name="Runway and analytics" />
           <button
             onClick={onClose}
             aria-label="Close analytics modal"
@@ -90,6 +90,7 @@ export const FinancialAnalyticsModal: React.FC<FinancialAnalyticsModalProps> = (
           >
             <X size={16} />
           </button>
+          </div>
         </div>
 
         <div data-guide-target="analytics-tabs" className="flex gap-4 border-b border-subtle overflow-x-auto whitespace-nowrap hide-scrollbar">

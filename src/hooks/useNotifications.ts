@@ -1,3 +1,4 @@
+import { readIncomeReminders } from "../utils/incomeReminders";
 import { useMemo, useState, useEffect } from "react";
 import { AppNotification, UnifiedFinanceData } from "../types/finance";
 import { getMonthKey, parseMonthKey, parseDateKey, getMonthRange } from "../utils/dateHelpers";
@@ -95,6 +96,7 @@ export function deriveNotifications(
   // Decision 7: Overdue commitments remain individually derived
   const activeOverdueBills = overdueBills.filter(n => !dismissed[n.id]);
   derived.push(...activeOverdueBills);
+  derived.push(...readIncomeReminders(globalData, currentDate).notifications);
 
   // Decision 9: Avoid flooding for upcoming commitments
   // Filter dismissed INDIVIDUAL notifications before applying grouping
@@ -285,16 +287,7 @@ export function useNotifications(
         return;
       }
       const now = new Date();
-      setCurrentCalendarDate(prev => {
-        if (
-          now.getFullYear() !== prev.getFullYear() ||
-          now.getMonth() !== prev.getMonth() ||
-          now.getDate() !== prev.getDate()
-        ) {
-          return now;
-        }
-        return prev;
-      });
+      setCurrentCalendarDate(now);
     };
 
     if (typeof window !== "undefined") {
@@ -310,6 +303,14 @@ export function useNotifications(
       }
     };
   }, [overrideDate]);
+
+  useEffect(() => {
+    if (overrideDate) return;
+    const next = readIncomeReminders(globalData).nextUpdateAt;
+    if (next === undefined) return;
+    const timer = setTimeout(() => setCurrentCalendarDate(new Date()), Math.max(1, next - Date.now() + 1));
+    return () => clearTimeout(timer);
+  }, [globalData, overrideDate, currentCalendarDate]);
 
   const activeDate = overrideDate ?? currentCalendarDate;
 

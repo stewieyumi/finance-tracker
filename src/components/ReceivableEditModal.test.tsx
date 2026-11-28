@@ -219,6 +219,7 @@ describe("ReceivableEditModal — Gross / Deductions Integration", () => {
     );
 
     // Add deduction
+    fireEvent.click(screen.getByText(/^Deductions \(/));
     const addBtn = screen.getByRole("button", { name: /add deduction/i });
     fireEvent.click(addBtn);
 
@@ -473,6 +474,7 @@ describe("ReceivableEditModal — Gross / Deductions Integration", () => {
       />
     );
 
+    fireEvent.click(screen.getByText(/^Deductions \(/));
     const addBtn = screen.getByRole("button", { name: /add deduction/i });
     fireEvent.click(addBtn);
 

@@ -1,7 +1,7 @@
+import { GuideButton } from "./ContextGuideControls";
 import { formatPHP } from "../utils/currency";
 import { walletSavingsTotals } from "../utils/walletSavings";
 import { budgetCash } from "../utils/budgeting";
-import { GuideButton } from "./ContextGuideControls";
 import { formatHistoryDate } from "../utils/transactionDates";
 import { InflowIncomeNotes } from "./InflowIncomeNotes";
 import type { InflowIncomeReport } from "../utils/inflowIncome";
@@ -260,7 +260,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
   return (
     <div data-guide-screen="dashboard" className="space-y-5 sm:space-y-6 animate-in fade-in zoom-in-95 duration-400 ease-out">
-        <div className="flex justify-end"><GuideButton screen="dashboard" name="Dashboard" /></div>
+      <GuideButton screen="dashboard" name="Dashboard" inPageHeader />
       {/* 1. FINANCIAL OVERVIEW CAROUSEL STAGE */}
       <div className="w-full space-y-2.5">
         {/* Contained Stage Viewport */}

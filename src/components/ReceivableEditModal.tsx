@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Edit2, Plus, Save, Trash2, X } from "lucide-react";
+import { Edit2, Plus, Save, Trash2, X, ChevronDown } from "lucide-react";
 import {
   EditFormData,
   ReceivableCategory,
@@ -193,11 +193,14 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
 
           {/* GROSS & DEDUCTIONS SECTION */}
           <div className="bg-surface-sunken border border-inverse/[0.05] rounded-2xl p-4 space-y-4">
-            <div className="space-y-2">
+            <details className="group rounded-xl border border-subtle bg-surface-low p-3">
+              <summary className="flex min-h-8 cursor-pointer list-none items-center justify-between gap-2 text-xs font-semibold text-primary [&::-webkit-details-marker]:hidden">
+                <span>Deductions ({currentDeductions.length})</span>
+                <span className="flex min-w-0 items-center gap-2"><span className="privacy-blur break-all font-mono text-muted">{editForm.amountUnspecified ? "—" : `-₱${totalDeductions.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</span><ChevronDown size={14} aria-hidden="true" className="shrink-0 transition-transform group-open:rotate-180" /></span>
+              </summary>
+              <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] text-faint uppercase font-semibold block">
-                  Deductions
-                </label>
+                <span className="text-[11px] text-muted">Optional adjustments</span>
                 <button
                   type="button"
                   onClick={handleAddDeduction}
@@ -217,7 +220,7 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                     <div
                       key={deduction.id}
                       data-testid={`deduction-row-${deduction.id}`}
-                      className="flex items-center gap-2 bg-surface-lowest p-2 rounded-xl border border-inverse/[0.05]"
+                      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 min-[375px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] bg-surface-lowest p-2 rounded-xl border border-inverse/[0.05] sm:grid-cols-[minmax(0,1fr)_6rem_6rem_auto]"
                     >
                       <input
                         type="text"
@@ -229,7 +232,7 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                           })
                         }
                         aria-label="Deduction name"
-                        className="flex-1 min-w-0 bg-surface-input border border-strong rounded-lg px-2.5 py-1.5 text-xs text-strong outline-none focus:border-emerald-500"
+                        className="col-span-2 min-w-0 bg-surface-input min-[375px]:col-span-3 sm:col-span-1 border border-strong rounded-lg px-2.5 py-1.5 text-xs text-strong outline-none focus:border-emerald-500"
                       />
                       <select
                         value={deduction.type}
@@ -239,12 +242,12 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                           })
                         }
                         aria-label="Deduction type"
-                        className="w-24 bg-surface-input border border-strong rounded-lg px-2 py-1.5 text-xs text-strong outline-none focus:border-emerald-500 cursor-pointer"
+                        className="col-span-2 min-w-0 w-full bg-surface-input border border-strong rounded-lg px-2 py-1.5 text-xs text-strong outline-none focus:border-emerald-500 cursor-pointer min-[375px]:col-span-1"
                       >
-                        <option value="fixed">Fixed (₱)</option>
-                        <option value="percentage">Percent (%)</option>
+                        <option value="fixed">Fixed ₱</option>
+                        <option value="percentage">Percent</option>
                       </select>
-                      <div className="w-24">
+                      <div className="min-w-0">
                         <input
                           type="number"
                           min="0"
@@ -273,7 +276,8 @@ export const ReceivableEditModal: React.FC<ReceivableEditModalProps> = ({
                   ))}
                 </div>
               )}
-            </div>
+              </div>
+            </details>
 
             {/* Live calculation display */}
             <div className="pt-2 border-t border-inverse/[0.05]">

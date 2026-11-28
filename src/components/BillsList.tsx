@@ -34,15 +34,10 @@ export const BillsList: React.FC<BillsListProps> = ({
   onEdit,
   hideSettled = false,
 }) => {
-  const showFirstHalf = payPeriod === "all" || payPeriod === "firstHalf";
-  const showSecondHalf = payPeriod === "all" || payPeriod === "secondHalf";
-
-  const displayedBillsCount =
-    payPeriod === "all"
-      ? filteredBills.length
-      : payPeriod === "firstHalf"
-        ? firstHalfBills.length
-        : secondHalfBills.length;
+  const displayedBills = payPeriod === "all"
+    ? [...filteredBills.filter(bill => !bill.paid), ...filteredBills.filter(bill => bill.paid)]
+    : payPeriod === "firstHalf" ? firstHalfBills : secondHalfBills;
+  const periodHeading = payPeriod === "firstHalf" ? "Days 1–15" : "Days 16–31";
 
   const renderMobileRow = (bill: BillViewModel) => (
     <BillMobileRow
@@ -72,29 +67,17 @@ export const BillsList: React.FC<BillsListProps> = ({
     <>
       {/* MOBILE LIST */}
       <div className="block md:hidden space-y-3">
-        {displayedBillsCount === 0 ? (
+        {displayedBills.length === 0 ? (
           <div className="py-6 text-center text-faint text-xs italic">
             No {hideSettled ? "unpaid " : ""}{selectedFilter !== "All" ? selectedFilter.toLowerCase() + " " : ""}commitments found{payPeriod === "firstHalf" ? " for Days 1–15" : payPeriod === "secondHalf" ? " for Days 16–31" : ""}{searchQuery ? ` matching "${searchQuery}"` : ""}.
           </div>
         ) : (
-          <>
-            {showFirstHalf && firstHalfBills.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-faint px-1">Days 1–15</div>
-                <div className="overflow-hidden rounded-2xl bg-surface divide-y divide-subtle">
-                  {firstHalfBills.map(bill => renderMobileRow(bill))}
-                </div>
-              </div>
-            )}
-            {showSecondHalf && secondHalfBills.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-faint px-1">Days 16–31</div>
-                <div className="overflow-hidden rounded-2xl bg-surface divide-y divide-subtle">
-                  {secondHalfBills.map(bill => renderMobileRow(bill))}
-                </div>
-              </div>
-            )}
-          </>
+          <div className="space-y-2">
+            {payPeriod !== "all" && <div className="text-[10px] font-bold uppercase tracking-wider text-faint px-1">{periodHeading}</div>}
+            <div className="overflow-hidden rounded-2xl bg-surface divide-y divide-subtle">
+              {displayedBills.map(renderMobileRow)}
+            </div>
+          </div>
         )}
       </div>
 
@@ -107,25 +90,15 @@ export const BillsList: React.FC<BillsListProps> = ({
               <th className="py-2.5 px-2 font-semibold">Status</th><th className="py-2.5 px-2 font-semibold">Commitment</th><th className="py-2.5 px-2 font-semibold text-right">Amount</th><th className="py-2.5 px-2 font-semibold">Type & Due Date</th><th className="py-2.5 px-2 font-semibold text-center">Actions</th>
             </tr>
           </thead>
-          {displayedBillsCount === 0 ? (
+          {displayedBills.length === 0 ? (
             <tbody>
               <tr><td colSpan={5} className="py-6 text-center text-faint italic">No {hideSettled ? "unpaid " : ""}{selectedFilter !== "All" ? selectedFilter.toLowerCase() : ""} commitments found{payPeriod === "firstHalf" ? " for Days 1–15" : payPeriod === "secondHalf" ? " for Days 16–31" : ""}{searchQuery ? ` matching "${searchQuery}"` : ""}.</td></tr>
             </tbody>
           ) : (
-            <>
-              {showFirstHalf && firstHalfBills.length > 0 && (
-                <tbody className="divide-y divide-white/[0.03]">
-                  <tr><td colSpan={5} className="pt-3 pb-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-faint">Days 1–15</td></tr>
-                  {firstHalfBills.map(bill => renderDesktopRow(bill))}
-                </tbody>
-              )}
-              {showSecondHalf && secondHalfBills.length > 0 && (
-                <tbody className="divide-y divide-white/[0.03]">
-                  <tr><td colSpan={5} className="pt-3 pb-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-faint">Days 16–31</td></tr>
-                  {secondHalfBills.map(bill => renderDesktopRow(bill))}
-                </tbody>
-              )}
-            </>
+            <tbody className="divide-y divide-white/[0.03]">
+              {payPeriod !== "all" && <tr><td colSpan={5} className="pt-3 pb-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-faint">{periodHeading}</td></tr>}
+              {displayedBills.map(renderDesktopRow)}
+            </tbody>
           )}
         </table>
       </div>

@@ -318,6 +318,7 @@ export type NotificationType =
   | "overdue_commitment"
   | "upcoming_commitment"
   | "pending_receivable"
+  | "received_income"
   | "log_reminder";
 
 export interface AppNotification {
@@ -327,7 +328,8 @@ export interface AppNotification {
   message: string;
   amount?: number;
   date?: string;
-  actionRoute?: "operations/bills" | "operations/inflows" | "expenses";
+  actionRoute?: "operations/bills" | "operations/inflows" | "expenses" | "budget/distribute";
+  incomeReceipt?: ReceivedIncomeDraft;
   targetId?: string;
   isGroup?: boolean;
   count?: number;
