@@ -67,6 +67,9 @@ const ExpensesTab = lazy(() => import("./components/ExpensesTab")
 
 const AppleCalendarSync = lazy(() => import("./components/AppleCalendarSync"));
 
+const PayBillsAheadModal = lazy(() => import("./components/PayBillsAheadModal")
+  .then(module => ({ default: module.PayBillsAheadModal })));
+
 const HistoricalLedgerModal = lazy(() => import("./components/HistoricalLedgerModal")
   .then(module => ({ default: module.HistoricalLedgerModal })));
 const YearlyOverviewModal = lazy(() => import("./components/YearlyOverviewModal")
@@ -285,6 +288,7 @@ const {
   const [highlightOverdue, setHighlightOverdue] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormData>({});
+  const [payAhead, setPayAhead] = useState<{ owner: string; month: string } | null>(null);
   const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [ledgerInitialType, setLedgerInitialType] = useState<'transfer' | undefined>();
   const [ledgerReceipt, setLedgerReceipt] = useState<ReceiptTransferDraft | undefined>();
@@ -721,6 +725,7 @@ const { saveShootEdit } = useShootSaveActions({
 
   const isTourOpen = Boolean(tourOwnerSub && tourOwnerSub === dataOwnerSub && isDataOwnedByActiveSub && !hasValidatedActiveConflict);
   const isModalOpen =
+    Boolean(payAhead && payAhead.owner === dataOwnerSub && isDataOwnedByActiveSub) ||
     contextGuideOpen ||
     showInstallGuide ||
     isTourOpen ||
@@ -1214,6 +1219,10 @@ const copySummaryToClipboard = async () => {
             </Suspense>
           </ErrorBoundary>
         )}
+        {payAhead && payAhead.owner === dataOwnerSub && isDataOwnedByActiveSub && !hasValidatedActiveConflict && <ErrorBoundary><Suspense fallback={deferredModalFallback}>
+          <PayBillsAheadModal key={`${payAhead.owner}-${payAhead.month}`} data={globalData} month={payAhead.month} commitBillTransition={syncedCommitTransition} showToast={showToast} onPaymentsReversed={removeReversedPayments} onClose={() => setPayAhead(null)} />
+        </Suspense></ErrorBoundary>}
+
         {showAppleCalendar && <ErrorBoundary><Suspense fallback={deferredModalFallback}>
           <AppleCalendarSync key={dataOwnerSub} autoOpen onClose={() => setShowAppleCalendar(false)} data={globalData} setData={syncedSetGlobalData} />
         </Suspense></ErrorBoundary>}
@@ -1334,6 +1343,7 @@ const copySummaryToClipboard = async () => {
             activeReceivables={activeReceivables}
             activeShoots={activeShoots}
             selectedMonth={selectedMonth}
+            onPayAhead={() => { if (dataOwnerSub && isDataOwnedByActiveSub) setPayAhead({ owner: dataOwnerSub, month: getAdjacentMonth(selectedMonth, 1) }); }}
             onToggleBillStatus={toggleBillStatus}
             onConfirmPriorBillPayments={confirmPriorBillPayments}
             onAddBill={handleAddBill}

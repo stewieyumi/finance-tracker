@@ -31,6 +31,7 @@ interface OperationsTabProps {
   activeShoots: Shoot[];
   selectedMonth: string;
   onSelectMonth: (month: string) => void;
+  onPayAhead?: () => void;
 
   onConfirmPriorBillPayments?: (billId: string, months: string[]) => void;
   onToggleBillStatus: (bill: BillViewModel, skipWalletMutation?: boolean) => void;
@@ -100,6 +101,7 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
   activeShoots,
   selectedMonth,
   onSelectMonth,
+  onPayAhead,
 
   onToggleBillStatus,
   onConfirmPriorBillPayments,
@@ -181,6 +183,7 @@ export const OperationsTab: React.FC<OperationsTabProps> = ({
               key={billJump?.sequence ?? 0}
               jumpToBillId={billJump?.id}
               activeBills={activeBills}
+              onPayAhead={onPayAhead}
               selectedMonth={selectedMonth}
               onToggleStatus={onToggleBillStatus}
               onConfirmPriorBillPayments={onConfirmPriorBillPayments}
